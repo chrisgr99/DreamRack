@@ -60,6 +60,8 @@ const SCOPE_ROLL_FPS = 60;      // roll history is one peak per animation frame 
 const SCOPE_TRACE = '#ffffff';  // trace 1 colour (white); the bright-orange second trace is phase 3
 // The scope's little controls (transport + trigger) are orange for visibility on the dark face.
 const SCOPE_CTRL = '#ff9d3a';
+const SCOPE_BORDER_LIVE = '#3ad16b';    // scope frame while running (live) — green
+const SCOPE_BORDER_PAUSED = '#e22a2a';  // scope frame while frozen (paused) — red
 // Row-mark glyphs for the Scopes roster menu: an open EYE (this scope is shown on the panel) and a
 // TRASH can (delete it for good). Inline SVG so they take the menu's currentColor like the other icons.
 const MENU_EYE_SVG = '<svg viewBox="0 0 16 16"><path d="M8 3.2C4.4 3.2 1.7 6 0.8 8c0.9 2 3.6 4.8 7.2 4.8s6.3-2.8 7.2-4.8C14.3 6 11.6 3.2 8 3.2zm0 8a3.2 3.2 0 110-6.4 3.2 3.2 0 010 6.4zm0-1.6a1.6 1.6 0 100-3.2 1.6 1.6 0 000 3.2z"/></svg>';
@@ -2689,6 +2691,7 @@ export class Rack {
   }
 
   _drawScope(sc) {
+    this._syncScopeBorder(sc);   // keep the frame colour tracking frozen/live, incl. the auto-freeze below
     const an = sc.analyser, buf = sc.buf, n = buf.length;
     if (!sc.frozen) { an.getFloatTimeDomainData(buf); this._captureRing(sc, buf, n); }   // frozen: keep the ring, still redraw so scroll re-scales it
     let lo = Infinity, hi = -Infinity, sum = 0;
@@ -3151,9 +3154,19 @@ export class Rack {
   // The transport button shows the ACTION: pause bars while running, play triangle while frozen.
   // The trigger button is hidden while frozen (triggering is moot on a held trace).
   _updateScopePlayPause(sc) {
+    this._syncScopeBorder(sc);
     if (!sc.playBtn) return;
     sc.playBtn.innerHTML = sc.frozen ? SCOPE_PLAY_ICON : SCOPE_PAUSE_ICON;
     if (sc.trigBtn) sc.trigBtn.style.display = sc.frozen ? 'none' : '';
+  }
+  // The scope's frame carries its run state: green while live, red while frozen (paused). Guarded on
+  // the last-applied state so it's a no-op on frames where nothing changed. Called both on explicit
+  // freeze/run toggles and once per draw frame (to catch the one-shot auto-freeze in _drawScope).
+  _syncScopeBorder(sc) {
+    const f = !!sc.frozen;
+    if (sc._borderFrozen === f) return;
+    sc._borderFrozen = f;
+    if (sc.el) sc.el.style.borderColor = f ? SCOPE_BORDER_PAUSED : SCOPE_BORDER_LIVE;
   }
   // A reliable custom tooltip for a scope control: shows immediately on hover, follows the
   // pointer, and clears on leave (native title tooltips are unreliable over these small controls).
