@@ -5096,8 +5096,8 @@ export class Rack {
           // OFF auditions that bus momentarily (a write-free peek), stopping on leave.
           const led = document.createElement('span');
           led.className = 'rack-menu-led' + (w.isOn() ? ' on' : '');
-          led.addEventListener('pointerenter', () => { if (!w.isOn()) w.peek(true); });
-          led.addEventListener('pointerleave', () => w.peek(false));
+          led.addEventListener('pointerenter', () => { if (!w.isOn()) { w.peek(true); led.classList.add('on'); } });   // light the lamp while auditioning, even un-clicked
+          led.addEventListener('pointerleave', () => { w.peek(false); led.classList.toggle('on', w.isOn()); });        // sound stops → lamp returns to its true state (dark if still off)
           led.addEventListener('pointerdown', (ev) => ev.stopPropagation());
           led.addEventListener('click', (ev) => { ev.stopPropagation(); w.flip(); led.classList.toggle('on', w.isOn()); });
           item.appendChild(led);
