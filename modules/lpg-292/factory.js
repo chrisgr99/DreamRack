@@ -18,6 +18,10 @@ const EXPECTED_WORKLET_INPUTS = [
   'inA', 'inB', 'inC', 'inD',
   'cvA', 'cvB', 'cvC', 'cvD',
   'trigA', 'trigB', 'trigC', 'trigD',
+  'levelCvA', 'levelCvB', 'levelCvC', 'levelCvD',
+  'decayCvA', 'decayCvB', 'decayCvC', 'decayCvD',
+  'ratioCvA', 'ratioCvB', 'ratioCvC', 'ratioCvD',
+  'rateCv',
 ];
 const EXPECTED_OUTPUTS = [
   'outA', 'outB', 'outC', 'outD', 'mixOdd', 'mixEven', 'clkOut',
@@ -74,8 +78,9 @@ export function create(ctx, services) {
   const clkRatio = [1, 1, 1, 1];
   const clkMul = [false, false, false, false];
   function sendClk(ch) {
-    const r = Math.max(1, clkRatio[ch] | 0);
-    node.port.postMessage({ type: 'clk', ch, factor: clkMul[ch] ? r : 1 / r });
+    // Send the BASE ratio + mode; the worklet now computes the effective factor each block
+    // (base + ratioDepth × ratioCv, quantized or not) so the ratio can be voltage-controlled.
+    node.port.postMessage({ type: 'clk', ch, baseDiv: Math.max(1, clkRatio[ch] | 0), mul: clkMul[ch] });
   }
 
   function getOutput(portId) {
@@ -99,8 +104,8 @@ export function create(ctx, services) {
 
     // Global clock run.
     if (paramId === 'run') { node.port.postMessage({ type: 'switch', id: 'run', value }); return; }
-    // Per-channel latching switches: lowpass / vca / clock-enable.
-    if (isCh(paramId, 'lp') || isCh(paramId, 'vca') || isCh(paramId, 'clkOn')) {
+    // Per-channel latching switches: lowpass / vca / clock-enable / ratio-quantize.
+    if (isCh(paramId, 'lp') || isCh(paramId, 'vca') || isCh(paramId, 'clkOn') || isCh(paramId, 'ratioQuant')) {
       node.port.postMessage({ type: 'switch', id: paramId, value });
       return;
     }

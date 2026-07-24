@@ -7,6 +7,7 @@ More than that, it's an exploration. It began as an attempt to build the modular
 ## My goals — the dream list
 
 - **A consistent design language across every module**, so knowledge carries from one to the next — input/output terminals colour-coded by signal type (a hint, not a restriction), inputs and outputs told apart instantly, panels compact and consistent in light and dark. *(done)*
+- **Fold a jack into a knob to save rack space** — a single control you turn *and* plug a cable straight into, so a parameter and its CV input share one spot instead of a separate knob and jack; I call it the **knAck**. *(partly TBD — a first version is in the Quad Function Generator)*
 - **Interaction kept drag-free** — a click, on a mouse or trackpad, is easier on the wrist than a drag, so controls turn with the scroll wheel and patching is click to grab, click to drop, with nothing held down. *(done)*
 - **See what affects what** — what feeds a module, what it feeds, and the whole chain shaping any one point. *(done)*
 - **See at a glance what every cable is doing** — where it runs from and to, and the role it plays at the end it plugs into. *(done)*

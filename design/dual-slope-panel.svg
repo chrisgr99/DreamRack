@@ -1,0 +1,209 @@
+<svg width="100%" viewBox="0 0 680 800" role="img" xmlns="http://www.w3.org/2000/svg"><title>Dual Slope — proposed panel layout</title><desc>Two identical slope-generator channels with four triple-knAck controls each, mode and cycle selectors, trigger/signal/reset/pitch inputs, out and end outputs, and a global strip with link selector, reset, run, and combined mix/max/diff/or outputs.</desc><rect x="0" y="0" width="680" height="800" fill="#ffffff"/><g transform="translate(120 18) scale(4.8)">
+<rect x="0" y="0" width="92" height="116" rx="2.4" fill="#cfcfcf"/>
+<rect x="0.5" y="0.5" width="91" height="115" rx="2.1" fill="none" stroke="#7d7d7d" stroke-width="0.5"/>
+<text x="46" y="7.2" font-size="4.4" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">DUAL SLOPE</text>
+<line x1="3" y1="9.4" x2="89" y2="9.4" stroke="#7d7d7d" stroke-width="0.4"/>
+<line x1="46" y1="10.5" x2="46" y2="90.5" stroke="#7d7d7d" stroke-width="0.4"/>
+<line x1="3" y1="90.5" x2="89" y2="90.5" stroke="#7d7d7d" stroke-width="0.4"/>
+<text x="24" y="14.2" font-size="3.6" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">A</text>
+<text x="14" y="16.0" font-size="2.4" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">RISE</text>
+<circle cx="14" cy="23" r="5.25" fill="none" stroke="#8fb0cf" stroke-width="1.6"/>
+<line x1="14" y1="16.85" x2="14" y2="18.65" stroke="#163a69" stroke-width="0.5"/>
+<line x1="9.76" y1="27.24" x2="10.39" y2="26.61" stroke="#163a69" stroke-width="0.22"/>
+<line x1="9.76" y1="18.76" x2="10.39" y2="19.39" stroke="#163a69" stroke-width="0.22"/>
+<circle cx="9.45" cy="20.38" r="0.7" fill="#163a69"/>
+<circle cx="14" cy="23" r="3.5" fill="#35688f" stroke="#1f4a6e" stroke-width="0.3"/>
+<line x1="12.01" y1="24.15" x2="11.14" y2="24.65" stroke="#ffffff" stroke-width="0.6"/>
+<circle cx="14" cy="23" r="2.1" fill="#ff7300"/>
+<circle cx="14" cy="23" r="1.1" fill="#161616"/>
+<text x="34" y="16.0" font-size="2.4" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">FALL</text>
+<circle cx="34" cy="23" r="5.25" fill="none" stroke="#8fb0cf" stroke-width="1.6"/>
+<line x1="34" y1="16.85" x2="34" y2="18.65" stroke="#163a69" stroke-width="0.5"/>
+<line x1="29.76" y1="27.24" x2="30.39" y2="26.61" stroke="#163a69" stroke-width="0.22"/>
+<line x1="29.76" y1="18.76" x2="30.39" y2="19.39" stroke="#163a69" stroke-width="0.22"/>
+<circle cx="29.45" cy="20.38" r="0.7" fill="#163a69"/>
+<circle cx="34" cy="23" r="3.5" fill="#35688f" stroke="#1f4a6e" stroke-width="0.3"/>
+<line x1="32.01" y1="24.15" x2="31.14" y2="24.65" stroke="#ffffff" stroke-width="0.6"/>
+<circle cx="34" cy="23" r="2.1" fill="#ff7300"/>
+<circle cx="34" cy="23" r="1.1" fill="#161616"/>
+<text x="14" y="37.0" font-size="2.4" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">SHP</text>
+<circle cx="14" cy="44" r="5.25" fill="none" stroke="#8fb0cf" stroke-width="1.6"/>
+<line x1="14" y1="37.85" x2="14" y2="39.65" stroke="#163a69" stroke-width="0.5"/>
+<line x1="9.76" y1="48.24" x2="10.39" y2="47.61" stroke="#163a69" stroke-width="0.22"/>
+<line x1="9.76" y1="39.76" x2="10.39" y2="40.39" stroke="#163a69" stroke-width="0.22"/>
+<circle cx="9.45" cy="41.38" r="0.7" fill="#163a69"/>
+<circle cx="14" cy="44" r="3.5" fill="#35688f" stroke="#1f4a6e" stroke-width="0.3"/>
+<line x1="12.01" y1="45.15" x2="11.14" y2="45.65" stroke="#ffffff" stroke-width="0.6"/>
+<circle cx="14" cy="44" r="2.1" fill="#ff7300"/>
+<circle cx="14" cy="44" r="1.1" fill="#161616"/>
+<text x="34" y="37.0" font-size="2.4" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">BIAS</text>
+<circle cx="34" cy="44" r="5.25" fill="none" stroke="#8fb0cf" stroke-width="1.6"/>
+<line x1="34" y1="37.85" x2="34" y2="39.65" stroke="#163a69" stroke-width="0.5"/>
+<line x1="29.76" y1="48.24" x2="30.39" y2="47.61" stroke="#163a69" stroke-width="0.22"/>
+<line x1="29.76" y1="39.76" x2="30.39" y2="40.39" stroke="#163a69" stroke-width="0.22"/>
+<circle cx="29.45" cy="41.38" r="0.7" fill="#163a69"/>
+<circle cx="34" cy="44" r="3.5" fill="#35688f" stroke="#1f4a6e" stroke-width="0.3"/>
+<line x1="32.01" y1="45.15" x2="31.14" y2="45.65" stroke="#ffffff" stroke-width="0.6"/>
+<circle cx="34" cy="44" r="2.1" fill="#ff7300"/>
+<circle cx="34" cy="44" r="1.1" fill="#161616"/>
+<text x="24" y="52.3" font-size="1.7" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">MODE</text>
+<rect x="9.75" y="53.25" width="9.50" height="3.5" rx="0.5" fill="#163a69" stroke="#163a69" stroke-width="0.25"/>
+<text x="14.5" y="55.75" font-size="1.65" font-weight="700" font-style="italic" fill="#ffffff" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">NORM</text>
+<rect x="19.25" y="53.25" width="9.50" height="3.5" rx="0.5" fill="none" stroke="#163a69" stroke-width="0.25"/>
+<text x="24.0" y="55.75" font-size="1.65" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">SLEW</text>
+<rect x="28.75" y="53.25" width="9.50" height="3.5" rx="0.5" fill="none" stroke="#163a69" stroke-width="0.25"/>
+<text x="33.5" y="55.75" font-size="1.65" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">PAIR</text>
+<text x="24" y="59.8" font-size="1.7" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">CYCLE</text>
+<rect x="14.50" y="60.75" width="9.50" height="3.5" rx="0.5" fill="#163a69" stroke="#163a69" stroke-width="0.25"/>
+<text x="19.25" y="63.25" font-size="1.65" font-weight="700" font-style="italic" fill="#ffffff" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">OFF</text>
+<rect x="24.00" y="60.75" width="9.50" height="3.5" rx="0.5" fill="none" stroke="#163a69" stroke-width="0.25"/>
+<text x="28.75" y="63.25" font-size="1.65" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">ON</text>
+<circle cx="14" cy="71" r="2.3" fill="#cfcfcf" stroke="#5aa0e6" stroke-width="0.75"/>
+<circle cx="14" cy="71" r="0.85" fill="#161616"/>
+<text x="14" y="75.0" font-size="1.95" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">TRIG</text>
+<circle cx="34" cy="71" r="2.3" fill="#cfcfcf" stroke="#e6c419" stroke-width="0.75"/>
+<circle cx="34" cy="71" r="0.85" fill="#161616"/>
+<text x="34" y="75.0" font-size="1.95" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">SIG</text>
+<circle cx="14" cy="79" r="2.3" fill="#cfcfcf" stroke="#5aa0e6" stroke-width="0.75"/>
+<circle cx="14" cy="79" r="0.85" fill="#161616"/>
+<text x="14" y="83.0" font-size="1.95" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">RST</text>
+<circle cx="34" cy="79" r="2.3" fill="#cfcfcf" stroke="#39a85a" stroke-width="0.75"/>
+<circle cx="34" cy="79" r="0.85" fill="#161616"/>
+<text x="34" y="83.0" font-size="1.95" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">1V/oct</text>
+<circle cx="14" cy="86.5" r="2.3" fill="#ff7300" stroke="#2a2a2a" stroke-width="0.22"/>
+<circle cx="14" cy="86.5" r="0.85" fill="#161616"/>
+<text x="14" y="90.5" font-size="1.95" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">OUT</text>
+<circle cx="34" cy="86.5" r="2.3" fill="#5aa0e6" stroke="#2a2a2a" stroke-width="0.22"/>
+<circle cx="34" cy="86.5" r="0.85" fill="#161616"/>
+<text x="34" y="90.5" font-size="1.95" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">END</text>
+<circle cx="18.6" cy="84.4" r="0.95" fill="#e23b2b" stroke="#00000055" stroke-width="0.15"/>
+<circle cx="38.6" cy="84.4" r="0.95" fill="#f0a020" stroke="#00000055" stroke-width="0.15"/>
+<text x="68" y="14.2" font-size="3.6" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">B</text>
+<text x="58" y="16.0" font-size="2.4" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">RISE</text>
+<circle cx="58" cy="23" r="5.25" fill="none" stroke="#8fb0cf" stroke-width="1.6"/>
+<line x1="58" y1="16.85" x2="58" y2="18.65" stroke="#163a69" stroke-width="0.5"/>
+<line x1="53.76" y1="27.24" x2="54.39" y2="26.61" stroke="#163a69" stroke-width="0.22"/>
+<line x1="53.76" y1="18.76" x2="54.39" y2="19.39" stroke="#163a69" stroke-width="0.22"/>
+<circle cx="53.45" cy="20.38" r="0.7" fill="#163a69"/>
+<circle cx="58" cy="23" r="3.5" fill="#35688f" stroke="#1f4a6e" stroke-width="0.3"/>
+<line x1="56.01" y1="24.15" x2="55.14" y2="24.65" stroke="#ffffff" stroke-width="0.6"/>
+<circle cx="58" cy="23" r="2.1" fill="#ff7300"/>
+<circle cx="58" cy="23" r="1.1" fill="#161616"/>
+<text x="78" y="16.0" font-size="2.4" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">FALL</text>
+<circle cx="78" cy="23" r="5.25" fill="none" stroke="#8fb0cf" stroke-width="1.6"/>
+<line x1="78" y1="16.85" x2="78" y2="18.65" stroke="#163a69" stroke-width="0.5"/>
+<line x1="73.76" y1="27.24" x2="74.39" y2="26.61" stroke="#163a69" stroke-width="0.22"/>
+<line x1="73.76" y1="18.76" x2="74.39" y2="19.39" stroke="#163a69" stroke-width="0.22"/>
+<circle cx="73.45" cy="20.38" r="0.7" fill="#163a69"/>
+<circle cx="78" cy="23" r="3.5" fill="#35688f" stroke="#1f4a6e" stroke-width="0.3"/>
+<line x1="76.01" y1="24.15" x2="75.14" y2="24.65" stroke="#ffffff" stroke-width="0.6"/>
+<circle cx="78" cy="23" r="2.1" fill="#ff7300"/>
+<circle cx="78" cy="23" r="1.1" fill="#161616"/>
+<text x="58" y="37.0" font-size="2.4" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">SHP</text>
+<circle cx="58" cy="44" r="5.25" fill="none" stroke="#8fb0cf" stroke-width="1.6"/>
+<line x1="58" y1="37.85" x2="58" y2="39.65" stroke="#163a69" stroke-width="0.5"/>
+<line x1="53.76" y1="48.24" x2="54.39" y2="47.61" stroke="#163a69" stroke-width="0.22"/>
+<line x1="53.76" y1="39.76" x2="54.39" y2="40.39" stroke="#163a69" stroke-width="0.22"/>
+<circle cx="53.45" cy="41.38" r="0.7" fill="#163a69"/>
+<circle cx="58" cy="44" r="3.5" fill="#35688f" stroke="#1f4a6e" stroke-width="0.3"/>
+<line x1="56.01" y1="45.15" x2="55.14" y2="45.65" stroke="#ffffff" stroke-width="0.6"/>
+<circle cx="58" cy="44" r="2.1" fill="#ff7300"/>
+<circle cx="58" cy="44" r="1.1" fill="#161616"/>
+<text x="78" y="37.0" font-size="2.4" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">BIAS</text>
+<circle cx="78" cy="44" r="5.25" fill="none" stroke="#8fb0cf" stroke-width="1.6"/>
+<line x1="78" y1="37.85" x2="78" y2="39.65" stroke="#163a69" stroke-width="0.5"/>
+<line x1="73.76" y1="48.24" x2="74.39" y2="47.61" stroke="#163a69" stroke-width="0.22"/>
+<line x1="73.76" y1="39.76" x2="74.39" y2="40.39" stroke="#163a69" stroke-width="0.22"/>
+<circle cx="73.45" cy="41.38" r="0.7" fill="#163a69"/>
+<circle cx="78" cy="44" r="3.5" fill="#35688f" stroke="#1f4a6e" stroke-width="0.3"/>
+<line x1="76.01" y1="45.15" x2="75.14" y2="45.65" stroke="#ffffff" stroke-width="0.6"/>
+<circle cx="78" cy="44" r="2.1" fill="#ff7300"/>
+<circle cx="78" cy="44" r="1.1" fill="#161616"/>
+<text x="68" y="52.3" font-size="1.7" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">MODE</text>
+<rect x="53.75" y="53.25" width="9.50" height="3.5" rx="0.5" fill="#163a69" stroke="#163a69" stroke-width="0.25"/>
+<text x="58.5" y="55.75" font-size="1.65" font-weight="700" font-style="italic" fill="#ffffff" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">NORM</text>
+<rect x="63.25" y="53.25" width="9.50" height="3.5" rx="0.5" fill="none" stroke="#163a69" stroke-width="0.25"/>
+<text x="68.0" y="55.75" font-size="1.65" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">SLEW</text>
+<rect x="72.75" y="53.25" width="9.50" height="3.5" rx="0.5" fill="none" stroke="#163a69" stroke-width="0.25"/>
+<text x="77.5" y="55.75" font-size="1.65" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">PAIR</text>
+<text x="68" y="59.8" font-size="1.7" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">CYCLE</text>
+<rect x="58.50" y="60.75" width="9.50" height="3.5" rx="0.5" fill="#163a69" stroke="#163a69" stroke-width="0.25"/>
+<text x="63.25" y="63.25" font-size="1.65" font-weight="700" font-style="italic" fill="#ffffff" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">OFF</text>
+<rect x="68.00" y="60.75" width="9.50" height="3.5" rx="0.5" fill="none" stroke="#163a69" stroke-width="0.25"/>
+<text x="72.75" y="63.25" font-size="1.65" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">ON</text>
+<circle cx="58" cy="71" r="2.3" fill="#cfcfcf" stroke="#5aa0e6" stroke-width="0.75"/>
+<circle cx="58" cy="71" r="0.85" fill="#161616"/>
+<text x="58" y="75.0" font-size="1.95" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">TRIG</text>
+<circle cx="78" cy="71" r="2.3" fill="#cfcfcf" stroke="#e6c419" stroke-width="0.75"/>
+<circle cx="78" cy="71" r="0.85" fill="#161616"/>
+<text x="78" y="75.0" font-size="1.95" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">SIG</text>
+<circle cx="58" cy="79" r="2.3" fill="#cfcfcf" stroke="#5aa0e6" stroke-width="0.75"/>
+<circle cx="58" cy="79" r="0.85" fill="#161616"/>
+<text x="58" y="83.0" font-size="1.95" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">RST</text>
+<circle cx="78" cy="79" r="2.3" fill="#cfcfcf" stroke="#39a85a" stroke-width="0.75"/>
+<circle cx="78" cy="79" r="0.85" fill="#161616"/>
+<text x="78" y="83.0" font-size="1.95" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">1V/oct</text>
+<circle cx="58" cy="86.5" r="2.3" fill="#ff7300" stroke="#2a2a2a" stroke-width="0.22"/>
+<circle cx="58" cy="86.5" r="0.85" fill="#161616"/>
+<text x="58" y="90.5" font-size="1.95" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">OUT</text>
+<circle cx="78" cy="86.5" r="2.3" fill="#5aa0e6" stroke="#2a2a2a" stroke-width="0.22"/>
+<circle cx="78" cy="86.5" r="0.85" fill="#161616"/>
+<text x="78" y="90.5" font-size="1.95" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">END</text>
+<circle cx="62.6" cy="84.4" r="0.95" fill="#e23b2b" stroke="#00000055" stroke-width="0.15"/>
+<circle cx="82.6" cy="84.4" r="0.95" fill="#f0a020" stroke="#00000055" stroke-width="0.15"/>
+<text x="46" y="95.2" font-size="1.9" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">GLOBAL</text>
+<text x="20" y="97.3" font-size="1.7" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">LINK</text>
+<rect x="3.00" y="98.25" width="8.50" height="3.5" rx="0.5" fill="#163a69" stroke="#163a69" stroke-width="0.25"/>
+<text x="7.25" y="100.75" font-size="1.65" font-weight="700" font-style="italic" fill="#ffffff" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">OFF</text>
+<rect x="11.50" y="98.25" width="8.50" height="3.5" rx="0.5" fill="none" stroke="#163a69" stroke-width="0.25"/>
+<text x="15.75" y="100.75" font-size="1.65" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">A>B</text>
+<rect x="20.00" y="98.25" width="8.50" height="3.5" rx="0.5" fill="none" stroke="#163a69" stroke-width="0.25"/>
+<text x="24.25" y="100.75" font-size="1.65" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">B>A</text>
+<rect x="28.50" y="98.25" width="8.50" height="3.5" rx="0.5" fill="none" stroke="#163a69" stroke-width="0.25"/>
+<text x="32.75" y="100.75" font-size="1.65" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">PING</text>
+<circle cx="50" cy="100" r="2.3" fill="#cfcfcf" stroke="#5aa0e6" stroke-width="0.75"/>
+<circle cx="50" cy="100" r="0.85" fill="#161616"/>
+<text x="50" y="104.0" font-size="1.95" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">RST</text>
+<circle cx="62" cy="100" r="2.3" fill="#cfcfcf" stroke="#5aa0e6" stroke-width="0.75"/>
+<circle cx="62" cy="100" r="0.85" fill="#161616"/>
+<text x="62" y="104.0" font-size="1.95" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">RUN</text>
+<circle cx="12" cy="110" r="2.3" fill="#ff7300" stroke="#2a2a2a" stroke-width="0.22"/>
+<circle cx="12" cy="110" r="0.85" fill="#161616"/>
+<text x="12" y="114.0" font-size="1.95" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">MIX</text>
+<circle cx="32" cy="110" r="2.3" fill="#ff7300" stroke="#2a2a2a" stroke-width="0.22"/>
+<circle cx="32" cy="110" r="0.85" fill="#161616"/>
+<text x="32" y="114.0" font-size="1.95" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">MAX</text>
+<circle cx="52" cy="110" r="2.3" fill="#ff7300" stroke="#2a2a2a" stroke-width="0.22"/>
+<circle cx="52" cy="110" r="0.85" fill="#161616"/>
+<text x="52" y="114.0" font-size="1.95" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">DIFF</text>
+<circle cx="72" cy="110" r="2.3" fill="#5aa0e6" stroke="#2a2a2a" stroke-width="0.22"/>
+<circle cx="72" cy="110" r="0.85" fill="#161616"/>
+<text x="72" y="114.0" font-size="1.95" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">OR</text>
+</g>
+<line x1="120" y1="584" x2="560" y2="584" stroke="#c9c9c9" stroke-width="1"/>
+<text x="120" y="600" font-size="15" font-weight="700" fill="#222222" text-anchor="start" font-family="Arial, Helvetica, sans-serif">The knAck (Rise / Fall / Shp / Bias):</text>
+<circle cx="175" cy="662" r="44" fill="none" stroke="#8fb0cf" stroke-width="13"/>
+<line x1="175" y1="610" x2="175" y2="624" stroke="#163a69" stroke-width="3"/>
+<circle cx="175" cy="662" r="27" fill="#35688f"/>
+<line x1="160.3" y1="670.5" x2="153.3" y2="674.5" stroke="#fff" stroke-width="4"/>
+<circle cx="175" cy="662" r="15" fill="#ff7300"/>
+<circle cx="175" cy="662" r="8" fill="#161616"/>
+<text x="241" y="632" font-size="13" font-weight="400" fill="#444444" text-anchor="start" font-family="Arial, Helvetica, sans-serif">Outer ring — CV depth / attenuverter (scroll; centre = zero)</text>
+<text x="241" y="658" font-size="13" font-weight="400" fill="#444444" text-anchor="start" font-family="Arial, Helvetica, sans-serif">Inner ring — base value (scroll)</text>
+<text x="241" y="684" font-size="13" font-weight="400" fill="#444444" text-anchor="start" font-family="Arial, Helvetica, sans-serif">Centre hole — CV input jack (click to patch a cable)</text>
+<line x1="175" y1="612" x2="237" y2="628" stroke="#c9c9c9" stroke-width="1"/>
+<line x1="165" y1="638" x2="237" y2="654" stroke="#c9c9c9" stroke-width="1"/>
+<line x1="175" y1="662" x2="237" y2="680" stroke="#c9c9c9" stroke-width="1"/>
+<circle cx="132" cy="750" r="9" fill="#cfcfcf" stroke="#163a69" stroke-width="2.4"/><circle cx="132" cy="750" r="3.2" fill="#161616"/>
+<text x="148" y="755" font-size="13" font-weight="400" fill="#444444" text-anchor="start" font-family="Arial, Helvetica, sans-serif">hollow = input</text>
+<circle cx="300" cy="750" r="9" fill="#ff7300" stroke="#333" stroke-width="1"/><circle cx="300" cy="750" r="3.2" fill="#161616"/>
+<text x="316" y="755" font-size="13" font-weight="400" fill="#444444" text-anchor="start" font-family="Arial, Helvetica, sans-serif">filled = output</text>
+<rect x="132" y="769" width="16" height="16" rx="3" fill="#ff7300"/>
+<text x="154" y="782" font-size="12.5" font-weight="400" fill="#444444" text-anchor="start" font-family="Arial, Helvetica, sans-serif">CV</text>
+<rect x="186.4" y="769" width="16" height="16" rx="3" fill="#5aa0e6"/>
+<text x="208.4" y="782" font-size="12.5" font-weight="400" fill="#444444" text-anchor="start" font-family="Arial, Helvetica, sans-serif">trigger / gate / pulse</text>
+<rect x="384.8" y="769" width="16" height="16" rx="3" fill="#39a85a"/>
+<text x="406.8" y="782" font-size="12.5" font-weight="400" fill="#444444" text-anchor="start" font-family="Arial, Helvetica, sans-serif">1V/oct pitch</text>
+<rect x="511.20000000000005" y="769" width="16" height="16" rx="3" fill="#e6c419"/>
+<text x="533.2" y="782" font-size="12.5" font-weight="400" fill="#444444" text-anchor="start" font-family="Arial, Helvetica, sans-serif">signal</text>
+</svg>

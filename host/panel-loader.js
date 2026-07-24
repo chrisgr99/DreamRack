@@ -254,6 +254,11 @@ export function parsePanel(svg, descriptor) {
     const binding = {
       id, meta, group: el,
       kind: stepped ? 'switch' : 'knob',
+      // A dual knAck also names a DEPTH param (the attenuverter on its centre CV). The
+      // element additionally carries data-wcoast-port for the CV jack; the rack renders it
+      // as a normal knob until that jack is patched, then splits it (value top, depth below).
+      depthId: el.getAttribute('data-wcoast-depth') || null,
+      quantizeId: el.getAttribute('data-wcoast-quantize') || null,   // detented knAck: right-click Quantize toggle
       pivot: (cx != null && cy != null) ? { x: cx, y: cy } : null,
       indicator: el.querySelector('[data-wcoast-role="indicator"]'),
       operator: el.querySelector('[data-wcoast-role="operator"]'),
@@ -306,11 +311,19 @@ export function parsePanel(svg, descriptor) {
       if (holeR === 0 || r < holeR) holeR = r;
       if (r > outerR) outerR = r;
     }
-    ports.set(id, { id, meta, element: el, anchor, holeR, outerR });
+    // A knAck (a jack sharing its element with a knob, so it also carries
+    // data-wcoast-param) spans the whole knob — but its cable must land on the
+    // centre JACK, not out in the blue. Clamp the outer radius to the jack band
+    // (hole + 1mm, matching paintKnAck's orange ring) so the cord ends at centre.
+    const isKnack = el.hasAttribute('data-wcoast-param');
+    ports.set(id, { id, meta, element: el, anchor, holeR, outerR: isKnack ? holeR + 1.0 : outerR });
   }
 
-  // Coverage: every descriptor param/port must have exactly one element.
+  // Coverage: every descriptor param/port must have exactly one element — EXCEPT
+  // subControl params (a knAck's depth/quantize), which ride on their knob's binding
+  // (data-wcoast-depth / data-wcoast-quantize) rather than their own SVG element.
   for (const p of (descriptor.params || [])) {
+    if (p.subControl) continue;
     if (!controls.has(p.id)) warnings.push(`descriptor param "${p.id}" has no panel element`);
   }
   for (const p of (descriptor.ports || [])) {
@@ -632,6 +645,54 @@ function addDirRing(port, outer, ro, rh) {
   port.element.appendChild(ring);
 }
 
+// Paint a knAck's centre (a knob a cable plugs into): leave the knob art alone,
+// but ring its black centre hole with the signal-family colour and lay the INPUT
+// direction dashes on that band — so the hole reads as a jack of the right type
+// (orange CV here) without disturbing the knob. Idempotent (re-run on a dark toggle).
+function paintKnAck(port, dark) {
+  const hole = port.element.querySelector('[data-wcoast-role="jackhole"]');
+  if (!hole || !port.meta) return;
+  const cx = parseFloat(hole.getAttribute('cx')), cy = parseFloat(hole.getAttribute('cy'));
+  const rh = parseFloat(hole.getAttribute('r'));
+  if (!isFinite(cx) || !isFinite(cy) || !(rh > 0)) return;
+  // A knAck knob face is MEDIUM blue over most of its surface. Framing the jack: a thin light-blue
+  // ring, then a NARROW dark-blue ring just outside it (softly shaded), then a light-blue line
+  // separating that from the medium face. The calibrations (drawn by the rack) sit on the medium
+  // face, never on the dark ring.
+  const KN_MED = '#0f6cad', KN_DARK = '#063f63', KN_LIGHT = '#ffffff';
+  const kcircles = [...port.element.querySelectorAll('circle')];
+  const outerRing = kcircles.reduce((a, c) => (parseFloat(c.getAttribute('r')) || 0) > (parseFloat(a.getAttribute('r')) || 0) ? c : a, kcircles[0]);
+  const cap = kcircles.find((c) => /knobCap/.test(c.getAttribute('fill') || ''));
+  const KR = outerRing ? (parseFloat(outerRing.getAttribute('r')) || 5) : 5;
+  // Blue face = the house radial crossfade (light centre → dark edge) — the SAME url(#blueRing)
+  // gradient the Complex Oscillator's big frequency/mod rings use. Keep the ring's gradient and
+  // clear the cap so one continuous fade spans the whole face. (Guarded: a knАck panel that
+  // doesn't define blueRing falls back to the flat medium face.)
+  const svgRoot = port.element.closest('svg');
+  const faceFill = (svgRoot && svgRoot.querySelector('#blueRing')) ? 'url(#blueRing)' : KN_MED;
+  if (outerRing) { outerRing.setAttribute('fill', faceFill); outerRing.setAttribute('stroke', KN_LIGHT); outerRing.setAttribute('stroke-width', round3((parseFloat(outerRing.getAttribute('stroke-width')) || 0.355) * 0.5)); }
+  if (cap) { cap.setAttribute('fill', 'none'); cap.setAttribute('stroke', 'none'); }
+  const ro = rh + 1.0;   // orange band outer radius (the jack)
+  for (const old of port.element.querySelectorAll('.knack-accent')) old.remove();
+  const kdoc = port.element.ownerDocument, kspan = KR - ro;
+  // ONE thin white line hugging the jack — its inner edge sits right against the orange, so no blue
+  // shows between the jack and the line. (The old dark grip ring and second white line are gone.)
+  const kw = Math.max(0.13, kspan * 0.045);
+  const c = kdoc.createElementNS(SVG_NS, 'circle'); c.setAttribute('class', 'knack-accent');
+  c.setAttribute('cx', round3(cx)); c.setAttribute('cy', round3(cy)); c.setAttribute('r', round3(ro + kw / 2));
+  c.setAttribute('fill', 'none'); c.setAttribute('stroke', KN_LIGHT); c.setAttribute('stroke-width', round3(kw)); c.style.pointerEvents = 'none';
+  port.element.appendChild(c);
+  const old = port.element.querySelector('.knack-band'); if (old) old.remove();
+  // Coloured band UNDER the hole, so the hole covers its centre and only the ring shows.
+  const band = port.element.ownerDocument.createElementNS(SVG_NS, 'circle');
+  band.setAttribute('class', 'knack-band');
+  band.setAttribute('cx', round3(cx)); band.setAttribute('cy', round3(cy)); band.setAttribute('r', round3(ro));
+  band.setAttribute('fill', jackFill(port.meta));
+  if (!dark) { band.setAttribute('stroke', JACK.edge); band.setAttribute('stroke-width', JACK.edgeW); }   // thin black edge on the light face only
+  port.element.insertBefore(band, hole);
+  addDirRing(port, band, ro, rh);   // input dashes hugging the hole (dir='in' → inner third)
+}
+
 // The lit-button gradient: a red LED core fading to the gray button body, so an
 // ON button reads as a dark-gray disc with a glowing centre. Injected once per
 // panel so showStep can reference url(#ledLit).
@@ -744,7 +805,13 @@ function decoratePanel(parsed, descriptor, opts) {
   const { svg, controls, ports } = parsed;
   ensureLedGradient(svg);
   for (const b of controls.values()) b.dark = opts.dark;   // showStep picks the button edge by mode
-  for (const port of ports.values()) paintJack(port, opts.dark);
+  // A knAck (an element carrying BOTH a param and a port — a knob a cable plugs
+  // into) keeps its knob art: paint only its centre (signal-coloured band + input
+  // dashes around the black hole), not the whole element as a jack.
+  for (const port of ports.values()) {
+    if (port.element.hasAttribute('data-wcoast-param')) paintKnAck(port, opts.dark);
+    else paintJack(port, opts.dark);
+  }
   // Vertical title up the left edge, fitted into the existing left margin.
   const name = (descriptor && descriptor.name) || '';
   drawIdentityStrip(svg, descriptor, ports, name);   // colour bar in the title column (breaks around the label below)

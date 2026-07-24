@@ -29,6 +29,13 @@ const params = [];
 for (const L of CH) ports.push({ id: `in${L}`, name: L, section: 'channel', domain: 'audio', dir: 'in' });
 for (const L of CH) ports.push({ id: `cv${L}`, name: `CV ${L}`, section: 'channel', domain: 'control', dir: 'in' });
 for (const L of CH) ports.push({ id: `trig${L}`, name: `Trig ${L}`, section: 'channel', domain: 'trigger', dir: 'in' });
+// knAck CV inputs — one per modulatable knob (the cable plugs into the knob's centre).
+// Appended AFTER trig so the existing worklet input indices (in 0-3, cv 4-7, trig 8-11)
+// are undisturbed; these become indices 12+ in descriptor order (see the factory).
+for (const L of CH) ports.push({ id: `levelCv${L}`, name: `Level CV ${L}`, section: 'channel', domain: 'control', dir: 'in' });
+for (const L of CH) ports.push({ id: `decayCv${L}`, name: `Decay CV ${L}`, section: 'channel', domain: 'control', dir: 'in' });
+for (const L of CH) ports.push({ id: `ratioCv${L}`, name: `Ratio CV ${L}`, section: 'channel', domain: 'control', dir: 'in' });
+ports.push({ id: 'rateCv', name: 'Rate CV', section: 'clock', domain: 'control', dir: 'in' });
 for (const L of CH) ports.push({ id: `out${L}`, name: `Out ${L}`, section: 'channel', domain: 'audio', dir: 'out' });
 ports.push({ id: 'mixOdd', name: 'Odd', section: 'sum', domain: 'audio', dir: 'out' });
 ports.push({ id: 'mixEven', name: 'Even', section: 'sum', domain: 'audio', dir: 'out' });
@@ -56,8 +63,18 @@ for (const L of CH) {
   // the default and preserves the original behaviour.
   params.push({ id: `clkMode${L}`, name: `Clock mode ${L}`, section: 'channel', curve: 'stepped', steps: [{ value: 'div' }, { value: 'mul' }], default: 'div' });
   params.push({ id: `clkOn${L}`, name: `Clock ${L}`, section: 'channel', ...onoff(), default: 'off' });
+  // knAck CV-depth (attenuverter) per modulatable knob: value = base + depth × CV, depth
+  // bipolar, zero = no modulation. subControl = driven by the knob's outer ring, not its
+  // own SVG element (see data-wcoast-depth), so the panel-coverage check skips it.
+  params.push({ id: `levelDepth${L}`, name: `Level CV depth ${L}`, section: 'channel', curve: 'linear', min: -1, max: 1, default: 0, glideMs: 10, subControl: true });
+  params.push({ id: `decayDepth${L}`, name: `Decay CV depth ${L}`, section: 'channel', curve: 'linear', min: -1, max: 1, default: 0, glideMs: 10, subControl: true });
+  params.push({ id: `ratioDepth${L}`, name: `Ratio CV depth ${L}`, section: 'channel', curve: 'linear', min: -1, max: 1, default: 0, glideMs: 10, subControl: true });
+  // Ratio is DETENTED, so its knAck offers a Quantize toggle (right-click menu): on = the
+  // CV-modulated ratio snaps to whole divisions 1..8; off = it sweeps continuously.
+  params.push({ id: `ratioQuant${L}`, name: `Ratio quantize ${L}`, section: 'channel', ...onoff(), default: 'on', subControl: true });
 }
 params.push({ id: 'rate', name: 'Clock Rate', section: 'clock', curve: 'linear', min: 0, max: 1, default: 0.35, glideMs: 10 });
+params.push({ id: 'rateDepth', name: 'Rate CV depth', section: 'clock', curve: 'linear', min: -1, max: 1, default: 0, glideMs: 10, subControl: true });
 params.push({ id: 'run', name: 'Clock Run', section: 'clock', ...onoff(), default: 'off' });
 
 export default {

@@ -44,8 +44,13 @@ class Lpg292 extends AudioWorkletProcessor {
       const L = 'ABCD'[i];
       p.push({ name: `level${L}`, defaultValue: 0.8, minValue: 0, maxValue: 1, automationRate: 'k-rate' });
       p.push({ name: `decay${L}`, defaultValue: 0.4, minValue: 0, maxValue: 1, automationRate: 'k-rate' });
+      // knAck CV-depth (attenuverter) per modulatable knob: value = base + depth × CV.
+      p.push({ name: `levelDepth${L}`, defaultValue: 0, minValue: -1, maxValue: 1, automationRate: 'k-rate' });
+      p.push({ name: `decayDepth${L}`, defaultValue: 0, minValue: -1, maxValue: 1, automationRate: 'k-rate' });
+      p.push({ name: `ratioDepth${L}`, defaultValue: 0, minValue: -1, maxValue: 1, automationRate: 'k-rate' });
     }
     p.push({ name: 'rate', defaultValue: 0.35, minValue: 0, maxValue: 1, automationRate: 'k-rate' });
+    p.push({ name: 'rateDepth', defaultValue: 0, minValue: -1, maxValue: 1, automationRate: 'k-rate' });
     return p;
   }
 
@@ -58,9 +63,13 @@ class Lpg292 extends AudioWorkletProcessor {
     this.lp = [true, true, true, true];
     this.vca = [true, true, true, true];
     this.clkOn = [false, false, false, false];
-    // Per-channel clock-rate factor: 1 = master rate, 1/k = divide by k (slower), k = multiply
-    // by k (faster). Each channel accrues its OWN phase so it can run faster than the master.
-    this.factor = new Float32Array([1, 1, 1, 1]);
+    // Per-channel clock ratio, now CV-modulatable. The base ratio (1..8), divide/multiply mode,
+    // and quantize flag arrive by message; the effective rate FACTOR (1/k divide, k multiply) is
+    // computed each block from base + ratioDepth × ratioCv, so voltage can sweep or step the ratio.
+    this.baseDiv = new Float32Array([1, 1, 1, 1]);
+    this.mul = [false, false, false, false];
+    this.quant = [true, true, true, true];
+    this._factor = new Float32Array([1, 1, 1, 1]);
     this.chPhase = new Float32Array(NCH);
     this.chPulse = new Int32Array(NCH);   // per-channel clock-out pulse (samples remaining)
     this.run = false;
@@ -83,10 +92,11 @@ class Lpg292 extends AudioWorkletProcessor {
         if (m.id.startsWith('lp')) this.lp[ch] = m.value === 'on';
         else if (m.id.startsWith('vca')) this.vca[ch] = m.value === 'on';
         else if (m.id.startsWith('clkOn')) this.clkOn[ch] = m.value === 'on';
+        else if (m.id.startsWith('ratioQuant')) this.quant[ch] = m.value === 'on';
       } else if (m.type === 'strike') {
         if (m.ch >= 0 && m.ch < NCH) this.v[m.ch] = 1;
       } else if (m.type === 'clk') {
-        if (m.ch >= 0 && m.ch < NCH && m.factor > 0) this.factor[m.ch] = m.factor;
+        if (m.ch >= 0 && m.ch < NCH) { this.baseDiv[m.ch] = Math.max(1, m.baseDiv | 0); this.mul[m.ch] = !!m.mul; }
       }
     };
   }
@@ -98,16 +108,29 @@ class Lpg292 extends AudioWorkletProcessor {
     const pulseLen = Math.max(1, (CLK_PULSE_S * sr) | 0);
 
     // Precompute per-channel constants for this block.
+    // knAck CV is read block-rate (its [0] sample) — these are control parameters, not audio.
+    const cvAt = (idx) => { const inp = inputs[idx]; return (inp && inp.length && inp[0].length) ? inp[0][0] : 0; };
     const releaseCoef = this._rc || (this._rc = new Float32Array(NCH));
     const level = this._lv || (this._lv = new Float32Array(NCH));
+    const factor = this._factor;
     for (let ch = 0; ch < NCH; ch++) {
       const L = 'ABCD'[ch];
-      const d = parameters[`decay${L}`][0];
-      const tau = DEC_LO * Math.pow(DEC_SPAN, clamp01(d));
+      // decay = base + depth × CV  (decayCv at input 16+ch)
+      const d = clamp01(parameters[`decay${L}`][0] + parameters[`decayDepth${L}`][0] * cvAt(16 + ch));
+      const tau = DEC_LO * Math.pow(DEC_SPAN, d);
       releaseCoef[ch] = 1 - Math.exp(-1 / (tau * sr));
-      level[ch] = parameters[`level${L}`][0];
+      // level = base + depth × CV  (levelCv at input 12+ch) — voltage-controllable loudness / velocity
+      level[ch] = clamp01(parameters[`level${L}`][0] + parameters[`levelDepth${L}`][0] * cvAt(12 + ch));
+      // clock ratio = base + depth × CV × range, clamped 1..8, optionally quantized to whole ratios,
+      // then applied as divide (1/k) or multiply (k). ratioCv at input 20+ch.
+      let eff = this.baseDiv[ch] + parameters[`ratioDepth${L}`][0] * cvAt(20 + ch) * 7;
+      if (eff < 1) eff = 1; else if (eff > 8) eff = 8;
+      if (this.quant[ch]) eff = Math.round(eff);
+      factor[ch] = this.mul[ch] ? eff : 1 / eff;
     }
-    const rateHz = RATE_LO * Math.pow(RATE_SPAN, clamp01(parameters.rate[0]));
+    // rate = base + depth × CV  (rateCv at input 24)
+    const rateEff = clamp01(parameters.rate[0] + parameters.rateDepth[0] * cvAt(24));
+    const rateHz = RATE_LO * Math.pow(RATE_SPAN, rateEff);
     const clkInc = rateHz / sr;
 
     const oddOut = outputs[4][0], evenOut = outputs[5][0], clkOut = outputs[6][0];
@@ -125,7 +148,7 @@ class Lpg292 extends AudioWorkletProcessor {
         for (let ch = 0; ch < NCH; ch++) {
           // Each channel's clock always runs while RUN is on so its CLK-out jack is live even
           // when it isn't striking its own gate; CLK ON only gates the local strike.
-          this.chPhase[ch] += clkInc * this.factor[ch];
+          this.chPhase[ch] += clkInc * factor[ch];
           if (this.chPhase[ch] >= 1) {
             this.chPhase[ch] -= 1;
             this.chPulse[ch] = pulseLen;

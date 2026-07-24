@@ -8,6 +8,9 @@
 // switch (self-cycle on/off); ATTACK and DECAY time knobs (0.001–10 s) each with
 // its own CV input; a FUNCTION output (the envelope, usable as audio-rate CV)
 // and a PULSE output that fires a trigger when the decay completes (end of cycle).
+// On the shipped faceplate the ATTACK/DECAY CV inputs are folded INTO their knobs as
+// knAcks (a cable plugs straight into the knob), so the ports below are unchanged but
+// the panel has no separate CV jacks for them — see panel.svg.
 //
 // Quadrature ties the A–B and C–D pairs so the two functions run 90° out of
 // phase (A rises, holds while B rises, then A falls, …). NOTE: the exact role of

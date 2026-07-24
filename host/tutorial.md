@@ -70,6 +70,10 @@ Coming next: **Basic interaction**.
 
 > **Do this** — Hover a knob and scroll it, then move to its rim and scroll again — the same gesture, four times finer.
 
+**The knAck — a knob you can patch:** some knobs are also jacks — a cable plugs straight into the knob, so a parameter and its CV input share one control instead of two spots. You'll spot one by the coloured centre with a hole, wearing the same code as any terminal (orange for a control-voltage input). It still scrolls to turn and double-clicks to reset; a single click **pulls a cable out of it**, and dropping a cable onto it patches a signal in. The "Quad Function Generator" uses these for its attack and decay.
+
+> **Do this** — On the "Quad Function Generator", click an **attack** knob — the one with the orange centre — and a cable follows the pointer; drop it on empty space to let it go, or on a terminal to patch. Double-click the knob to reset it, and scroll it to set the attack time as before.
+
 **Moving around:** if scrolling turns knobs, how do you get around a big rack? Hold Option (Alt on Windows), then move the pointer to slide the view and roll the wheel to zoom. More on this in the **Getting around** section, covered later.
 
 Coming next: **First sound**.

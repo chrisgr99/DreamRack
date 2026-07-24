@@ -1,3 +1,8 @@
+// SUPERSEDED — DO NOT RUN. The shipped panel.svg/panel.dark.svg were hand-authored
+// (attack/decay are knAcks — a cable plugs into the knob — and the CV jack columns were
+// folded away, narrowing the faceplate). panel.layout.js still describes the OLD four-column
+// layout, so regenerating from it would overwrite the knAck faceplate. Kept for history only.
+//
 // Generator — renders panel.layout.js to the light + dark SVGs via the shared
 // table-driven renderer (panel/render.js), applying any saved position overrides
 // (panel.overrides.json) from the visual editor first. See design/panel-editor.md.

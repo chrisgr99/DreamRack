@@ -58,7 +58,9 @@ const MODULE_TYPES = [{
 }, {
   descriptorId: fnDescriptor.id,
   name: 'Quad Function Generator',
-  hp: 30,
+  // ATTACK and DECAY are knAcks (a cable plugs straight into the knob), so the CV jacks
+  // are folded away and the faceplate is ~15% narrower than the original four-column layout.
+  hp: 26,
   panelUrl: 'modules/function-gen-281t/panel.svg',
   descriptor: fnDescriptor,
 }, {

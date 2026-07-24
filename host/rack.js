@@ -19,7 +19,7 @@
 //     pointer is over one). Modules are placed and sized by their real panel
 //     width in mm (no HP grid); neighbours butt together edge to edge.
 
-import { loadPanel, showValue, attachControlInteraction, FACE_H_MM, FACE_TOP_MM, FACE_LEFT_MM } from './panel-loader.js';
+import { loadPanel, showValue, attachControlInteraction, valueToPosition, positionToValue, FACE_H_MM, FACE_TOP_MM, FACE_LEFT_MM } from './panel-loader.js';
 import { Patchbay } from './patchbay.js';
 
 const PANEL_H_MM = FACE_H_MM;   // modules display only the cropped functional face
@@ -119,6 +119,11 @@ const GRAB_MAX_COS = Math.SQRT1_2;
 // drag is easier to land. 1.3mm is safe against the tightest jack pair (3mm apart → both
 // grow, meeting only past 1.5mm). Push buttons grow adaptively up to the same cap.
 const HIT_GROW_MM = 1.3;
+// KnAck (a knob a cable plugs into): a lone left-click waits this long to see whether a
+// second click follows (a double-click = reset the knob). Only after the window passes does the
+// click commit to pulling a cable — the small lag is what keeps click-to-patch and double-click-
+// to-reset from colliding, until reset moves onto the knob's right-click menu.
+const KNACK_DBL_MS = 250;
 // Ear-monitor volume knob: scroll with the same momentum feel as a panel knob.
 const MON_VOL_STEP = 0.04, MON_VOL_DRAG = 6, MON_VOL_MAXV = 8;
 // The monitor knob is a dB-LINEAR taper (like the mixer faders): unity at the top, down
@@ -211,6 +216,10 @@ export class Rack {
     this._tempCable = null;    // live cord element while dragging a new/regrabbed cable
     this._dragEdgeId = null;   // edge whose end is being dragged (hidden meanwhile)
     this._highlights = null;   // candidate rings thickened during a drag
+    // Testing switch: suppress the drag-time drop-target highlighting AND the hover/isolate terminal
+    // swell + net-ring ("pulsing"). Set false to bring both effects back. See _armTarget,
+    // _highlightCandidates/_highlightFedInputs, _swellJack, _applyJackSwell.
+    this._quietFx = true;
     this._contentWmm = 0;
     this._contentHmm = 0;
 
@@ -854,6 +863,7 @@ export class Rack {
 
   _drawCables() {
     if (!this.cables) return;
+    this._refreshDualKnacks();   // a cable in/out of a knAck centre splits/unsplits it
     // While isolating a subnet, the hover-driven net highlight is suppressed, and the
     // subnet itself is recomputed live so it tracks patch edits (a new feeding cord
     // joins at once; a removed one leaves). Rebuild the enlarged jacks only on a change.
@@ -1139,6 +1149,29 @@ export class Rack {
     document.addEventListener('pointerdown', onCancel, true);
     document.addEventListener('contextmenu', onCancel, true);
     document.addEventListener('keydown', onKey, true);
+  }
+
+  // A knAck — a knob a cable plugs straight into (the element carries both a param and a port).
+  // Scrolling still turns the knob (its own wheel handler). A left CLICK starts a click-to-carry cable
+  // from the knob; a DOUBLE-click resets it. They're told apart by TIMING alone: a lone click waits out
+  // KNACK_DBL_MS before committing to a cable, so a quick second click cancels the pull and resets
+  // instead. (Reset lives here for the prototype; it'll move to the knob's right-click menu later.)
+  _wireKnAck(el, rec, portId, paramId) {
+    let timer = null, lastT = 0;
+    el.addEventListener('click', (e) => {
+      if (e.button !== 0) return;
+      if (this._tempCable) return;   // a cord is already in hand — its own drop handlers take this click
+      const now = e.timeStamp;
+      if (timer && (now - lastT) < KNACK_DBL_MS) {   // second click within the window → double-click = reset
+        clearTimeout(timer); timer = null;
+        const def = this._paramDefault(rec, paramId);
+        if (def !== undefined) this._setParam(rec, paramId, def);
+        return;
+      }
+      lastT = now;
+      const cx = e.clientX, cy = e.clientY;
+      timer = setTimeout(() => { timer = null; this._startStickyCable(rec.key, portId, cx, cy); }, KNACK_DBL_MS);
+    });
   }
 
 
@@ -1454,6 +1487,7 @@ export class Rack {
 
   // Swell every FED input (a re-tap target while re-anchoring a link), skipping one port.
   _highlightFedInputs(exceptKey, exceptPort) {
+    if (this._quietFx) return;   // testing: no drop-target highlighting
     this._clearHighlights();
     this._highlights = [];
     const delta = 2 / ((this.pxPerMm || 1) * this.zoom);
@@ -1461,26 +1495,17 @@ export class Rack {
       for (const [portId, port] of rec.panel.ports) {
         if (port.meta.dir !== 'in' || !this._incomingEdge(rec.key, portId)) continue;
         if (rec.key === exceptKey && portId === exceptPort) continue;
-        const ring = port.element.querySelector('circle');
-        if (!ring) continue;
-        const orig = ring.getAttribute('stroke-width');
-        ring.setAttribute('stroke-width', r2((parseFloat(orig) || 0) + delta));
-        this._highlights.push({ ring, orig });
+        this._addCandidateHighlight(port, delta);
       }
     }
   }
 
   _highlightCandidates(wantDir, exceptEdge, linkMode) {
+    if (this._quietFx) return;   // testing: no drop-target highlighting
     this._clearHighlights();
     this._highlights = [];
     const delta = 2 / ((this.pxPerMm || 1) * this.zoom);   // 2 screen px expressed in panel mm
-    const swell = (rec, portId, port) => {
-      const ring = port.element.querySelector('circle');   // the outer coloured ring
-      if (!ring) return;
-      const orig = ring.getAttribute('stroke-width');
-      ring.setAttribute('stroke-width', r2((parseFloat(orig) || 0) + delta));
-      this._highlights.push({ ring, orig });
-    };
+    const swell = (rec, portId, port) => this._addCandidateHighlight(port, delta);
     for (const rec of this.records.values()) {
       for (const [portId, port] of rec.panel.ports) {
         if (port.meta.dir === wantDir) {
@@ -1493,11 +1518,31 @@ export class Rack {
     }
   }
 
+  // Thicken ONE candidate's ring during a drag. For a normal jack that's its outer coloured ring;
+  // for a dual knАck it must be ONLY the orange jack band — never the knob's white outer boundary.
+  // A knАck band has no stroke in dark mode, so we give it its own fill colour to thicken against.
+  _addCandidateHighlight(port, delta) {
+    const band = port.element.querySelector('.knack-band');
+    if (band) {
+      const origW = band.getAttribute('stroke-width'), origS = band.getAttribute('stroke');
+      band.setAttribute('stroke', band.getAttribute('fill') || '#ff7300');
+      band.setAttribute('stroke-width', r2((parseFloat(origW) || 0) + delta));
+      this._highlights.push({ ring: band, orig: origW, origStroke: origS });
+      return;
+    }
+    const ring = port.element.querySelector('circle');   // the outer coloured ring
+    if (!ring) return;
+    const orig = ring.getAttribute('stroke-width');
+    ring.setAttribute('stroke-width', r2((parseFloat(orig) || 0) + delta));
+    this._highlights.push({ ring, orig });
+  }
+
   _clearHighlights() {
     if (!this._highlights) return;
     for (const h of this._highlights) {
       if (h.orig == null) h.ring.removeAttribute('stroke-width');
       else h.ring.setAttribute('stroke-width', h.orig);
+      if ('origStroke' in h) { if (h.origStroke == null) h.ring.removeAttribute('stroke'); else h.ring.setAttribute('stroke', h.origStroke); }
     }
     this._highlights = [];
   }
@@ -1576,9 +1621,22 @@ export class Rack {
     this._disarmTarget();
     this._armedTag = tag;
     if (!ok) return;
+    if (this._quietFx) return;   // testing: no armed-target swell/outline (drop still hit-tests on release)
     const el = this._jackElement(target.key, target.portId);
-    const circle = el && el.querySelector('circle');
-    if (!el || !circle) { this._armedTag = null; return; }
+    if (!el) { this._armedTag = null; return; }
+    // A dual knАck: confine the "ready to receive" cue to the ORANGE jack band alone — expand only
+    // it, slightly. Never the knob's white rings or the whole knob, and no bold outline ring.
+    const knackBand = el.querySelector('.knack-band');
+    if (knackBand) {
+      const bx = parseFloat(knackBand.getAttribute('cx')) || 0, by = parseFloat(knackBand.getAttribute('cy')) || 0;
+      const btf = knackBand.getAttribute('transform');
+      const bswell = `translate(${r2(bx)} ${r2(by)}) scale(1.15) translate(${r2(-bx)} ${r2(-by)})`;
+      knackBand.setAttribute('transform', btf ? `${btf} ${bswell}` : bswell);
+      this._armed = { el: knackBand, tf: btf };
+      return;
+    }
+    const circle = el.querySelector('circle');
+    if (!circle) { this._armedTag = null; return; }
     const ro = parseFloat(circle.getAttribute('r')) || 3;
     const cx = parseFloat(circle.getAttribute('cx')) || 0;
     const cy = parseFloat(circle.getAttribute('cy')) || 0;
@@ -2034,20 +2092,28 @@ export class Rack {
   // _exitIsolate can restore the jack and disconnect the tap.
   _swellJack(key, portId, list, byTag) {
     const el = this._jackElement(key, portId);
-    const circle = el && el.querySelector('circle');
-    if (!el || !circle) return;
+    if (!el) return;
+    // A knAck breathes only its CENTRE jack (the port), not the whole knob — use the centre circle.
+    const isKnack = el.hasAttribute('data-wcoast-param');
+    const circle = isKnack ? (el.querySelector('.knack-band') || el.querySelector('[data-wcoast-role="jackhole"]')) : el.querySelector('circle');
+    if (!circle) return;
     const ro = parseFloat(circle.getAttribute('r')) || 3;
     const cx = parseFloat(circle.getAttribute('cx')) || 0;
     const cy = parseFloat(circle.getAttribute('cy')) || 0;
-    const ring = el.ownerDocument.createElementNS(SVG_NS, 'circle');
-    ring.setAttribute('class', 'jack-net-ring');
-    ring.setAttribute('cx', r2(cx)); ring.setAttribute('cy', r2(cy)); ring.setAttribute('r', r2(ro));
-    ring.setAttribute('fill', 'none');
-    ring.setAttribute('stroke', circle.getAttribute('fill') || STYLE_COLOR.control);
-    ring.setAttribute('stroke-width', r2(ro * 0.24));
-    ring.style.pointerEvents = 'none';
-    el.appendChild(ring);
-    const rec = { el, cx, cy, tf: el.getAttribute('transform'), level: 0, analyser: null, buf: null, tapNode: null, tapIndex: 0 };
+    // Testing: skip the visible net-ring + swell, but still build the record and tap so the
+    // cable-flow dash speed can read this jack's live level.
+    let ring = null;
+    if (!this._quietFx) {
+      ring = el.ownerDocument.createElementNS(SVG_NS, 'circle');
+      ring.setAttribute('class', 'jack-net-ring');
+      ring.setAttribute('cx', r2(cx)); ring.setAttribute('cy', r2(cy)); ring.setAttribute('r', r2(ro));
+      ring.setAttribute('fill', 'none');
+      ring.setAttribute('stroke', circle.getAttribute('fill') || STYLE_COLOR.control);
+      ring.setAttribute('stroke-width', r2(ro * 0.24));
+      ring.style.pointerEvents = 'none';
+      el.appendChild(ring);
+    }
+    const rec = { el, cx, cy, ro, ring, knack: isKnack, tf: el.getAttribute('transform'), level: 0, analyser: null, buf: null, tapNode: null, tapIndex: 0 };
     const tap = this._probeTap(key, portId);
     if (tap && tap.node) {
       try {
@@ -2073,7 +2139,11 @@ export class Rack {
 
   // Scale a swelled jack about its centre: a base swell plus a signal-driven bump.
   _applyJackSwell(rec) {
-    const scale = 1.12 + rec.level * 0.55;
+    if (this._quietFx) return;   // testing: terminals never swell
+    // Sound-reactive breathing is OFF for now — it made the knAck scales hard to read. The hover/isolate
+    // highlight stays as a fixed swell; a knAck never scales. (Future: modulate BRIGHTNESS, not size.)
+    if (rec.knack) { if (rec.ring) rec.ring.setAttribute('r', r2(rec.ro || 2)); return; }
+    const scale = 1.12;
     const swell = `translate(${r2(rec.cx)} ${r2(rec.cy)}) scale(${r2(scale)}) translate(${r2(-rec.cx)} ${r2(-rec.cy)})`;
     rec.el.setAttribute('transform', rec.tf ? `${rec.tf} ${swell}` : swell);
   }
@@ -4496,13 +4566,17 @@ export class Rack {
     for (const b of panel.controls.values()) {
       const v = rec.values.get(b.id);
       if (v !== undefined) showValue(b, v);
+      // A DUAL knAck (a knob that also names a depth param): its own interaction — scroll the top
+      // half for the value, the bottom half for CV depth, split when a cable is patched into its
+      // centre, right-click for its menu. It bypasses the standard knob wiring below.
+      if (b.kind === 'knob' && b.depthId) { this._setupDualKnack(rec, b); continue; }
       attachControlInteraction(b, {
         get: () => rec.values.get(b.id),
         set: (val) => this._setParam(rec, b.id, val),
       }, { hitGrowMm: btnGrow.get(b.id) || 0 });
       b.group.addEventListener('pointerdown', (e) => e.stopPropagation());
-      if (b.kind === 'knob') {                      // double-click a knob → back to its default
-        b.group.addEventListener('dblclick', (e) => {
+      if (b.kind === 'knob' && !b.group.hasAttribute('data-wcoast-port')) {   // double-click a knob → default
+        b.group.addEventListener('dblclick', (e) => {                          // (a knAck resets via its own timed click handler)
           e.preventDefault(); e.stopPropagation();
           const def = this._paramDefault(rec, b.id);
           if (def !== undefined) this._setParam(rec, b.id, def);
@@ -4513,14 +4587,25 @@ export class Rack {
     // a dropped cord hit-test the jack it lands on. stopPropagation (in the
     // handler) keeps a jack press from starting a module drag.
     for (const [portId, port] of panel.ports) {
-      port.element.style.cursor = 'crosshair';
+      const isDualKnack = port.element.hasAttribute('data-wcoast-depth');
       port.element.dataset.jackKey = rec.key;
       port.element.dataset.jackPort = portId;
-      port.element.addEventListener('pointerdown', (e) => this._onJackPointerDown(e, rec.key, portId));
-      port.element.addEventListener('contextmenu', (e) => this._onJackContextMenu(e, rec.key, portId));
       // Track the terminal under the pointer so the U / D shortcuts know which one they mean.
       port.element.addEventListener('pointerenter', () => { this._hoverJack = { key: rec.key, portId }; });
       port.element.addEventListener('pointerleave', () => { if (this._hoverJack && this._hoverJack.key === rec.key && this._hoverJack.portId === portId) this._hoverJack = null; });
+      // A DUAL knAck already owns its click (instant cable-carry) and right-click menu via
+      // _setupDualKnack; here it only needs to be a drop target (dataset set above).
+      if (isDualKnack) continue;
+      port.element.addEventListener('contextmenu', (e) => this._onJackContextMenu(e, rec.key, portId));
+      // A knAck (element also tagged with a param): the knob keeps its own cursor and drop
+      // geometry; clicking it pulls a cable (with the double-click-reset lag). No crosshair, no
+      // _onJackPointerDown, no extra hit-pad — the knob is already a large, precise target.
+      if (port.element.hasAttribute('data-wcoast-param')) {
+        this._wireKnAck(port.element, rec, portId, port.element.getAttribute('data-wcoast-param'));
+        continue;
+      }
+      port.element.style.cursor = 'crosshair';
+      port.element.addEventListener('pointerdown', (e) => this._onJackPointerDown(e, rec.key, portId));
       // An invisible hit-pad HIT_GROW_MM beyond the outer edge, appended LAST so the outer
       // circle stays the first-match for the paint/geometry queries. Clicks on it bubble to
       // the group's handlers above.
@@ -4757,6 +4842,176 @@ export class Rack {
     const type = this.moduleTypes.find((t) => t.descriptorId === rec.descriptorId);
     const p = type && type.descriptor.params.find((q) => q.id === id);
     return p ? p.default : undefined;
+  }
+  _paramMeta(rec, id) {
+    const type = this.moduleTypes.find((t) => t.descriptorId === rec.descriptorId);
+    return (type && type.descriptor.params.find((q) => q.id === id)) || null;
+  }
+
+  // ---- dual knAck (a knob a cable plugs into, with a CV-depth attenuverter that appears on patch) ----
+  // A normal knob until its centre CV jack is patched; then it splits — the value pointer compresses
+  // into the top half and a depth (attenuverter) pointer appears in the bottom, zero pointing down.
+  // Scroll the top half for the value, the bottom for depth (radial fine/coarse preserved in each);
+  // the base value is unchanged, only its visual sweep compresses. Reset / Disconnect / Quantize live
+  // on the right-click menu — there is no double-click.
+  _setupDualKnack(rec, b) {
+    const el = b.group;
+    const portId = el.getAttribute('data-wcoast-port');
+    const depthMeta = this._paramMeta(rec, b.depthId) || { curve: 'linear', min: -1, max: 1 };
+    const doc = el.ownerDocument;
+    const cx = b.pivot ? b.pivot.x : 0, cy = b.pivot ? b.pivot.y : 0;
+    const ring = el.querySelector('circle');
+    const R = ring ? (parseFloat(ring.getAttribute('r')) || 5) : 5;
+    const cap = [...el.querySelectorAll('circle')].find((c) => /knobCap/.test(c.getAttribute('fill') || ''));
+    const capR = cap ? (parseFloat(cap.getAttribute('r')) || R * 0.7) : R * 0.7;
+    const polar = (deg, r) => [cx + r * Math.cos(deg * Math.PI / 180), cy + r * Math.sin(deg * Math.PI / 180)];
+
+    // VALUE pointer: a triangle just OUTSIDE the ring so it clears the bottom attenuverter, and the
+    // knob turns through its FULL range like an ordinary knob (patched or not). Replaces the authored
+    // internal pointer (which would otherwise sweep through the attenuverter).
+    if (b.indicator) b.indicator.style.display = 'none';
+    const tri = doc.createElementNS(SVG_NS, 'path');
+    // a small triangle just OUTSIDE the ring, tip pointing outward, in the ring's light-blue line colour
+    tri.setAttribute('d', `M ${r2(cx)} ${r2(cy - (R + 1.2))} L ${r2(cx - 0.55)} ${r2(cy - (R + 0.25))} L ${r2(cx + 0.55)} ${r2(cy - (R + 0.25))} Z`);
+    tri.setAttribute('fill', '#ffffff');
+    const triG = doc.createElementNS(SVG_NS, 'g'); triG.setAttribute('data-wcoast-role', 'indicator'); triG.appendChild(tri);
+    el.appendChild(triG);
+    b.indicator = triG;   // showPosition/showValue now rotate the external triangle over the full range
+
+    // ATTENUVERTER gauge (bottom of the cap), hidden until patched: a fixed centre tick = zero with a
+    // minus and plus flanking it, and a marker that slides along the lower arc as depth changes. It is
+    // a local scale inside the bottom segment — it does NOT sweep around the whole knob.
+    const rInner = R * 0.72, rOuter = R * 0.93;   // on the medium face, outside the jack's accent rings
+    const atten = doc.createElementNS(SVG_NS, 'g'); atten.setAttribute('class', 'knack-atten'); atten.style.display = 'none'; atten.style.pointerEvents = 'none';
+    const line = (ang, r1, r2m, w) => { const [x1, y1] = polar(ang, r1), [x2, y2] = polar(ang, r2m); const l = doc.createElementNS(SVG_NS, 'line'); l.setAttribute('x1', r2(x1)); l.setAttribute('y1', r2(y1)); l.setAttribute('x2', r2(x2)); l.setAttribute('y2', r2(y2)); l.setAttribute('stroke', '#ffffff'); l.setAttribute('stroke-width', w); l.setAttribute('stroke-linecap', 'round'); return l; };
+    atten.appendChild(line(90, rInner, rOuter, 0.22));   // centre tick (zero) — spans the full band, straight down
+    const txt = (ang, s) => { const [lx, ly] = polar(ang, rOuter + 0.6); const t = doc.createElementNS(SVG_NS, 'text'); t.setAttribute('x', r2(lx)); t.setAttribute('y', r2(ly + 0.6)); t.setAttribute('font-size', 1.7); t.setAttribute('fill', '#ffffff'); t.setAttribute('text-anchor', 'middle'); t.setAttribute('font-weight', '700'); t.textContent = s; atten.appendChild(t); };
+    txt(145, '−'); txt(35, '+');
+    const marker = line(90, rInner, rOuter, 0.42);   // the moving marker — spans the full band width, rotated by depth
+    marker.setAttribute('class', 'knack-atten-marker'); atten.appendChild(marker);
+    el.appendChild(atten);
+    // groove (shown on patch): a DOUBLE line splitting value (top) from attenuverter (bottom) — a
+    // dark line straight across the diameter, its ends touching the white edge ring on both sides,
+    // and a white line just below it, also reaching the edge ring, so the two read as an incised
+    // slot connecting into the knob's outer white line. Inserted UNDER the jack so neither draws
+    // across the orange centre (the jack covers their middles).
+    const grDarkW = 0.24, grWhiteW = 0.18, grGap = (grDarkW + grWhiteW) / 2;
+    const groove = doc.createElementNS(SVG_NS, 'g');
+    groove.setAttribute('class', 'knack-groove'); groove.style.display = 'none'; groove.style.pointerEvents = 'none';
+    const grLine = (y, w, col) => {
+      const half = Math.sqrt(Math.max(0, R * R - (y - cy) * (y - cy)));   // chord half-length → ends land on the ring
+      const l = doc.createElementNS(SVG_NS, 'line');
+      l.setAttribute('x1', r2(cx - half)); l.setAttribute('y1', r2(y));
+      l.setAttribute('x2', r2(cx + half)); l.setAttribute('y2', r2(y));
+      l.setAttribute('stroke', col); l.setAttribute('stroke-width', w); return l;
+    };
+    groove.appendChild(grLine(cy, grDarkW, '#06253d'));           // dark line, on the diameter
+    groove.appendChild(grLine(cy + grGap, grWhiteW, '#ffffff'));  // white line just below, touching it
+    const bandEl = el.querySelector('.knack-band');
+    if (bandEl) el.insertBefore(groove, bandEl); else el.appendChild(groove);
+
+    // Faceplate ticks at the two travel extremes: short radial marks just outside the ring at the
+    // value pointer's min and max angles (± full sweep from straight up), so the knob's range reads
+    // on the panel. Static (not rotated with the pointer), always visible.
+    const tickCol = this.dark ? '#9aa3ab' : '#4a4a4a';
+    for (const deg of [b.angleMin, b.angleMax]) {
+      const rad = deg * Math.PI / 180, ux = Math.sin(rad), uy = -Math.cos(rad);   // up, rotated CW by deg
+      const tk = doc.createElementNS(SVG_NS, 'line');
+      tk.setAttribute('x1', r2(cx + ux * (R + 0.35))); tk.setAttribute('y1', r2(cy + uy * (R + 0.35)));
+      tk.setAttribute('x2', r2(cx + ux * (R + 1.5)));  tk.setAttribute('y2', r2(cy + uy * (R + 1.5)));
+      tk.setAttribute('stroke', tickCol); tk.setAttribute('stroke-width', 0.3); tk.setAttribute('stroke-linecap', 'round');
+      tk.style.pointerEvents = 'none';
+      el.appendChild(tk);
+    }
+
+    const dk = { rec, b, el, portId, depthMeta, atten, marker, groove, cx, cy, patched: false };
+    (this._dualKnacks || (this._dualKnacks = [])).push(dk);
+    // Cabling: the STANDARD jack pointerdown — proven grab/drop, and it early-returns when a cable is
+    // already in hand, so dropping onto the knAck no longer also grabs a fresh cable.
+    el.addEventListener('pointerdown', (e) => this._onJackPointerDown(e, rec.key, portId));
+    el.addEventListener('wheel', (e) => this._dualKnackWheel(e, dk), { passive: false });
+    el.addEventListener('contextmenu', (e) => this._dualKnackMenu(e, dk));
+    const val = rec.values.get(b.id); if (val !== undefined) showValue(b, val);   // position the new triangle
+    this._renderKnackSplit(dk, this._isKnackPatched(rec.key, portId));
+  }
+
+  _knackRadialFactor(b, e) {
+    const ctm = b.group.getScreenCTM && b.group.getScreenCTM();
+    if (!ctm || !b.pivot) return 1;
+    const sx = ctm.a * b.pivot.x + ctm.c * b.pivot.y + ctm.e;
+    const sy = ctm.b * b.pivot.x + ctm.d * b.pivot.y + ctm.f;
+    const R = (b.group.getBoundingClientRect().width / 2) || 1;
+    const r = Math.hypot(e.clientX - sx, e.clientY - sy);
+    return Math.max(0.25, 1 - 0.75 * Math.min(1, r / R));
+  }
+
+  _dualKnackWheel(e, dk) {
+    if (e.ctrlKey) return;   // ctrl+wheel is the rack pinch-zoom
+    e.preventDefault();
+    const raw = e.deltaMode === 1 ? e.deltaY * 16 : e.deltaMode === 2 ? e.deltaY * 400 : e.deltaY;
+    const step = (-raw / 100) * 0.05 * this._knackRadialFactor(dk.b, e);   // up (negative delta) raises
+    // route to depth only when patched AND the pointer is in the bottom half
+    let toDepth = false;
+    if (dk.patched) {
+      const ctm = dk.b.group.getScreenCTM();
+      const sy = ctm ? (ctm.b * dk.b.pivot.x + ctm.d * dk.b.pivot.y + ctm.f) : e.clientY;
+      toDepth = e.clientY > sy;
+    }
+    if (toDepth) {
+      const np = Math.max(0, Math.min(1, valueToPosition(dk.depthMeta, dk.rec.values.get(dk.b.depthId) || 0) + step));
+      this._setParam(dk.rec, dk.b.depthId, positionToValue(dk.depthMeta, np));
+      this._renderKnackSplit(dk, true);
+    } else if (dk.b.meta.curve === 'detent') {
+      // detented base (the clock ratio): accumulate scroll, step one whole detent per threshold
+      dk.acc = (dk.acc || 0) - raw;
+      let guard = 0;
+      while (Math.abs(dk.acc) >= 100 && guard++ < 8) {
+        const dir = dk.acc > 0 ? 1 : -1; dk.acc -= dir * 100;
+        const cur = Math.round(Number(dk.rec.values.get(dk.b.id)));
+        const nv = Math.max(dk.b.meta.min, Math.min(dk.b.meta.max, cur + dir));
+        if (nv !== cur) this._setParam(dk.rec, dk.b.id, nv);
+      }
+    } else {
+      const np = Math.max(0, Math.min(1, valueToPosition(dk.b.meta, dk.rec.values.get(dk.b.id)) + step));
+      this._setParam(dk.rec, dk.b.id, positionToValue(dk.b.meta, np));   // _setParam → showValue moves the value pointer
+    }
+  }
+
+  _isKnackPatched(key, portId) {
+    return this.patchbay.edgesAtJack(key, portId).some((edge) => edge.dst && edge.dst.key === key && edge.dst.portId === portId);
+  }
+
+  _refreshDualKnacks() {
+    if (!this._dualKnacks) return;
+    for (const dk of this._dualKnacks) {
+      const patched = this._isKnackPatched(dk.rec.key, dk.portId);
+      if (patched !== dk.patched) this._renderKnackSplit(dk, patched);
+    }
+  }
+
+  // Show/hide the bottom attenuverter gauge on patch, and slide its marker to the current depth.
+  // The value knob's rotation is independent (full range, always) — nothing about it changes here.
+  _renderKnackSplit(dk, patched) {
+    dk.patched = patched;
+    dk.atten.style.display = patched ? '' : 'none';
+    dk.groove.style.display = patched ? '' : 'none';
+    if (patched) {
+      const depth = dk.rec.values.get(dk.b.depthId) || 0;   // -1..1
+      dk.marker.setAttribute('transform', `rotate(${r2(-depth * 55)} ${r2(dk.cx)} ${r2(dk.cy)})`);   // ±55° about straight-down
+    }
+  }
+
+  _dualKnackMenu(e, dk) {
+    e.preventDefault(); e.stopPropagation();
+    const { rec, b } = dk;
+    const items = [{ label: 'Reset value', action: () => { const d = this._paramDefault(rec, b.id); if (d !== undefined) this._setParam(rec, b.id, d); } }];
+    if (dk.patched) items.push({ label: 'Reset CV depth', action: () => { this._setParam(rec, b.depthId, 0); this._renderKnackSplit(dk, true); } });
+    if (b.quantizeId) {
+      const on = rec.values.get(b.quantizeId) === 'on';
+      items.push({ label: (on ? '✓ ' : '    ') + 'Quantize', action: () => this._setParam(rec, b.quantizeId, on ? 'off' : 'on') });
+    }
+    if (dk.patched) items.push({ label: 'Disconnect', action: () => { for (const edge of this.patchbay.edgesAtJack(rec.key, dk.portId)) this.patchbay.disconnect(edge); this._reconcileLinks(); this._drawCables(); this.onChange(); } });
+    this._openMenu(e.clientX, e.clientY, items);
   }
   // Reset ONE module's controls to their descriptor defaults (undoable), leaving every cable
   // connected. Used by the title menu's "Reset" item.
