@@ -35,10 +35,18 @@ export const FACE_H_MM = 113.5912;
 // carries a transparent left margin that shows as a dark seam between butted
 // modules. Width is unchanged, so the right edge lands on the faceplate's right.
 export const FACE_LEFT_MM = 3.9;
+// The horizontal TITLE STRIP shown ABOVE the face: the module's name + identity colour
+// band live here (they used to run vertically up the left edge). The strip occupies part
+// of the top gutter the crop used to discard, so no module content moves — the module
+// simply displays 4mm taller.
+export const TITLE_STRIP_MM = 4;
+// The DRAWN title bar is taller than the revealed gutter: the extra 2mm overlays the face's
+// blank top margin, so total module height and all content positions stay put.
+export const TITLE_BAR_MM = 6;
 
 function cropToFace(svg) {
   const vb = (svg.getAttribute('viewBox') || '').trim().split(/\s+/).map(Number);
-  if (vb.length === 4) svg.setAttribute('viewBox', `${FACE_LEFT_MM} ${FACE_TOP_MM} ${vb[2]} ${FACE_H_MM}`);
+  if (vb.length === 4) svg.setAttribute('viewBox', `${FACE_LEFT_MM} ${FACE_TOP_MM - TITLE_STRIP_MM} ${vb[2]} ${FACE_H_MM + TITLE_STRIP_MM}`);
 }
 
 function clamp01(x) { return x < 0 ? 0 : x > 1 ? 1 : x; }
@@ -754,49 +762,104 @@ function minusGap(a, b, ga, gb) {
   return out;
 }
 
+let stripClipSeq = 0;   // clipPath ids are document-global; keep each panel's unique
+
 function drawIdentityStrip(svg, descriptor, ports, name) {
   const old = svg.querySelector('.module-identity');
   if (old) old.remove();
   const colors = moduleIdentityColors(descriptor, ports);
-  if (!colors.length) return;
   const doc = svg.ownerDocument;
   const g = doc.createElementNS(SVG_NS, 'g');
   g.setAttribute('class', 'module-identity');
   g.setAttribute('pointer-events', 'none');
+  const face = svg.querySelector('rect');
+  const vb0 = (svg.getAttribute('viewBox') || '').trim().split(/\s+/).map(Number);
+  const W0 = vb0.length === 4 ? vb0[2] : 142;
+  const faceRx = (face && parseFloat(face.getAttribute('rx'))) || 2.5;
+  // Clip the whole strip to a round-topped shape so the colour band follows the panel's rounded
+  // upper corners (the clip reaches below the face top, where the face art covers it, so only the
+  // TOP corners round). Then paint the backdrop in the face's own colour — the strip sits above
+  // the face art in the revealed gutter, so without it the page background would show through.
+  const clipId = `title-strip-clip-${stripClipSeq++}`;
+  const clip = doc.createElementNS(SVG_NS, 'clipPath'); clip.setAttribute('id', clipId);
+  const cr = doc.createElementNS(SVG_NS, 'rect');
+  cr.setAttribute('x', round3(FACE_LEFT_MM)); cr.setAttribute('y', round3(FACE_TOP_MM - TITLE_STRIP_MM));
+  cr.setAttribute('width', round3(W0)); cr.setAttribute('height', round3(TITLE_BAR_MM + faceRx));
+  cr.setAttribute('rx', round3(faceRx));
+  clip.appendChild(cr); g.appendChild(clip);
+  g.setAttribute('clip-path', `url(#${clipId})`);
+  {
+    const bg = doc.createElementNS(SVG_NS, 'rect');
+    bg.setAttribute('x', round3(FACE_LEFT_MM)); bg.setAttribute('y', round3(FACE_TOP_MM - TITLE_STRIP_MM));
+    bg.setAttribute('width', round3(W0)); bg.setAttribute('height', TITLE_BAR_MM);
+    bg.setAttribute('fill', '#000000');   // the strip field is BLACK in both themes; only 8mm colour segments flank the name
+    g.appendChild(bg);
+  }
+  if (!colors.length) { svg.appendChild(g); return; }
+  // The colour band must stop at the INNER edge of the border line (the backdrop keeps the face's
+  // 0.5mm margin outside the line, like the face itself). Border: 0.5 inset, 0.5 stroke -> inner
+  // edge at 0.75; its inner corner radius is the border rx minus half the stroke.
+  const inset = 0.75;
+  const innerClipId = `title-strip-inner-${stripClipSeq++}`;
+  const iclip = doc.createElementNS(SVG_NS, 'clipPath'); iclip.setAttribute('id', innerClipId);
+  const icr = doc.createElementNS(SVG_NS, 'rect');
+  icr.setAttribute('x', round3(FACE_LEFT_MM + inset)); icr.setAttribute('y', round3(FACE_TOP_MM - TITLE_STRIP_MM + inset));
+  icr.setAttribute('width', round3(W0 - 2 * inset)); icr.setAttribute('height', round3(TITLE_BAR_MM + faceRx));
+  icr.setAttribute('rx', round3(Math.max(0, faceRx - inset)));
+  iclip.appendChild(icr); g.appendChild(iclip);
+  const bandG = doc.createElementNS(SVG_NS, 'g');
+  bandG.setAttribute('clip-path', `url(#${innerClipId})`);
+  g.appendChild(bandG);
   const N = colors.length;
-  // The band spans the vertical title's WIDTH (the glyph height — a font-fixed constant, not the name
-  // length). The rotated glyph block sits ~1.1mm toward the OUTER side of the baseline (ascenders reach
-  // further than descenders), so centre the band on the glyph block, not on the baseline, or the label
-  // reads off-centre in its box.
-  const cx = FACE_LEFT_MM + 3.4;                            // title baseline column (x = 7.3)
-  const labelCenter = cx - 1.12;                            // the glyph block's actual centre
-  const glyphHalf = 1.79, margin = 0.25;                    // half the glyph height + a hair of breathing room
-  const outerX = round3(labelCenter - glyphHalf - margin);  // band outer (left) edge
-  const innerX = round3(labelCenter + glyphHalf + margin);  // band inner (right) edge — just past the label
-  const w = (innerX - outerX) / N;                          // stripe width; PRIMARY on the RIGHT, nearest the label
-  const top = FACE_TOP_MM, H = FACE_H_MM, bottom = top + H, centerY = top + H / 2;
-  // The vertical title's length (name-dependent) — estimated at ~1.5mm/char, since a detached SVG can't
-  // measure text — with a small pad so the stripes HUG the name. An empty name leaves no gap.
-  let gapTop = centerY, gapBot = centerY;
-  if (name) { const half = (name.length * 1.5) / 2 + 0.8; gapTop = Math.max(top, centerY - half); gapBot = Math.min(bottom, centerY + half); }
-  // The primary (inner) edge continues straight down through the gap as a hair-thin line, UNDERLINING
-  // the label — joining the stripes above and below so the name sits in a colour "box".
-  const lineW = 0.3;
-  const line = doc.createElementNS(SVG_NS, 'rect');
-  line.setAttribute('x', round3(innerX - lineW)); line.setAttribute('y', round3(top));
-  line.setAttribute('width', lineW); line.setAttribute('height', round3(H));
-  line.setAttribute('fill', dimColor(colors[0], BAND_DIM));  // primary colour, dimmed
-  g.appendChild(line);
+  // The colour band is two 8mm segments HUGGING the name (one each side); the rest of the strip
+  // stays black. N stripes stack within the band height (PRIMARY at the BOTTOM, nearest the face).
+  const vb = (svg.getAttribute('viewBox') || '').trim().split(/\s+/).map(Number);
+  const W = vb.length === 4 ? vb[2] : 142;
+  const left = FACE_LEFT_MM, right = left + W, centerX = left + W / 2;
+  const stripTop = FACE_TOP_MM - TITLE_STRIP_MM, stripBot = stripTop + TITLE_BAR_MM;
+  // A shelf line in the BORDER's colour runs the full width directly below (touching) the bands.
+  const frame0 = svg.querySelector('rect[fill="none"][stroke]');
+  const shelfCol = (frame0 && frame0.getAttribute('stroke')) || '#7d7d7d';
+  const shelfH = parseFloat((frame0 && frame0.getAttribute('stroke-width')) || '0.5');
+  const bandH = TITLE_BAR_MM - shelfH;      // bands sit ON the shelf line
+  const segTop = stripTop + inset;          // top edge touches the upper border line's inner edge
+  const segH = bandH - inset;
+  const h = segH / N;                       // stripe height
+  // The name's width — estimated at ~1.5mm/char (a detached SVG can't measure text) — with a small
+  // pad so the segments HUG the name.
+  let gapL = centerX, gapR = centerX;
+  if (name) { const half = (name.length * 2.25) / 2 + 0.8; gapL = Math.max(left, centerX - half); gapR = Math.min(right, centerX + half); }
+  // ONE colour segment, LEFT of the name only — 12mm long, all four corners rounded (the stripes
+  // are clipped to a rounded rect over the segment).
+  const SEG_MM = 12, SEG_SHIFT = 1;         // the pill sits 1mm left of the name's gap edge
+  const segs = [];
+  const segEnd = gapL - SEG_SHIFT;
+  const segL = Math.max(left, segEnd - SEG_MM);
+  if (segEnd - segL > 0.3) segs.push([segL, segEnd]);
+  const segClipId = `title-seg-clip-${stripClipSeq++}`;
+  const sclip = doc.createElementNS(SVG_NS, 'clipPath'); sclip.setAttribute('id', segClipId);
+  const scr = doc.createElementNS(SVG_NS, 'rect');
+  scr.setAttribute('x', round3(segL)); scr.setAttribute('y', round3(segTop));
+  scr.setAttribute('width', round3(segEnd - segL)); scr.setAttribute('height', round3(segH));
+  scr.setAttribute('rx', '1');
+  sclip.appendChild(scr); g.appendChild(sclip);
+  const segG = doc.createElementNS(SVG_NS, 'g');
+  segG.setAttribute('clip-path', `url(#${segClipId})`);
+  bandG.appendChild(segG);
+  const shelf = doc.createElementNS(SVG_NS, 'rect');
+  shelf.setAttribute('x', round3(left)); shelf.setAttribute('y', round3(stripBot - shelfH));
+  shelf.setAttribute('width', round3(W)); shelf.setAttribute('height', round3(shelfH));
+  shelf.setAttribute('fill', shelfCol);
+  bandG.appendChild(shelf);
   for (let i = 0; i < N; i++) {
-    const x = round3(outerX + i * w);
-    const col = colors[N - 1 - i];                          // reversed: primary rightmost, nearest the label
-    for (const [a, b] of minusGap(top, bottom, gapTop, gapBot)) {   // each stripe runs full height, broken at the label
-      if (b - a < 0.6) continue;
+    const y = round3(segTop + i * h);
+    const col = colors[N - 1 - i];            // reversed: primary at the bottom, nearest the face
+    for (const [a, b] of segs) {
       const r = doc.createElementNS(SVG_NS, 'rect');
-      r.setAttribute('x', x); r.setAttribute('y', round3(a));
-      r.setAttribute('width', round3(w)); r.setAttribute('height', round3(b - a));
+      r.setAttribute('x', round3(a)); r.setAttribute('y', y);
+      r.setAttribute('width', round3(b - a)); r.setAttribute('height', round3(h));
       r.setAttribute('fill', dimColor(col, BAND_DIM));
-      g.appendChild(r);
+      segG.appendChild(r);
     }
   }
   svg.appendChild(g);   // above the faceplate art, below the title text (appended next)
@@ -813,22 +876,46 @@ function decoratePanel(parsed, descriptor, opts) {
     if (port.element.hasAttribute('data-wcoast-param')) paintKnAck(port, opts.dark);
     else paintJack(port, opts.dark);
   }
-  // Vertical title up the left edge, fitted into the existing left margin.
+  // Horizontal title in the 4mm strip above the face, centred on the module's width.
   const name = (descriptor && descriptor.name) || '';
-  drawIdentityStrip(svg, descriptor, ports, name);   // colour bar in the title column (breaks around the label below)
+  drawIdentityStrip(svg, descriptor, ports, name);   // colour band in the title strip (breaks around the label below)
   if (name) {
+    const vbT = (svg.getAttribute('viewBox') || '').trim().split(/\s+/).map(Number);
+    const wT = vbT.length === 4 ? vbT[2] : 142;
     const t = svg.ownerDocument.createElementNS(SVG_NS, 'text');
-    t.setAttribute('transform', `translate(${round2(FACE_LEFT_MM + 3.4)} ${round2(FACE_TOP_MM + FACE_H_MM / 2)}) rotate(-90)`);
+    t.setAttribute('x', round2(FACE_LEFT_MM + wT / 2));
+    t.setAttribute('y', round2(FACE_TOP_MM - TITLE_STRIP_MM + (TITLE_BAR_MM - 0.5) / 2 + 1.67));   // baseline so the glyph block centres in the bar
     t.setAttribute('text-anchor', 'middle');
-    t.setAttribute('font-size', '3.1');
+    t.setAttribute('font-size', '4.65');
     t.setAttribute('font-weight', '700');
     t.setAttribute('letter-spacing', '0.2');
-    t.setAttribute('fill', opts.dark ? '#ffffff' : '#163a69');
+    t.setAttribute('fill', '#ffffff');   // the strip field is black in both themes
     t.setAttribute('class', 'module-title');
     t.setAttribute('opacity', '0.9');
     t.setAttribute('pointer-events', 'auto');   // the title is the delete/move handle (right-click for its menu)
     t.textContent = name;
     svg.appendChild(t);
+  }
+  // The light panel border now wraps the TITLE STRIP too: retire the authored frame (which ran
+  // around the face only, drawing a line UNDER the title bar) and draw one border around the
+  // whole module — slightly rounded corners at the strip's upper left and right.
+  const frame = svg.querySelector('rect[fill="none"][stroke]');
+  if (frame) {
+    const vbF = (svg.getAttribute('viewBox') || '').trim().split(/\s+/).map(Number);
+    const wF = vbF.length === 4 ? vbF[2] : 142;
+    const b = svg.ownerDocument.createElementNS(SVG_NS, 'rect');
+    b.setAttribute('x', round2(FACE_LEFT_MM + 0.5));
+    b.setAttribute('y', round2(FACE_TOP_MM - TITLE_STRIP_MM + 0.5));
+    b.setAttribute('width', round2(wF - 1));
+    b.setAttribute('height', round2(FACE_H_MM + TITLE_STRIP_MM - 1));
+    b.setAttribute('rx', frame.getAttribute('rx') || '2.2');
+    b.setAttribute('fill', 'none');
+    b.setAttribute('stroke', frame.getAttribute('stroke'));
+    b.setAttribute('stroke-width', frame.getAttribute('stroke-width') || '0.5');
+    b.setAttribute('class', 'module-frame');
+    b.setAttribute('pointer-events', 'none');
+    frame.setAttribute('stroke', 'none');
+    svg.appendChild(b);   // last = on top, so the band never covers the border line
   }
 }
 

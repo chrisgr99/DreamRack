@@ -19,10 +19,10 @@
 //     pointer is over one). Modules are placed and sized by their real panel
 //     width in mm (no HP grid); neighbours butt together edge to edge.
 
-import { loadPanel, showValue, attachControlInteraction, valueToPosition, positionToValue, FACE_H_MM, FACE_TOP_MM, FACE_LEFT_MM } from './panel-loader.js';
+import { loadPanel, showValue, attachControlInteraction, valueToPosition, positionToValue, FACE_H_MM, FACE_TOP_MM, FACE_LEFT_MM, TITLE_STRIP_MM, TITLE_BAR_MM } from './panel-loader.js';
 import { Patchbay } from './patchbay.js';
 
-const PANEL_H_MM = FACE_H_MM;   // modules display only the cropped functional face
+const PANEL_H_MM = FACE_H_MM + TITLE_STRIP_MM;   // the cropped functional face plus the 4mm title strip above it
 const ROW_GAP_MM = 0;           // vertical gap between rows (0 = flush, faceplates touch)
 const GAP_MM = 4;               // horizontal margin at the right of the case, in mm
 const SVG_NS = 'http://www.w3.org/2000/svg';
@@ -78,7 +78,7 @@ const SCOPE_GRID_ZERO = 'rgba(150,190,150,0.9)';   // the grid's green-grey, bri
 const CALLOUT_OPACITY = 1;     // loop, line, and grab handle are OPAQUE — the muted border colour already reads as secondary
 const CALLOUT_COLOR = '#8a8d92';        // DARK mode: loop/line/handle in the scope's border grey (the .scope border) — reads as part of the frame on dark panels
 const CALLOUT_COLOR_LIGHT = '#5a5d62';  // LIGHT mode: a darker grey — the callout floats over LIGHT panels, where the border grey has no contrast
-const TITLE_BAND_MM = 5;                // a panel drags only by this-wide left-edge title band; a press further right doesn't move it
+const TITLE_BAND_MM = TITLE_BAR_MM;     // a panel drags only by its top title bar; a press lower on the face doesn't move it
 // View navigation: Command-scroll pans; Command-click opens the overview navigator (a whole-rack picture)
 // to zoom + jump. VIEW_ZOOM_MAX caps magnification. VIEW_EASE(_MS) is used only by resetZoom's glide back
 // to the fit-to-window home view (View ▸ Fit to window, or double-click a panel background).
@@ -800,7 +800,7 @@ export class Rack {
     const hole = port.holeR || 0;
     return {
       x: rec.x + (port.anchor.x - FACE_LEFT_MM),
-      y: rec.row * (PANEL_H_MM + ROW_GAP_MM) + (port.anchor.y - FACE_TOP_MM),
+      y: rec.row * (PANEL_H_MM + ROW_GAP_MM) + (port.anchor.y - FACE_TOP_MM + TITLE_STRIP_MM),
       r: hole,
       // Mid-ring radius: where a stub-less cord ends (middle of the coloured band).
       ring: port.outerR ? (hole + port.outerR) / 2 : hole,
@@ -4634,12 +4634,12 @@ export class Rack {
     // panel gap the pointer happens to be over.
     el.addEventListener('pointerenter', () => { this._hoverRec = rec; this.onSelect(rec); this._drawCables(); });
     el.addEventListener('pointerleave', () => { el.style.cursor = ''; if (this._hoverRec === rec) { this._hoverRec = null; this._drawCables(); } });
-    // A grab (hand) cursor over the left title band signals it's the drag handle; the rest of the
+    // A grab (hand) cursor over the top title strip signals it's the drag handle; the rest of the
     // faceplate stays default, and a control keeps its own cursor (a child's overrides this one).
     el.addEventListener('pointermove', (e) => {
       if (e.ctrlKey) return;   // Control held = macOS accessibility-zoom gesture; skip the getBoundingClientRect
                                // read + cursor write, which only fires over a module and fed the zoom feedback loop
-      const inBand = (e.clientX - el.getBoundingClientRect().left) <= TITLE_BAND_MM * this.pxPerMm;
+      const inBand = (e.clientY - el.getBoundingClientRect().top) <= TITLE_BAND_MM * this.pxPerMm;
       el.style.cursor = inBand ? 'var(--grip)' : '';
     });
 
@@ -5185,9 +5185,9 @@ export class Rack {
   _startDrag(e, rec) {
     if (e.button !== 0) return;
     this._hideAllScopeValues();   // a click on a panel background also dismisses any open scope settings box
-    // A panel moves ONLY by its left-edge title band; pressing anywhere else on the faceplate does not
+    // A panel moves ONLY by its top title strip; pressing anywhere else on the faceplate does not
     // drag it. (Controls stop their own pointerdown, so this only ever sees faceplate/title presses.)
-    if ((e.clientX - rec.el.getBoundingClientRect().left) > TITLE_BAND_MM * this.pxPerMm) {
+    if ((e.clientY - rec.el.getBoundingClientRect().top) > TITLE_BAND_MM * this.pxPerMm) {
       this._startPan(e);   // drag the panel background to pan the window; a plain click still leaves isolate
       return;
     }
