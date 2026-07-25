@@ -78,6 +78,8 @@ const SCOPE_GRID_ZERO = 'rgba(150,190,150,0.9)';   // the grid's green-grey, bri
 const CALLOUT_OPACITY = 1;     // loop, line, and grab handle are OPAQUE — the muted border colour already reads as secondary
 const CALLOUT_COLOR = '#8a8d92';        // DARK mode: loop/line/handle in the scope's border grey (the .scope border) — reads as part of the frame on dark panels
 const CALLOUT_COLOR_LIGHT = '#5a5d62';  // LIGHT mode: a darker grey — the callout floats over LIGHT panels, where the border grey has no contrast
+const DBL_MS = 350;                     // double-click window for knobs and knАcks — ours, not the system's,
+                                        // so the reset gesture feels the same on every control
 const TITLE_BAND_MM = TITLE_BAR_MM;     // a panel drags only by its top title bar; a press lower on the face doesn't move it
 // View navigation: Command-scroll pans; Command-click opens the overview navigator (a whole-rack picture)
 // to zoom + jump. VIEW_ZOOM_MAX caps magnification. VIEW_EASE(_MS) is used only by resetZoom's glide back
@@ -4556,9 +4558,11 @@ export class Rack {
         set: (val) => this._setParam(rec, b.id, val),
       }, { hitGrowMm: btnGrow.get(b.id) || 0 });
       b.group.addEventListener('pointerdown', (e) => e.stopPropagation());
-      if (b.kind === 'knob' && !b.group.hasAttribute('data-wcoast-port')) {   // double-click a knob → default
-        b.group.addEventListener('dblclick', (e) => {                          // (a knAck resets via its own timed click handler)
-          e.preventDefault(); e.stopPropagation();
+      if (b.kind === 'knob' && !b.group.hasAttribute('data-wcoast-port')) {   // double-click a knob → its default
+        const dblSt = {};                                                      // (a knАck has its own zone-aware version)
+        b.group.addEventListener('pointerdown', (e) => {
+          if (e.button !== 0 || !this._isDoublePress(e, dblSt)) return;
+          e.preventDefault();
           const def = this._paramDefault(rec, b.id);
           if (def !== undefined) this._setParam(rec, b.id, def);
         });
@@ -4968,11 +4972,20 @@ export class Rack {
     (this._dualKnacks || (this._dualKnacks = [])).push(dk);
     // Cabling: the STANDARD jack pointerdown — proven grab/drop, and it early-returns when a cable is
     // already in hand, so dropping onto the knAck no longer also grabs a fresh cable.
+    const dblSt = {};
     el.addEventListener('pointerdown', (e) => {
-      // Pick up a cable ONLY from the terminal (the jack) — the same region a drop lands on. A click
-      // on the knob body does nothing (value/AV are scroll-only); a cord already in hand drops via the
-      // document handler, so let that case through.
-      if (!this._tempCable && e.button === 0 && !this._onKnackTerminal(e, rec.key, portId)) { e.stopPropagation(); return; }
+      // Pick up a cable ONLY from the terminal (the jack) — the same region a drop lands on. On the
+      // knob BODY a single click does nothing (value/AV are scroll-only), but a DOUBLE click resets
+      // whichever zone the pointer is over: the AV band resets the depth, anywhere else the value —
+      // one or the other, never both. A cord already in hand drops via the document handler.
+      if (!this._tempCable && e.button === 0 && !this._onKnackTerminal(e, rec.key, portId)) {
+        if (this._isDoublePress(e, dblSt)) {
+          e.preventDefault();
+          if (this._knackZone(e, dk).zone === 'av') { this._setParam(rec, b.depthId, 0); this._renderKnackSplit(dk, true); }
+          else { const d = this._paramDefault(rec, b.id); if (d !== undefined) this._setParam(rec, b.id, d); }
+        }
+        e.stopPropagation(); return;
+      }
       this._onJackPointerDown(e, rec.key, portId);
     });
     el.addEventListener('wheel', (e) => this._dualKnackWheel(e, dk), { passive: false });
@@ -4995,20 +5008,9 @@ export class Rack {
     if (e.ctrlKey) return;   // ctrl+wheel is the rack pinch-zoom
     e.preventDefault();
     const raw = e.deltaMode === 1 ? e.deltaY * 16 : e.deltaMode === 2 ? e.deltaY * 400 : e.deltaY;
-    // Route by ZONE: the BOTTOM green band (patched only) → AV depth; everything else — the whole top
-    // hemisphere plus the outer blue ring — → value.
-    let frac = 1;         // pointer distance from the jack centre, as a fraction of the knob radius
-    let belowCentre = false;
-    const ctm = dk.b.group.getScreenCTM();
-    if (ctm && dk.b.pivot) {
-      const sx = ctm.a * dk.b.pivot.x + ctm.c * dk.b.pivot.y + ctm.e;
-      const sy = ctm.b * dk.b.pivot.x + ctm.d * dk.b.pivot.y + ctm.f;
-      const Rpx = (dk.b.group.getBoundingClientRect().width / 2) || 1;
-      frac = Math.hypot(e.clientX - sx, e.clientY - sy) / Rpx;
-      belowCentre = e.clientY > sy;
-    }
-    const greenFrac = dk.greenOut / dk.R;
-    if (dk.patched && dk.avOn() && belowCentre && frac <= greenFrac) {
+    // Route by ZONE: the BOTTOM band (patched, AV on) → depth; everything else → value.
+    const { zone, frac, greenFrac } = this._knackZone(e, dk);
+    if (zone === 'av') {
       // AV: nearer the centre scrolls faster, nearer the green edge slower/finer
       const f = Math.max(0.2, 1 - 0.8 * Math.min(1, frac / greenFrac));
       const step = (-raw / 100) * 0.05 * f;
@@ -5031,6 +5033,32 @@ export class Rack {
       const np = Math.max(0, Math.min(1, valueToPosition(dk.b.meta, dk.rec.values.get(dk.b.id)) + step));
       this._setParam(dk.rec, dk.b.id, positionToValue(dk.b.meta, np));   // _setParam → showValue moves the value pointer
     }
+  }
+
+  // Two presses within DBL_MS, near the same spot = a double. Manual rather than the native dblclick
+  // so knobs and knАcks share one window; `st` is the caller's per-control state object.
+  _isDoublePress(e, st) {
+    const t = e.timeStamp || 0;
+    if (st.t && (t - st.t) <= DBL_MS && Math.hypot(e.clientX - st.x, e.clientY - st.y) < 8) { st.t = 0; return true; }
+    st.t = t; st.x = e.clientX; st.y = e.clientY; return false;
+  }
+
+  // Which half of a knАck is the pointer over? 'av' = the bottom band while patched with the AV on
+  // (its depth zone); 'value' = everything else. Also returns the radial fraction, which the wheel
+  // uses for its fine/coarse speed.
+  _knackZone(e, dk) {
+    let frac = 1, belowCentre = false;
+    const ctm = dk.b.group.getScreenCTM();
+    if (ctm && dk.b.pivot) {
+      const sx = ctm.a * dk.b.pivot.x + ctm.c * dk.b.pivot.y + ctm.e;
+      const sy = ctm.b * dk.b.pivot.x + ctm.d * dk.b.pivot.y + ctm.f;
+      const Rpx = (dk.b.group.getBoundingClientRect().width / 2) || 1;
+      frac = Math.hypot(e.clientX - sx, e.clientY - sy) / Rpx;
+      belowCentre = e.clientY > sy;
+    }
+    const greenFrac = dk.greenOut / dk.R;
+    const zone = (dk.patched && dk.avOn() && belowCentre && frac <= greenFrac) ? 'av' : 'value';
+    return { zone, frac, greenFrac };
   }
 
   // Would a cable dropped here land on this knАck's terminal? The SAME test the drop uses (_jackNear),
@@ -5069,8 +5097,7 @@ export class Rack {
   _dualKnackMenu(e, dk) {
     e.preventDefault(); e.stopPropagation();
     const { rec, b } = dk;
-    const items = [{ label: 'Reset value', action: () => { const d = this._paramDefault(rec, b.id); if (d !== undefined) this._setParam(rec, b.id, d); } }];
-    if (dk.patched && dk.avOn()) items.push({ label: 'Reset CV depth', action: () => { this._setParam(rec, b.depthId, 0); this._renderKnackSplit(dk, true); } });
+    const items = [];   // resetting is a double-click on the zone you want — not a menu item
     if (b.quantizeId) {
       const on = rec.values.get(b.quantizeId) === 'on';
       items.push({ label: (on ? '✓ ' : '    ') + 'Quantize', action: () => this._setParam(rec, b.quantizeId, on ? 'off' : 'on') });
