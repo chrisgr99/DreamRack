@@ -259,6 +259,7 @@ export function parsePanel(svg, descriptor) {
       // as a normal knob until that jack is patched, then splits it (value top, depth below).
       depthId: el.getAttribute('data-wcoast-depth') || null,
       quantizeId: el.getAttribute('data-wcoast-quantize') || null,   // detented knAck: right-click Quantize toggle
+      avDefault: el.getAttribute('data-wcoast-av') || 'on',          // the DESIGNER'S default for the AV; the user can flip it per knob (right-click)
       pivot: (cx != null && cy != null) ? { x: cx, y: cy } : null,
       indicator: el.querySelector('[data-wcoast-role="indicator"]'),
       operator: el.querySelector('[data-wcoast-role="operator"]'),

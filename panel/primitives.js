@@ -42,6 +42,35 @@ function jack(id, cx, cy, { r = 3.0, hole = 1.6, fill = JACK_NEUTRAL, label: lab
 // sweep. Style is fixed; radius, cap, sweep, and tick count are params. Scales
 // (numbers around the dial) are added as a later option. Needs theme for the ink /
 // ring-stroke / cap-stroke colours (knobs are baked per theme, not repainted).
+// Calibration scale — fixed panel art around a dial: a tick and/or a label at each
+// mark's angle (from `at` 0..1 along the sweep, or an explicit `angle`), the label one
+// or more lines. Optional 12-o'clock index triangle. Static (not rotated). Shared by
+// knob() and knack().
+function dialScale(cx, cy, outerR, scale, angleMin, angleMax, ink) {
+  if (!scale) return '';
+  let scaleSvg = '';
+  const gap = scale.tickGap ?? 0.6, tlen = scale.tickLen ?? 1.1, lgap = scale.labelGap ?? 1.8;
+  const scCol = scale.color || ink, scSize = scale.size ?? 2.0, bSc = scSize + LABEL_BUMP, lh = bSc * 1.1;
+  const r0 = outerR + gap, r1 = r0 + tlen, rl = r1 + lgap;
+  for (const m of (scale.marks || [])) {
+    const deg = m.angle != null ? m.angle : angleMin + (m.at ?? 0) * (angleMax - angleMin);
+    const rad = deg * Math.PI / 180, sn = Math.sin(rad), cs = Math.cos(rad);
+    if (m.tick !== false) scaleSvg += `\n    <line x1="${(cx + sn * r0).toFixed(2)}" y1="${(cy - cs * r0).toFixed(2)}" x2="${(cx + sn * r1).toFixed(2)}" y2="${(cy - cs * r1).toFixed(2)}" stroke="${scCol}" stroke-width="0.355"/>`;
+    if (m.label != null) {
+      const lines = Array.isArray(m.label) ? m.label : [m.label];
+      const lx = cx + sn * rl, ly = cy - cs * rl;
+      lines.forEach((ln, i) => {
+        scaleSvg += '\n    ' + label(lx, ly - (lines.length - 1) * lh / 2 + i * lh + bSc * 0.35, ln, { size: scSize, fill: scCol });
+      });
+    }
+  }
+  if (scale.index) {
+    const bR = outerR + gap, tR = bR + tlen + 1.4;
+    scaleSvg += `\n    <path d="M ${(cx - 1.3).toFixed(2)} ${(cy - bR).toFixed(2)} L ${cx} ${(cy - tR).toFixed(2)} L ${(cx + 1.3).toFixed(2)} ${(cy - bR).toFixed(2)} Z" fill="#f0f0f0" stroke="${ink}" stroke-width="0.24" stroke-linejoin="round"/>`;
+  }
+  return scaleSvg;
+}
+
 function knob(id, cx, cy, opts = {}) {
   const { radius = 4.6, cap = +(radius * 0.72).toFixed(2), angleMin = -150, angleMax = 150,
     ticks = 7, tickColor = '#ffffff', ring = 'url(#blueRing)', skirt = 0, scale = null, theme = {}, label: lab = null } = opts;
@@ -71,28 +100,7 @@ function knob(id, cx, cy, opts = {}) {
   // each mark's angle (from `at` 0..1 along the sweep, or an explicit `angle`), the
   // label one or more lines. Optional 12-o'clock index triangle. Static (not rotated).
   const outerR = hasSkirt ? skirt : radius;
-  let scaleSvg = '';
-  if (scale) {
-    const gap = scale.tickGap ?? 0.6, tlen = scale.tickLen ?? 1.1, lgap = scale.labelGap ?? 1.8;
-    const scCol = scale.color || ink, scSize = scale.size ?? 2.0, bSc = scSize + LABEL_BUMP, lh = bSc * 1.1;
-    const r0 = outerR + gap, r1 = r0 + tlen, rl = r1 + lgap;
-    for (const m of (scale.marks || [])) {
-      const deg = m.angle != null ? m.angle : angleMin + (m.at ?? 0) * (angleMax - angleMin);
-      const rad = deg * Math.PI / 180, sn = Math.sin(rad), cs = Math.cos(rad);
-      if (m.tick !== false) scaleSvg += `\n    <line x1="${(cx + sn * r0).toFixed(2)}" y1="${(cy - cs * r0).toFixed(2)}" x2="${(cx + sn * r1).toFixed(2)}" y2="${(cy - cs * r1).toFixed(2)}" stroke="${scCol}" stroke-width="0.355"/>`;
-      if (m.label != null) {
-        const lines = Array.isArray(m.label) ? m.label : [m.label];
-        const lx = cx + sn * rl, ly = cy - cs * rl;
-        lines.forEach((ln, i) => {
-          scaleSvg += '\n    ' + label(lx, ly - (lines.length - 1) * lh / 2 + i * lh + bSc * 0.35, ln, { size: scSize, fill: scCol });
-        });
-      }
-    }
-    if (scale.index) {
-      const bR = outerR + gap, tR = bR + tlen + 1.4;
-      scaleSvg += `\n    <path d="M ${(cx - 1.3).toFixed(2)} ${(cy - bR).toFixed(2)} L ${cx} ${(cy - tR).toFixed(2)} L ${(cx + 1.3).toFixed(2)} ${(cy - bR).toFixed(2)} Z" fill="#f0f0f0" stroke="${ink}" stroke-width="0.24" stroke-linejoin="round"/>`;
-    }
-  }
+  const scaleSvg = dialScale(cx, cy, outerR, scale, angleMin, angleMax, ink);
   // The ring (with its directional drop-shadow) and the cap are rotationally
   // symmetric, so they stay put. The ticks and the pointer ARE the knob face — they
   // sit in the indicator group and rotate together, so the ticks turn with the knob.
@@ -105,6 +113,53 @@ function knob(id, cx, cy, opts = {}) {
   </g>`;
   const ext = Math.max(radius, skirt);   // label clears the outermost tier (skirt if present)
   if (lab) out += '\n' + attachedLabel(cx, cy, ext, ext, lab);
+  return out;
+}
+
+// knack — THE knAck: a knob whose centre is a CV jack. The panel carries only the
+// skeleton (blue ring, cap, centre jack, binding attributes, optional printed scale);
+// the app dresses it live — metal band, grips, pointer, AV hemisphere — so improving
+// the control in code updates every panel that uses it. Options beyond knob():
+//   port     the centre jack's port id (required for a live knАck)
+//   depth    the attenuverter (AV) param id — present = the AV capability exists
+//   quantize a detented knАck's quantize-toggle param id
+//   av       'on' | 'off' — the DESIGNER'S default for whether the AV shows when a
+//            cable is patched (the user can flip it from the knob's right-click menu)
+function knack(id, cx, cy, opts = {}) {
+  const { radius = 4.6, cap = +(radius * 0.72).toFixed(2), angleMin = -150, angleMax = 150,
+    port = null, depth = null, quantize = null, av = null,
+    scale = null, theme = {}, label: lab = null } = opts;
+  const ink = theme.ink || '#163a69', ringStroke = theme.ringStroke || '#004b7a', capStroke = theme.capStroke || '#666666';
+  const hole = Math.max(1.1, Math.min(1.8, +(radius * 0.242).toFixed(2)));
+  const band = +(hole + 1).toFixed(2);
+  const scaleSvg = dialScale(cx, cy, radius, scale, angleMin, angleMax, ink);
+  // Static preview of the live dress: 7 grip dashes evenly around the rim (the app
+  // re-draws these, reading the FIRST white line's length as the dash length — so the
+  // grips must precede the pointer here), then a pointer from the jack band to the rim.
+  let tickSvg = '';
+  for (let k = 0; k < 7; k++) {
+    const a = k * (2 * Math.PI / 7);
+    const sn = Math.sin(a), cs = Math.cos(a);
+    const oR = radius + 0.5, iR = oR - 1.5;
+    tickSvg += `\n      <line x1="${(cx + sn * oR).toFixed(2)}" y1="${(cy - cs * oR).toFixed(2)}" x2="${(cx + sn * iR).toFixed(2)}" y2="${(cy - cs * iR).toFixed(2)}" stroke="#ffffff" stroke-width="0.4"/>`;
+  }
+  const attrs =
+    ` data-wcoast-param="${id}" data-wcoast-cx="${cx}" data-wcoast-cy="${cy}"` +
+    ` data-wcoast-angle-min="${angleMin}" data-wcoast-angle-max="${angleMax}"` +
+    (port ? ` data-wcoast-port="${port}"` : '') +
+    (depth ? ` data-wcoast-depth="${depth}"` : '') +
+    (quantize ? ` data-wcoast-quantize="${quantize}"` : '') +
+    (av ? ` data-wcoast-av="${av}"` : '');
+  let out = `  <g${attrs}>
+    <circle cx="${cx}" cy="${cy}" r="${radius}" fill="url(#blueRing)" stroke="${ringStroke}" stroke-width="0.355" filter="url(#softShadow)"/>
+    <circle cx="${cx}" cy="${cy}" r="${cap}" fill="url(#knobCap)" stroke="${capStroke}" stroke-width="0.2366"/>${scaleSvg}
+    <circle cx="${cx}" cy="${cy}" r="${band}" fill="#ff7300"/>
+    <circle cx="${cx}" cy="${cy}" r="${hole}" fill="#000000" data-wcoast-role="jackhole"/>
+    <g data-wcoast-role="indicator">${tickSvg}
+      <line x1="${cx}" y1="${(cy - band).toFixed(2)}" x2="${cx}" y2="${(cy - radius).toFixed(2)}" stroke="#ffffff" stroke-width="0.5"/>
+    </g>
+  </g>`;
+  if (lab) out += '\n' + attachedLabel(cx, cy, radius, radius, lab);
   return out;
 }
 
@@ -362,4 +417,4 @@ function bipolarMark(kx, ky, kr, { gap = 2.0, spanDeg = 23, r = 1.27, color = '#
   return `  <g>\n    ${parts.join('\n    ')}\n  </g>`;
 }
 
-export { defs, jack, knob, label, attachedLabel, evenScale, bipolarMark, ledLamp, waveGlyph, button, radioGroup, stepButton, slider, vuMeter, textWidth, wrapLines };
+export { defs, jack, knob, knack, label, attachedLabel, evenScale, bipolarMark, ledLamp, waveGlyph, button, radioGroup, stepButton, slider, vuMeter, textWidth, wrapLines };

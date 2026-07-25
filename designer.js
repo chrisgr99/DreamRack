@@ -12,7 +12,7 @@ import { renderPanel } from './panel/render.js';
 import { loadPanel } from './host/panel-loader.js';
 import { applyOverrides } from './panel/overrides.js';
 import { THEME } from './panel/theme.js';
-import { defs, jack, knob, radioGroup, button, slider, label } from './panel/primitives.js';   // control-gallery thumbnails
+import { defs, jack, knob, knack, radioGroup, button, slider, label } from './panel/primitives.js';   // control-gallery thumbnails
 
 import oscLayout from './modules/complex-oscillator-259t/panel.layout.js';
 import oscDesc from './modules/complex-oscillator-259t/descriptor.js';
@@ -217,7 +217,8 @@ function itemOffset(layout) {
 // are movable in this phase; labels, dividers and marks come later.
 function anchor(it, layout) {
   switch (it.t) {
-    case 'knob':       return { x: it.x, y: it.y, axes: 'xy', r: Math.max(3, (it.opts && it.opts.radius || 4.6) * 0.5) };
+    case 'knob':
+    case 'knack':      return { x: it.x, y: it.y, axes: 'xy', r: Math.max(3, (it.opts && it.opts.radius || 4.6) * 0.5) };
     case 'jack':       return { x: it.x, y: it.y, axes: 'xy', r: 3.0 };
     case 'button':     return { x: it.x, y: it.y, axes: 'xy', r: 3.0 };
     case 'radio':      return { x: it.x, y: it.y, axes: 'xy', r: 3.4 };
@@ -671,7 +672,8 @@ function buildSettingsBody(id) {
   // --- Presentation (layout) ---
   const pres = section('Presentation', 'pres');
   const addP = (label, el) => pres.body.appendChild(fieldRow(label, el));
-  if (it.t === 'knob') addP('radius', numberInput(optVal(id, 'radius', 4.6), (v) => setKnobRadius(id, v)));
+  if (it.t === 'knob' || it.t === 'knack') addP('radius', numberInput(optVal(id, 'radius', 4.6), (v) => setKnobRadius(id, v)));
+  if (it.t === 'knack') addP('AV default', selectInput(optVal(id, 'av', 'on'), [['on', 'on — attenuverter shows when patched'], ['off', 'off — plain knAck']], (v) => setOpt(id, 'av', v)));
   if (it.opts && it.opts.label && typeof it.opts.label === 'object') {
     addP('label text', textInput(optVal(id, 'label.text', ''), (v) => setOpt(id, 'label.text', v)));
     addP('label place', selectInput(optVal(id, 'label.placement', 'below'), PLACEMENTS, (v) => setOpt(id, 'label.placement', v)));
@@ -685,7 +687,7 @@ function buildSettingsBody(id) {
     pres.body.appendChild(stepsEditor(id));
   }
   if (it.t === 'button') { addP('radius', numberInput(optVal(id, 'r', 2.0), (v) => setOpt(id, 'r', v))); addP('kind', textInput(optVal(id, 'kind', 'red'), (v) => setOpt(id, 'kind', v))); }
-  if (it.t === 'knob') {   // dial scale as its own collapsible sub-section
+  if (it.t === 'knob' || it.t === 'knack') {   // dial scale as its own collapsible sub-section
     const sc = section('Dial scale', 'scale'); sc.el.classList.add('sub');
     sc.body.appendChild(scaleEditor(id));
     pres.body.appendChild(sc.el);
@@ -812,7 +814,7 @@ function openModuleSettings() {
 
 // ---- control gallery (a floating palette; drag a control onto the panel) --
 const TOOLS = [
-  { type: 'jack', label: 'Jack' }, { type: 'knob', label: 'Knob' },
+  { type: 'jack', label: 'Jack' }, { type: 'knob', label: 'Knob' }, { type: 'knack', label: 'knAck' },
   { type: 'radio', label: 'Radio' }, { type: 'button', label: 'Button' }, { type: 'slider', label: 'Slider' },
   { type: 'label', label: 'Label', structure: true }, { type: 'divider', label: 'Divider', structure: true },
 ];
@@ -825,6 +827,7 @@ function thumbSVG(type) {
   let inner = '', vb = '0 0 12 12';
   if (type === 'jack') { inner = jack('t', 4, 4, {}); vb = '0 0 8 8'; }
   else if (type === 'knob') { inner = knob('t', 6, 6, { radius: 4.6, theme: th }); vb = '0 0 12 12'; }
+  else if (type === 'knack') { inner = knack('t', 6, 6, { radius: 4.6, theme: th }); vb = '0 0 12 12'; }
   else if (type === 'radio') { inner = radioGroup('t', 2.4, 3, { orientation: 'h', spacing: 3.6, ledR: 1.5, steps: [{ value: 'a' }, { value: 'b' }, { value: 'c' }], theme: th }); vb = '0 0 11 6'; }
   else if (type === 'button') { inner = button('t', 4, 4, { r: 3, kind: 'red' }); vb = '0 0 8 8'; }
   else if (type === 'slider') { inner = slider('t', 4, { top: 1, bot: 12, valuePos: 0.6, theme: th }); vb = '0 0 8 14'; }
@@ -948,6 +951,12 @@ function makeControl(type, id, x, y) {
   switch (type) {
     case 'jack':   return { item: { t: 'jack', id, x, y, opts: { label: lbl('in') } }, entry: { id, name: 'In', domain: 'control', dir: 'in' }, kind: 'port' };
     case 'knob':   return { item: { t: 'knob', id, x, y, opts: { radius: 4.6, label: lbl('knob') } }, entry: { id, name: 'Knob', min: 0, max: 1, default: 0, unit: '', curve: 'linear' }, kind: 'param' };
+    // The knAck: one drop creates the value param, the centre CV port, and the AV depth param.
+    case 'knack':  return { item: { t: 'knack', id, x, y, opts: { radius: 4.6, av: 'on', port: `${id}Cv`, depth: `${id}Depth`, label: lbl('knack') } }, kind: 'multi', entries: [
+      { kind: 'param', entry: { id, name: 'Knack', min: 0, max: 1, default: 0, unit: '', curve: 'linear' } },
+      { kind: 'port', entry: { id: `${id}Cv`, name: 'CV', domain: 'control', dir: 'in' } },
+      { kind: 'param', entry: { id: `${id}Depth`, name: 'CV depth', min: -1, max: 1, default: 0, unit: '', curve: 'linear', subControl: true } },
+    ] };
     case 'radio':  return { item: { t: 'radio', id, x, y, opts: { orientation: 'v', spacing: 5.6, ledR: 2.16, steps: [{ value: 'a', label: 'A' }, { value: 'b', label: 'B' }] } }, entry: { id, name: 'Switch', curve: 'stepped', default: 'a', steps: [{ value: 'a', name: 'A' }, { value: 'b', name: 'B' }] }, kind: 'param' };
     case 'button': return { item: { t: 'button', id, x, y, opts: { r: 2.0, kind: 'red' } }, entry: { id, name: 'Button', curve: 'stepped', default: 'off', steps: [{ value: 'off', name: 'Off' }, { value: 'on', name: 'On' }] }, kind: 'param' };
     case 'slider': return { item: { t: 'slider', id, x, opts: {} }, entry: { id, name: 'Level', min: 0, max: 1, default: 0.8, unit: '', curve: 'linear' }, kind: 'param' };
@@ -969,6 +978,7 @@ function placeControl(type, clientX, clientY) {
   m.base.items.push(made.item);
   if (made.kind === 'port') m.workDesc.ports.push(made.entry);
   else if (made.kind === 'param') m.workDesc.params.push(made.entry);
+  else if (made.kind === 'multi') for (const en of made.entries) (en.kind === 'port' ? m.workDesc.ports : m.workDesc.params).push(en.entry);
   m.dirtyDraft = true;
   selectedId = made.item.id; scheduleRender();   // select it (no dialog — so you can drop several); an amber dot flags it as unconfigured
 }
@@ -981,6 +991,12 @@ function renameControl(oldId, newId) {
   pushUndo();
   const it = m.base.items.find((i) => i.id === oldId); if (it) it.id = newId;
   const e = descEntry(oldId); if (e) e.id = newId;
+  if (it && it.t === 'knack') {   // derived ids follow the base rename
+    for (const [suffix, optKey] of [['Cv', 'port'], ['Depth', 'depth'], ['Quant', 'quantize']]) {
+      const sub = descEntry(oldId + suffix); if (sub) sub.id = newId + suffix;
+      if (it.opts && it.opts[optKey] === oldId + suffix) it.opts[optKey] = newId + suffix;
+    }
+  }
   if (settingsId === oldId) settingsId = newId;
   selectedId = newId; m.dirtyDraft = true; scheduleRender(); refreshSettings();
 }

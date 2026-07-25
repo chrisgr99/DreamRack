@@ -54,6 +54,11 @@ for (const L of CH) {
   params.push({ id: `decay${L}`, name: `Decay ${L}`, section: 'channel', curve: 'exp', min: 0.001, max: 10, default: 0.2, glideMs: 0 });
   params.push({ id: `trigBtn${L}`, name: `Trig ${L}`, section: 'channel', ...onoff(), default: 'off', momentary: true });
   params.push({ id: `mode${L}`, name: `Mode ${L}`, section: 'channel', curve: 'stepped', steps: [{ value: 'transient' }, { value: 'sustained' }, { value: 'cyclic' }], default: 'transient' });
+  // knAck AV depth per time knob: time = knob x 2^(depth x CV x octaves). Default 1 =
+  // the plain knАck (AV off): CV acts at full strength. subControl = driven by the knob's
+  // AV ring, not its own SVG element, so the panel-coverage check skips it.
+  params.push({ id: `attackDepth${L}`, name: `Attack CV depth ${L}`, section: 'channel', curve: 'linear', min: -1, max: 1, default: 1, glideMs: 10, subControl: true });
+  params.push({ id: `decayDepth${L}`, name: `Decay CV depth ${L}`, section: 'channel', curve: 'linear', min: -1, max: 1, default: 1, glideMs: 10, subControl: true });
 }
 // Quadrature (placeholder behaviour — see header): a coordinated-time knob per
 // pair plus an enable toggle per pair.

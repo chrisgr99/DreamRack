@@ -59,6 +59,9 @@ class QuadFn281t extends AudioWorkletProcessor {
       const L = LTR[i];
       p.push({ name: `attack${L}`, defaultValue: 0.05, minValue: T_MIN, maxValue: T_MAX, automationRate: 'k-rate' });
       p.push({ name: `decay${L}`, defaultValue: 0.2, minValue: T_MIN, maxValue: T_MAX, automationRate: 'k-rate' });
+      // knAck AV depth: scales the CV inside the exponent; 1 = full strength (AV off), 0 = none.
+      p.push({ name: `attackDepth${L}`, defaultValue: 1, minValue: -1, maxValue: 1, automationRate: 'k-rate' });
+      p.push({ name: `decayDepth${L}`, defaultValue: 1, minValue: -1, maxValue: 1, automationRate: 'k-rate' });
     }
     p.push({ name: 'quadTimeAB', defaultValue: 0.5, minValue: 0, maxValue: 1, automationRate: 'k-rate' });
     p.push({ name: 'quadTimeCD', defaultValue: 0.5, minValue: 0, maxValue: 1, automationRate: 'k-rate' });
@@ -104,8 +107,8 @@ class QuadFn281t extends AudioWorkletProcessor {
     for (let ch = 0; ch < NCH; ch++) {
       const L = LTR[ch];
       const aCv = inputs[8 + ch], dCv = inputs[12 + ch];
-      const aT = clampTime(parameters[`attack${L}`][0] * Math.pow(2, (aCv && aCv.length ? aCv[0][0] : 0) * CV_OCT));
-      const dT = clampTime(parameters[`decay${L}`][0] * Math.pow(2, (dCv && dCv.length ? dCv[0][0] : 0) * CV_OCT));
+      const aT = clampTime(parameters[`attack${L}`][0] * Math.pow(2, parameters[`attackDepth${L}`][0] * (aCv && aCv.length ? aCv[0][0] : 0) * CV_OCT));
+      const dT = clampTime(parameters[`decay${L}`][0] * Math.pow(2, parameters[`decayDepth${L}`][0] * (dCv && dCv.length ? dCv[0][0] : 0) * CV_OCT));
       const T = aT + dT;
       aFrac[ch] = Math.min(0.98, Math.max(0.02, aT / T));
       dphi[ch] = 1 / (T * sr);

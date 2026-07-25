@@ -165,7 +165,12 @@ export function validate(obj, registry) {
     const byId = new Map((d.params || []).map((p) => [p.id, p]));
     for (const [pid, v] of Object.entries(vals)) {
       const p = byId.get(pid);
-      if (!p) return bad(`unknown param "${pid}" on "${mid}"`);
+      if (!p) {
+        // knAck UI state: "av.<paramId>" carries the knob's attenuverter on/off choice
+        // (designer default overridden by the user — see rack's _setupDualKnack).
+        if (pid.startsWith('av.') && byId.has(pid.slice(3)) && (v === 'on' || v === 'off')) continue;
+        return bad(`unknown param "${pid}" on "${mid}"`);
+      }
       if (p.curve === 'stepped') {
         const steps = (p.steps || []).map((s) => s.value);
         if (!steps.includes(v)) return bad(`param "${pid}" on "${mid}" must be one of: ${steps.join(', ')}`);
