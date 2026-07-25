@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='utf-8'?>
-<svg xmlns="http://www.w3.org/2000/svg" width="84mm" height="128.5mm" viewBox="0 0 90 128.5" font-family="Arial Narrow, Helvetica, Arial, sans-serif">
+<svg xmlns="http://www.w3.org/2000/svg" width="84mm" height="128.5mm" viewBox="0 0 91 128.5" font-family="Arial Narrow, Helvetica, Arial, sans-serif">
 <defs>
   <filter id="softShadow" x="-30%" y="-30%" width="160%" height="160%"><feDropShadow dx="0.4733" dy="0.5916" stdDeviation="0.4733" flood-color="#000" flood-opacity=".28" /></filter>
   <radialGradient id="blueRing"><stop offset="0" stop-color="#1688cc" /><stop offset="0.55" stop-color="#006da8" /><stop offset="1" stop-color="#003d62" /></radialGradient>
@@ -8,14 +8,14 @@
   <radialGradient id="redLed"><stop offset="0" stop-color="#ff4a4a" /><stop offset="0.55" stop-color="#d00000" /><stop offset="1" stop-color="#650000" /></radialGradient>
 </defs>
   <g transform="translate(3.9 7.0994)">
-  <rect x="0" y="0" width="90" height="113.5912" rx="2.5" fill="#262629" />
-  <rect x="0.5" y="0.5" width="89" height="112.5912" rx="2.2" fill="none" stroke="#7d7d7d" stroke-width="0.5" />
+  <rect x="0" y="0" width="91" height="113.5912" rx="2.5" fill="#262629" />
+  <rect x="0.5" y="0.5" width="90" height="112.5912" rx="2.2" fill="none" stroke="#7d7d7d" stroke-width="0.5" />
   <line x1="3" y1="9" x2="81.5" y2="9" stroke="#7d7d7d" stroke-width="0.355" />
   <line x1="3" y1="34" x2="67" y2="34" stroke="#7d7d7d" stroke-width="0.355" />
   <line x1="3" y1="59" x2="81.5" y2="59" stroke="#7d7d7d" stroke-width="0.355" />
   <line x1="3" y1="84" x2="67" y2="84" stroke="#7d7d7d" stroke-width="0.355" />
   <line x1="3" y1="109" x2="81.5" y2="109" stroke="#7d7d7d" stroke-width="0.355" />
-  <line x1="70" y1="9" x2="70" y2="109" stroke="#7d7d7d" stroke-width="0.355" />
+  <line x1="72" y1="9" x2="72" y2="109" stroke="#7d7d7d" stroke-width="0.355" />
   <g data-wcoast-port="trigA" data-wcoast-cx="10" data-wcoast-cy="16.5">
     <circle cx="10" cy="16.5" r="3" fill="#8a8a8a" stroke="#000000" stroke-width="0.3" filter="url(#softShadow)" />
     <circle cx="10" cy="16.5" r="1.6" fill="#000000" />
@@ -36,7 +36,7 @@
     <circle cx="23.2" cy="25.5" r="1.3" fill="url(#redLed)" stroke="#7c0000" stroke-width="0.2366" filter="url(#softShadow)" data-wcoast-role="step-indicator" data-wcoast-step="cyclic" /><circle cx="22.84" cy="25.14" r="0.39" fill="#ffb4b4" opacity="0.85" pointer-events="none" />
     <polyline points="21.90,29.90 22.55,28.50 23.2,29.90 23.85,28.50 24.50,29.90" fill="none" stroke="#b8b8bc" stroke-width="0.3" stroke-linejoin="round" />
   </g>
-  <g data-wcoast-param="attackA" data-wcoast-cx="40" data-wcoast-cy="20.5" data-wcoast-angle-min="-150" data-wcoast-angle-max="150" data-wcoast-port="attackCvA" transform="translate(-8 0)" data-wcoast-depth="attackDepthA" data-wcoast-av="off">
+  <g data-wcoast-param="attackA" data-wcoast-cx="40" data-wcoast-cy="20.5" data-wcoast-angle-min="-150" data-wcoast-angle-max="150" data-wcoast-port="attackCvA" transform="translate(-6 0)" data-wcoast-depth="attackDepthA" data-wcoast-av="off">
     <circle cx="40" cy="20.5" r="6.4" fill="url(#blueRing)" stroke="#6fa8d6" stroke-width="0.4939" filter="url(#softShadow)" />
     <circle cx="40" cy="20.5" r="4.605" fill="url(#knobCap)" stroke="#666666" stroke-width="0.3292" />
     <line x1="36.5" y1="26.56" x2="35.95" y2="27.52" stroke="#b8b8bc" stroke-width="0.355" />
@@ -58,8 +58,8 @@
       <line x1="40" y1="20.5" x2="40" y2="17.19" stroke="#b8b8bc" stroke-width="0.55" />
     </g>
   </g>
-  <text x="40" y="32.5" font-size="2.906" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" transform="translate(-8 0)">attack</text>
-  <g data-wcoast-param="decayA" data-wcoast-cx="62" data-wcoast-cy="20.5" data-wcoast-angle-min="-150" data-wcoast-angle-max="150" data-wcoast-port="decayCvA" transform="translate(-12 0)" data-wcoast-depth="decayDepthA" data-wcoast-av="off">
+  <text x="40" y="32.5" font-size="2.906" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" transform="translate(-6 0)">attack</text>
+  <g data-wcoast-param="decayA" data-wcoast-cx="62" data-wcoast-cy="20.5" data-wcoast-angle-min="-150" data-wcoast-angle-max="150" data-wcoast-port="decayCvA" transform="translate(-10 0)" data-wcoast-depth="decayDepthA" data-wcoast-av="off">
     <circle cx="62" cy="20.5" r="6.4" fill="url(#blueRing)" stroke="#6fa8d6" stroke-width="0.4939" filter="url(#softShadow)" />
     <circle cx="62" cy="20.5" r="4.605" fill="url(#knobCap)" stroke="#666666" stroke-width="0.3292" />
     <line x1="58.5" y1="26.56" x2="57.95" y2="27.52" stroke="#b8b8bc" stroke-width="0.355" />
@@ -81,17 +81,17 @@
       <line x1="62" y1="20.5" x2="62" y2="17.19" stroke="#b8b8bc" stroke-width="0.55" />
     </g>
   </g>
-  <text x="66.0" y="32.5" font-size="2.906" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" transform="translate(-16 0)">decay</text>
-  <text x="85.2" y="12.5" font-size="2.806" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="end" font-family="Arial Narrow, Helvetica, Arial, sans-serif" transform="translate(-16 0)">pulse out</text>
-  <g data-wcoast-port="pulseA" data-wcoast-cx="74" data-wcoast-cy="16.5" transform="translate(-10 0)">
+  <text x="66.0" y="32.5" font-size="2.906" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" transform="translate(-14 0)">decay</text>
+  <text x="85.2" y="12.5" font-size="2.806" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="end" font-family="Arial Narrow, Helvetica, Arial, sans-serif" transform="translate(-14 0)">pulse out</text>
+  <g data-wcoast-port="pulseA" data-wcoast-cx="74" data-wcoast-cy="16.5" transform="translate(-8 0)">
     <circle cx="74" cy="16.5" r="3" fill="#8a8a8a" stroke="#000000" stroke-width="0.3" filter="url(#softShadow)" />
     <circle cx="74" cy="16.5" r="1.6" fill="#000000" />
   </g>
-  <g data-wcoast-port="fnA" data-wcoast-cx="74" data-wcoast-cy="26.5" transform="translate(-10 0)">
+  <g data-wcoast-port="fnA" data-wcoast-cx="74" data-wcoast-cy="26.5" transform="translate(-8 0)">
     <circle cx="74" cy="26.5" r="3" fill="#8a8a8a" stroke="#000000" stroke-width="0.3" filter="url(#softShadow)" />
     <circle cx="74" cy="26.5" r="1.6" fill="#000000" />
   </g>
-  <text x="82.2" y="32.5" font-size="2.806" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="end" font-family="Arial Narrow, Helvetica, Arial, sans-serif" transform="translate(-16 0)">CV out</text>
+  <text x="82.2" y="32.5" font-size="2.806" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="end" font-family="Arial Narrow, Helvetica, Arial, sans-serif" transform="translate(-14 0)">CV out</text>
   <g data-wcoast-port="trigB" data-wcoast-cx="10" data-wcoast-cy="41.5">
     <circle cx="10" cy="41.5" r="3" fill="#8a8a8a" stroke="#000000" stroke-width="0.3" filter="url(#softShadow)" />
     <circle cx="10" cy="41.5" r="1.6" fill="#000000" />
@@ -112,7 +112,7 @@
     <circle cx="23.2" cy="50.5" r="1.3" fill="url(#redLed)" stroke="#7c0000" stroke-width="0.2366" filter="url(#softShadow)" data-wcoast-role="step-indicator" data-wcoast-step="cyclic" /><circle cx="22.84" cy="50.14" r="0.39" fill="#ffb4b4" opacity="0.85" pointer-events="none" />
     <polyline points="21.90,54.90 22.55,53.50 23.2,54.90 23.85,53.50 24.50,54.90" fill="none" stroke="#b8b8bc" stroke-width="0.3" stroke-linejoin="round" />
   </g>
-  <g data-wcoast-param="attackB" data-wcoast-cx="40" data-wcoast-cy="45.5" data-wcoast-angle-min="-150" data-wcoast-angle-max="150" data-wcoast-port="attackCvB" transform="translate(-8 0)" data-wcoast-depth="attackDepthB" data-wcoast-av="off">
+  <g data-wcoast-param="attackB" data-wcoast-cx="40" data-wcoast-cy="45.5" data-wcoast-angle-min="-150" data-wcoast-angle-max="150" data-wcoast-port="attackCvB" transform="translate(-6 0)" data-wcoast-depth="attackDepthB" data-wcoast-av="off">
     <circle cx="40" cy="45.5" r="6.4" fill="url(#blueRing)" stroke="#6fa8d6" stroke-width="0.4939" filter="url(#softShadow)" />
     <circle cx="40" cy="45.5" r="4.605" fill="url(#knobCap)" stroke="#666666" stroke-width="0.3292" />
     <line x1="36.5" y1="51.56" x2="35.95" y2="52.52" stroke="#b8b8bc" stroke-width="0.355" />
@@ -134,8 +134,8 @@
       <line x1="40" y1="45.5" x2="40" y2="42.19" stroke="#b8b8bc" stroke-width="0.55" />
     </g>
   </g>
-  <text x="40" y="57.5" font-size="2.906" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" transform="translate(-8 0)">attack</text>
-  <g data-wcoast-param="decayB" data-wcoast-cx="62" data-wcoast-cy="45.5" data-wcoast-angle-min="-150" data-wcoast-angle-max="150" data-wcoast-port="decayCvB" transform="translate(-12 0)" data-wcoast-depth="decayDepthB" data-wcoast-av="off">
+  <text x="40" y="57.5" font-size="2.906" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" transform="translate(-6 0)">attack</text>
+  <g data-wcoast-param="decayB" data-wcoast-cx="62" data-wcoast-cy="45.5" data-wcoast-angle-min="-150" data-wcoast-angle-max="150" data-wcoast-port="decayCvB" transform="translate(-10 0)" data-wcoast-depth="decayDepthB" data-wcoast-av="off">
     <circle cx="62" cy="45.5" r="6.4" fill="url(#blueRing)" stroke="#6fa8d6" stroke-width="0.4939" filter="url(#softShadow)" />
     <circle cx="62" cy="45.5" r="4.605" fill="url(#knobCap)" stroke="#666666" stroke-width="0.3292" />
     <line x1="58.5" y1="51.56" x2="57.95" y2="52.52" stroke="#b8b8bc" stroke-width="0.355" />
@@ -157,17 +157,17 @@
       <line x1="62" y1="45.5" x2="62" y2="42.19" stroke="#b8b8bc" stroke-width="0.55" />
     </g>
   </g>
-  <text x="66.0" y="57.5" font-size="2.906" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" transform="translate(-16 0)">decay</text>
-  <text x="85.2" y="37.5" font-size="2.806" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="end" font-family="Arial Narrow, Helvetica, Arial, sans-serif" transform="translate(-16 0)">pulse out</text>
-  <g data-wcoast-port="pulseB" data-wcoast-cx="74" data-wcoast-cy="41.5" transform="translate(-10 0)">
+  <text x="66.0" y="57.5" font-size="2.906" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" transform="translate(-14 0)">decay</text>
+  <text x="85.2" y="37.5" font-size="2.806" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="end" font-family="Arial Narrow, Helvetica, Arial, sans-serif" transform="translate(-14 0)">pulse out</text>
+  <g data-wcoast-port="pulseB" data-wcoast-cx="74" data-wcoast-cy="41.5" transform="translate(-8 0)">
     <circle cx="74" cy="41.5" r="3" fill="#8a8a8a" stroke="#000000" stroke-width="0.3" filter="url(#softShadow)" />
     <circle cx="74" cy="41.5" r="1.6" fill="#000000" />
   </g>
-  <g data-wcoast-port="fnB" data-wcoast-cx="74" data-wcoast-cy="51.5" transform="translate(-10 0)">
+  <g data-wcoast-port="fnB" data-wcoast-cx="74" data-wcoast-cy="51.5" transform="translate(-8 0)">
     <circle cx="74" cy="51.5" r="3" fill="#8a8a8a" stroke="#000000" stroke-width="0.3" filter="url(#softShadow)" />
     <circle cx="74" cy="51.5" r="1.6" fill="#000000" />
   </g>
-  <text x="82.2" y="57.5" font-size="2.806" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="end" font-family="Arial Narrow, Helvetica, Arial, sans-serif" transform="translate(-16 0)">CV out</text>
+  <text x="82.2" y="57.5" font-size="2.806" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="end" font-family="Arial Narrow, Helvetica, Arial, sans-serif" transform="translate(-14 0)">CV out</text>
   <g data-wcoast-port="trigC" data-wcoast-cx="10" data-wcoast-cy="66.5">
     <circle cx="10" cy="66.5" r="3" fill="#8a8a8a" stroke="#000000" stroke-width="0.3" filter="url(#softShadow)" />
     <circle cx="10" cy="66.5" r="1.6" fill="#000000" />
@@ -188,7 +188,7 @@
     <circle cx="23.2" cy="75.5" r="1.3" fill="url(#redLed)" stroke="#7c0000" stroke-width="0.2366" filter="url(#softShadow)" data-wcoast-role="step-indicator" data-wcoast-step="cyclic" /><circle cx="22.84" cy="75.14" r="0.39" fill="#ffb4b4" opacity="0.85" pointer-events="none" />
     <polyline points="21.90,79.90 22.55,78.50 23.2,79.90 23.85,78.50 24.50,79.90" fill="none" stroke="#b8b8bc" stroke-width="0.3" stroke-linejoin="round" />
   </g>
-  <g data-wcoast-param="attackC" data-wcoast-cx="40" data-wcoast-cy="70.5" data-wcoast-angle-min="-150" data-wcoast-angle-max="150" data-wcoast-port="attackCvC" transform="translate(-8 0)" data-wcoast-depth="attackDepthC" data-wcoast-av="off">
+  <g data-wcoast-param="attackC" data-wcoast-cx="40" data-wcoast-cy="70.5" data-wcoast-angle-min="-150" data-wcoast-angle-max="150" data-wcoast-port="attackCvC" transform="translate(-6 0)" data-wcoast-depth="attackDepthC" data-wcoast-av="off">
     <circle cx="40" cy="70.5" r="6.4" fill="url(#blueRing)" stroke="#6fa8d6" stroke-width="0.4939" filter="url(#softShadow)" />
     <circle cx="40" cy="70.5" r="4.605" fill="url(#knobCap)" stroke="#666666" stroke-width="0.3292" />
     <line x1="36.5" y1="76.56" x2="35.95" y2="77.52" stroke="#b8b8bc" stroke-width="0.355" />
@@ -210,8 +210,8 @@
       <line x1="40" y1="70.5" x2="40" y2="67.19" stroke="#b8b8bc" stroke-width="0.55" />
     </g>
   </g>
-  <text x="40" y="82.5" font-size="2.906" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" transform="translate(-8 0)">attack</text>
-  <g data-wcoast-param="decayC" data-wcoast-cx="62" data-wcoast-cy="70.5" data-wcoast-angle-min="-150" data-wcoast-angle-max="150" data-wcoast-port="decayCvC" transform="translate(-12 0)" data-wcoast-depth="decayDepthC" data-wcoast-av="off">
+  <text x="40" y="82.5" font-size="2.906" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" transform="translate(-6 0)">attack</text>
+  <g data-wcoast-param="decayC" data-wcoast-cx="62" data-wcoast-cy="70.5" data-wcoast-angle-min="-150" data-wcoast-angle-max="150" data-wcoast-port="decayCvC" transform="translate(-10 0)" data-wcoast-depth="decayDepthC" data-wcoast-av="off">
     <circle cx="62" cy="70.5" r="6.4" fill="url(#blueRing)" stroke="#6fa8d6" stroke-width="0.4939" filter="url(#softShadow)" />
     <circle cx="62" cy="70.5" r="4.605" fill="url(#knobCap)" stroke="#666666" stroke-width="0.3292" />
     <line x1="58.5" y1="76.56" x2="57.95" y2="77.52" stroke="#b8b8bc" stroke-width="0.355" />
@@ -233,17 +233,17 @@
       <line x1="62" y1="70.5" x2="62" y2="67.19" stroke="#b8b8bc" stroke-width="0.55" />
     </g>
   </g>
-  <text x="66.0" y="82.5" font-size="2.906" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" transform="translate(-16 0)">decay</text>
-  <text x="85.2" y="62.5" font-size="2.806" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="end" font-family="Arial Narrow, Helvetica, Arial, sans-serif" transform="translate(-16 0)">pulse out</text>
-  <g data-wcoast-port="pulseC" data-wcoast-cx="74" data-wcoast-cy="66.5" transform="translate(-10 0)">
+  <text x="66.0" y="82.5" font-size="2.906" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" transform="translate(-14 0)">decay</text>
+  <text x="85.2" y="62.5" font-size="2.806" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="end" font-family="Arial Narrow, Helvetica, Arial, sans-serif" transform="translate(-14 0)">pulse out</text>
+  <g data-wcoast-port="pulseC" data-wcoast-cx="74" data-wcoast-cy="66.5" transform="translate(-8 0)">
     <circle cx="74" cy="66.5" r="3" fill="#8a8a8a" stroke="#000000" stroke-width="0.3" filter="url(#softShadow)" />
     <circle cx="74" cy="66.5" r="1.6" fill="#000000" />
   </g>
-  <g data-wcoast-port="fnC" data-wcoast-cx="74" data-wcoast-cy="76.5" transform="translate(-10 0)">
+  <g data-wcoast-port="fnC" data-wcoast-cx="74" data-wcoast-cy="76.5" transform="translate(-8 0)">
     <circle cx="74" cy="76.5" r="3" fill="#8a8a8a" stroke="#000000" stroke-width="0.3" filter="url(#softShadow)" />
     <circle cx="74" cy="76.5" r="1.6" fill="#000000" />
   </g>
-  <text x="82.2" y="82.5" font-size="2.806" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="end" font-family="Arial Narrow, Helvetica, Arial, sans-serif" transform="translate(-16 0)">CV out</text>
+  <text x="82.2" y="82.5" font-size="2.806" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="end" font-family="Arial Narrow, Helvetica, Arial, sans-serif" transform="translate(-14 0)">CV out</text>
   <g data-wcoast-port="trigD" data-wcoast-cx="10" data-wcoast-cy="91.5">
     <circle cx="10" cy="91.5" r="3" fill="#8a8a8a" stroke="#000000" stroke-width="0.3" filter="url(#softShadow)" />
     <circle cx="10" cy="91.5" r="1.6" fill="#000000" />
@@ -264,7 +264,7 @@
     <circle cx="23.2" cy="100.5" r="1.3" fill="url(#redLed)" stroke="#7c0000" stroke-width="0.2366" filter="url(#softShadow)" data-wcoast-role="step-indicator" data-wcoast-step="cyclic" /><circle cx="22.84" cy="100.14" r="0.39" fill="#ffb4b4" opacity="0.85" pointer-events="none" />
     <polyline points="21.90,104.90 22.55,103.50 23.2,104.90 23.85,103.50 24.50,104.90" fill="none" stroke="#b8b8bc" stroke-width="0.3" stroke-linejoin="round" />
   </g>
-  <g data-wcoast-param="attackD" data-wcoast-cx="40" data-wcoast-cy="95.5" data-wcoast-angle-min="-150" data-wcoast-angle-max="150" data-wcoast-port="attackCvD" transform="translate(-8 0)" data-wcoast-depth="attackDepthD" data-wcoast-av="off">
+  <g data-wcoast-param="attackD" data-wcoast-cx="40" data-wcoast-cy="95.5" data-wcoast-angle-min="-150" data-wcoast-angle-max="150" data-wcoast-port="attackCvD" transform="translate(-6 0)" data-wcoast-depth="attackDepthD" data-wcoast-av="off">
     <circle cx="40" cy="95.5" r="6.4" fill="url(#blueRing)" stroke="#6fa8d6" stroke-width="0.4939" filter="url(#softShadow)" />
     <circle cx="40" cy="95.5" r="4.605" fill="url(#knobCap)" stroke="#666666" stroke-width="0.3292" />
     <line x1="36.5" y1="101.56" x2="35.95" y2="102.52" stroke="#b8b8bc" stroke-width="0.355" />
@@ -286,8 +286,8 @@
       <line x1="40" y1="95.5" x2="40" y2="92.19" stroke="#b8b8bc" stroke-width="0.55" />
     </g>
   </g>
-  <text x="40" y="107.5" font-size="2.906" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" transform="translate(-8 0)">attack</text>
-  <g data-wcoast-param="decayD" data-wcoast-cx="62" data-wcoast-cy="95.5" data-wcoast-angle-min="-150" data-wcoast-angle-max="150" data-wcoast-port="decayCvD" transform="translate(-12 0)" data-wcoast-depth="decayDepthD" data-wcoast-av="off">
+  <text x="40" y="107.5" font-size="2.906" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" transform="translate(-6 0)">attack</text>
+  <g data-wcoast-param="decayD" data-wcoast-cx="62" data-wcoast-cy="95.5" data-wcoast-angle-min="-150" data-wcoast-angle-max="150" data-wcoast-port="decayCvD" transform="translate(-10 0)" data-wcoast-depth="decayDepthD" data-wcoast-av="off">
     <circle cx="62" cy="95.5" r="6.4" fill="url(#blueRing)" stroke="#6fa8d6" stroke-width="0.4939" filter="url(#softShadow)" />
     <circle cx="62" cy="95.5" r="4.605" fill="url(#knobCap)" stroke="#666666" stroke-width="0.3292" />
     <line x1="58.5" y1="101.56" x2="57.95" y2="102.52" stroke="#b8b8bc" stroke-width="0.355" />
@@ -309,21 +309,21 @@
       <line x1="62" y1="95.5" x2="62" y2="92.19" stroke="#b8b8bc" stroke-width="0.55" />
     </g>
   </g>
-  <text x="66.0" y="107.5" font-size="2.906" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" transform="translate(-16 0)">decay</text>
-  <text x="85.2" y="87.5" font-size="2.806" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="end" font-family="Arial Narrow, Helvetica, Arial, sans-serif" transform="translate(-16 0)">pulse out</text>
-  <g data-wcoast-port="pulseD" data-wcoast-cx="74" data-wcoast-cy="91.5" transform="translate(-10 0)">
+  <text x="66.0" y="107.5" font-size="2.906" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" transform="translate(-14 0)">decay</text>
+  <text x="85.2" y="87.5" font-size="2.806" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="end" font-family="Arial Narrow, Helvetica, Arial, sans-serif" transform="translate(-14 0)">pulse out</text>
+  <g data-wcoast-port="pulseD" data-wcoast-cx="74" data-wcoast-cy="91.5" transform="translate(-8 0)">
     <circle cx="74" cy="91.5" r="3" fill="#8a8a8a" stroke="#000000" stroke-width="0.3" filter="url(#softShadow)" />
     <circle cx="74" cy="91.5" r="1.6" fill="#000000" />
   </g>
-  <g data-wcoast-port="fnD" data-wcoast-cx="74" data-wcoast-cy="101.5" transform="translate(-10 0)">
+  <g data-wcoast-port="fnD" data-wcoast-cx="74" data-wcoast-cy="101.5" transform="translate(-8 0)">
     <circle cx="74" cy="101.5" r="3" fill="#8a8a8a" stroke="#000000" stroke-width="0.3" filter="url(#softShadow)" />
     <circle cx="74" cy="101.5" r="1.6" fill="#000000" />
   </g>
-  <text x="82.2" y="107.5" font-size="2.806" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="end" font-family="Arial Narrow, Helvetica, Arial, sans-serif" transform="translate(-16 0)">CV out</text>
-  <text x="97.0" y="16" font-size="2.706" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" transform="translate(-16 0)"><tspan x="97.0" dy="0">QUAD-</tspan><tspan x="97.0" dy="3.11">RATURE</tspan></text>
-  <g data-wcoast-param="quadEnAB" transform="translate(-10 0)"><circle cx="91" cy="24.75" r="1.65" fill="url(#redLed)" stroke="#7c0000" stroke-width="0.2366" filter="url(#softShadow)" data-wcoast-role="step-indicator" data-wcoast-step="on" /><circle cx="90.54" cy="24.29" r="0.49" fill="#ffb4b4" opacity="0.85" pointer-events="none" /></g>
-  <text x="97" y="22" font-size="2.606" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" transform="translate(-16 0)">on</text>
-  <g data-wcoast-param="quadTimeAB" data-wcoast-cx="91" data-wcoast-cy="34" data-wcoast-angle-min="-215" data-wcoast-angle-max="35" transform="translate(-10 0)">
+  <text x="82.2" y="107.5" font-size="2.806" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="end" font-family="Arial Narrow, Helvetica, Arial, sans-serif" transform="translate(-14 0)">CV out</text>
+  <text x="97.0" y="16" font-size="2.706" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" transform="translate(-15 0)"><tspan x="97.0" dy="0">QUAD-</tspan><tspan x="97.0" dy="3.11">RATURE</tspan></text>
+  <g data-wcoast-param="quadEnAB" transform="translate(-9 0)"><circle cx="91" cy="24.75" r="1.65" fill="url(#redLed)" stroke="#7c0000" stroke-width="0.2366" filter="url(#softShadow)" data-wcoast-role="step-indicator" data-wcoast-step="on" /><circle cx="90.54" cy="24.29" r="0.49" fill="#ffb4b4" opacity="0.85" pointer-events="none" /></g>
+  <text x="97" y="22" font-size="2.606" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" transform="translate(-15 0)">on</text>
+  <g data-wcoast-param="quadTimeAB" data-wcoast-cx="91" data-wcoast-cy="34" data-wcoast-angle-min="-215" data-wcoast-angle-max="35" transform="translate(-9 0)">
     <circle cx="91" cy="34" r="6.4" fill="url(#blueRing)" stroke="#6fa8d6" stroke-width="0.355" filter="url(#softShadow)" />
     <circle cx="91" cy="34" r="4.61" fill="url(#knobCap)" stroke="#666666" stroke-width="0.2366" />
     <g data-wcoast-role="indicator">
@@ -341,18 +341,18 @@
       <line x1="91" y1="34" x2="91" y2="29.39" stroke="#b8b8bc" stroke-width="0.55" />
     </g>
   </g>
-  <text x="88.5" y="28.9" font-size="3.306" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" transform="translate(-16 0)">A</text>
-  <text x="88.5" y="40.9" font-size="3.306" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" transform="translate(-16 0)">B</text>
-  <text x="97" y="43.5" font-size="2.706" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" transform="translate(-16 0)">mix</text>
-  <g data-wcoast-port="quadOutAB" data-wcoast-cx="91" data-wcoast-cy="49" transform="translate(-10 0)">
+  <text x="88.5" y="28.9" font-size="3.306" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" transform="translate(-15 0)">A</text>
+  <text x="88.5" y="40.9" font-size="3.306" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" transform="translate(-15 0)">B</text>
+  <text x="97" y="43.5" font-size="2.706" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" transform="translate(-15 0)">mix</text>
+  <g data-wcoast-port="quadOutAB" data-wcoast-cx="91" data-wcoast-cy="49" transform="translate(-9 0)">
     <circle cx="91" cy="49" r="3" fill="#8a8a8a" stroke="#000000" stroke-width="0.3" filter="url(#softShadow)" />
     <circle cx="91" cy="49" r="1.6" fill="#000000" />
   </g>
-  <text x="97" y="54.5" font-size="2.706" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" transform="translate(-16 0)">A-B out</text>
-  <text x="97.0" y="66" font-size="2.706" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" transform="translate(-16 0)"><tspan x="97.0" dy="0">QUAD-</tspan><tspan x="97.0" dy="3.11">RATURE</tspan></text>
-  <g data-wcoast-param="quadEnCD" transform="translate(-10 0)"><circle cx="91" cy="74.75" r="1.65" fill="url(#redLed)" stroke="#7c0000" stroke-width="0.2366" filter="url(#softShadow)" data-wcoast-role="step-indicator" data-wcoast-step="on" /><circle cx="90.54" cy="74.29" r="0.49" fill="#ffb4b4" opacity="0.85" pointer-events="none" /></g>
-  <text x="97" y="72" font-size="2.606" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" transform="translate(-16 0)">on</text>
-  <g data-wcoast-param="quadTimeCD" data-wcoast-cx="91" data-wcoast-cy="84" data-wcoast-angle-min="-215" data-wcoast-angle-max="35" transform="translate(-10 0)">
+  <text x="97" y="54.5" font-size="2.706" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" transform="translate(-15 0)">A-B out</text>
+  <text x="97.0" y="66" font-size="2.706" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" transform="translate(-15 0)"><tspan x="97.0" dy="0">QUAD-</tspan><tspan x="97.0" dy="3.11">RATURE</tspan></text>
+  <g data-wcoast-param="quadEnCD" transform="translate(-9 0)"><circle cx="91" cy="74.75" r="1.65" fill="url(#redLed)" stroke="#7c0000" stroke-width="0.2366" filter="url(#softShadow)" data-wcoast-role="step-indicator" data-wcoast-step="on" /><circle cx="90.54" cy="74.29" r="0.49" fill="#ffb4b4" opacity="0.85" pointer-events="none" /></g>
+  <text x="97" y="72" font-size="2.606" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" transform="translate(-15 0)">on</text>
+  <g data-wcoast-param="quadTimeCD" data-wcoast-cx="91" data-wcoast-cy="84" data-wcoast-angle-min="-215" data-wcoast-angle-max="35" transform="translate(-9 0)">
     <circle cx="91" cy="84" r="6.4" fill="url(#blueRing)" stroke="#6fa8d6" stroke-width="0.355" filter="url(#softShadow)" />
     <circle cx="91" cy="84" r="4.61" fill="url(#knobCap)" stroke="#666666" stroke-width="0.2366" />
     <g data-wcoast-role="indicator">
@@ -370,13 +370,13 @@
       <line x1="91" y1="84" x2="91" y2="79.39" stroke="#b8b8bc" stroke-width="0.55" />
     </g>
   </g>
-  <text x="88.5" y="78.9" font-size="3.306" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" transform="translate(-16 0)">C</text>
-  <text x="88.5" y="90.9" font-size="3.306" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" transform="translate(-16 0)">D</text>
-  <text x="97" y="93.5" font-size="2.706" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" transform="translate(-16 0)">mix</text>
-  <g data-wcoast-port="quadOutCD" data-wcoast-cx="91" data-wcoast-cy="99" transform="translate(-10 0)">
+  <text x="88.5" y="78.9" font-size="3.306" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" transform="translate(-15 0)">C</text>
+  <text x="88.5" y="90.9" font-size="3.306" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" transform="translate(-15 0)">D</text>
+  <text x="97" y="93.5" font-size="2.706" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" transform="translate(-15 0)">mix</text>
+  <g data-wcoast-port="quadOutCD" data-wcoast-cx="91" data-wcoast-cy="99" transform="translate(-9 0)">
     <circle cx="91" cy="99" r="3" fill="#8a8a8a" stroke="#000000" stroke-width="0.3" filter="url(#softShadow)" />
     <circle cx="91" cy="99" r="1.6" fill="#000000" />
   </g>
-  <text x="97" y="104.5" font-size="2.706" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" transform="translate(-16 0)">C-D out</text>
+  <text x="97" y="104.5" font-size="2.706" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" transform="translate(-15 0)">C-D out</text>
   <text x="5.8" y="13.6" font-size="5.306" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">A</text><text x="5.8" y="38.6" font-size="5.306" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">B</text><text x="5.8" y="63.6" font-size="5.306" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">C</text><text x="5.8" y="88.6" font-size="5.306" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">D</text></g>
 </svg>
