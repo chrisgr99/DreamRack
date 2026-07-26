@@ -52,7 +52,16 @@ const RENDER_SCALE = urlScale > 0 ? urlScale : 3;
 
 const dark = true;   // the editor is always dark — a panel is always drawn in dark mode here
 let idx = 0;
-let selectedId = null;
+let selectedId = null;              // PRIMARY selection — drives the settings float, which edits one control
+const selectedIds = new Set();      // the full selection (multi-select: shift-click, or marquee)
+let clipboard = null;               // { items, entries } — survives module switches, so you can paste across modules
+let dragGuides = [];                // alignment guides to draw this frame (set while dragging)
+function selectOnly(id) { selectedIds.clear(); if (id) selectedIds.add(id); selectedId = id || null; }
+function selectAlso(id) {           // shift-click: toggle one in or out, keeping the rest
+  if (selectedIds.has(id)) { selectedIds.delete(id); if (selectedId === id) selectedId = [...selectedIds].pop() || null; }
+  else { selectedIds.add(id); selectedId = id; }
+}
+function selectClear() { selectedIds.clear(); selectedId = null; }
 let currentLayout = null;   // the working layout of the last render (base + overrides)
 let currentSvg = null;
 let lastWarnings = [];      // binding warnings from the last render — the validation signal
@@ -93,12 +102,12 @@ function pushUndo(key) {
 }
 function canUndo() { return MODULES[idx].undo.length > 0; }
 function canRedo() { return MODULES[idx].redo.length > 0; }
-function undo() { const m = MODULES[idx]; if (!m.undo.length) return; m.redo.push(snapshot()); restoreSnap(m.undo.pop()); selectedId = null; closeFloats(); refreshPalette(); scheduleRender(); }
-function redo() { const m = MODULES[idx]; if (!m.redo.length) return; m.undo.push(snapshot()); restoreSnap(m.redo.pop()); selectedId = null; closeFloats(); refreshPalette(); scheduleRender(); }
+function undo() { const m = MODULES[idx]; if (!m.undo.length) return; m.redo.push(snapshot()); restoreSnap(m.undo.pop()); selectClear(); closeFloats(); refreshPalette(); scheduleRender(); }
+function redo() { const m = MODULES[idx]; if (!m.redo.length) return; m.undo.push(snapshot()); restoreSnap(m.redo.pop()); selectClear(); closeFloats(); refreshPalette(); scheduleRender(); }
 
 function selectModuleIndex(i) {
   if (i < 0 || i >= MODULES.length) return;
-  idx = i; selectedId = null; resetScrollNext = true;
+  idx = i; selectClear(); resetScrollNext = true;
   closeFloats(); refreshPalette(); scheduleRender();
 }
 
@@ -159,9 +168,32 @@ function mainMenu() {
     { separator: true },
     { label: 'Close editor', action: () => window.close() },
   ];
+  const owned = MODULES[idx].editorOwned, sel = selectedIds.size;
   const edit = [
     { label: 'Undo', disabled: !canUndo(), action: undo },
     { label: 'Redo', disabled: !canRedo(), action: redo },
+    { separator: true },
+    { label: 'Cut', disabled: !owned || !sel, action: cutSelected },
+    { label: 'Copy', disabled: !sel, action: copySelected },
+    { label: 'Paste', disabled: !owned || !clipboard, action: () => pasteClipboard() },
+    { label: 'Duplicate', disabled: !owned || !sel, action: duplicateSelected },
+    { label: 'Delete', disabled: !owned || !sel, action: deleteSelected },
+    { separator: true },
+    { label: 'Select all', action: selectAllControls },
+    { label: 'Select same type', disabled: !selectedId, action: selectSameType },
+    { label: 'Arrange', submenu: [
+      { label: 'Bring to front', disabled: !owned || !sel, action: () => reorderSelection('front') },
+      { label: 'Bring forward', disabled: !owned || !sel, action: () => reorderSelection('forward') },
+      { label: 'Send backward', disabled: !owned || !sel, action: () => reorderSelection('backward') },
+      { label: 'Send to back', disabled: !owned || !sel, action: () => reorderSelection('back') },
+    ] },
+    { label: 'Align', submenu: [
+      { label: 'In a column (same x)', disabled: sel < 2, action: () => alignSelection('column') },
+      { label: 'In a row (same y)', disabled: sel < 2, action: () => alignSelection('row') },
+      { separator: true },
+      { label: 'Spread evenly across', disabled: sel < 3, action: () => alignSelection('spreadX') },
+      { label: 'Spread evenly down', disabled: sel < 3, action: () => alignSelection('spreadY') },
+    ] },
   ];
   const view = [
     { label: `Zoom ${Math.round(zoom * 100)}%`, disabled: true },
@@ -296,7 +328,7 @@ function buildOverlay(svg, layout) {
       handle = document.createElementNS(NS, 'rect');
       handle.setAttribute('x', box.x); handle.setAttribute('y', box.y); handle.setAttribute('width', box.w); handle.setAttribute('height', box.h);
       markerAt = { x: box.x + box.w, y: box.y };
-      if (cid === selectedId) {
+      if (selectedIds.has(cid)) {
         selection = document.createElementNS(NS, 'rect');
         selection.setAttribute('x', box.x); selection.setAttribute('y', box.y); selection.setAttribute('width', box.w); selection.setAttribute('height', box.h);
         selection.setAttribute('rx', '1');
@@ -308,7 +340,7 @@ function buildOverlay(svg, layout) {
       handle = document.createElementNS(NS, 'circle');
       handle.setAttribute('cx', cx); handle.setAttribute('cy', cy); handle.setAttribute('r', a.r);
       markerAt = { x: cx + a.r, y: cy - a.r };
-      if (cid === selectedId) {
+      if (selectedIds.has(cid)) {
         selection = document.createElementNS(NS, 'circle');
         selection.setAttribute('cx', cx); selection.setAttribute('cy', cy); selection.setAttribute('r', a.r + 1.2);
       }
@@ -321,7 +353,13 @@ function buildOverlay(svg, layout) {
     handle.setAttribute('fill', 'transparent');
     handle.setAttribute('data-ctrl-id', cid);   // so click/right-click reach this control
     handle.style.cursor = 'grab';
-    handle.addEventListener('pointerdown', (e) => startDrag(e, cid));
+    handle.addEventListener('pointerdown', (e) => {
+      if (e.shiftKey || e.metaKey || e.ctrlKey) {   // shift-click: add/remove from the selection, no drag
+        e.preventDefault(); e.stopPropagation();
+        selectAlso(cid); scheduleRender(); refreshStatus(); return;
+      }
+      startDrag(e, cid);
+    });
     g.appendChild(handle);
     if (markerAt && MODULES[idx].editorOwned && isUnconfigured(it, cid)) {   // amber dot: still on its placeholder id
       const dot = document.createElementNS(NS, 'circle');
@@ -330,11 +368,59 @@ function buildOverlay(svg, layout) {
       g.appendChild(dot);
     }
   });
+  // Alignment guides, drawn while a drag is snapped to another control's centre line.
+  for (const gd of dragGuides) {
+    const ln = document.createElementNS(NS, 'line');
+    if (gd.x != null) { const gx = off.x + gd.x; ln.setAttribute('x1', gx); ln.setAttribute('x2', gx); ln.setAttribute('y1', 0); ln.setAttribute('y2', layout.faceH || 113.6); }
+    else { const gy = off.y + gd.y; ln.setAttribute('y1', gy); ln.setAttribute('y2', gy); ln.setAttribute('x1', 0); ln.setAttribute('x2', layout.faceW || 142); }
+    ln.setAttribute('stroke', '#ff3b8e'); ln.setAttribute('stroke-width', '0.25');
+    ln.setAttribute('stroke-dasharray', '1.4 1.0'); ln.setAttribute('pointer-events', 'none');
+    g.appendChild(ln);
+  }
   svg.appendChild(g);
   svg.addEventListener('pointerdown', (e) => {
     if (e.target !== svg) return;
-    selectedId = null; scheduleRender();   // click empty space to deselect; open floats stay
+    startMarquee(e, svg, layout);   // drag empty space to rubber-band a selection; a plain click deselects
   });
+}
+
+// Rubber-band selection: drag over empty panel and every control whose centre falls inside is
+// selected (shift keeps what was already selected). A click with no drag just deselects.
+function startMarquee(e, svg, layout) {
+  const rect = svg.getBoundingClientRect(), vb = viewBoxOf(svg);
+  const toU = (cx, cy) => ({ x: vb.x + (cx - rect.left) * (vb.w / rect.width), y: vb.y + (cy - rect.top) * (vb.h / rect.height) });
+  const start = toU(e.clientX, e.clientY);
+  const keep = (e.shiftKey || e.metaKey || e.ctrlKey) ? new Set(selectedIds) : new Set();
+  const box = document.createElementNS(NS, 'rect');
+  box.setAttribute('fill', 'rgba(57,160,255,0.12)'); box.setAttribute('stroke', '#39a0ff');
+  box.setAttribute('stroke-width', '0.3'); box.setAttribute('stroke-dasharray', '1.2 0.8'); box.setAttribute('pointer-events', 'none');
+  svg.appendChild(box);
+  let moved = false;
+  const off = itemOffset(layout);
+  const move = (ev) => {
+    const p = toU(ev.clientX, ev.clientY);
+    const x = Math.min(start.x, p.x), y = Math.min(start.y, p.y);
+    const w = Math.abs(p.x - start.x), h = Math.abs(p.y - start.y);
+    if (w > 0.8 || h > 0.8) moved = true;
+    box.setAttribute('x', x); box.setAttribute('y', y); box.setAttribute('width', w); box.setAttribute('height', h);
+    if (!moved) return;
+    selectedIds.clear(); for (const k of keep) selectedIds.add(k);
+    for (const it of layout.items) {
+      const cid = it.id || it.param; if (!cid) continue;
+      const a = anchor(it, layout); if (!a) continue;
+      const ax = off.x + a.x, ay = off.y + a.y;
+      if (ax >= x && ax <= x + w && ay >= y && ay <= y + h) selectedIds.add(cid);
+    }
+    selectedId = [...selectedIds].pop() || null;
+  };
+  const up = () => {
+    window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', up);
+    box.remove();
+    if (!moved) selectClear();
+    scheduleRender(); refreshStatus();
+  };
+  window.addEventListener('pointermove', move);
+  window.addEventListener('pointerup', up);
 }
 
 // ---- move ----------------------------------------------------------------
@@ -349,48 +435,256 @@ function curPos(id) {
 function startDrag(e, id) {
   if (e.button !== 0) return;   // left-drag only; right-click opens the settings float
   e.preventDefault(); e.stopPropagation();
-  selectedId = id;
+  if (!selectedIds.has(id)) selectOnly(id);   // dragging outside the selection starts a fresh one
+  else selectedId = id;
   if (settingsId && settingsId !== id) openSettings(id);   // a dialog is open -> switch it to this control
   const m = MODULES[idx];
   const a = anchor(baseItem(id), m.base);
   if (!a) { scheduleRender(); return; }   // selectable but not draggable (e.g. a lamp group has no x/y anchor)
+  // Everything selected moves together, each from its own start position.
+  const movers = [...selectedIds].map((sid) => {
+    const it = baseItem(sid); const an = it && anchor(it, m.base);
+    return an ? { id: sid, a: an, p: curPos(sid) } : null;
+  }).filter(Boolean);
   const rect = currentSvg.getBoundingClientRect();
   const vb = viewBoxOf(currentSvg);
   const mmPerPxX = vb.w / rect.width, mmPerPxY = vb.h / rect.height;
   const startCX = e.clientX, startCY = e.clientY;
-  const p = curPos(id), baseX = p.x, baseY = p.y;
+  // Snap targets: the centre lines of every control NOT being dragged.
+  const others = m.base.items.map((it) => {
+    const c = it.id || it.param;
+    if (!c || selectedIds.has(c)) return null;
+    const an = anchor(it, m.base); if (!an) return null;
+    return curPos(c);                       // where it sits NOW (overrides applied), not its layout home
+  }).filter(Boolean);
+  const SNAP_MM = 0.4;
   let moved = false;
   scheduleRender();   // reflect the selection ring right away
 
   function move(ev) {
     if (!moved) pushUndo(`drag:${id}`);   // one undo entry per drag gesture, on the first move
-    const nx = a.axes.includes('x') ? round3(baseX + (ev.clientX - startCX) * mmPerPxX) : baseX;
-    const ny = a.axes === 'xy' ? round3(baseY + (ev.clientY - startCY) * mmPerPxY) : baseY;
-    m.overrides[id] = a.axes === 'x' ? { x: nx } : { x: nx, y: ny };
+    let dx = (ev.clientX - startCX) * mmPerPxX;
+    let dy = (ev.clientY - startCY) * mmPerPxY;
+    // Snap the PRIMARY control's centre to another control's centre line; Alt suspends snapping.
+    dragGuides = [];
+    if (!ev.altKey) {
+      const lead = movers.find((mv) => mv.id === id) || movers[0];
+      if (lead) {
+        const tx = lead.p.x + dx, ty = lead.p.y + dy;
+        let bx = null, by = null;
+        for (const oa of others) {
+          if (lead.a.axes.includes('x') && Math.abs(oa.x - tx) < SNAP_MM && (bx === null || Math.abs(oa.x - tx) < Math.abs(bx - tx))) bx = oa.x;
+          if (lead.a.axes === 'xy' && Math.abs(oa.y - ty) < SNAP_MM && (by === null || Math.abs(oa.y - ty) < Math.abs(by - ty))) by = oa.y;
+        }
+        if (bx !== null) { dx += bx - tx; dragGuides.push({ x: bx }); }
+        if (by !== null) { dy += by - ty; dragGuides.push({ y: by }); }
+      }
+    }
+    for (const mv of movers) {
+      const nx = mv.a.axes.includes('x') ? round3(mv.p.x + dx) : mv.p.x;
+      const ny = mv.a.axes === 'xy' ? round3(mv.p.y + dy) : mv.p.y;
+      m.overrides[mv.id] = mv.a.axes === 'x' ? { x: nx } : { x: nx, y: ny };
+    }
     moved = true;
     scheduleRender();
   }
   function up() {
     window.removeEventListener('pointermove', move);
     window.removeEventListener('pointerup', up);
-    if (moved) refreshStatus();
+    dragGuides = [];
+    if (moved) { scheduleRender(); refreshStatus(); }
   }
   window.addEventListener('pointermove', move);
   window.addEventListener('pointerup', up);
 }
 
 function nudge(dx, dy) {
-  if (!selectedId) return;
+  if (!selectedIds.size) return;
   const m = MODULES[idx];
-  const it = baseItem(selectedId);
-  if (!it) return;
-  pushUndo(`nudge:${selectedId}`);
-  const a = anchor(it, m.base);
-  const p = curPos(selectedId);
-  const nx = round3(p.x + (a.axes.includes('x') ? dx : 0));
-  const ny = round3(p.y + (a.axes === 'xy' ? dy : 0));
-  m.overrides[selectedId] = a.axes === 'x' ? { x: nx } : { x: nx, y: ny };
+  pushUndo(`nudge:${[...selectedIds].join(',')}`);
+  for (const id of selectedIds) {
+    const it = baseItem(id); if (!it) continue;
+    const a = anchor(it, m.base); if (!a) continue;
+    const p = curPos(id);
+    const nx = round3(p.x + (a.axes.includes('x') ? dx : 0));
+    const ny = round3(p.y + (a.axes === 'xy' ? dy : 0));
+    m.overrides[id] = a.axes === 'x' ? { x: nx } : { x: nx, y: ny };
+  }
   scheduleRender();
+}
+
+// ---- delete / clipboard / align ------------------------------------------
+// These reshape the module itself (items + descriptor entries), so they apply only to an
+// editor-owned module; a shipped built-in stays read-only apart from position overrides.
+function editable() { return !!MODULES[idx].editorOwned; }
+
+function descEntriesFor(id) {
+  const m = MODULES[idx];
+  const out = [];
+  for (const arr of ['ports', 'params']) {
+    for (const e of (m.workDesc[arr] || [])) if (e.id === id) out.push({ arr, entry: e });
+  }
+  return out;
+}
+
+// A knАck owns derived entries (its CV port, depth and quantize params) that no layout item
+// names — they must travel with it on delete, copy and paste.
+function derivedIds(it) {
+  if (it.t !== 'knack' || !it.opts) return [];
+  return [it.opts.port, it.opts.depth, it.opts.quantize].filter(Boolean);
+}
+
+function deleteSelected() {
+  if (!editable() || !selectedIds.size) return;
+  const m = MODULES[idx];
+  pushUndo('delete');
+  const gone = new Set();
+  for (const id of selectedIds) {
+    const it = m.base.items.find((x) => (x.id || x.param) === id);
+    if (!it) continue;
+    gone.add(id);
+    for (const d of derivedIds(it)) gone.add(d);
+  }
+  m.base.items = m.base.items.filter((x) => !gone.has(x.id || x.param));
+  for (const arr of ['ports', 'params']) {
+    if (m.workDesc[arr]) m.workDesc[arr] = m.workDesc[arr].filter((e) => !gone.has(e.id));
+  }
+  for (const id of gone) delete m.overrides[id];
+  selectClear(); closeFloats();
+  m.dirtyDraft = true; scheduleRender(); refreshPalette(); refreshStatus();
+}
+
+function copySelected() {
+  if (!selectedIds.size) return;
+  const m = MODULES[idx];
+  const items = [], entries = [];
+  for (const id of selectedIds) {
+    const it = m.base.items.find((x) => (x.id || x.param) === id);
+    if (!it) continue;
+    const c = clone(it);
+    const p = curPos(id);                       // carry the control's CURRENT position, not its layout home
+    if (typeof c.x === 'number') c.x = p.x;
+    if (typeof c.y === 'number') c.y = p.y;
+    items.push(c);
+    for (const eid of [id, ...derivedIds(it)]) for (const de of descEntriesFor(eid)) entries.push({ arr: de.arr, entry: clone(de.entry) });
+  }
+  if (items.length) clipboard = { items, entries };
+  refreshStatus();
+}
+
+function pasteClipboard(payload = clipboard, dx = 2, dy = 2) {
+  if (!editable() || !payload || !payload.items.length) return;
+  const m = MODULES[idx];
+  pushUndo('paste');
+  const remap = new Map();
+  const rename = (old, seed) => { if (!remap.has(old)) remap.set(old, uniqueId(m, seed)); return remap.get(old); };
+  const fresh = [];
+  for (const src of payload.items) {
+    const it = clone(src);
+    const oldId = it.id || it.param;
+    const nid = rename(oldId, it.t);
+    if (it.id) it.id = nid; else it.param = nid;
+    if (typeof it.x === 'number') it.x = round3(it.x + dx);
+    if (typeof it.y === 'number') it.y = round3(it.y + dy);
+    if (it.t === 'knack' && it.opts) {          // keep a knАck's derived ids in step with its new name
+      if (it.opts.port) it.opts.port = rename(it.opts.port, nid + 'Cv');
+      if (it.opts.depth) it.opts.depth = rename(it.opts.depth, nid + 'Depth');
+      if (it.opts.quantize) it.opts.quantize = rename(it.opts.quantize, nid + 'Quant');
+    }
+    m.base.items.push(it); fresh.push(nid);
+  }
+  for (const de of payload.entries) {
+    const e = clone(de.entry);
+    e.id = remap.get(e.id) || uniqueId(m, 'p');
+    (m.workDesc[de.arr] || (m.workDesc[de.arr] = [])).push(e);
+  }
+  selectedIds.clear(); for (const id of fresh) selectedIds.add(id);
+  selectedId = fresh[fresh.length - 1] || null;
+  m.dirtyDraft = true; scheduleRender(); refreshPalette(); refreshStatus();
+}
+
+function cutSelected() { if (!editable()) return; copySelected(); deleteSelected(); }
+function duplicateSelected() {
+  if (!editable() || !selectedIds.size) return;
+  const keep = clipboard;                        // duplicate must not clobber what you copied earlier
+  copySelected(); const payload = clipboard; clipboard = keep;
+  pasteClipboard(payload, 2, 2);
+}
+
+// Align / distribute across the selection, by control CENTRE (the anchor the editor drags).
+function alignSelection(mode) {
+  if (selectedIds.size < 2) return;
+  const m = MODULES[idx];
+  const list = [...selectedIds].map((id) => {
+    const it = baseItem(id); const a = it && anchor(it, m.base);
+    return a ? { id, a, p: curPos(id) } : null;
+  }).filter(Boolean);
+  if (list.length < 2) return;
+  pushUndo(`align:${mode}`);
+  const setPos = (e, nx, ny) => { m.overrides[e.id] = e.a.axes === 'x' ? { x: round3(nx) } : { x: round3(nx), y: round3(ny) }; };
+  if (mode === 'column') {                       // one x for all — a vertical stack
+    const x = list.reduce((s2, e) => s2 + e.p.x, 0) / list.length;
+    for (const e of list) setPos(e, x, e.p.y);
+  } else if (mode === 'row') {                   // one y for all — a horizontal row
+    const y = list.reduce((s2, e) => s2 + e.p.y, 0) / list.length;
+    for (const e of list) setPos(e, e.p.x, y);
+  } else if (mode === 'spreadX' || mode === 'spreadY') {
+    const k = mode === 'spreadX' ? 'x' : 'y';
+    const sorted = [...list].sort((a1, b1) => a1.p[k] - b1.p[k]);
+    const lo = sorted[0].p[k], hi = sorted[sorted.length - 1].p[k];
+    const step = (hi - lo) / (sorted.length - 1);
+    sorted.forEach((e, i) => { const v = lo + i * step; setPos(e, k === 'x' ? v : e.p.x, k === 'y' ? v : e.p.y); });
+  }
+  if (editable()) m.dirtyDraft = true;
+  scheduleRender(); refreshStatus();
+}
+
+// Z-ORDER. The renderer paints items in list order, so later = on top; these move the selected
+// items within m.base.items. Authored modules only (a shipped module's order is its layout's).
+function reorderSelection(where) {
+  if (!editable() || !selectedIds.size) return;
+  const m = MODULES[idx];
+  pushUndo(`z:${where}`);
+  // Only CONTROLS take part: reorder them among the slots they already occupy, so the panel's
+  // background and frame (items with no id) stay put as the floor — send-to-back can never bury a
+  // control behind the faceplate, and one step forward is one CONTROL, not one raw list entry.
+  const items = [...m.base.items];
+  const slots = [];
+  items.forEach((it, i) => { if (it.id || it.param) slots.push(i); });
+  let seq = slots.map((i) => items[i]);
+  const isSel = (it) => selectedIds.has(it.id || it.param);
+  if (where === 'front') seq = [...seq.filter((it) => !isSel(it)), ...seq.filter(isSel)];
+  else if (where === 'back') seq = [...seq.filter(isSel), ...seq.filter((it) => !isSel(it))];
+  else {
+    const idxs = seq.map((it, i) => (isSel(it) ? i : -1)).filter((i) => i >= 0);
+    for (const i of (where === 'forward' ? [...idxs].reverse() : idxs)) {
+      const j = where === 'forward' ? i + 1 : i - 1;
+      if (j < 0 || j >= seq.length || isSel(seq[j])) continue;   // don't swap within the selection
+      [seq[i], seq[j]] = [seq[j], seq[i]];
+    }
+  }
+  slots.forEach((slot, k) => { items[slot] = seq[k]; });
+  m.base.items = items;
+  m.dirtyDraft = true; scheduleRender(); refreshStatus();
+}
+
+// Select every control sharing the primary selection's type — e.g. grab all knAcks to align them.
+function selectSameType() {
+  const m = MODULES[idx];
+  const it = selectedId && workItem(selectedId);
+  if (!it) return;
+  selectedIds.clear();
+  for (const x of m.base.items) { const c = x.id || x.param; if (c && x.t === it.t) selectedIds.add(c); }
+  if (!selectedIds.has(selectedId)) selectedId = [...selectedIds].pop() || null;
+  scheduleRender(); refreshStatus();
+}
+
+function selectAllControls() {
+  const m = MODULES[idx];
+  selectedIds.clear();
+  for (const it of m.base.items) { const c = it.id || it.param; if (c) selectedIds.add(c); }
+  selectedId = [...selectedIds].pop() || null;
+  scheduleRender(); refreshStatus();
 }
 
 // ---- save / revert -------------------------------------------------------
@@ -428,7 +722,7 @@ function revert() {
     m.overrides = clone(m.saved);
     m.workDesc = clone(m.desc);   // data edits aren't persisted yet; drop them too
   }
-  selectedId = null;
+  selectClear();
   closeFloats();
   scheduleRender();
 }
@@ -458,6 +752,33 @@ function descEntry(id) {
   return (d.ports || []).find((p) => p.id === id) || (d.params || []).find((p) => p.id === id) || null;
 }
 function optVal(id, path, dflt) { const it = workItem(id); return getPath(it && it.opts, path, dflt); }
+// The presentation setters below edit ONE control. When several controls of the same type are
+// selected, the settings sheet routes through these fan-out wrappers instead, so a single edit
+// (radius, label size, …) lands on all of them.
+function peers(id) {
+  if (selectedIds.size < 2 || !selectedIds.has(id)) return [id];
+  const t = (workItem(id) || {}).t;
+  return [...selectedIds].filter((sid) => (workItem(sid) || {}).t === t);
+}
+function setOptAll(id, path, value) { for (const sid of peers(id)) setOpt(sid, path, value); }
+function setKnobRadiusAll(id, r) { for (const sid of peers(id)) setKnobRadius(sid, r); }
+function setItemFieldAll(id, key, value) { for (const sid of peers(id)) setItemField(sid, key, value); }
+
+// Move a control to an exact panel position (the numeric x/y fields), through the same
+// overrides layer that drag and nudge use.
+function setPos(id, axis, v) {
+  if (!Number.isFinite(v)) return;
+  const m = MODULES[idx];
+  const it = baseItem(id); if (!it) return;
+  const a = anchor(it, m.base); if (!a) return;
+  pushUndo(`pos:${id}:${axis}`);
+  const p = curPos(id);
+  const nx = axis === 'x' ? round3(v) : p.x;
+  const ny = axis === 'y' ? round3(v) : p.y;
+  m.overrides[id] = a.axes === 'x' ? { x: nx } : { x: nx, y: ny };
+  scheduleRender(); refreshStatus();
+}
+
 function setOpt(id, path, value) {
   pushUndo(`opt:${id}:${path}`);
   const m = MODULES[idx];
@@ -659,10 +980,10 @@ function buildSettingsBody(id) {
     const s = section('Structure', 'struct');
     if (it.t === 'label') {
       s.body.appendChild(fieldRow('text', textInput(it.text, (v) => setItemField(id, 'text', v))));
-      s.body.appendChild(fieldRow('font size', numberInput(optVal(id, 'size', 2.4), (v) => setOpt(id, 'size', v))));
+      s.body.appendChild(fieldRow('font size', numberInput(optVal(id, 'size', 2.4), (v) => setOptAll(id, 'size', v))));
     } else {
-      s.body.appendChild(fieldRow('length', numberInput(it.len, (v) => setItemField(id, 'len', v))));
-      s.body.appendChild(fieldRow('thickness', numberInput(it.w, (v) => setItemField(id, 'w', v), 0.05)));
+      s.body.appendChild(fieldRow('length', numberInput(it.len, (v) => setItemFieldAll(id, 'len', v))));
+      s.body.appendChild(fieldRow('thickness', numberInput(it.w, (v) => setItemFieldAll(id, 'w', v), 0.05)));
     }
     if (MODULES[idx].editorOwned) s.body.appendChild(fieldRow('id', textInputCommit(id, (v) => renameControl(id, v))));
     root.appendChild(s.el);
@@ -672,21 +993,29 @@ function buildSettingsBody(id) {
   // --- Presentation (layout) ---
   const pres = section('Presentation', 'pres');
   const addP = (label, el) => pres.body.appendChild(fieldRow(label, el));
-  if (it.t === 'knob' || it.t === 'knack') addP('radius', numberInput(optVal(id, 'radius', 4.6), (v) => setKnobRadius(id, v)));
-  if (it.t === 'knack') addP('AV default', selectInput(optVal(id, 'av', 'on'), [['on', 'on — attenuverter shows when patched'], ['off', 'off — plain knAck']], (v) => setOpt(id, 'av', v)));
+  const group = peers(id);
+  if (group.length > 1) note(pres.body, `editing ${group.length} selected ${it.t}s together`);
+  const a0 = anchor(it, MODULES[idx].base);
+  if (a0) {   // exact placement — the same overrides layer drag and nudge write to
+    const p0 = curPos(id);
+    addP('x (mm)', numberInput(p0.x, (v) => setPos(id, 'x', v)));
+    if (a0.axes === 'xy') addP('y (mm)', numberInput(p0.y, (v) => setPos(id, 'y', v)));
+  }
+  if (it.t === 'knob' || it.t === 'knack') addP('radius', numberInput(optVal(id, 'radius', 4.6), (v) => setKnobRadiusAll(id, v)));
+  if (it.t === 'knack') addP('AV default', selectInput(optVal(id, 'av', 'on'), [['on', 'on — attenuverter shows when patched'], ['off', 'off — plain knAck']], (v) => setOptAll(id, 'av', v)));
   if (it.opts && it.opts.label && typeof it.opts.label === 'object') {
-    addP('label text', textInput(optVal(id, 'label.text', ''), (v) => setOpt(id, 'label.text', v)));
-    addP('label place', selectInput(optVal(id, 'label.placement', 'below'), PLACEMENTS, (v) => setOpt(id, 'label.placement', v)));
-    addP('font size', numberInput(optVal(id, 'label.size', 2.0), (v) => setOpt(id, 'label.size', v)));
+    addP('label text', textInput(optVal(id, 'label.text', ''), (v) => setOpt(id, 'label.text', v)));   // text stays per-control
+    addP('label place', selectInput(optVal(id, 'label.placement', 'below'), PLACEMENTS, (v) => setOptAll(id, 'label.placement', v)));
+    addP('font size', numberInput(optVal(id, 'label.size', 2.0), (v) => setOptAll(id, 'label.size', v)));
   }
   if (it.t === 'radio' || it.t === 'stepButton') {
-    addP('orientation', selectInput(optVal(id, 'orientation', 'v'), [['h', 'horizontal'], ['v', 'vertical']], (v) => setOpt(id, 'orientation', v)));
-    addP('spacing', numberInput(optVal(id, 'spacing', 5.6), (v) => setOpt(id, 'spacing', v)));
-    addP('LED radius', numberInput(optVal(id, 'ledR', 2.16), (v) => setOpt(id, 'ledR', v)));
+    addP('orientation', selectInput(optVal(id, 'orientation', 'v'), [['h', 'horizontal'], ['v', 'vertical']], (v) => setOptAll(id, 'orientation', v)));
+    addP('spacing', numberInput(optVal(id, 'spacing', 5.6), (v) => setOptAll(id, 'spacing', v)));
+    addP('LED radius', numberInput(optVal(id, 'ledR', 2.16), (v) => setOptAll(id, 'ledR', v)));
     const sub = document.createElement('div'); sub.className = 'insp-sub'; sub.textContent = 'positions'; pres.body.appendChild(sub);
     pres.body.appendChild(stepsEditor(id));
   }
-  if (it.t === 'button') { addP('radius', numberInput(optVal(id, 'r', 2.0), (v) => setOpt(id, 'r', v))); addP('kind', textInput(optVal(id, 'kind', 'red'), (v) => setOpt(id, 'kind', v))); }
+  if (it.t === 'button') { addP('radius', numberInput(optVal(id, 'r', 2.0), (v) => setOptAll(id, 'r', v))); addP('kind', textInput(optVal(id, 'kind', 'red'), (v) => setOptAll(id, 'kind', v))); }
   if (it.t === 'knob' || it.t === 'knack') {   // dial scale as its own collapsible sub-section
     const sc = section('Dial scale', 'scale'); sc.el.classList.add('sub');
     sc.body.appendChild(scaleEditor(id));
@@ -884,7 +1213,7 @@ function newDraft() {
   const m = { name: `New Module ${n}`, dir: `draft-${n}`, base, desc, workDesc: clone(desc), overrides: {}, saved: {}, editorOwned: true, dirtyDraft: true, undo: [], redo: [] };
   MODULES.push(m);
   idx = MODULES.length - 1;
-  selectedId = null; resetScrollNext = true; closeFloats(); openPalette(); scheduleRender();
+  selectClear(); resetScrollNext = true; closeFloats(); openPalette(); scheduleRender();
 }
 
 // Discover authored modules on disk (editor-generated) and add any not already listed as
@@ -933,7 +1262,7 @@ function openDuplicateDialog() {
     const desc = clone(src.workDesc); desc.id = dir; desc.name = name; delete desc.worklets;
     const m = initModule({ name, dir, base: clone(src.base), desc, editorOwned: true, dirtyDraft: true });
     MODULES.push(m); idx = MODULES.length - 1;
-    selectedId = null; resetScrollNext = true; closeFloats(); openPalette(); scheduleRender();
+    selectClear(); resetScrollNext = true; closeFloats(); openPalette(); scheduleRender();
     close();
   });
 }
@@ -980,7 +1309,7 @@ function placeControl(type, clientX, clientY) {
   else if (made.kind === 'param') m.workDesc.params.push(made.entry);
   else if (made.kind === 'multi') for (const en of made.entries) (en.kind === 'port' ? m.workDesc.ports : m.workDesc.params).push(en.entry);
   m.dirtyDraft = true;
-  selectedId = made.item.id; scheduleRender();   // select it (no dialog — so you can drop several); an amber dot flags it as unconfigured
+  selectOnly(made.item.id); scheduleRender();   // select it (no dialog — so you can drop several); an amber dot flags it as unconfigured
 }
 function renameControl(oldId, newId) {
   const m = MODULES[idx]; if (!m.editorOwned) return;
@@ -998,7 +1327,7 @@ function renameControl(oldId, newId) {
     }
   }
   if (settingsId === oldId) settingsId = newId;
-  selectedId = newId; m.dirtyDraft = true; scheduleRender(); refreshSettings();
+  selectOnly(newId); m.dirtyDraft = true; scheduleRender(); refreshSettings();
 }
 function moveEntry(id, dir) {
   const m = MODULES[idx];
@@ -1022,6 +1351,7 @@ function refreshStatus() {
     const n = Object.keys(m.overrides).length;
     status.textContent = `${m.name} — ${m.base.items.length} items` + (n ? `, ${n} moved${dirty() ? ' (unsaved)' : ''}` : '');
   }
+  if (selectedIds.size > 1) { readout.textContent = `${selectedIds.size} controls selected`; return; }
   if (selectedId && currentLayout) {
     const it = currentLayout.items.find((x) => x.id === selectedId);
     if (it) { readout.textContent = `${selectedId}  ·  x ${it.x ?? '—'}  y ${it.y ?? '—'}`; return; }
@@ -1064,7 +1394,7 @@ document.addEventListener('contextmenu', (e) => {
   if (tag === 'input' || tag === 'select' || tag === 'textarea') return;   // leave native editing menus alone
   e.preventDefault();
   const handle = e.target.closest && e.target.closest('[data-ctrl-id]');
-  if (handle) { const id = handle.getAttribute('data-ctrl-id'); selectedId = id; openSettings(id); scheduleRender(); return; }
+  if (handle) { const id = handle.getAttribute('data-ctrl-id'); if (selectedIds.has(id)) selectedId = id; else selectOnly(id); openSettings(id); scheduleRender(); return; }
   openMenu(e.clientX, e.clientY, mainMenu());
 });
 // Click outside an open settings/module float closes it (like a popover). Capture phase, and
@@ -1080,6 +1410,11 @@ window.addEventListener('keydown', (e) => {
   if (mod && e.key.toLowerCase() === 's') { e.preventDefault(); if (dirty()) save(); return; }
   if (mod && e.key.toLowerCase() === 'z') { e.preventDefault(); (e.shiftKey ? redo : undo)(); return; }
   if (mod && e.key.toLowerCase() === 'n') { e.preventDefault(); newDraft(); return; }
+  if (mod && e.key.toLowerCase() === 'a') { e.preventDefault(); selectAllControls(); return; }
+  if (mod && e.key.toLowerCase() === 'c') { e.preventDefault(); copySelected(); return; }
+  if (mod && e.key.toLowerCase() === 'x') { e.preventDefault(); cutSelected(); return; }
+  if (mod && e.key.toLowerCase() === 'v') { e.preventDefault(); pasteClipboard(); return; }
+  if (mod && e.key.toLowerCase() === 'd') { e.preventDefault(); duplicateSelected(); return; }
   if (mod && (e.key === '=' || e.key === '+')) { e.preventDefault(); zoomBy(1.2); return; }
   if (mod && e.key === '-') { e.preventDefault(); zoomBy(1 / 1.2); return; }
   if (mod && e.key === '0') { e.preventDefault(); zoomReset(); return; }
@@ -1093,6 +1428,7 @@ window.addEventListener('keydown', (e) => {
   }
   const tag = (e.target.tagName || '').toLowerCase();
   if (tag === 'input' || tag === 'select' || tag === 'textarea') return;
+  if (e.key === 'Delete' || e.key === 'Backspace') { e.preventDefault(); deleteSelected(); return; }
   const step = e.shiftKey ? 1.0 : 0.2;
   const map = { ArrowLeft: [-step, 0], ArrowRight: [step, 0], ArrowUp: [0, -step], ArrowDown: [0, step] };
   if (map[e.key]) { e.preventDefault(); nudge(...map[e.key]); }
