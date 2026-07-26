@@ -1,28 +1,28 @@
 # DreamRack — Interactive tutorial
 
 <!--
-This file is BOTH the document you are reading and the exact copy the app shows in its tutorial cards. Editing it here changes the tutorial; there is no build step.
+This file is BOTH the document you are reading and the exact copy the app shows in its tutorial sections. Editing it here changes the tutorial; there is no build step.
 
 Format (parsed by host/tutorial-md.js):
-  ## Heading         starts a card; the heading becomes the card's title
-  paragraph          a paragraph — write it on ONE line, the card wraps it
+  ## Heading         starts a section; the heading becomes its title
+  paragraph          a paragraph — write it on ONE line, the section wraps it
   - item             consecutive items become one bulleted list
   > **Do this** — …  a "Do this" block; the bold text is its label
 
 Inline: **bold**, *italic*, [text](url), `code`. Text above the first ## is preamble for a human reader and never reaches the app.
 
-House style: the reader has probably used a software modular before, and they all differ in interface and terminology — so the job is to map, not to teach. One card per heading, each a complete covering of it. No sales pitch; they've read the README.
+House style: the reader has probably used a software modular before, and they all differ in interface and terminology — so the job is to map, not to teach. One section per heading, each a complete covering of it. No sales pitch; they've read the README.
 -->
 
-This is the tutorial DreamRack shows in its floating cards, on a first run and from Help ▸ Interactive tutorial. It's written for someone who has used a software modular before, so rather than teaching synthesis it maps what you already know onto this one — and points out where DreamRack differs.
+This is the tutorial DreamRack shows in its floating window, a section at a time, on a first run and from Help ▸ Interactive tutorial. It's written for someone who has used a software modular before, so rather than teaching synthesis it maps what you already know onto this one — and points out where DreamRack differs.
 
 ## Before you start
 
-**Before you start,** please turn off any browser extension that recolours pages — Dark Reader and the like — for this site. DreamRack has its own light and dark modes, and those extensions distort its panels.
+**Before you start,** please turn off any browser extension that recolours pages — Dark Reader and the like — for this site. DreamRack (DR for short) has its own light and dark modes, and those extensions distort its panels.
 
-**These cards:** each explains one part of the instrument, then asks you to do something. A card stays open while you work, so you never have to dismiss it to follow it — park it anywhere by its title bar, and resize it like any other window. Marked blocks are your cue to act, like this one:
+**This tutorial** is divided into sections that progressively cover what you need to know to get started with the instrument. Its window stays open, so you never have to dismiss it to follow it — drag it anywhere by its title and resize if needed. Marked blocks are your cue to act, like this one:
 
-> **Do this** — Read the [README](https://github.com/chrisgr99/DreamRack/blob/main/README.md) if you haven't — it covers what DreamRack is, and what it isn't, which this tutorial won't repeat.
+> **Do this** — Read the [README](https://github.com/chrisgr99/DreamRack/blob/main/README.md) if you haven't — it covers what DR is, which this tutorial won't repeat.
 
 **Coming up:**
 
@@ -38,13 +38,13 @@ Coming next: **Vocabulary**.
 
 ## Vocabulary
 
-If you already patch modular synths, this is nothing new — press **Next** to skip ahead. If you're new to it, these are the words the rest of the tutorial leans on:
+If you're already familiar with modular synthesis, you can probably skip this section. These are some terms the rest of the tutorial assumes you know:
 
-- **Synthesizer** — an electronic instrument that makes sound. A *modular* synthesizer, like DreamRack, isn't one fixed instrument but a set of separate parts you connect however you like, so you build the instrument as you go.
+- **Synthesizer** — an electronic instrument that makes sound. A *modular* synthesizer, like DR, isn't one fixed instrument but a set of separate parts you connect however you like, so you build the instrument as you go, adding modules and then connecting them.
 - **Module** — one piece of the instrument: a single faceplate with its own knobs and jacks, like the oscillator, the low-pass gate, or the mixer here.
-- **Rack** — the surface the modules sit on, arranged in rows like a physical modular case. A rack usually holds a number of modules wired together with cables so one feeds into the next; that flow of signal from module to module is what turns a handful of separate parts into a single instrument that makes sound.
-- **Jack (terminal)** — the sockets on a module. An **output** sends a signal out; an **input** takes one in.
-- **Signal** — what travels along a cable. Three kinds: **audio** (what you hear), **control voltage** or **CV** (a voltage that moves a control for you instead of being heard), and **triggers or gates** (on-off pulses that start or time things). DreamRack colours the cables by kind.
+- **Rack** — the frame that holds the modules, arranged in rows like a physical modular case. A rack holds a number of modules that can be wired together with cables so one feeds into the next; that flow of signal from module to module creates an instrument that makes sound.
+- **Jack (terminal)** — a socket on a module. An **output** sends a signal out; an **input** takes one in. These look like a small coloured ring with a black hole in the centre.
+- **Signal** — what travels along a cable. Three kinds: **audio** (what you hear), **control voltage** or **CV** (a voltage that moves a control for you instead of being heard), and **triggers or gates** (on-off pulses that start or time things). DR colours each cable to match the terminal it plugs into.
 - **Cable (patch cord)** — the connection you draw from an output to an input.
 - **Patch** — the whole arrangement: which modules you have, how they're wired, and every setting. "Patching" is the act of wiring it up; your patch is your current setup, and it's what you save.
 
@@ -52,13 +52,13 @@ Coming next: **Basic interaction**.
 
 ## Basic interaction
 
-**Focus:** as you move around, whatever you're over brightens and everything else dims back — so the module, a single band of a quad, and all the modules in a wired-up signal chain you're pointing at stand out from the rest.
+**Focus:** as you move the pointer around, the module or module section the pointer is over brightens, leaving the others dimmer — so what is most relevant to what you are working on stands out from the rest.
 
-> **Do this** — Move your pointer over the "Complex Oscillator" (the top-left module) without clicking, and watch the whole module brighten while the rest dims. Now move to band A of the "Quad Low Pass Gate" (the module in the lower right) — just that band lights. Point at other modules to see this in action.
+> **Do this** — Without clicking, move your pointer anywhere over the "Complex Oscillator" (the large module at top-left) and watch the whole module brighten while the rest stay dim. Move the pointer from one module to another and the **hovered** module always brightens. Notice too that on a quad module — the "Quad Low Pass Gate", say — each channel band brightens on its own, like a separate module.
 
-**Commands:** right-click a panel — or click the hamburger in the top-left corner — for the main menu: a **Sound** row with **Master** and **Monitor** buttons at the top, then File, Edit, View, Rack and Help.
+**Commands:** right-click a panel — or click the "Hamburger" menu in the top-left corner — for the main menu: at the top, a row of sound controls with **Master** (MSTR) and **Monitor** (MON) buttons, then File, Edit, View, Rack and Help. A module's name sits in the bar across its top — drag that bar to move the module around the rack, and right-click the name for the module's own menu.
 
-> **Do this** — Right-click a panel, go to View, and set light or dark to your taste. Everything re-skins, including this card, and your choice sticks between sessions.
+> **Do this** — Right-click a panel, go to View, and set light or dark to your taste. Everything re-skins, including this section, and your choice sticks between sessions.
 
 **Terminals:** right-click one and the menu offers what you can do with that signal — watch it on a scope, listen to it, or trace where it goes.
 
@@ -70,9 +70,9 @@ Coming next: **Basic interaction**.
 
 > **Do this** — Hover a knob and scroll it, then move to its rim and scroll again — the same gesture, four times finer.
 
-**The knAck — a knob you can patch:** some knobs are also jacks — a cable plugs straight into the knob, so a parameter and its CV input share one control instead of two spots. You'll spot one by the coloured centre with a hole, wearing the same code as any terminal (orange for a control-voltage input). It still scrolls to turn and double-clicks to reset; a single click **pulls a cable out of it**, and dropping a cable onto it patches a signal in. The "Quad Function Generator" uses these for its attack and decay.
+**The knAck (knob-jack) — a knob you can patch:** some knobs are also jacks — a cable plugs straight into the knob's centre, so a parameter and its CV input share one control instead of two spots. You'll spot one by the orange jack at its centre, wearing the same colour code as any terminal. The knob body scrolls to turn as usual; the **centre jack alone** is the terminal — click it to pull a cable out, or drop a cable on it to patch a signal in. Right-click the knob for its menu: reset the value, disconnect the cable, and switch on the **attenuverter (AV)**. With the AV on and a cable plugged in, the knob's lower half becomes a depth gauge: scroll there to set how strongly the signal moves the knob — straight down is zero, right is positive, left is negative — while the rest of the knob still scrolls the value itself. The "Quad Function Generator" uses knAcks for attack and decay, and the "Quad Low Pass Gate" for its level, decay, clock-ratio and rate knobs.
 
-> **Do this** — On the "Quad Function Generator", click an **attack** knob — the one with the orange centre — and a cable follows the pointer; drop it on empty space to let it go, or on a terminal to patch. Double-click the knob to reset it, and scroll it to set the attack time as before.
+> **Do this** — On the "Quad Function Generator", click the **orange centre** of an **attack** knob — a cable follows the pointer; drop it on empty space to let it go, or onto a terminal to patch. Hold the mouse pointer over the knob and scroll to set the attack time as before, double-click the knob to reset it, and right-click it to see its menu.
 
 **Moving around:** if scrolling turns knobs, how do you get around a big rack? Hold Option (Alt on Windows), then move the pointer to slide the view and roll the wheel to zoom. More on this in the **Getting around** section, covered later.
 
@@ -80,7 +80,7 @@ Coming next: **First sound**.
 
 ## First sound
 
-**Cables:** left-click a terminal and the cable follows the pointer — no button held. (Almost everything in DreamRack works without a held button — gentler on the hand than dragging.) Left-click another terminal to connect it, or left-click anywhere else to drop it. A cable takes the colour of the input it plugs into, so you can read its job at a glance.
+**Cables:** left-click a terminal and the cable follows the pointer — no button held. (Almost everything in DR works without a held button — gentler on the hand than dragging.) Left-click another terminal to connect it, or left-click anywhere else to drop it. A cable takes the colour of the input it plugs into, so you can read its job at a glance.
 
 > **Do this** — Left-click the **"Complex Oscillator"** Final output (near the centre top of the module), move to **channel A** of the **"Mixer / Output"** (bottom-left, top row of inputs), and click to connect. The cable is yellow — its destination is an audio terminal.
 
@@ -115,7 +115,7 @@ Coming next: **Building a patch**.
 
 **Your modules:** you already have a useful set of four — the "Complex Oscillator", "Quad Function Generator", "Quad Low Pass Gate", and "Mixer / Output" — enough to build real patches. Adding and removing modules comes later; for now, build with these. (The **Master** bus should still be on from **First sound**; if it's off, turn it on by clicking the button beside **Master** in the top row of the main menu.)
 
-> **Do this** — This section works mostly with the "Quad Low Pass Gate", the module at the lower right. If this card covers it, pull its bottom edge up until the whole module is visible.
+> **Do this** — This section works mostly with the "Quad Low Pass Gate", the module at the lower right. If this section covers it, pull its bottom edge up until the whole module is visible.
 
 **Create a pluck or percussive sound:** a plucked sound is a brief pulse of sound, made by passing a signal through a gate that opens and closes quickly — which is how a low pass gate works. To give it something to gate, send a signal from the oscillator into the gate's input.
 
@@ -125,7 +125,7 @@ Coming next: **Building a patch**.
 
 > **Do this** — Press **Strike** on channel A for a pluck, and press it again for another. Turn **Decay** up for a longer tail, down for a short blip.
 
-**Clock it:** instead of striking by hand, let the gate's own clock strike it — steadily, over and over.
+**Clock it:** the gate has its own clock, which strikes a channel repeatedly. The clock-ratio dial is a knAck, so a CV patched into its centre plays the division itself; its right-click **Quantize** switch keeps a swept ratio snapping to whole divisions.
 
 > **Do this** — Turn on channel A's **Clock** button (CLK on), then the master **Run** at the bottom of the module — the pluck now repeats in time. Turn **Rate** to speed it up or slow it down. Set channel A's **clock ratio** dial, and its **÷ / ×** mode, to pulse at divisions or multiples of the master rate — all locked in sync.
 
@@ -195,7 +195,7 @@ Coming next: **Saving your work**.
 
 ## Saving your work
 
-**Nothing is lost when you close:** you don't have to save to hang on to your work — DreamRack quietly remembers your session as you go, in the desktop app and in any web browser, so the next time you open it you're right back where you left off: the same modules, cables, knob settings, and any scopes or monitors you'd placed. Saving is for something different — keeping a named version you can return to, or hand to someone else.
+**Nothing is lost when you close:** you don't have to save to hang on to your work — DR quietly remembers your session as you go, in the desktop app and in any web browser, so the next time you open it you're right back where you left off: the same modules, cables, knob settings, and any scopes or monitors you'd placed. Saving is for something different — keeping a named version you can return to, or hand to someone else.
 
 > **Do this** — Change something small — turn a knob, drop a monitor — then quit and reopen. It all comes back exactly as you left it.
 

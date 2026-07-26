@@ -139,11 +139,11 @@
        light face and a light line on a dark one — so it reads as part of the app, not a web page. */
     .tour-card { --t-face: #cfcfcf; --t-ink: #163a69; --t-dim: #5c6f8c; --t-edge: #141414;
       --t-sep: rgba(22,58,105,0.28); --t-accent: #8a5510; --t-tint: rgba(138,85,16,0.10);
-      position: fixed; z-index: 1350; width: 340px; min-width: 220px; min-height: 130px; max-height: 90vh;
+      position: fixed; z-index: 1350; width: 30rem; min-width: 20rem; min-height: 130px; max-height: 90vh;
       overflow: hidden; display: flex; flex-direction: column;
       background: var(--t-face); color: var(--t-ink);
       border: 1.5px solid var(--t-edge); border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-      font: 400 9px/1.5 -apple-system, system-ui, sans-serif; user-select: none; -webkit-user-select: none; }
+      font: 400 1rem/1.5 -apple-system, system-ui, sans-serif; user-select: none; -webkit-user-select: none; }
     .tour-card.theme-dark { --t-face: #262629; --t-ink: #b8b8bc; --t-dim: #8a8a90; --t-edge: #d2d2d6;
       --t-sep: rgba(184,184,188,0.24); --t-accent: #e0a353; --t-tint: rgba(224,163,83,0.10); }
     /* Resize grips. The whole bottom edge grabs height (so the card is easy to pull up off a module
@@ -170,10 +170,10 @@
     .tour-head { flex: none; display: flex; align-items: center; gap: 8px; padding: 7px 8px 7px 11px;
       border-bottom: 1px solid var(--t-sep); cursor: move; touch-action: none; }
     .tour-title { flex: 1 1 auto; font-weight: 600; }
-    .tour-x { flex: none; width: 20px; height: 20px; padding: 0; background: none; border: none;
-      color: var(--t-dim); font: 400 12px/1 -apple-system, system-ui, sans-serif; cursor: pointer; border-radius: 4px; }
+    .tour-x { flex: none; width: 1.3em; height: 1.3em; padding: 0; background: none; border: none;
+      color: var(--t-dim); font: 400 0.8em/1 -apple-system, system-ui, sans-serif; cursor: pointer; border-radius: 4px; }
     .tour-home { flex: none; padding: 2px 7px; background: none; border: none; color: var(--t-dim);
-      font: 400 11px/1 -apple-system, system-ui, sans-serif; cursor: pointer; border-radius: 4px; }
+      font: 400 0.72em/1 -apple-system, system-ui, sans-serif; cursor: pointer; border-radius: 4px; }
     .tour-x:hover, .tour-home:hover { color: var(--t-ink); background: rgba(128,128,128,0.18); }
     /* min-height:0 lets a flex child actually shrink and scroll. The bar is styled dark on a
        transparent track — the default macOS bar is a dazzling white slab over our panels.
@@ -200,7 +200,7 @@
     .tour-foot { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 8px;
       padding: 8px 16px 8px 11px; border-top: 1px solid var(--t-sep); flex-wrap: wrap; }   /* right pad: clear of the resize grip */
     .tour-left, .tour-nav { display: flex; align-items: center; gap: 6px; }
-    .tour-count { color: var(--t-dim); font-size: 8px; margin-right: 2px; }
+    .tour-count { color: var(--t-dim); font-size: 0.72em; margin-right: 2px; }
     .tour-btn { padding: 4px 10px; border-radius: 6px; border: 1px solid var(--t-sep);
       background: transparent; color: var(--t-ink); font: inherit; cursor: pointer; }
     .tour-btn:hover:not(:disabled) { border-color: var(--t-ink); }
@@ -208,11 +208,11 @@
     .tour-next { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
     /* A real toggle, not an exit: it reports whether the tutorial auto-opens, and flips back off. */
     .tour-never { display: inline-flex; align-items: center; gap: 4px; color: var(--t-dim);
-      font: inherit; font-size: 8px; cursor: pointer; user-select: none; -webkit-user-select: none; }
+      font: inherit; font-size: 0.72em; cursor: pointer; user-select: none; -webkit-user-select: none; }
     /* Fully custom box: the native checkbox renders a light square in both modes, which on the dark
        faceplate reads as already-checked. Draw it as an empty faceplate square with a themed edge —
        dark box + light line on dark, light box + dark line on light — and only fill it when checked. */
-    .tour-never input { appearance: none; -webkit-appearance: none; flex: none; width: 11px; height: 11px;
+    .tour-never input { appearance: none; -webkit-appearance: none; flex: none; width: 0.75em; height: 0.75em;
       margin: 0; cursor: pointer; border-radius: 2px; background: var(--t-face); border: 1px solid var(--t-edge); }
     .tour-never input:checked { background: var(--t-accent); border-color: var(--t-accent); }
     .tour-never input:checked::after { content: '✓'; display: block; text-align: center;
