@@ -148,6 +148,21 @@
       --t-sep: rgba(184,184,188,0.24); --t-accent: #e0a353; --t-tint: rgba(224,163,83,0.10); }
     /* Resize grips. The whole bottom edge grabs height (so the card is easy to pull up off a module
        it covers); the corner grabs both. Custom, because CSS `resize` only draws the corner grip. */
+    /* SHOW-ME eye: an inline button in the tutorial text that rings the thing being described. */
+    .tour-eye { display: inline-flex; align-items: center; justify-content: center; vertical-align: baseline;
+      width: 1.05em; height: 1.05em; margin: 0 0.18em; padding: 0.08em; border: none; border-radius: 50%;
+      user-select: none; -webkit-user-select: none;
+      background: none; color: #ff7300; font: inherit; line-height: 1; cursor: pointer; }
+    .tour-eye svg { width: 100%; height: 100%; fill: currentColor; display: block; }
+    .tour-eye:hover { background: rgba(255,115,0,0.18); }
+    .tour-eye.lit { background: #ff7300; color: #fff; }
+    .tour-eye.unavailable { color: var(--t-dim); cursor: default; opacity: 0.5; }
+    /* The callout itself: a full-window overlay ABOVE the rack and the card, and click-through, so
+       the panel stays live and can be worked while it's ringed. */
+    /* An <svg> is a replaced element: inset:0 alone leaves it at its 300x150 intrinsic size, which
+       silently clips the callout. Size it explicitly to the window. */
+    #tutorialCallout { position: fixed; left: 0; top: 0; width: 100vw; height: 100vh; z-index: 1360;
+      pointer-events: none; overflow: visible; }
     .tour-resize-y { position: absolute; left: 0; right: 0; bottom: 0; height: 8px; cursor: ns-resize; touch-action: none; }
     .tour-resize-xy { position: absolute; right: 0; bottom: 0; width: 16px; height: 16px; cursor: nwse-resize; touch-action: none; z-index: 1; }
     .notes-text { white-space: pre-wrap; word-break: break-word; }
@@ -205,7 +220,9 @@
       background: transparent; color: var(--t-ink); font: inherit; cursor: pointer; }
     .tour-btn:hover:not(:disabled) { border-color: var(--t-ink); }
     .tour-btn:disabled { opacity: 0.4; cursor: default; }
-    .tour-next { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+    /* Next is always clickable; it takes the accent only once the section has been read to the end
+       (or is short enough not to scroll), so the colour reports progress rather than urging a click. */
+    .tour-next.ready { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
     /* A real toggle, not an exit: it reports whether the tutorial auto-opens, and flips back off. */
     .tour-never { display: inline-flex; align-items: center; gap: 4px; color: var(--t-dim);
       font: inherit; font-size: 0.72em; cursor: pointer; user-select: none; -webkit-user-select: none; }
@@ -328,6 +345,7 @@
       <rect x="4" y="16" width="16" height="2.4" rx="1"/>
     </svg>
   </button>
+  <svg id="tutorialCallout"></svg>
   <div id="rack"></div>
 
   <script type="module" src="debug/rack-app.js"></script>

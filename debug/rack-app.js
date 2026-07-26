@@ -534,7 +534,10 @@ async function boot() {
   let tour = null;
   try {
     const steps = await loadTutorial();
-    tour = createTour({ steps, onExternal: (url) => rack._openExternal(url), isDark: () => rack.isDark() });
+    tour = createTour({ steps, onExternal: (url) => rack._openExternal(url), isDark: () => rack.isDark(),
+      onSee: (t, el) => (t ? rack.showCallout(t, el) : rack.clearCallout()),
+      canSee: (t) => rack.calloutAvailable(t),
+      homePos: (w, h) => rack.tutorialHomePos(w, h) });
     rack.onTutorial = () => tour.open(0);
     if (!tourSeen()) tour.open(0);
   } catch (e) {

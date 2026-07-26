@@ -24,6 +24,10 @@ This is the tutorial DreamRack shows in its floating window, a section at a time
 
 > **Do this** — Read the [README](https://github.com/chrisgr99/DreamRack/blob/main/README.md) if you haven't — it covers what DR is, which this tutorial won't repeat.
 
+**Show me:** wherever the tutorial names something on screen, it may carry this symbol {see:complexOsc259t#title} — click it and that thing is ringed in orange, with a line drawn from the symbol to it. Click the same symbol again to clear the ring, or click another to move it; only one is shown at a time, and changing section clears it. The rack stays live underneath, so you can work a control while it is ringed.
+
+> **Do this** — Click the symbol in the paragraph above. The "Complex Oscillator" title bar is ringed, with a line running to it. Click it again to clear.
+
 **Coming up:**
 
 - [**Vocabulary**](#vocabulary) — a few modular terms; skip it if you already patch
@@ -41,10 +45,10 @@ Coming next: **Vocabulary**.
 If you're already familiar with modular synthesis, you can probably skip this section. These are some terms the rest of the tutorial assumes you know:
 
 - **Synthesizer** — an electronic instrument that makes sound. A *modular* synthesizer, like DR, isn't one fixed instrument but a set of separate parts you connect however you like, so you build the instrument as you go, adding modules and then connecting them.
-- **Module** — one piece of the instrument: a single faceplate with its own knobs and jacks, like the oscillator, the low-pass gate, or the mixer here.
-- **Rack** — the frame that holds the modules, arranged in rows like a physical modular case. A rack holds a number of modules that can be wired together with cables so one feeds into the next; that flow of signal from module to module creates an instrument that makes sound.
-- **Jack (terminal)** — a socket on a module. An **output** sends a signal out; an **input** takes one in. These look like a small coloured ring with a black hole in the centre.
-- **Signal** — what travels along a cable. Three kinds: **audio** (what you hear), **control voltage** or **CV** (a voltage that moves a control for you instead of being heard), and **triggers or gates** (on-off pulses that start or time things). DR colours each cable to match the terminal it plugs into.
+- **Module** — one piece of the instrument: a single faceplate with its own knobs and jacks, like the oscillator {see:complexOsc259t}, the low-pass gate {see:lpg-292}, or the mixer {see:mixer} here.
+- **Rack** — the frame that holds the modules {see:quadFn281t}, arranged in rows like a physical modular case. A rack holds a number of modules that can be wired together with cables so one feeds into the next; that flow of signal from module to module creates an instrument that makes sound.
+- **Jack (terminal)** — a socket on a module. An **output** {see:complexOsc259t/prinSineOut} sends a signal out; an **input** {see:lpg-292/inA} takes one in. These look like a small coloured ring with a black hole in the centre.
+- **Signal** — what travels along a cable. Three kinds: **audio** (what you hear), **control voltage** or **CV** (a voltage that moves a control for you instead of being heard), and **triggers or gates** (on-off pulses that start or time things). Each kind has its own colour, on the terminals and on the cables: **audio** {see:complexOsc259t/prinFinalOut}, **CV** {see:complexOsc259t/modCvOut}, **trigger** {see:lpg-292/trigA}. DR colours each cable to match the terminal it plugs into.
 - **Cable (patch cord)** — the connection you draw from an output to an input.
 - **Patch** — the whole arrangement: which modules you have, how they're wired, and every setting. "Patching" is the act of wiring it up; your patch is your current setup, and it's what you save.
 
@@ -54,23 +58,23 @@ Coming next: **Basic interaction**.
 
 **Focus:** as you move the pointer around, the module or module section the pointer is over brightens, leaving the others dimmer — so what is most relevant to what you are working on stands out from the rest.
 
-> **Do this** — Without clicking, move your pointer anywhere over the "Complex Oscillator" (the large module at top-left) and watch the whole module brighten while the rest stay dim. Move the pointer from one module to another and the **hovered** module always brightens. Notice too that on a quad module — the "Quad Low Pass Gate", say — each channel band brightens on its own, like a separate module.
+> **Do this** — Without clicking, move your pointer anywhere over the "Complex Oscillator" {see:complexOsc259t} (the large module at top-left) and watch the whole module brighten while the rest stay dim. Move the pointer from one module to another and the **hovered** module always brightens. Notice too that on a quad module — the "Quad Low Pass Gate", say — each channel band {see:lpg-292#A} brightens on its own, like a separate module.
 
-**Commands:** right-click a panel — or click the "Hamburger" menu in the top-left corner — for the main menu: at the top, a row of sound controls with **Master** (MSTR) and **Monitor** (MON) buttons, then File, Edit, View, Rack and Help. A module's name sits in the bar across its top — drag that bar to move the module around the rack, and right-click the name for the module's own menu.
+**Commands:** right-click a panel {see:complexOsc259t} — anywhere on its face that is not a control or a terminal, since those carry menus of their own — or click the "Hamburger" menu in the top-left corner {see:ui:#burger} — for the main menu: at the top, a row of sound controls with **Master** (MSTR) and **Monitor** (MON) buttons, then File, Edit, View, Rack and Help. A module's name sits in the bar across its top {see:lpg-292#title} — drag that bar to move the module around the rack, and right-click the name for the module's own menu.
 
-> **Do this** — Right-click a panel, go to View, and set light or dark to your taste. Everything re-skins, including this section, and your choice sticks between sessions.
+> **Do this** — Right-click a panel {see:complexOsc259t}, go to View, and set light or dark to your taste. Everything re-skins, including this section, and your choice sticks between sessions.
 
 **Terminals:** right-click one and the menu offers what you can do with that signal — watch it on a scope, listen to it, or trace where it goes.
 
-> **Do this** — On the "Complex Oscillator", right-click the **Final** output (under Principal Osc Outputs) and rest the pointer on **Monitor** to hear the signal there, then slide onto **Scope** to see its shape. No clicking — each lasts only while your pointer is on it (you could click to keep it).
+> **Do this** — On the "Complex Oscillator", right-click the **Final** output {see:complexOsc259t/prinFinalOut} (under Principal Osc Outputs) and rest the pointer on **Monitor** to hear the signal there, then slide onto **Scope** to see its shape. No clicking — each lasts only while your pointer is on it (you could click to keep it).
 
-**Colour code:** terminals read at a glance. Colour is the signal family — **audio** yellow, **control voltage** orange, **gates and triggers** blue. Shape is direction: a dashed ring hugs a terminal's outer edge on an **output**, and surrounds the centre hole on an **input**.
+**Colour code:** terminals read at a glance. Colour is the signal family — **audio** yellow {see:complexOsc259t/prinSineOut}, **control voltage** orange {see:complexOsc259t/modCvOut}, **gates and triggers** blue {see:lpg-292/trigA}. Shape is direction: a dashed ring hugs a terminal's outer edge on an **output** {see:complexOsc259t/prinFinalOut}, and surrounds the centre hole on an **input** {see:lpg-292/inA}.
 
-**Controls:** knobs may work differently from other modulars you've used — they **don't drag**. Hover a knob and scroll. Full rate at the centre, a quarter of it at the rim, so the same gesture gives you coarse or fine without a modifier. Faders take either: drag them, or scroll them like a knob. Double-click any knob to reset it.
+**Controls:** knobs may work differently from other modulars you've used — they **don't drag**. Hover a knob — a large one {see:complexOsc259t/prinFreq} or a small one {see:complexOsc259t/prinFine} — and scroll. Full rate at the centre, a quarter of it at the rim, so the same gesture gives you coarse or fine without a modifier. Faders {see:mixer/levelA} take either: drag them, or scroll them like a knob. Buttons {see:complexOsc259t/pitchMod} you simply press. Radio buttons {see:complexOsc259t/modRange} come as a set where only one can be on at a time — pressing one releases the others. Double-click any knob to reset it.
 
 > **Do this** — Hover a knob and scroll it, then move to its rim and scroll again — the same gesture, four times finer.
 
-**The knAck (knob-jack) — a knob you can patch:** some knobs are also jacks — a cable plugs straight into the knob's centre, so a parameter and its CV input share one control instead of two spots. You'll spot one by the orange jack at its centre, wearing the same colour code as any terminal. The knob body scrolls to turn as usual; the **centre jack alone** is the terminal — click it to pull a cable out, or drop a cable on it to patch a signal in. Right-click the knob for its menu: reset the value, disconnect the cable, and switch on the **attenuverter (AV)**. With the AV on and a cable plugged in, the knob's lower half becomes a depth gauge: scroll there to set how strongly the signal moves the knob — straight down is zero, right is positive, left is negative — while the rest of the knob still scrolls the value itself. The "Quad Function Generator" uses knAcks for attack and decay, and the "Quad Low Pass Gate" for its level, decay, clock-ratio and rate knobs.
+**The knAck (knob-jack) — a knob you can patch:** some knobs are also jacks — a cable plugs straight into the knob's centre, so a parameter and its CV input share one control instead of two spots. You'll spot one by the orange jack at its centre, wearing the same colour code as any terminal — compare a knAck {see:lpg-292/levelA} with an ordinary knob {see:complexOsc259t/prinFreq}. The knob body scrolls to turn as usual; the **centre jack alone** is the terminal — click it to pull a cable out, or drop a cable on it to patch a signal in. Right-click the knob for its menu: reset the value, disconnect the cable, and switch on the **attenuverter (AV)**. With the AV on and a cable plugged in, the knob's lower half becomes a depth gauge: scroll there to set how strongly the signal moves the knob — straight down is zero, right is positive, left is negative — while the rest of the knob still scrolls the value itself. The "Quad Function Generator" uses knAcks for attack {see:quadFn281t/attackA} and decay {see:quadFn281t/decayA}, and the "Quad Low Pass Gate" for its level {see:lpg-292/levelA}, decay {see:lpg-292/decayA}, clock-ratio {see:lpg-292/divA} and rate {see:lpg-292/rate} knobs.
 
 > **Do this** — On the "Quad Function Generator", click the **orange centre** of an **attack** knob — a cable follows the pointer; drop it on empty space to let it go, or onto a terminal to patch. Hold the mouse pointer over the knob and scroll to set the attack time as before, double-click the knob to reset it, and right-click it to see its menu.
 
@@ -82,15 +86,15 @@ Coming next: **First sound**.
 
 **Cables:** left-click a terminal and the cable follows the pointer — no button held. (Almost everything in DR works without a held button — gentler on the hand than dragging.) Left-click another terminal to connect it, or left-click anywhere else to drop it. A cable takes the colour of the input it plugs into, so you can read its job at a glance.
 
-> **Do this** — Left-click the **"Complex Oscillator"** Final output (near the centre top of the module), move to **channel A** of the **"Mixer / Output"** (bottom-left, top row of inputs), and click to connect. The cable is yellow — its destination is an audio terminal.
+> **Do this** — Left-click the **"Complex Oscillator"** Final output {see:complexOsc259t/prinFinalOut} (near the centre top of the module), move to **channel A** of the **"Mixer / Output"** {see:mixer/chanA} (bottom-left, top row of inputs), and click to connect. The cable is yellow — its destination is an audio terminal.
 
 **Unplug or move a cable:** to remove or re-route a cable, left-click the terminal it's plugged into — the cable lifts off and follows the pointer again, just as if you'd started it there. Left-click another terminal to plug it in instead, or left-click empty space to remove it. Press Escape while carrying to cancel and leave the cable where it was. If more than one cable meets at that terminal, pull away in the direction of the one you want — the cable whose path matches your drag is the one that lifts off.
 
-> **Do this** — Left-click the **"Mixer / Output"** channel A input where your cable lands: it lifts off and follows the pointer. Left-click channel A again to plug it back in, and leave it connected there for what follows. (To remove a cable for good, you'd drop it on empty space instead.)
+> **Do this** — Left-click the **"Mixer / Output"** channel A input {see:mixer/chanA} where your cable lands: it lifts off and follows the pointer. Left-click channel A again to plug it back in, and leave it connected there for what follows. (To remove a cable for good, you'd drop it on empty space instead.)
 
 **Sound:** nothing plays until you switch a bus on. The **Sound** row at the top of the menu has two buttons — **Master** (the mix you're building) and **Monitor** — both off when the app opens.
 
-> **Do this** — Right-click a panel to open the menu; in the **Sound** row at the top, hover the **Master** button — the oscillator sounds while your pointer rests on it, and stops when you move off. Click **Master** to switch it on and leave it running — pressing it again turns it off, so the button toggles the bus; the menu stays open. The **space bar** toggles the Master bus on and off too, without opening the menu. Then set a comfortable volume with the mixer's **Master** fader (drag it, or scroll it) — the first sound can come out louder or quieter than you'd like.
+> **Do this** — Right-click a panel {see:complexOsc259t} to open the menu; in the **Sound** row at the top, hover the **Master** button — the oscillator sounds while your pointer rests on it, and stops when you move off. Click **Master** to switch it on and leave it running — pressing it again turns it off, so the button toggles the bus; the menu stays open. The **space bar** toggles the Master bus on and off too, without opening the menu. Then set a comfortable volume with the mixer's **Master** fader {see:mixer/master} (drag it, or scroll it) — the first sound can come out louder or quieter than you'd like.
 
 **The chain:** with the oscillator now wired to the mixer, the two are one signal chain — and hovering lights a whole chain at once, so you can see what feeds what, which controls affect the signal you're on, and what they in turn affect.
 
@@ -98,46 +102,46 @@ Coming next: **First sound**.
 
 Here it's trivial — one oscillator into one channel — but in a rack full of wired modules, seeing at a glance what affects what, and what is affected by what, lightens your mental load and heightens your understanding of the patch.
 
-**Pitch:** the big **Pitch** knob (centre, under Principal Osc) sets the frequency of the sound you're hearing.
+**Pitch:** the big **Pitch** knob {see:complexOsc259t/prinFreq} (centre, under Principal Osc) sets the frequency of the sound you're hearing.
 
-> **Do this** — Hold the pointer over the **Pitch** knob and scroll (scroll wheel, or two fingers on a trackpad) to hear the pitch rise and fall. Try it near the knob's centre, then out at its rim — the centre changes it fast, the rim slow and fine.
+> **Do this** — Hold the pointer over the **Pitch** knob {see:complexOsc259t/prinFreq} and scroll (scroll wheel, or two fingers on a trackpad) to hear the pitch rise and fall. Try it near the knob's centre, then out at its rim — the centre changes it fast, the rim slow and fine.
 
-**Modulate:** the **"Complex Oscillator"** holds two oscillators — the principal one you're hearing, and a *modulation* oscillator (left) that can drive it. Between them sits the modulation section: three **push buttons** (Ampl Mod, Pitch Mod, Timbre Mod) that pick how it drives, and a **Mod Index** knob for depth.
+**Modulate:** the **"Complex Oscillator"** holds two oscillators — the principal one you're hearing, and a *modulation* oscillator (left) that can drive it. Between them sits the modulation section: three **push buttons** (Ampl Mod, Pitch Mod, Timbre Mod) {see:complexOsc259t/pitchMod} that pick how it drives, and a **Mod Index** knob {see:complexOsc259t/modIndex} for depth.
 
-> **Do this** — On the **"Complex Oscillator"**, press the **Pitch Mod** push button (it lights), then scroll **Mod Index** either way off its centre, to a non-zero modulation depth. Explore the sound possibilities by changing three things: the modulation oscillator's **Frequency** (left), the principal **Pitch**, and the **Mod Index** depth.
+> **Do this** — On the **"Complex Oscillator"**, press the **Pitch Mod** push button {see:complexOsc259t/pitchMod} (it lights), then scroll **Mod Index** {see:complexOsc259t/modIndex} either way off its centre, to a non-zero modulation depth. Explore the sound possibilities by changing three things: the modulation oscillator's **Frequency** {see:complexOsc259t/modFreq} (left), the principal **Pitch**, and the **Mod Index** depth.
 
-**More variations:** the shape section on the right — **Timbre**, **Order**, **Symmetry** — folds the waveform.
+**More variations:** the shape section on the right — **Timbre** {see:complexOsc259t/timbre}, **Order** {see:complexOsc259t/order}, **Symmetry** {see:complexOsc259t/symmetry} — folds the waveform.
 
 > **Do this** — With **Mod Index** still turned up and at least one modulation push button on, scroll **Timbre**, then **Order** and **Symmetry**, and listen to the harmonics shift. Then combine everything — the principal **Pitch**, the modulation oscillator's **Frequency**, **Mod Index**, the different modulation buttons, and the shape knobs — to hear the wide range of possible sounds.
 
 Coming next: **Building a patch**.
 ## Building a patch
 
-**Your modules:** you already have a useful set of four — the "Complex Oscillator", "Quad Function Generator", "Quad Low Pass Gate", and "Mixer / Output" — enough to build real patches. Adding and removing modules comes later; for now, build with these. (The **Master** bus should still be on from **First sound**; if it's off, turn it on by clicking the button beside **Master** in the top row of the main menu.)
+**Your modules:** you already have a useful set of four — the "Complex Oscillator" {see:complexOsc259t}, "Quad Function Generator" {see:quadFn281t}, "Quad Low Pass Gate" {see:lpg-292}, and "Mixer / Output" {see:mixer} — enough to build real patches. Adding and removing modules comes later; for now, build with these. (The **Master** bus should still be on from **First sound**; if it's off, turn it on by clicking the button beside **Master** in the top row of the main menu.)
 
-> **Do this** — This section works mostly with the "Quad Low Pass Gate", the module at the lower right. If this section covers it, pull its bottom edge up until the whole module is visible.
+> **Do this** — This section works mostly with the "Quad Low Pass Gate" {see:lpg-292}, the module at the lower right. If this section covers it, pull its bottom edge up until the whole module is visible.
 
 **Create a pluck or percussive sound:** a plucked sound is a brief pulse of sound, made by passing a signal through a gate that opens and closes quickly — which is how a low pass gate works. To give it something to gate, send a signal from the oscillator into the gate's input.
 
-> **Do this** — Cable the "Complex Oscillator" **Square** output to the "Quad Low Pass Gate" **channel A** input (its **IN** jack), then the gate's **channel A** output (**OUT**) to the "Mixer / Output" **channel B**. Nothing yet — the gate stays shut until it's struck.
+> **Do this** — Cable the "Complex Oscillator" **Square** output {see:complexOsc259t/prinSquareOut} to the "Quad Low Pass Gate" **channel A** input {see:lpg-292/inA} (its **IN** jack), then the gate's **channel A** output {see:lpg-292/outA} (**OUT**) to the "Mixer / Output" **channel B** {see:mixer/chanB}. Nothing yet — the gate stays shut until it's struck.
 
-**Play it:** the **Strike** button opens the gate for an instant — the sound bursts through, then decays. **Decay** sets how long the tail rings.
+**Play it:** the **Strike** button {see:lpg-292/strikeA} opens the gate for an instant — the sound bursts through, then decays. **Decay** sets how long the tail rings.
 
-> **Do this** — Press **Strike** on channel A for a pluck, and press it again for another. Turn **Decay** up for a longer tail, down for a short blip.
+> **Do this** — Press **Strike** on channel A {see:lpg-292/strikeA} for a pluck, and press it again for another. Turn **Decay** {see:lpg-292/decayA} up for a longer tail, down for a short blip.
 
 **Clock it:** the gate has its own clock, which strikes a channel repeatedly. The clock-ratio dial is a knAck, so a CV patched into its centre plays the division itself; its right-click **Quantize** switch keeps a swept ratio snapping to whole divisions.
 
-> **Do this** — Turn on channel A's **Clock** button (CLK on), then the master **Run** at the bottom of the module — the pluck now repeats in time. Turn **Rate** to speed it up or slow it down. Set channel A's **clock ratio** dial, and its **÷ / ×** mode, to pulse at divisions or multiples of the master rate — all locked in sync.
+> **Do this** — Turn on channel A's **Clock** button {see:lpg-292/clkOnA} (CLK on), then the master **Run** {see:lpg-292/run} at the bottom of the module — the pluck now repeats in time. Turn **Rate** {see:lpg-292/rate} to speed it up or slow it down. Set channel A's **clock ratio** dial {see:lpg-292/divA}, and its **÷ / ×** mode, to pulse at divisions or multiples of the master rate — all locked in sync.
 
 **Adjust the levels:** both voices run into the mixer now — the oscillator drone on channel A, the gated plucks on channel B. Balance them here.
 
-> **Do this** — Drag the **channel A** and **channel B** faders to set each voice's level against the other. Then use the **Enable** buttons below the faders to switch a voice on or off.
+> **Do this** — Drag the **channel A** {see:mixer/levelA} and **channel B** {see:mixer/levelB} faders to set each voice's level against the other. Then use the **Enable** buttons {see:mixer/muteA} below the faders to switch a voice on or off.
 
 **Explore:** mute the drone on channel A and leave the plucks on channel B, so you hear the rhythm on its own — then shape it with everything you've already met. The "Complex Oscillator" knobs colour the tone; the gate's **Level** and **Decay** set how hard and how long each pluck sounds.
 
-> **Do this** — If channel A's **Enable** button on the mixer is illuminated, press it so it is not — that mutes the drone. Now explore: on the "Complex Oscillator" work the **Pitch**, **Timbre**, **Order**, **Symmetry**, **Mod Index** and the modulation buttons; on the gate, channel A's **Level** and **Decay**. Have fun — there's a wide range of sounds in here.
+> **Do this** — If channel A's **Enable** button on the mixer {see:mixer/muteA} is illuminated, press it so it is not — that mutes the drone. Now explore: on the "Complex Oscillator" work the **Pitch**, **Timbre**, **Order**, **Symmetry**, **Mod Index** and the modulation buttons; on the gate, channel A's **Level** {see:lpg-292/levelA} and **Decay** {see:lpg-292/decayA}. Have fun — there's a wide range of sounds in here.
 
-> **Bonus** — Add a second voice: cable the "Complex Oscillator" **Sine** output to the gate's **channel B** input, and the gate's **channel B** output to the "Mixer / Output" **channel C**. Turn on channel B's **Clock**, and set its **clock ratio** to a different value than channel A's — the two plucks cross in and out of step, building a shifting rhythm.
+> **Bonus** — Add a second voice: cable the "Complex Oscillator" **Sine** output {see:complexOsc259t/prinSineOut} to the gate's **channel B** input {see:lpg-292/inB}, and the gate's **channel B** output {see:lpg-292/outB} to the "Mixer / Output" **channel C** {see:mixer/chanC}. Turn on channel B's **Clock** {see:lpg-292/clkOnB}, and set its **clock ratio** {see:lpg-292/divB} to a different value than channel A's — the two plucks cross in and out of step, building a shifting rhythm.
 
 Coming next: **Getting around**.
 
@@ -155,7 +159,7 @@ Coming next: **Getting around**.
 
 **Zooming in on a scope:** one way to see a scope more clearly is to enlarge the scope itself by dragging its borders. But when you'd rather get a closer look without resizing the object, zooming does it — magnify the view over a scope and it grows on screen along with everything around it, then zoom back out when you're done.
 
-> **Do this** — If you don't already have a scope in your rack, attach one to an output that's producing sound — the "Complex Oscillator" **Final** output, say. Hover over the scope, hold **Option**, and roll the wheel to zoom in, nudging the pointer to keep the scope in view. Now it's as large as you want; zoom back out when you've seen enough.
+> **Do this** — If you don't already have a scope in your rack, attach one to an output that's producing sound — the "Complex Oscillator" **Final** output {see:complexOsc259t/prinFinalOut}, say. Hover over the scope, hold **Option**, and roll the wheel to zoom in, nudging the pointer to keep the scope in view. Now it's as large as you want; zoom back out when you've seen enough.
 
 Coming next: **Seeing and hearing**.
 
@@ -163,7 +167,7 @@ Coming next: **Seeing and hearing**.
 
 **Listen with the monitor:** many outputs carry a signal even with no cable plugged into them, so you can listen to a point in the circuit on its own — and not just audio: even a slower output like an LFO or a clock may carry a signal you can listen to, unless it's a very low frequency. Right-click a terminal and hover **Monitor** to listen to just that point; move off and it stops. It's separate from your mix — the "Mixer / Output" is the sound you're building, while a monitor checks any single signal, even one that isn't in the mix, brought up to a comfortable level.
 
-> **Do this** — Right-click a few different outputs on the "Complex Oscillator" — the modulation oscillator's **Triangle**, the principal **Sine**, the **Final** — and hover **Monitor** on each to hear how they differ, without wiring anything. If you built the patch last section, try it on the "Quad Low Pass Gate" too: hover **Monitor** on its **Clk Out**, and on channel A's **Clk A** output, to hear the clock ticking.
+> **Do this** — Right-click a few different outputs on the "Complex Oscillator" — the modulation oscillator's **Triangle** {see:complexOsc259t/modTriOut}, the principal **Sine** {see:complexOsc259t/prinSineOut}, the **Final** {see:complexOsc259t/prinFinalOut} — and hover **Monitor** on each to hear how they differ, without wiring anything. If you built the patch last section, try it on the "Quad Low Pass Gate" too: hover **Monitor** on its **Clk Out** {see:lpg-292/clkOut}, and on channel A's **Clk A** output {see:lpg-292/clkOutA}, to hear the clock ticking.
 
 **Keep a monitor:** to listen without holding the pointer still, click **Monitor** instead of hovering — a monitor drops onto the rack right where you clicked and stays there (drag its body to move it). It stays live and is saved with your patch, so you can leave several running side by side. Each is also its own control: hold the pointer over it and scroll to set its level, click it to mute and unmute — a green ring shows when it's on — and close it with the red close button at its upper-left.
 
@@ -171,15 +175,15 @@ Coming next: **Seeing and hearing**.
 
 **Master and monitor buses:** the "Mixer / Output" carries two output buses, side by side in its master section. **Master** is the mix you build from the six channels; **Monitor** is the sum of every monitor you've dropped — a second, independent sub-mix, like the monitor or aux bus on a real desk. Each bus has its own level fader and its own enable lamp beneath it, and the two are independent: play either, both, or neither. Dropping a monitor switches the Monitor bus on for you; turning it off silences all your monitors at once without removing them, and turning **Master** off leaves just the monitor sub-mix. The same two enables sit at the top of the main menu, in its **Sound** row.
 
-> **Do this** — With a monitor or two running, find the **Master** and **Monitor** faders in the mixer's master section, each with an enable lamp below it. Set the **Monitor** level against the **Master**, then toggle the two enables — **Master** off to hear only your monitors, **Monitor** off to silence them and keep just the mix.
+> **Do this** — With a monitor or two running, find the **Master** {see:mixer/master} and **Monitor** {see:mixer/monitorLevel} faders in the mixer's master section, each with an enable lamp below it. Set the **Monitor** level against the **Master**, then toggle the two enables — **Master** off to hear only your monitors, **Monitor** off to silence them and keep just the mix.
 
 **Peek at a signal:** the same terminal menu's **Scope** shows a signal's shape. Right-click a terminal and hover **Scope**, and a small scope appears beside the pointer, drawing live; move off and it's gone — the same peek-or-keep pattern as the monitor. It sets its own scale and locks the trace steady, triggering on the signal's rising edges, so you get a still, framed picture at once — whether the signal is fast or slow. The exception is a signal with no clear rising edge to lock onto, like the Complex Oscillator's **Final** output while it's modulated: with nothing steady to trigger on, that trace keeps moving.
 
-> **Do this** — Right-click the "Complex Oscillator" principal **Square** output and hover **Scope** — a clean waveform, held steady. Try the modulation oscillator's **Triangle** and the "Quad Low Pass Gate" **Clk Out** too: each locks into a still trace, the slow clock included.
+> **Do this** — Right-click the "Complex Oscillator" principal **Square** output {see:complexOsc259t/prinSquareOut} and hover **Scope** — a clean waveform, held steady. Try the modulation oscillator's **Triangle** {see:complexOsc259t/modTriOut} and the "Quad Low Pass Gate" **Clk Out** {see:lpg-292/clkOut} too: each locks into a still trace, the slow clock included.
 
 **Keep a scope:** to hold a scope open, click it — on the **Scope** menu item, or on the peeked scope's face. It drops in place right where you clicked and stays there (drag its body to move it). Like an audio monitor, a kept scope draws a callout — a ring around the terminal, joined by a line to the scope — stays live, and is saved with your patch. A running scope tracks its signal moment to moment, so anything you change upstream shows on screen at once.
 
-> **Do this** — Right-click the "Complex Oscillator" principal **Square** output and click **Scope** — it drops right there. Drag it to a clear spot if you like, then turn the **Frequency** (Pitch) knob and watch the wavelength squeeze and stretch as the frequency rises and falls. Then keep a scope on the "Quad Low Pass Gate" **Clk Out** and turn its **Rate** up and down — the trigger pulses crowd together or spread apart.
+> **Do this** — Right-click the "Complex Oscillator" principal **Square** output {see:complexOsc259t/prinSquareOut} and click **Scope** — it drops right there. Drag it to a clear spot if you like, then turn the **Frequency** (Pitch) knob {see:complexOsc259t/prinFreq} and watch the wavelength squeeze and stretch as the frequency rises and falls. Then keep a scope on the "Quad Low Pass Gate" **Clk Out** {see:lpg-292/clkOut} and turn its **Rate** {see:lpg-292/rate} up and down — the trigger pulses crowd together or spread apart.
 
 **Move or remove a scope:** the callout ring has a small grab handle. Drag the ring off its terminal and release it over empty space, and the scope vanishes — the same gesture as pulling a cable off a terminal. Drop the ring on a different terminal instead, and the scope re-probes there, re-framing to show that signal.
 
@@ -187,9 +191,9 @@ Coming next: **Seeing and hearing**.
 
 **Looking at complex signals:** while the "Complex Oscillator" is being modulated, its output usually can't be held steady by the scope's auto-sync — the waveform shifts too much from one cycle to the next for the trigger to lock onto. You can still study it by freezing the trace: hover the scope and press its freeze button (lower-left) to hold the picture exactly as it was the instant you pressed — a still frame to read at leisure. Freezing works on steady signals too, handy when you want a close look. Press the button again to run.
 
-> **Do this** — Keep a scope on the "Complex Oscillator" **Final** output, then turn up the modulation — press **Pitch Mod** and raise **Mod Index**. The trace won't settle. Hover the scope and press its **freeze** button to catch a single frame; study its shape, then press again to run. Try freezing a steady signal too, like the principal **Square** — a still trace can be easier to read.
+> **Do this** — Keep a scope on the "Complex Oscillator" **Final** output {see:complexOsc259t/prinFinalOut}, then turn up the modulation — press **Pitch Mod** {see:complexOsc259t/pitchMod} and raise **Mod Index** {see:complexOsc259t/modIndex}. The trace won't settle. Hover the scope and press its **freeze** button to catch a single frame; study its shape, then press again to run. Try freezing a steady signal too, like the principal **Square** {see:complexOsc259t/prinSquareOut} — a still trace can be easier to read.
 
-The scope can do more — triggering, and comparing two signals at once — which a later section covers.
+The scope can do more — it has its own trigger controls. Dual trace, showing two signals at once, is planned but not yet implemented.
 
 Coming next: **Saving your work**.
 

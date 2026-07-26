@@ -34,7 +34,7 @@ export function tourSeen() { try { return localStorage.getItem(SEEN_KEY) === '1'
 // `steps`: the card copy, in order. `onExternal(url)`: open a link outside the app (Electron needs
 // this routed through the shell, so the caller supplies it). `isDark()`: the app's current mode —
 // the card is dressed as a faceplate, so it follows View ▸ Light/Dark mode like the panels do.
-export function createTour({ steps, onExternal, isDark }) {
+export function createTour({ steps, onExternal, isDark, onSee, canSee, homePos }) {
   let el = null, idx = 0;
   let titleEl, bodyEl, countEl, prevBtn, nextBtn, neverCb, homeBtn;
 
@@ -42,13 +42,17 @@ export function createTour({ steps, onExternal, isDark }) {
   // resize (or a move between displays), which would strand the card where it can't be reached.
   // If the window can't be measured yet, DON'T clamp: a zero viewport would pin the card into the
   // top-left corner, which is worse than leaving it where it was asked to go.
+  // The card may hang off the left, right or bottom — you often want it mostly out of the way —
+  // but KEEP_ON_SCREEN of it always stays reachable, and its top never goes above the window,
+  // because the header is the only drag handle: pushed off the top it could never be grabbed back.
+  const KEEP_ON_SCREEN = 80;
   const clampIntoView = (x, y) => {
     const vw = window.innerWidth || 0, vh = window.innerHeight || 0;
     if (vw <= 0 || vh <= 0) return { x, y };
-    const w = el.offsetWidth || 340, h = el.offsetHeight || 200;
+    const w = el.offsetWidth || 340;
     return {
-      x: Math.max(4, Math.min(vw - w - 4, x)),
-      y: Math.max(4, Math.min(vh - h - 4, y)),
+      x: Math.max(KEEP_ON_SCREEN - w, Math.min(vw - KEEP_ON_SCREEN, x)),
+      y: Math.max(4, Math.min(vh - 40, y)),
     };
   };
 
@@ -100,6 +104,11 @@ export function createTour({ steps, onExternal, isDark }) {
     document.addEventListener('pointerup', onUp, true);
   };
 
+  // Next stays clickable throughout; it only takes the accent once the section has been scrolled to
+  // the end (or needs no scrolling), so the cue means "you've seen it all" rather than "click here".
+  const atBottom = () => !bodyEl || bodyEl.scrollHeight - bodyEl.clientHeight - bodyEl.scrollTop <= 2;
+  const refreshNextCue = () => { if (nextBtn) nextBtn.classList.toggle('ready', atBottom()); };
+
   const build = () => {
     el = document.createElement('div');
     el.className = 'tour-card';
@@ -118,11 +127,12 @@ export function createTour({ steps, onExternal, isDark }) {
     close.className = 'tour-x'; close.textContent = '×';
     close.title = 'Close (Help ▸ Interactive tutorial brings it back)';
     close.setAttribute('aria-label', 'Close');
-    close.addEventListener('click', () => hide());
+    close.addEventListener('click', () => { if (onSee) onSee(null, null); hide(); });
     head.appendChild(titleEl); head.appendChild(homeBtn); head.appendChild(close);
     head.addEventListener('pointerdown', startDrag);
 
     bodyEl = document.createElement('div'); bodyEl.className = 'tour-body';
+    bodyEl.addEventListener('scroll', refreshNextCue, { passive: true });
 
     const foot = document.createElement('div'); foot.className = 'tour-foot';
     // Leaving must be obvious: a plain Close button, not just the ×.
@@ -169,6 +179,7 @@ export function createTour({ steps, onExternal, isDark }) {
     const saved = readJSON(SIZE_KEY);
     if (saved && saved.w > 0) { el.style.width = saved.w + 'px'; el.style.height = saved.h + 'px'; }
     if (window.ResizeObserver) new ResizeObserver(() => {
+      refreshNextCue();                     // a taller card may now show the whole section
       if (!el.style.width && !el.style.height) return;
       write(SIZE_KEY, JSON.stringify({ w: el.offsetWidth, h: el.offsetHeight }));
     }).observe(el);
@@ -204,6 +215,28 @@ export function createTour({ steps, onExternal, isDark }) {
     const parts = Array.isArray(s.body) ? s.body : [s.body];
     for (const part of parts) bodyEl.appendChild(renderPart(part));
     bodyEl.scrollTop = 0;                   // a long step left scrolled down must not start the next one part-read
+    refreshNextCue();                       // a short section is already "read" — cue Next at once
+    // SHOW-ME eyes. One callout at a time: the rack toggles it, so clicking a lit eye clears it and
+    // clicking another moves it. Changing step clears whatever was lit. An eye whose subject isn't
+    // in the rack (the reader removed that module) shows as unavailable rather than doing nothing.
+    if (onSee) onSee(null, null);           // leaving a step drops its callout
+    // The eyes carry no target of their own (so nothing extra is read aloud when a paragraph is
+    // spoken or copied); they pair with the step's target list by document order.
+    const eyeTargets = s.sees || [];
+    [...bodyEl.querySelectorAll('.tour-eye')].forEach((eye, i) => {
+      const target = eyeTargets[i];
+      if (!target) return;
+      eye.addEventListener('pointerdown', (ev) => ev.preventDefault());   // don't start/extend a text selection
+      eye.addEventListener('click', (ev) => {
+        ev.preventDefault(); ev.stopPropagation();
+        // Checked HERE, not when the card was built: a card can open before the saved session has
+        // finished restoring its modules, so availability is only meaningful at the moment of use.
+        if (canSee && !canSee(target)) { eye.classList.add('unavailable'); eye.title = 'Not in your rack'; return; }
+        const lit = onSee(target, eye);
+        for (const other of bodyEl.querySelectorAll('.tour-eye.lit')) other.classList.remove('lit');
+        eye.classList.toggle('lit', !!lit);
+      });
+    });
     countEl.textContent = `${idx + 1} of ${steps.length}`;
     prevBtn.disabled = idx === 0;
     homeBtn.style.display = idx === 0 ? 'none' : '';
@@ -237,6 +270,10 @@ export function createTour({ steps, onExternal, isDark }) {
     const saved = readJSON(POS_KEY);
     if (saved && typeof saved.x === 'number' && typeof saved.y === 'number') { place(saved.x, saved.y); return; }
     if ((!window.innerWidth || !el.offsetWidth) && tries < 10) { requestAnimationFrame(() => placeInitial(tries + 1)); return; }
+    // First run: sit just clear of the rack if there's room for it there, so the card doesn't cover
+    // the very modules it's describing. Otherwise fall back to low-centre.
+    const home = homePos && homePos(el.offsetWidth || 340, el.offsetHeight || 200);
+    if (home) { place(home.x, home.y); return; }
     place((window.innerWidth - (el.offsetWidth || 340)) / 2, window.innerHeight * 0.62);
   };
 

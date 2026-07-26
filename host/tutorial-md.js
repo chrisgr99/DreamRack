@@ -16,7 +16,7 @@
 //                      else ("> **Now play** — …") and the document still reads right.
 //   <!-- … -->         ignored, including across lines.
 //
-// Inline: **bold**, *italic*, [text](url), `code`. Anything before the first ## is preamble for a
+// Inline: **bold**, *italic*, [text](url), `code`, {see:target}. Anything before the first ## is preamble for a
 // human reader and is skipped.
 //
 // The markdown is OURS, not user input, but it's escaped before the inline rules run anyway — so
@@ -28,9 +28,22 @@ export const TUTORIAL_URL = new URL('./tutorial.md', import.meta.url);
 
 const escapeHtml = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
+// The SHOW-ME eye. The button carries NO target text of its own — no data attribute, no title, and
+// aria-hidden so assistive tech skips it — because a screen reader or text-to-speech picking up a
+// paragraph would otherwise read the target out loud along with the prose. The targets travel
+// beside the copy instead, in step.sees, and the card pairs them up by order.
+const EYE_BUTTON = '<button type="button" class="tour-eye" aria-hidden="true" tabindex="-1">'
+  + '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 3.2C4.4 3.2 1.7 6 0.8 8c0.9 2 3.6 4.8 7.2 4.8'
+  + 's6.3-2.8 7.2-4.8C14.3 6 11.6 3.2 8 3.2zm0 8a3.2 3.2 0 110-6.4 3.2 3.2 0 010 6.4zm0-1.6a1.6 1.6 0 100-3.2 1.6 1.6 0 000 3.2z"/></svg></button>';
+
 // Inline markdown → the small HTML the card renders. Order matters: links before emphasis, so a
 // URL containing an underscore or asterisk isn't mangled.
-const inline = (s) => escapeHtml(s)
+//
+// {see:TARGET} becomes the eye. TARGET is "<module>" (whole module), "<module>#title" (its title
+// bar), "<module>#<section>" (a quad's channel band), "<module>/<element>" (one terminal or
+// control), or "ui:<css selector>" (application chrome). Each target found is pushed onto `sees`.
+const inline = (s, sees) => escapeHtml(s)
+  .replace(/\{see:([^}\s]+)\}/g, (_m, t) => { if (sees) sees.push(t); return EYE_BUTTON; })
   .replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, '<a href="$2">$1</a>')
   .replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>')
   .replace(/(^|[^*])\*([^*]+)\*/g, '$1<em>$2</em>')
@@ -49,19 +62,19 @@ export function parseTutorial(md) {
 
   const flushPara = () => {
     if (!para.length) return;
-    if (step) step.body.push(inline(para.join(' ')));
+    if (step) step.body.push(inline(para.join(' '), step.sees));
     para = [];
   };
   const flushList = () => {
     if (!list.length) return;
-    if (step) step.body.push('<ul>' + list.map((i) => '<li>' + inline(i) + '</li>').join('') + '</ul>');
+    if (step) step.body.push('<ul>' + list.map((i) => '<li>' + inline(i, step.sees) + '</li>').join('') + '</ul>');
     list = [];
   };
   const flushQuote = () => {
     if (!quote.length) return;
     const text = quote.join(' ').trim();
     const m = LABELLED.exec(text);
-    if (step) step.body.push(m ? { try: inline(m[2]), label: m[1] } : { try: inline(text) });
+    if (step) step.body.push(m ? { try: inline(m[2], step.sees), label: m[1] } : { try: inline(text, step.sees) });
     quote = [];
   };
   const flushAll = () => { flushPara(); flushList(); flushQuote(); };
@@ -74,7 +87,7 @@ export function parseTutorial(md) {
     if (line === '') { flushAll(); continue; }
     if (line.startsWith('## ')) {
       flushAll();
-      step = { title: line.slice(3).trim(), body: [] };
+      step = { title: line.slice(3).trim(), body: [], sees: [] };
       steps.push(step);
       continue;
     }

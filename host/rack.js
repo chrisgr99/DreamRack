@@ -596,6 +596,167 @@ export class Rack {
   // opts.centred treats (x, y) as the menu's CENTRE rather than its top-left (used by F1 ▸ Help).
   openMenu(x, y, items, opts) { this._openMenu(x, y, items, opts); }
 
+  // Where the tutorial should open so it doesn't cover the modules it describes: just clear of the
+  // rightmost module, near the top. Returns null when there isn't room, and the card falls back to
+  // its own default placement.
+  tutorialHomePos(w, h) {
+    let right = 0;
+    for (const rec of this.records.values()) {
+      const r = rec.el.getBoundingClientRect();
+      if (r.width || r.height) right = Math.max(right, r.right);
+    }
+    if (!right) return null;
+    const x = right + 12;
+    if (x + w > (window.innerWidth || 0) - 4) return null;   // no room beside the rack
+    return { x, y: 56 };
+  }
+
+  // ---- tutorial callout ("show me") ----------------------------------------
+  // The tutorial can ring any part of the rack and run a leader line to it from the eye symbol in
+  // its text. ONE callout at a time: showing another moves it, showing the same target again is a
+  // toggle. Purely visual — the overlay never takes pointer events, so the panel stays live and
+  // can be worked while it's ringed. Drawn in the CV orange, which reads over both the dark card
+  // and every faceplate.
+  //
+  // A target is "<descriptorId>" (the whole module), "<descriptorId>#title" (its title bar),
+  // "<descriptorId>#<section>" (a quad's channel band, e.g. #A), or "<descriptorId>/<elementId>"
+  // (one port or control). The FIRST instance of that module in the rack is used.
+  showCallout(target, fromEl) {
+    if (this._callout && this._callout.target === target) { this.clearCallout(); return false; }
+    const hit = this._resolveCalloutTarget(target);
+    if (!hit) { this.clearCallout(); return false; }
+    this._callout = { target, fromEl, rec: hit.rec, els: hit.els };
+    this._scrollCalloutIntoView(hit);
+    this._drawCallout();
+    if (!this._calloutRaf) {   // keep it pinned while the rack pans, zooms or relayouts
+      const tick = () => { if (!this._callout) { this._calloutRaf = 0; return; } this._drawCallout(); this._calloutRaf = requestAnimationFrame(tick); };
+      this._calloutRaf = requestAnimationFrame(tick);
+    }
+    return true;
+  }
+
+  clearCallout() {
+    this._callout = null;
+    if (this._calloutRaf) { cancelAnimationFrame(this._calloutRaf); this._calloutRaf = 0; }
+    const ov = document.getElementById('tutorialCallout');
+    if (ov) ov.replaceChildren();
+  }
+
+  // Is this target reachable in the rack as it stands? The tutorial dims an eye whose subject the
+  // reader has removed, rather than offering a click that does nothing.
+  calloutAvailable(target) { return !!this._resolveCalloutTarget(target); }
+
+  _resolveCalloutTarget(target) {
+    const spec = String(target || '');
+    // "ui:<css selector>" points at application chrome rather than a rack element — the hamburger,
+    // say. Only things permanently on screen: a menu row exists solely while its menu is open.
+    if (spec.startsWith('ui:')) {
+      const el = document.querySelector(spec.slice(3));
+      return el ? { rec: null, els: [el] } : null;
+    }
+    const [modPart, elPart] = spec.split('/');
+    const [descId, section] = modPart.split('#');
+    // Match the module tolerantly: descriptor ids are namespaced to differing depths
+    // ("wcoast.complexOsc259t" vs "lpg-292"), so the tutorial may name either the full id or a
+    // readable tail of it ("complexOsc259t", "lpg-292").
+    const norm = (v) => String(v || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+    const want = norm(descId);
+    let rec = null;
+    for (const r of this.records.values()) {
+      const have = norm(r.descriptorId);
+      if (have === want || have.endsWith(want)) { rec = r; break; }
+    }
+    if (!rec || !rec.panel) return null;
+    if (elPart) {                                   // one port or control
+      const port = rec.panel.ports.get(elPart);
+      const ctrl = rec.panel.controls.get(elPart);
+      const el = (port && port.element) || (ctrl && ctrl.group);
+      return el ? { rec, els: [el] } : null;
+    }
+    if (section === 'title') {                      // the module's title bar
+      const el = rec.el.querySelector('.module-identity');
+      return el ? { rec, els: [el] } : null;
+    }
+    if (section) {                                  // a section — a quad's channel band, say
+      const want = `${rec.key}:${section}`;
+      const els = [];
+      for (const b of rec.panel.controls.values()) if (this._controlSectionKey(rec, b) === want) els.push(b.group);
+      for (const [pid, port] of rec.panel.ports) if (this._portSectionKey(rec, pid) === want) els.push(port.element);
+      return els.length ? { rec, els } : null;
+    }
+    return { rec, els: [rec.el] };                  // the whole module
+  }
+
+  _portSectionKey(rec, portId) {
+    const desc = this.host.registry.descriptor(rec.descriptorId);
+    if (!desc || !desc.sectioned) return rec.key;
+    const ch = this._channelOf(desc, portId);
+    return ch ? `${rec.key}:${ch}` : rec.key;
+  }
+
+  // The union of the target's elements, in client coordinates, padded a little.
+  _calloutRect() {
+    const c = this._callout;
+    if (!c) return null;
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    for (const el of c.els) {
+      const r = el.getBoundingClientRect();
+      if (!r.width && !r.height) continue;
+      x0 = Math.min(x0, r.left); y0 = Math.min(y0, r.top);
+      x1 = Math.max(x1, r.right); y1 = Math.max(y1, r.bottom);
+    }
+    if (!isFinite(x0)) return null;
+    const pad = 4;
+    return { x: x0 - pad, y: y0 - pad, w: (x1 - x0) + pad * 2, h: (y1 - y0) + pad * 2 };
+  }
+
+  _scrollCalloutIntoView(hit) {
+    if (!hit.rec) return;                     // chrome is always on screen; nothing to scroll to
+    const el = hit.els[0];
+    const r = el.getBoundingClientRect();
+    const view = this.container.getBoundingClientRect();
+    if (r.bottom < view.top || r.top > view.bottom || r.right < view.left || r.left > view.right) {
+      el.scrollIntoView({ block: 'center', inline: 'center', behavior: 'smooth' });
+    }
+  }
+
+  _drawCallout() {
+    const ov = document.getElementById('tutorialCallout');
+    const c = this._callout;
+    if (!ov || !c) return;
+    const box = this._calloutRect();
+    if (!box) { ov.replaceChildren(); return; }
+    const NS = SVG_NS;
+    const mk = (tag, attrs) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); return e; };
+    const COL = '#ff7300';
+    const parts = [];
+    const rx = Math.min(10, Math.min(box.w, box.h) / 2);
+    parts.push(mk('rect', { x: r2(box.x), y: r2(box.y), width: r2(box.w), height: r2(box.h), rx: r2(rx),
+      fill: 'none', stroke: COL, 'stroke-width': 2.5, 'stroke-linejoin': 'round' }));
+    // Leader line from the eye to the ring. Always drawn: the overlay sits above the tutorial
+    // window, so the line crosses the card and carries on over the rack to its subject — which is
+    // what makes the connection readable even when the card covers the thing being pointed at.
+    if (c.fromEl && c.fromEl.isConnected) {
+      const f = c.fromEl.getBoundingClientRect();
+      const fx = f.left + f.width / 2, fy = f.top + f.height / 2;
+      const cx = box.x + box.w / 2, cy = box.y + box.h / 2;
+      // End on the ring's perimeter, on the side facing the eye, so the line touches rather than
+      // runs across the subject.
+      const dx = cx - fx, dy = cy - fy;
+      let ex = cx, ey = cy;
+      if (dx || dy) {
+        const sx = dx ? (box.w / 2) / Math.abs(dx) : Infinity;
+        const sy = dy ? (box.h / 2) / Math.abs(dy) : Infinity;
+        const t = Math.min(sx, sy);                    // scale to the nearer edge of the box
+        ex = cx - dx * t; ey = cy - dy * t;
+      }
+      parts.push(mk('line', { x1: r2(fx), y1: r2(fy), x2: r2(ex), y2: r2(ey), stroke: COL, 'stroke-width': 2, 'stroke-dasharray': '6 4', 'stroke-linecap': 'round' }));
+      parts.push(mk('circle', { cx: r2(fx), cy: r2(fy), r: 3.5, fill: COL }));
+    }
+    ov.replaceChildren(...parts);
+  }
+
+
   // The rendered height of a module at default zoom (zoom 1), in px — used to
   // size the mixer panel to match a faceplate.
   moduleHeightPx() { return PANEL_H_MM * (this._fit || 1); }

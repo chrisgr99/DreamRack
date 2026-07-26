@@ -404,10 +404,51 @@ function registerAppProtocol() {
   });
 }
 
+// The window's size, position and maximised state, remembered between runs in
+// <userData>/window.json. Restoring is guarded: a saved rectangle from a display that is no longer
+// attached would open the window off-screen, so it is only used if it still overlaps a display.
+const WINDOW_STATE_FILE = () => path.join(app.getPath('userData'), 'window.json');
+
+function readWindowState() {
+  try {
+    const raw = JSON.parse(fs.readFileSync(WINDOW_STATE_FILE(), 'utf8'));
+    if (!raw || typeof raw.width !== 'number' || typeof raw.height !== 'number') return null;
+    return raw;
+  } catch (_e) { return null; }
+}
+
+function usableWindowState() {
+  const st = readWindowState();
+  if (!st) return null;
+  if (typeof st.x !== 'number' || typeof st.y !== 'number') return st;   // size only — let the OS place it
+  const { screen } = require('electron');
+  const onADisplay = screen.getAllDisplays().some((d) => {
+    const b = d.workArea;
+    return st.x < b.x + b.width && st.x + st.width > b.x && st.y < b.y + b.height && st.y + st.height > b.y;
+  });
+  return onADisplay ? st : { width: st.width, height: st.height, maximized: st.maximized };
+}
+
+function saveWindowState() {
+  if (!mainWindow || mainWindow.isDestroyed()) return;
+  try {
+    const maximized = mainWindow.isMaximized() || mainWindow.isFullScreen();
+    // While maximised the bounds ARE the screen, which would be restored as a plain window filling
+    // it; keep the last normal bounds so unmaximising returns to the size the user chose.
+    const b = maximized ? (lastNormalBounds || mainWindow.getNormalBounds()) : mainWindow.getBounds();
+    fs.mkdirSync(path.dirname(WINDOW_STATE_FILE()), { recursive: true });
+    fs.writeFileSync(WINDOW_STATE_FILE(), JSON.stringify({ ...b, maximized }));
+  } catch (_e) { /* a lost window position is not worth failing over */ }
+}
+
+let lastNormalBounds = null;
+
 function createWindow() {
+  const st = usableWindowState();
   mainWindow = new BrowserWindow({
-    width: 1100,
-    height: 720,
+    width: (st && st.width) || 1100,
+    height: (st && st.height) || 720,
+    ...(st && typeof st.x === 'number' ? { x: st.x, y: st.y } : {}),
     title: 'DreamRack',
     show: false,
     backgroundColor: '#14110d',
@@ -418,6 +459,15 @@ function createWindow() {
       sandbox: true,
     },
   });
+
+  if (st && st.maximized) mainWindow.maximize();
+  // Track the un-maximised size so it survives quitting while maximised, and save on every change.
+  const remember = () => { if (!mainWindow.isMaximized() && !mainWindow.isFullScreen()) lastNormalBounds = mainWindow.getBounds(); saveWindowState(); };
+  mainWindow.on('resize', remember);
+  mainWindow.on('move', remember);
+  mainWindow.on('maximize', saveWindowState);
+  mainWindow.on('unmaximize', saveWindowState);
+  mainWindow.on('close', saveWindowState);
 
   mainWindow.loadURL(`${APP_ORIGIN}/index.html`);
 
