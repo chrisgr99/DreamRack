@@ -3691,8 +3691,18 @@ export class Rack {
       this._monBus = ctx.createGain();
       // Monitor master: the mixer's master fader drives this while the output radio is on Monitor
       // (its own remembered level, independent of the main master).
-      if (this._monLevel == null) this._monLevel = MON_LEVEL_DEFAULT;
-      const monMaster = ctx.createGain(); monMaster.gain.value = this._monLevel;
+      // The Monitor fader and pan are the MIXER's nodes, not ours — it draws them, a CV
+      // cord targets them through its getParam, and it holds their restored values. We
+      // only splice them into the bus. (The fallback is for the impossible case of the
+      // bus being needed before the pinned mixer has realized; it keeps the audio path
+      // intact, at the cost of that one session's Monitor CV having nothing to grab.)
+      const mixIn = this._mixerInstance();
+      const chain = mixIn && mixIn.monitorChain;
+      if (!chain) console.warn('[rack] monitor bus built before the mixer realized — Monitor fader CV unavailable');
+      const monMaster = chain ? chain.input : ctx.createGain();
+      const monOut = chain ? chain.output : monMaster;
+      if (!chain) { if (this._monLevel == null) this._monLevel = MON_LEVEL_DEFAULT; monMaster.gain.value = this._monLevel; }
+      else this._monLevel = monMaster.gain.value;
       this._monMasterGain = monMaster;
       // Monitor VU tap: post-fader, so the meter shows the monitor level regardless of the enable/
       // engine (scaled by MON_MAKEUP in monVuLevel() to read comparably to the master meter).
@@ -3707,7 +3717,7 @@ export class Rack {
       const makeup = ctx.createGain(); makeup.gain.value = MON_MAKEUP;   // match the main output's makeup
       const lim = ctx.createDynamicsCompressor();
       lim.threshold.value = -1; lim.knee.value = 0; lim.ratio.value = 20; lim.attack.value = 0.003; lim.release.value = 0.12;
-      this._monBus.connect(monMaster); monMaster.connect(modeGate);
+      this._monBus.connect(monMaster); monOut.connect(modeGate);
       modeGate.connect(makeup); makeup.connect(lim); lim.connect(ctx.destination);
       this._monLimiter = lim;   // the screen recorder taps here too, so auditioning is in the take
       // Preview injection: the momentary "Listen" hover joins here, AFTER the mode gate, so a
