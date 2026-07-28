@@ -80,6 +80,72 @@ let hasUnsavedChanges = false;   // mirrored from the renderer, to guard window 
 let appQuitting = false;         // ⌘Q / app-quit in progress — bypass the unsaved-changes guard
 app.on('before-quit', () => { appQuitting = true; });
 
+// ---- screen recording -------------------------------------------------------
+// A take is written to disk AS IT ARRIVES rather than buffered and saved at the end,
+// so a long session cannot exhaust memory and a crash mid-take still leaves a playable
+// file. It goes to Downloads under a timestamped name with no dialog at either end —
+// starting and stopping are both a single keystroke.
+let recStream = null;
+let recPath = null;
+
+// Never silently overwrite an existing take. The timestamp makes a collision unlikely,
+// but two starts inside the same second would otherwise clobber the first.
+function uniquePath(p) {
+  if (!fs.existsSync(p)) return p;
+  const dir = path.dirname(p), ext = path.extname(p), stem = path.basename(p, ext);
+  for (let n = 2; n < 1000; n++) {
+    const candidate = path.join(dir, `${stem} (${n})${ext}`);
+    if (!fs.existsSync(candidate)) return candidate;
+  }
+  return p;
+}
+
+function registerRecordIpc() {
+  // Open the file and start writing. NO dialog: a take goes straight to Downloads under
+  // a timestamped name, so hitting the shortcut records immediately rather than stopping
+  // to ask. The renderer shows where it went when the take ends, with a click to reveal
+  // it — which is the moment the answer is actually useful.
+  ipcMain.handle('record:begin', async (_e, suggestedName) => {
+    if (recStream) return { path: recPath };   // already rolling
+    const base = (typeof suggestedName === 'string' && suggestedName) || 'DreamRack.webm';
+    recPath = uniquePath(path.join(app.getPath('downloads'), base));
+    recStream = fs.createWriteStream(recPath);
+    return { path: recPath };
+  });
+
+  ipcMain.handle('record:chunk', async (_e, bytes) => {
+    if (!recStream || !bytes) return false;
+    // Backpressure matters here: a 12 Mbps take on a slow disk will otherwise queue in
+    // memory, which is the thing streaming was meant to avoid.
+    return new Promise((resolve) => {
+      const ok = recStream.write(Buffer.from(bytes));
+      if (ok) resolve(true); else recStream.once('drain', () => resolve(true));
+    });
+  });
+
+  ipcMain.handle('record:end', async () => {
+    if (!recStream) return null;
+    const done = recPath;
+    await new Promise((resolve) => recStream.end(resolve));
+    recStream = null; recPath = null;
+    return { path: done };
+  });
+
+  // Abandon a take: close the stream and delete the partial file.
+  ipcMain.handle('record:cancel', async () => {
+    if (!recStream) return false;
+    const partial = recPath;
+    await new Promise((resolve) => recStream.end(resolve));
+    recStream = null; recPath = null;
+    try { fs.unlinkSync(partial); } catch (_e) { /* nothing to clean up */ }
+    return true;
+  });
+
+  ipcMain.handle('record:reveal', async (_e, p) => {
+    if (typeof p === 'string' && p) shell.showItemInFolder(p);
+  });
+}
+
 function registerPatchIpc() {
   ipcMain.on('patch:dirty', (_e, v) => { hasUnsavedChanges = !!v; });
   // Open a docs/help link in the user's default browser. Restricted to http(s)
@@ -537,6 +603,21 @@ app.whenReady().then(async () => {
   // launch can't show stale code (belt-and-braces with the no-store header on the app scheme).
   try { await session.defaultSession.clearCache(); } catch (_e) { /* best effort */ }
   registerPatchIpc();
+  registerRecordIpc();
+  // getDisplayMedia() in the renderer normally raises a picker asking which surface to
+  // share. There is only ever one answer here, so answer it in the main process and
+  // "start recording" becomes a single click.
+  //
+  // The answer is the page's own FRAME, not the OS window. Two things follow, both
+  // wanted: the recording contains the app and nothing else — no title bar, no window
+  // shadow, no desktop behind it — and because we are capturing our own content rather
+  // than the screen, macOS does not require Screen Recording permission for it.
+  //
+  // Nothing else in the app calls getDisplayMedia, so this cannot hand out anything
+  // unintended.
+  session.defaultSession.setDisplayMediaRequestHandler((_request, callback) => {
+    callback(mainWindow ? { video: mainWindow.webContents.mainFrame } : {});
+  }, { useSystemPicker: false });
   initMirror(() => mainWindow);
   registerMenuIpc();
   applyAppMenu();

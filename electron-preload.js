@@ -28,6 +28,16 @@ contextBridge.exposeInMainWorld('wcoast', {
     chrome: process.versions.chrome,
     node: process.versions.node,
   },
+  // Screen recording (Electron only). begin() picks the destination and opens the file,
+  // chunk() appends as the recorder produces data, end() closes it. Writing as we go
+  // means a long take never buffers in memory and stopping never waits on a dialog.
+  record: {
+    begin: (suggestedName) => ipcRenderer.invoke('record:begin', suggestedName),
+    chunk: (bytes) => ipcRenderer.invoke('record:chunk', bytes),
+    end: () => ipcRenderer.invoke('record:end'),
+    cancel: () => ipcRenderer.invoke('record:cancel'),
+    reveal: (p) => ipcRenderer.invoke('record:reveal', p),
+  },
   // Patch files. open() -> { path, text } | null; save/saveAs -> { path } | null.
   // setDirty tells the main process about unsaved changes so it can guard the
   // window close.

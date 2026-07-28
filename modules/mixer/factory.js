@@ -156,5 +156,10 @@ export function create(ctx, services) {
     channels: new Map(channels.map((c) => [c.L, c.meter])),
   };
 
-  return { getOutput, getInput, getParam, setParam, supports, dispose, setMasterAudible, master, meters, levels, analysers };
+  // The last node before the speakers. The screen recorder connects here in parallel
+  // with ctx.destination, so a take carries exactly what the master bus is producing.
+  // Optional contract method: a module without an output of its own doesn't implement it.
+  function outputTap() { return limiter; }
+
+  return { getOutput, getInput, getParam, setParam, supports, dispose, setMasterAudible, master, meters, levels, analysers, outputTap };
 }

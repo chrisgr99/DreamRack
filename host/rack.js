@@ -3709,6 +3709,7 @@ export class Rack {
       lim.threshold.value = -1; lim.knee.value = 0; lim.ratio.value = 20; lim.attack.value = 0.003; lim.release.value = 0.12;
       this._monBus.connect(monMaster); monMaster.connect(modeGate);
       modeGate.connect(makeup); makeup.connect(lim); lim.connect(ctx.destination);
+      this._monLimiter = lim;   // the screen recorder taps here too, so auditioning is in the take
       // Preview injection: the momentary "Listen" hover joins here, AFTER the mode gate, so a
       // terminal can always be auditioned regardless of the Monitor enable. A fixed level (like the
       // default monitor fader) keeps it comparable to a placed monitor.
@@ -3754,6 +3755,19 @@ export class Rack {
     // audition, so a hover doesn't flicker the faceplate.
     this._setChannelsGrayed(rec.values.get('masterEnable') === 'off');
     this._refreshMonHighlights();
+  }
+
+  // Every node that feeds the speakers, for the screen recorder to tap in parallel —
+  // the mixer's master and the monitor bus. Building the monitor bus here if it does not
+  // exist yet costs a few silent gain nodes and means a monitor placed mid-take is still
+  // in the recording, rather than the take quietly missing it.
+  audioTapNodes() {
+    const taps = [];
+    const mx = this._mixerRec();
+    if (mx && typeof mx.instance.outputTap === 'function') taps.push(mx.instance.outputTap());
+    this._monitorBus();
+    if (this._monLimiter) taps.push(this._monLimiter);
+    return taps;
   }
 
   // ---- the Sound menu (panel menu): hover auditions, click toggles ----

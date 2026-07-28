@@ -11,6 +11,7 @@
 import { ModuleRegistry } from '../host/registry.js';
 import { SynthHost } from '../host/host.js';
 import { Rack } from '../host/rack.js';
+import { Recorder } from '../host/recorder.js';
 import oscDescriptor from '../modules/complex-oscillator-259t/descriptor.js';
 import { create as oscCreate } from '../modules/complex-oscillator-259t/factory.js';
 import mixerDescriptor from '../modules/mixer/descriptor.js';
@@ -104,6 +105,101 @@ let audioCtx = null;
 let host = null;
 let rack = null;
 let mixer = null;        // { instanceId, instance }
+let recorder = null;     // screen+audio recorder (Electron only)
+let recBadge = null, recTimer = null;
+
+// A recording that is quietly still running is the failure mode worth designing against,
+// so the badge is deliberately hard to miss: fixed to the top-right, above everything,
+// with a pulsing dot and the elapsed time. Click it to stop.
+function paintRecBadge() {
+  if (!recorder) return;
+  if (recorder.recording && !recBadge) {
+    recBadge = document.createElement('button');
+    recBadge.type = 'button';
+    recBadge.title = 'Stop recording';
+    recBadge.style.cssText = [
+      'position:fixed', 'top:10px', 'right:12px', 'z-index:2000',
+      'display:flex', 'align-items:center', 'gap:7px',
+      'padding:5px 11px 5px 9px', 'border-radius:16px',
+      'border:1px solid #b3323c', 'background:#2a1416', 'color:#ffd9dc',
+      'font:600 12px/1 -apple-system,system-ui,sans-serif', 'cursor:pointer',
+      'font-variant-numeric:tabular-nums', 'box-shadow:0 3px 14px rgba(0,0,0,.5)',
+    ].join(';');
+    const dot = document.createElement('span');
+    dot.style.cssText = 'width:9px;height:9px;border-radius:50%;background:#ff3b30;animation:wcRecPulse 1.6s ease-in-out infinite';
+    const time = document.createElement('span');
+    recBadge.append(dot, time);
+    recBadge.addEventListener('click', () => toggleRecording());
+    if (!document.getElementById('wcRecKeyframes')) {
+      const st = document.createElement('style');
+      st.id = 'wcRecKeyframes';
+      st.textContent = '@keyframes wcRecPulse{0%,100%{opacity:1}50%{opacity:.35}}';
+      document.head.appendChild(st);
+    }
+    document.body.appendChild(recBadge);
+    const tick = () => {
+      const s = Math.floor(recorder.elapsedMs() / 1000);
+      time.textContent = `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
+    };
+    tick();
+    recTimer = setInterval(tick, 500);
+  } else if (!recorder.recording && recBadge) {
+    clearInterval(recTimer); recTimer = null;
+    recBadge.remove(); recBadge = null;
+  }
+}
+
+// A take that lands silently in Downloads leaves you wondering whether it worked and
+// where it went. This says both and STAYS until dismissed, so the filename is still
+// there when you come back to it — click the name to open it in Finder, or the × to
+// dismiss. A pill that faded on its own took the filename with it.
+let savedPill = null;
+function showSavedPill(filePath) {
+  if (savedPill) savedPill.remove();          // one at a time; a new take replaces the last
+  const name = filePath.split('/').pop();
+  const pill = document.createElement('button');
+  pill.type = 'button';
+  pill.title = filePath;
+  pill.style.cssText = [
+    'position:fixed', 'top:10px', 'right:12px', 'z-index:2000',
+    'display:flex', 'align-items:center', 'gap:7px',
+    'padding:5px 11px', 'border-radius:16px',
+    'border:1px solid #3d6b46', 'background:#152418', 'color:#cfe9d5',
+    'font:600 12px/1 -apple-system,system-ui,sans-serif', 'cursor:pointer',
+    'box-shadow:0 3px 14px rgba(0,0,0,.5)', 'transition:opacity .5s',
+    'max-width:52ch', 'overflow:hidden', 'text-overflow:ellipsis', 'white-space:nowrap',
+  ].join(';');
+  const text = document.createElement('span');
+  text.textContent = `Saved to Downloads · ${name}`;
+  text.style.cssText = 'overflow:hidden;text-overflow:ellipsis;white-space:nowrap';
+  const close = document.createElement('span');
+  close.textContent = '×';
+  close.title = 'Dismiss';
+  close.style.cssText = 'flex:none;opacity:.65;font-size:15px;line-height:1;padding:0 1px';
+  close.addEventListener('click', (e) => { e.stopPropagation(); pill.remove(); });
+  pill.append(text, close);
+  pill.addEventListener('click', () => window.wcoast?.record?.reveal?.(filePath));
+  document.body.appendChild(pill);
+  savedPill = pill;
+}
+
+async function toggleRecording() {
+  if (!recorder) return;
+  try {
+    if (recorder.recording) {
+      const file = await recorder.stop();
+      if (file) { log(`recording saved — ${file}`); showSavedPill(file); }
+    } else {
+      const file = await recorder.start();
+      if (file) log(`recording to ${file}`);
+    }
+  } catch (err) {
+    // A refused screen-share, or a codec the build cannot produce. Say so rather than
+    // leaving a badge that never appeared unexplained.
+    log(`recording failed — ${err && err.message ? err.message : err}`);
+    paintRecBadge();
+  }
+}
 let trace = null;        // audio-trace projection (created after the mixer)
 
 function ensureAudio() {
@@ -141,6 +237,10 @@ async function boot() {
   const mixRec = await rack.addModule(mixerDescriptor.id, rack.rowCount - 1, 0, { pinned: true, key: 'mixer' });
   mixer = { instanceId: mixRec.instanceId, instance: mixRec.instance };
   trace = createAudioTrace({ ctx: audioCtx, rack, mixer: mixer.instance });
+
+  // Window recording (Electron only). The picture comes from the window; the sound is
+  // tapped off the audio graph, so a take carries exactly what was reaching the speakers.
+  recorder = new Recorder(audioCtx, () => rack.audioTapNodes(), { onState: paintRecBadge });
 
   // Unsaved-changes tracking (state declared above the rack). Any knob, switch,
   // cable, or mixer change dirties the patch; loading or saving cleans it. The
@@ -452,6 +552,11 @@ async function boot() {
       file.push({ label: 'Recent', submenu: recentFiles.map((f) => ({ label: f.name, action: () => openRecent(f.id) })) });
     }
     file.push({ label: 'Share this patch…', disabled: true });   // greyed until there's a person-to-person channel
+    // Recording the window to a video file. Desktop only — it needs the main process to
+    // answer the screen-share prompt and to stream the file to disk.
+    if (recorder && recorder.available()) {
+      file.push({ label: `${recorder.recording ? 'Stop recording' : 'Record video…'}   R`, action: () => toggleRecording() });
+    }
     const edit = [
       { label: 'Undo', disabled: !rack.canUndo(), action: () => rack.undo() },
       { label: 'Redo', disabled: !rack.canRedo(), action: () => rack.redo() },
@@ -578,6 +683,22 @@ async function boot() {
     if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'BUTTON' || t.isContentEditable)) return;
     e.preventDefault();
     rack.toggleBusEnable('master');
+  });
+
+  // R toggles recording. A bare letter is safe here for the same reason Space can toggle
+  // the master bus: patching is a pointer activity, so the keyboard is free. Modified R is
+  // explicitly excluded so Cmd-R (reload) and friends pass straight through, and e.code
+  // keeps it on the physical key rather than the character a layout produces.
+  //
+  // There is no native menu item for recording, so unlike the standard shortcuts below
+  // this one runs in Electron too — it is the only handler for it, so nothing double-fires.
+  window.addEventListener('keydown', (e) => {
+    if (e.code !== 'KeyR' || e.metaKey || e.ctrlKey || e.altKey || e.shiftKey) return;
+    if (!recorder || !recorder.available()) return;
+    const t = e.target;
+    if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'BUTTON' || t.isContentEditable)) return;
+    e.preventDefault();
+    toggleRecording();
   });
 
   // Standard shortcuts, for the BROWSER only: in Electron the native menu carries the same
