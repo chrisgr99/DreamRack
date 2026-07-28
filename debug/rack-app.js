@@ -613,6 +613,9 @@ async function boot() {
       // Require at least one module — a module-less session is boot-transient junk,
       // not a patch worth resuming; fall through to the default instead.
       if (v.ok && obj.modules && obj.modules.length) {
+        // Settings that no longer fit the descriptors are dropped rather than fatal, so
+        // say what was dropped — silently different knob positions are worse than noisy ones.
+        for (const w of v.warnings || []) log(`session: ${w}`);
         await restore(obj, rack, mixerIO); syncMaster(); afterLoad(); resumed = true;
         // Re-adopt the file this session was editing, so File > Save writes back to it (not a fresh prompt).
         try { const n = await storage.adoptLast(); if (n) patchName = n; } catch (_e) { /* fileless resume */ }

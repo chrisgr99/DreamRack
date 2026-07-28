@@ -4178,6 +4178,7 @@ export class Rack {
       initialDepth,
     );
     if (res.ok) { this._reconcileLinks(); this._drawCables(); this.onChange(); return res.edge; }
+    console.warn(`[wcoast] connect refused: ${src.key}.${src.portId} -> ${dst.key}.${dst.portId} — ${res.reason}`);
     return null;
   }
 

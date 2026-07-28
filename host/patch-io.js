@@ -110,7 +110,16 @@ export async function restore(obj, rack, mixer) {
   for (const [id, vals] of Object.entries(params)) {
     if (id === mixer.key) { mixer.setParams(vals); continue; }
     const rec = rack.records.get(idToKey.get(id));
-    if (rec) for (const [pid, v] of Object.entries(vals)) rack.applyParam(rec, pid, v);
+    // Skip ids this module no longer has. applyParam would store them harmlessly, but
+    // they would then be written back out on the next save and the patch would carry the
+    // stale key for ever; dropping them here lets an old patch heal on first save.
+    const desc = rec && rack.moduleTypes.find((t) => t.descriptorId === rec.descriptorId);
+    if (rec) {
+      for (const [pid, v] of Object.entries(vals)) {
+        if (desc && desc.descriptor && !paramIsKnown(desc.descriptor, pid)) continue;
+        rack.applyParam(rec, pid, v);
+      }
+    }
   }
 
   // Recreate wiring (both endpoints now exist), restoring each cable's bend.
@@ -122,6 +131,9 @@ export async function restore(obj, rack, mixer) {
       { key: fromKey, portId: w.from.port },
       { key: toKey, portId: w.to.port },
     );
+    // A cable that silently fails to come back is the worst kind of restore bug: the
+    // patch looks restored and isn't. Say so.
+    if (!edge) console.warn(`[wcoast] cable not restored: ${w.from.module}.${w.from.port} -> ${w.to.module}.${w.to.port}`);
     if (edge && w.bow) edge.bow = w.bow;
     // Re-tag a link with its (remapped) anchor input; reconciled after all wiring exists.
     if (edge && w.link && idToKey.has(w.link.module)) edge.link = { key: idToKey.get(w.link.module), portId: w.link.port };
@@ -138,13 +150,27 @@ export async function restore(obj, rack, mixer) {
   }
 }
 
-// Validate an (AI-authored) patch object against the registered descriptors.
-// Returns { ok: true } or { ok: false, error }. Stricter than restore(), which
-// trusts its input: this checks the format, module types, param ids and their
-// ranges/steps, and wiring ports (real, right direction, one cable per input)
-// BEFORE anything is applied — so a machine-written patch is rejected cleanly
-// with a precise message rather than half-applied.
+// Validate a patch object against the registered descriptors. Returns
+// { ok: true, warnings: [] } or { ok: false, error }.
+//
+// STRUCTURE is fatal; SETTINGS are not. A patch's value is its modules and its
+// cables — an unknown or unusable param value is a detail, and losing an entire
+// patch over one is a bad trade. So an unknown param id, a step that no longer
+// exists, or a value out of range is dropped with a warning and everything else
+// restores; the param simply takes its default.
+//
+// This matters because the module descriptors are still moving. Every time a param
+// is renamed or removed — the knAck rework, the sequencer's marker buttons becoming
+// start/end selectors — every saved session written before that change contained the
+// old id. Under the previous all-or-nothing rule that silently discarded the whole
+// session, cables included, and the app came up empty with only a console line to
+// say why.
+//
+// Fatal, still: a bad format or version, a module with no id, a duplicate id, an
+// unknown module type, and any malformed or impossible wiring. Those cannot be
+// applied at all, and a patch that half-exists is worse than one that is refused.
 export function validate(obj, registry) {
+  const warnings = [];
   const bad = (m) => ({ ok: false, error: m });
   if (!obj || obj.format !== FORMAT) return bad('not a wcoast-patch file');
   if (obj.version !== VERSION) return bad(`unsupported version ${obj.version}`);
@@ -161,7 +187,7 @@ export function validate(obj, registry) {
   const params = (obj.settings && obj.settings.params) || {};
   for (const [mid, vals] of Object.entries(params)) {
     const d = descOf.get(mid);
-    if (!d) return bad(`settings for unknown module "${mid}"`);
+    if (!d) { warnings.push(`settings for unknown module "${mid}" ignored`); continue; }
     const byId = new Map((d.params || []).map((p) => [p.id, p]));
     for (const [pid, v] of Object.entries(vals)) {
       const p = byId.get(pid);
@@ -169,15 +195,16 @@ export function validate(obj, registry) {
         // knAck UI state: "av.<paramId>" carries the knob's attenuverter on/off choice
         // (designer default overridden by the user — see rack's _setupDualKnack).
         if (pid.startsWith('av.') && byId.has(pid.slice(3)) && (v === 'on' || v === 'off')) continue;
-        return bad(`unknown param "${pid}" on "${mid}"`);
+        warnings.push(`unknown param "${pid}" on "${mid}" ignored`);
+        continue;
       }
       if (p.curve === 'stepped') {
         const steps = (p.steps || []).map((s) => s.value);
-        if (!steps.includes(v)) return bad(`param "${pid}" on "${mid}" must be one of: ${steps.join(', ')}`);
+        if (!steps.includes(v)) warnings.push(`param "${pid}" on "${mid}" is not one of ${steps.join(', ')} — ignored`);
       } else if (typeof v !== 'number' || !Number.isFinite(v)) {
-        return bad(`param "${pid}" on "${mid}" must be a number`);
+        warnings.push(`param "${pid}" on "${mid}" is not a number — ignored`);
       } else if (v < p.min || v > p.max) {
-        return bad(`param "${pid}" on "${mid}" is out of range ${p.min}..${p.max}`);
+        warnings.push(`param "${pid}" on "${mid}" is outside ${p.min}..${p.max} — ignored`);
       }
     }
   }
@@ -198,5 +225,14 @@ export function validate(obj, registry) {
     if (usedInputs.has(key)) return bad(`input "${w.to.port}" on "${w.to.module}" has more than one cable`);
     usedInputs.add(key);
   }
-  return { ok: true };
+  return { ok: true, warnings };
+}
+
+// The param ids a descriptor will actually accept, used by restore() to skip the ones
+// validate() warned about. Without this a stale id is stored in the record's values and
+// written straight back out on the next autosave, so the patch never heals itself.
+function paramIsKnown(descriptor, pid) {
+  const ids = (descriptor && descriptor.params) || [];
+  if (ids.some((p) => p.id === pid)) return true;
+  return pid.startsWith('av.') && ids.some((p) => p.id === pid.slice(3));
 }
