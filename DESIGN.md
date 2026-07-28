@@ -14,7 +14,7 @@ architecture; individual features and modules are specified in their own files
 under `design/` — among them `control-protocol.md`, `save-load.md`,
 `faceplate-system.md`, `panel-editor.md`, `scripted-demo.md`, `source-of-entropy.md`,
 `dual-slope.md`, `scope.md`, `sound-and-monitoring.md`, `ai-mirror.md`, and
-`cv-sequencer.md` (the Sequencer/Programmer Eight). Where a `design/` file and this
+`cv-sequencer.md` (the Sequencer/Programmer Eight) and `video-synthesis.md`. Where a `design/` file and this
 document disagree, the `design/` file is newer.
 
 ---
