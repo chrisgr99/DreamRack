@@ -24,6 +24,8 @@ import mixerLayout from './modules/mixer/panel.layout.js';
 import mixerDesc from './modules/mixer/descriptor.js';
 import galleryLayout from './modules/gallery/panel.layout.js';
 import galleryDesc from './modules/gallery/descriptor.js';
+import progLayout from './modules/programmer-8/panel.layout.js';
+import progDesc from './modules/programmer-8/descriptor.js';
 
 const NS = 'http://www.w3.org/2000/svg';
 const clone = (o) => JSON.parse(JSON.stringify(o));
@@ -35,6 +37,7 @@ const MODULES = [
   { name: 'Quad Function Generator', dir: 'function-gen-281t', base: fnLayout, desc: fnDesc },
   { name: 'Mixer / Output', dir: 'mixer', base: mixerLayout, desc: mixerDesc },
   { name: 'Control Gallery', dir: 'gallery', base: galleryLayout, desc: galleryDesc },
+  { name: 'Sequencer / Programmer Eight', dir: 'programmer-8', base: progLayout, desc: progDesc },
 ];
 
 const stage = document.getElementById('stage');
@@ -1012,10 +1015,17 @@ function buildSettingsBody(id) {
     addP('orientation', selectInput(optVal(id, 'orientation', 'v'), [['h', 'horizontal'], ['v', 'vertical']], (v) => setOptAll(id, 'orientation', v)));
     addP('spacing', numberInput(optVal(id, 'spacing', 5.6), (v) => setOptAll(id, 'spacing', v)));
     addP('LED radius', numberInput(optVal(id, 'ledR', 2.16), (v) => setOptAll(id, 'ledR', v)));
+    addP('LED colour', selectInput(optVal(id, 'led', 'red'), LED_KINDS, (v) => setOptAll(id, 'led', v)));
+    // The grouping line alongside the lamps. Right for a short row; on a column as tall
+    // as a stage sequencer's it runs most of the faceplate, so it can be turned off.
+    addP('group line', selectInput(String(optVal(id, 'outline', true)), [['true', 'shown'], ['false', 'hidden']], (v) => setOptAll(id, 'outline', v === 'true')));
     const sub = document.createElement('div'); sub.className = 'insp-sub'; sub.textContent = 'positions'; pres.body.appendChild(sub);
     pres.body.appendChild(stepsEditor(id));
   }
-  if (it.t === 'button') { addP('radius', numberInput(optVal(id, 'r', 2.0), (v) => setOptAll(id, 'r', v))); addP('kind', textInput(optVal(id, 'kind', 'red'), (v) => setOptAll(id, 'kind', v))); }
+  if (it.t === 'button') {
+    addP('radius', numberInput(optVal(id, 'r', 2.0), (v) => setOptAll(id, 'r', v)));
+    addP('kind', selectInput(optVal(id, 'kind', 'red'), BUTTON_KINDS, (v) => setOptAll(id, 'kind', v)));
+  }
   if (it.t === 'knob' || it.t === 'knack') {   // dial scale as its own collapsible sub-section
     const sc = section('Dial scale', 'scale'); sc.el.classList.add('sub');
     sc.body.appendChild(scaleEditor(id));
@@ -1148,6 +1158,13 @@ const TOOLS = [
   { type: 'label', label: 'Label', structure: true }, { type: 'divider', label: 'Divider', structure: true },
 ];
 const STRUCTURE_TYPES = new Set(['label', 'divider']);
+
+// LED colours a lamp can carry. Red is the house default and what every panel used
+// until the sequencer needed three lamp columns in one stage row to mean different
+// things. A button additionally has 'white', which is the light push-button disc
+// rather than an LED at all.
+const LED_KINDS = [['red', 'red'], ['green', 'green'], ['orange', 'orange']];
+const BUTTON_KINDS = [['red', 'red LED'], ['white', 'white disc'], ['green', 'green LED'], ['orange', 'orange LED']];
 
 // A small SVG preview of a sample control, drawn with the real primitives. The viewBox
 // bounds it loosely; the SVG scales/centres it into the thumbnail box.

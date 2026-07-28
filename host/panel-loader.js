@@ -178,7 +178,10 @@ export function showStep(binding, stepValue) {
     // centre (the ledLit gradient: red core fading to the gray body) plus a glossy
     // highlight. OFF is the flat gray disc. The thin edge is black on the light
     // panel, the font-gray on the dark panel.
-    el.setAttribute('fill', on ? 'url(#ledLit)' : BUTTON_OFF);
+    // A lamp may declare its LED colour; no declaration means red, which is every
+    // panel authored before the sequencer's START / END / PLAY columns.
+    const hue = el.getAttribute('data-wcoast-led');
+    el.setAttribute('fill', on ? (hue === 'green' ? 'url(#ledLitGreen)' : hue === 'orange' ? 'url(#ledLitOrange)' : 'url(#ledLit)') : BUTTON_OFF);
     el.setAttribute('stroke', binding.dark ? DARK_LINE : BUTTON_EDGE_LIGHT);
     // Match the jack edge's PROPORTION (~6% of radius): buttons are smaller, so a
     // fixed width read much heavier on them. Scale the edge to each button's radius.
@@ -187,7 +190,11 @@ export function showStep(binding, stepValue) {
     el.setAttribute('stroke-width', String(Math.round(edgeW * 1000) / 1000));
     el.setAttribute('opacity', '1');
     const hi = el.nextElementSibling;   // the little glossy highlight
-    if (hi && hi.getAttribute && hi.getAttribute('fill') === '#ffb4b4') {
+    // Matched by role now that a gloss can be green or orange as well as red. The
+    // fill test stays as a fallback for panels rendered before the role existed —
+    // the function generator's SVGs are hand-held and are not regenerated.
+    if (hi && hi.getAttribute
+        && (hi.getAttribute('data-wcoast-role') === 'led-gloss' || hi.getAttribute('fill') === '#ffb4b4')) {
       hi.setAttribute('opacity', on ? '0.85' : '0');
     }
   }
@@ -279,7 +286,15 @@ export function parsePanel(svg, descriptor) {
       angleMin, angleMax,
     };
     for (const s of el.querySelectorAll('[data-wcoast-role="step-indicator"]')) {
-      binding.stepIndicators.set(s.getAttribute('data-wcoast-step'), s);
+      // An SVG attribute is always a string, but a descriptor's step values need not
+      // be — the sequencer's loop-window selectors step through the NUMBERS 1..8. Key
+      // the map by the DECLARED value, so the lit-lamp comparison, the unknown-step
+      // check below, and the value a click writes back are all one type. Without this
+      // a numeric stepped param renders lamps that never light and, when clicked,
+      // writes a string back into a numeric param.
+      const raw = s.getAttribute('data-wcoast-step');
+      const declared = binding.stepValues.find((v) => String(v) === raw);
+      binding.stepIndicators.set(declared !== undefined ? declared : raw, s);
     }
 
     // Geometry validation (the contract's load-time checks).
@@ -294,6 +309,13 @@ export function parsePanel(svg, descriptor) {
       }
       if (!binding.indicator && !binding.operator && !binding.stepIndicators.size) {
         warnings.push(`switch "${id}" has no operator, lever, or lamps`);
+      }
+      // A `stepped` param is a SWITCH: it is operated by clicking one of its lamps. Drawn
+      // as a knob instead — an indicator on a pivot, no lamps, no stepper — it renders
+      // perfectly and cannot be operated at all, which is a silent dead control. A knob
+      // you turn to whole numbers wants `curve: 'detent'` with min/max.
+      if (binding.indicator && binding.pivot && !binding.stepIndicators.size && !binding.stepper && !binding.operator) {
+        warnings.push(`switch "${id}" is drawn as a knob but has no lamps to click — it cannot be operated. Use curve:'detent' with min/max for a knob that steps to integers.`);
       }
     }
     controls.set(id, binding);
@@ -705,19 +727,29 @@ function paintKnAck(port, dark) {
 // The lit-button gradient: a red LED core fading to the gray button body, so an
 // ON button reads as a dark-gray disc with a glowing centre. Injected once per
 // panel so showStep can reference url(#ledLit).
+// The LED lens fills the WHOLE button (a glowing dome, bright centre → deep edge) —
+// no gray rim; the only ring is the thin outline the button already has. Green and
+// orange are the same dome in another hue, for panels that need lamps sitting side
+// by side to mean different things.
+const LED_LIT = {
+  ledLit: [['0', '#ff7a5a'], ['0.5', '#ee2a10'], ['0.82', '#d21010'], ['1', '#8f0c0c']],
+  ledLitGreen: [['0', '#8dff9e'], ['0.5', '#1dc93f'], ['0.82', '#12a531'], ['1', '#0a6b1f']],
+  ledLitOrange: [['0', '#ffd08a'], ['0.5', '#ff9312'], ['0.82', '#e87a00'], ['1', '#944d00']],
+};
+
 function ensureLedGradient(svg) {
   const doc = svg.ownerDocument;
   let defs = svg.querySelector('defs');
   if (!defs) { defs = doc.createElementNS(SVG_NS, 'defs'); svg.insertBefore(defs, svg.firstChild); }
-  if (svg.querySelector('#ledLit')) return;
-  const g = doc.createElementNS(SVG_NS, 'radialGradient');
-  g.setAttribute('id', 'ledLit');
-  // Red LED lens fills the WHOLE button (a glowing dome, bright centre → deep red
-  // edge) — no gray rim; the only ring is the thin outline the button already has.
-  for (const [off, col] of [['0', '#ff7a5a'], ['0.5', '#ee2a10'], ['0.82', '#d21010'], ['1', '#8f0c0c']]) {
-    const s = doc.createElementNS(SVG_NS, 'stop'); s.setAttribute('offset', off); s.setAttribute('stop-color', col); g.appendChild(s);
+  for (const [id, stops] of Object.entries(LED_LIT)) {
+    if (svg.querySelector('#' + id)) continue;
+    const g = doc.createElementNS(SVG_NS, 'radialGradient');
+    g.setAttribute('id', id);
+    for (const [off, col] of stops) {
+      const s = doc.createElementNS(SVG_NS, 'stop'); s.setAttribute('offset', off); s.setAttribute('stop-color', col); g.appendChild(s);
+    }
+    defs.appendChild(g);
   }
-  defs.appendChild(g);
 }
 
 // ---- Module identity strip -------------------------------------------------

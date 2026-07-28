@@ -5,6 +5,7 @@
   "main": "electron-main.js",
   "scripts": {
     "start": "electron .",
+    "panels": "node modules/mixer/gen-panel.js && node modules/complex-oscillator-259t/gen-panel.js && node modules/lpg-292/gen-panel.js && node modules/gallery/gen-panel.js && node modules/sine-source/gen-panel.js && node modules/programmer-8/gen-panel.js",
     "test": "node --test"
   },
   "devDependencies": {

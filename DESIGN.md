@@ -9,6 +9,14 @@ This document is the authoritative design reference. It captures decisions
 reached during the design sessions so implementation can proceed against a
 settled plan. Where something is deliberately left open, it says so.
 
+**Detailed specs live in `design/`.** This document holds the system-level
+architecture; individual features and modules are specified in their own files
+under `design/` — among them `control-protocol.md`, `save-load.md`,
+`faceplate-system.md`, `panel-editor.md`, `scripted-demo.md`, `source-of-entropy.md`,
+`dual-slope.md`, `scope.md`, `sound-and-monitoring.md`, `ai-mirror.md`, and
+`cv-sequencer.md` (the Sequencer/Programmer Eight). Where a `design/` file and this
+document disagree, the `design/` file is newer.
+
 ---
 
 ## 1. Guiding context: accessibility drives the design
@@ -444,10 +452,14 @@ and may run a partial height rather than edge-to-edge.
 (light). Faceplate text is **bold italic** in a condensed face (Arial Narrow,
 Helvetica, Arial), sizes ~2.0–2.6; legends are static art, never tagged.
 
-**Module name.** Set vertically up the left margin (rotated −90°), font-size
-`3.1`, weight 700, at x = face-left + `3.4`, centred top-to-bottom, fill
-**white** (`#ffffff`) in dark / `#163a69` in light, opacity `0.9`. The host draws
-this automatically from `descriptor.name` — authors leave the left margin clear.
+**Module name.** Set in a horizontal **title strip above the face**, carrying the
+module's name and its identity colour band. The strip occupies part of the top gutter
+the face crop used to discard (`TITLE_STRIP_MM` = 4; the drawn bar is `TITLE_BAR_MM` = 6,
+the extra 2 mm overlaying the face's blank top margin), so no module content moves — the
+module simply displays 4 mm taller. The host draws this automatically from
+`descriptor.name`; authors leave the top margin clear. (This replaces the earlier
+vertical treatment, which ran the name up the left edge rotated −90° — the left margin
+is no longer reserved.)
 
 **Knobs (small, "259t" style).** Skirt ring radius `4.2`, radial blue
 (`#1688cc → #006da8 → #003d62`), stroke `#6fa8d6` (dark) / `#004b7a` (light) at
@@ -613,10 +625,14 @@ Modulation & timing (make it move):
    ONLY possible source of fast modulation (GXW cannot supply audio-rate).
 5. **Source of uncertainty (266)** — sample-and-hold + fluctuating random +
    noise; the generative heart.
-6. **Clock/pulser** — minimal timing. NOTE: consider keeping the synth's own
-   timing thin and letting GXW be the sequencer when bridged. A full
-   sequencer is optional / deferred.
-7. **Attenuators / CV mixer** — connective tissue; wanted as soon as there's
+6. **Clock/pulser** — minimal timing.
+7. **Sequencer/Programmer Eight** — an eight-stage sequential voltage programmer in
+   the Serge tradition (two CV rows, per-stage select inputs and pulse outputs,
+   ratchets, patched length and direction). Specified in `design/cv-sequencer.md`.
+   NOTE: the earlier position — keep the synth's timing thin and let GXW be the
+   sequencer when bridged — is superseded. Both are wanted: GXW drives via the control
+   protocol, and the rack has its own sequencer for standalone play.
+8. **Attenuators / CV mixer** — connective tissue; wanted as soon as there's
    more than one modulation source. (Control edges already get an inline gain
    for the per-connection amount, i.e. a free attenuator per control cord.)
 

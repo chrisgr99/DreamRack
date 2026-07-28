@@ -23,6 +23,8 @@ import galleryDescriptor from '../modules/gallery/descriptor.js';
 import { create as galleryCreate } from '../modules/gallery/factory.js';
 import sineDescriptor from '../modules/sine-source/descriptor.js';
 import { create as sineCreate } from '../modules/sine-source/factory.js';
+import progDescriptor from '../modules/programmer-8/descriptor.js';
+import { create as progCreate } from '../modules/programmer-8/factory.js';
 import { serialize, restore, validate, APP_NAME, APP_VERSION } from '../host/patch-io.js';
 import { createStorage } from '../host/storage.js';
 import { buildCatalogue, createMirror } from '../host/mirror.js';
@@ -42,6 +44,7 @@ registry.register({ descriptor: lpgDescriptor, create: lpgCreate });
 registry.register({ descriptor: fnDescriptor, create: fnCreate });
 registry.register({ descriptor: galleryDescriptor, create: galleryCreate });
 registry.register({ descriptor: sineDescriptor, create: sineCreate });
+registry.register({ descriptor: progDescriptor, create: progCreate });
 
 const MODULE_TYPES = [{
   descriptorId: oscDescriptor.id,
@@ -77,6 +80,15 @@ const MODULE_TYPES = [{
   hp: 9,
   panelUrl: 'modules/sine-source/panel.svg',
   descriptor: sineDescriptor,
+}, {
+  // Sequencer / Programmer Eight — complete: playhead, transport, directed loop window,
+  // per-stage select/pulse jacks, both voltage rows with A−B, All Gate, Trigger, the play
+  // buttons as a keyboard, and per-stage ratchets. Vertical stage layout, 16 HP.
+  descriptorId: progDescriptor.id,
+  name: 'Sequencer / Programmer Eight',
+  hp: 16,
+  panelUrl: 'modules/programmer-8/panel.svg',
+  descriptor: progDescriptor,
 }, {
   // The mixer is a pinned singleton placed at boot, so it's hidden from the
   // "Add module" menu (no second mixer). Still a normal module type otherwise.

@@ -18,6 +18,8 @@ function defs(theme) {
   <radialGradient id="blueDial"><stop offset="0" stop-color="#1d79b7"/><stop offset="0.6" stop-color="#00639a"/><stop offset="1" stop-color="#00456e"/></radialGradient>
   <radialGradient id="knobCap"><stop offset="0" stop-color="${cap[0]}"/><stop offset="0.4" stop-color="${cap[1]}"/><stop offset="0.62" stop-color="${cap[2]}"/><stop offset="1" stop-color="${cap[3]}"/></radialGradient>
   <radialGradient id="redLed"><stop offset="0" stop-color="#ff4a4a"/><stop offset="0.55" stop-color="#d00000"/><stop offset="1" stop-color="#650000"/></radialGradient>
+  <radialGradient id="greenLed"><stop offset="0" stop-color="#5cf07a"/><stop offset="0.55" stop-color="#12a531"/><stop offset="1" stop-color="#054d15"/></radialGradient>
+  <radialGradient id="orangeLed"><stop offset="0" stop-color="#ffbf5c"/><stop offset="0.55" stop-color="#ef7d00"/><stop offset="1" stop-color="#7a3a00"/></radialGradient>
 </defs>`;
 }
 
@@ -244,17 +246,33 @@ function attachedLabel(cx, cy, hw, hh, spec = {}) {
 
 // --- LED lamp · buttons · radio groups · slider -------------------------------
 
-// A red LED lamp with a highlight — the shared building block for radios, buttons,
-// and indicators. Pass role/step to make it a bindable step-indicator; `white` for
-// the light push-button disc instead of the red LED.
-function ledLamp(cx, cy, { r = 1.66, role = null, step = null, white = false, on = true } = {}) {
-  // `on` bakes the lit (red) / unlit (grey) state for a static render; the host's
-  // showStep repaints step-indicators live, so it only matters before load.
-  const fill = white ? '#e9e9ec' : (on ? 'url(#redLed)' : '#505055'), stroke = white ? '#8a8a8e' : (on ? '#7c0000' : '#4a4a4a'), sw = white ? '0.35' : '0.2366';
+// LED colours. Red is the house default and every existing panel uses it; green and
+// orange exist so a module can distinguish lamps that mean different things sitting
+// side by side (the sequencer's START / END / PLAY columns). Each entry carries the
+// static gradient, the ring, and the glossy highlight tint.
+const LED = {
+  red: { grad: 'redLed', stroke: '#7c0000', gloss: '#ffb4b4' },
+  green: { grad: 'greenLed', stroke: '#005c1e', gloss: '#b7ffc6' },
+  orange: { grad: 'orangeLed', stroke: '#8a3d00', gloss: '#ffdcb0' },
+};
+
+// An LED lamp with a highlight — the shared building block for radios, buttons, and
+// indicators. Pass role/step to make it a bindable step-indicator; `white` for the
+// light push-button disc instead of an LED; `led` to pick the LED colour.
+function ledLamp(cx, cy, { r = 1.66, role = null, step = null, white = false, on = true, led = 'red' } = {}) {
+  // `on` bakes the lit / unlit state for a static render; the host's showStep
+  // repaints step-indicators live, so it only matters before load. The colour is
+  // carried on the element as data-wcoast-led so showStep can light the right one —
+  // a lamp with no such attribute is red, which is every panel authored so far.
+  const c = LED[led] || LED.red;
+  const fill = white ? '#e9e9ec' : (on ? `url(#${c.grad})` : '#505055');
+  const stroke = white ? '#8a8a8e' : (on ? c.stroke : '#4a4a4a'), sw = white ? '0.35' : '0.2366';
   const roleAttr = role ? ` data-wcoast-role="${role}"${step != null ? ` data-wcoast-step="${step}"` : ''}` : '';
-  const hr = 0.3 * r, hx = cx - 0.28 * r, hy = cy - 0.28 * r, hFill = white ? '#ffffff' : '#ffb4b4', hOp = white ? '0.8' : (on ? '0.85' : '0');
-  return `<circle cx="${cx}" cy="${cy}" r="${r}" fill="${fill}" stroke="${stroke}" stroke-width="${sw}" filter="url(#softShadow)"${roleAttr}/>`
-    + `<circle cx="${hx.toFixed(2)}" cy="${hy.toFixed(2)}" r="${hr.toFixed(2)}" fill="${hFill}" opacity="${hOp}" pointer-events="none"/>`;
+  const ledAttr = (!white && led !== 'red') ? ` data-wcoast-led="${led}"` : '';
+  const hr = 0.3 * r, hx = cx - 0.28 * r, hy = cy - 0.28 * r;
+  const hFill = white ? '#ffffff' : c.gloss, hOp = white ? '0.8' : (on ? '0.85' : '0');
+  return `<circle cx="${cx}" cy="${cy}" r="${r}" fill="${fill}" stroke="${stroke}" stroke-width="${sw}" filter="url(#softShadow)"${roleAttr}${ledAttr}/>`
+    + `<circle cx="${hx.toFixed(2)}" cy="${hy.toFixed(2)}" r="${hr.toFixed(2)}" fill="${hFill}" opacity="${hOp}" data-wcoast-role="led-gloss" pointer-events="none"/>`;
 }
 
 // Small wave/shape glyph for a mode step, centred at (gx,gy): transient · sustained
@@ -273,7 +291,7 @@ function waveGlyph(kind, gx, gy, color = '#163a69', w = 1.3) {
 // Momentary / toggle push-button — a single step-indicator lamp. kind 'red' (LED)
 // or 'white' (light disc). Covers strike, trig, mute, clock-on.
 function button(id, cx, cy, { r = 2.2, kind = 'red', label: lb = null } = {}) {
-  const lamp = ledLamp(cx, cy, { r, white: kind === 'white', role: 'step-indicator', step: 'on' });
+  const lamp = ledLamp(cx, cy, { r, white: kind === 'white', led: kind === 'white' ? 'red' : kind, role: 'step-indicator', step: 'on' });
   // Label placement goes through attachedLabel so it always clears the lamp
   // (first line sits gap+cap below the edge), the same as jack/knob labels.
   const lbl = lb ? '\n    ' + attachedLabel(cx, cy, r, r, { fill: '#163a69', ...lb }) : '';
@@ -283,7 +301,7 @@ function button(id, cx, cy, { r = 2.2, kind = 'red', label: lb = null } = {}) {
 // Radio group — one stepped param shown as a row/column of LED lamps (one lit).
 // steps: [{ value, label?, glyph? }]. orientation 'h' | 'v'. Each LED can carry a
 // side label (v → right, h → below) or a wave glyph (below).
-function radioGroup(id, cx, cy, { steps = [], orientation = 'v', spacing = 5.6, ledR = 2.16, size = 2.1, outline = true, theme = {} } = {}) {
+function radioGroup(id, cx, cy, { steps = [], orientation = 'v', spacing = 5.6, ledR = 2.16, size = 2.1, outline = true, led = 'red', theme = {} } = {}) {
   const ink = theme.ink || '#163a69', frame = theme.frame || '#7d7d7d', n = steps.length;
   let g = `  <g data-wcoast-param="${id}">`;
   // Grouping line: a single grey line running alongside the lamps on their
@@ -299,7 +317,7 @@ function radioGroup(id, cx, cy, { steps = [], orientation = 'v', spacing = 5.6, 
   steps.forEach((s, i) => {
     const off = (i - (n - 1) / 2) * spacing;
     const lx = orientation === 'h' ? cx + off : cx, ly = orientation === 'h' ? cy : cy + off;
-    g += `\n    ${ledLamp(lx, ly, { r: ledR, role: 'step-indicator', step: s.value })}`;
+    g += `\n    ${ledLamp(lx, ly, { r: ledR, role: 'step-indicator', step: s.value, led })}`;
     if (s.glyph) {
       const gx = orientation === 'h' ? lx : lx + ledR + 2.2, gy = orientation === 'h' ? ly + ledR + 2.4 : ly;
       g += `\n    ${waveGlyph(s.glyph, gx, gy, ink)}`;

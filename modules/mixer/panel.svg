@@ -6,6 +6,8 @@
   <radialGradient id="blueDial"><stop offset="0" stop-color="#1d79b7"/><stop offset="0.6" stop-color="#00639a"/><stop offset="1" stop-color="#00456e"/></radialGradient>
   <radialGradient id="knobCap"><stop offset="0" stop-color="#f8f8f8"/><stop offset="0.4" stop-color="#bfc3c5"/><stop offset="0.62" stop-color="#f4f4f4"/><stop offset="1" stop-color="#777777"/></radialGradient>
   <radialGradient id="redLed"><stop offset="0" stop-color="#ff4a4a"/><stop offset="0.55" stop-color="#d00000"/><stop offset="1" stop-color="#650000"/></radialGradient>
+  <radialGradient id="greenLed"><stop offset="0" stop-color="#5cf07a"/><stop offset="0.55" stop-color="#12a531"/><stop offset="1" stop-color="#054d15"/></radialGradient>
+  <radialGradient id="orangeLed"><stop offset="0" stop-color="#ffbf5c"/><stop offset="0.55" stop-color="#ef7d00"/><stop offset="1" stop-color="#7a3a00"/></radialGradient>
 </defs>
   <g transform="translate(3.9 7.0994)">
   <rect x="0" y="0" width="114" height="113.5912" rx="2.5" fill="#cfcfcf"/>
@@ -112,7 +114,7 @@
     <circle cx="15.5" cy="86" r="3" fill="#8a8a8a" stroke="#000000" stroke-width="0.3" filter="url(#softShadow)"/>
     <circle cx="15.5" cy="86" r="1.6" fill="#000000"/>
   </g>
-  <g data-wcoast-param="muteA"><circle cx="15.5" cy="94" r="1.8" fill="url(#redLed)" stroke="#7c0000" stroke-width="0.2366" filter="url(#softShadow)" data-wcoast-role="step-indicator" data-wcoast-step="on"/><circle cx="15.00" cy="93.50" r="0.54" fill="#ffb4b4" opacity="0.85" pointer-events="none"/></g>
+  <g data-wcoast-param="muteA"><circle cx="15.5" cy="94" r="1.8" fill="url(#redLed)" stroke="#7c0000" stroke-width="0.2366" filter="url(#softShadow)" data-wcoast-role="step-indicator" data-wcoast-step="on"/><circle cx="15.00" cy="93.50" r="0.54" fill="#ffb4b4" opacity="0.85" data-wcoast-role="led-gloss" pointer-events="none"/></g>
   <g data-wcoast-role="vu" data-wcoast-chan="A">
     <rect x="8.00" y="77.50" width="3" height="1" rx="0.35" fill="none" stroke="#7d7d7d" stroke-width="0.3" data-wcoast-seg="0"/>
     <rect x="8.00" y="72.59" width="3" height="1" rx="0.35" fill="none" stroke="#7d7d7d" stroke-width="0.3" data-wcoast-seg="1"/>
@@ -142,7 +144,7 @@
     <circle cx="28.5" cy="86" r="3" fill="#8a8a8a" stroke="#000000" stroke-width="0.3" filter="url(#softShadow)"/>
     <circle cx="28.5" cy="86" r="1.6" fill="#000000"/>
   </g>
-  <g data-wcoast-param="muteB"><circle cx="28.5" cy="94" r="1.8" fill="url(#redLed)" stroke="#7c0000" stroke-width="0.2366" filter="url(#softShadow)" data-wcoast-role="step-indicator" data-wcoast-step="on"/><circle cx="28.00" cy="93.50" r="0.54" fill="#ffb4b4" opacity="0.85" pointer-events="none"/></g>
+  <g data-wcoast-param="muteB"><circle cx="28.5" cy="94" r="1.8" fill="url(#redLed)" stroke="#7c0000" stroke-width="0.2366" filter="url(#softShadow)" data-wcoast-role="step-indicator" data-wcoast-step="on"/><circle cx="28.00" cy="93.50" r="0.54" fill="#ffb4b4" opacity="0.85" data-wcoast-role="led-gloss" pointer-events="none"/></g>
   <g data-wcoast-role="vu" data-wcoast-chan="B">
     <rect x="21.00" y="77.50" width="3" height="1" rx="0.35" fill="none" stroke="#7d7d7d" stroke-width="0.3" data-wcoast-seg="0"/>
     <rect x="21.00" y="72.59" width="3" height="1" rx="0.35" fill="none" stroke="#7d7d7d" stroke-width="0.3" data-wcoast-seg="1"/>
@@ -172,7 +174,7 @@
     <circle cx="41.5" cy="86" r="3" fill="#8a8a8a" stroke="#000000" stroke-width="0.3" filter="url(#softShadow)"/>
     <circle cx="41.5" cy="86" r="1.6" fill="#000000"/>
   </g>
-  <g data-wcoast-param="muteC"><circle cx="41.5" cy="94" r="1.8" fill="url(#redLed)" stroke="#7c0000" stroke-width="0.2366" filter="url(#softShadow)" data-wcoast-role="step-indicator" data-wcoast-step="on"/><circle cx="41.00" cy="93.50" r="0.54" fill="#ffb4b4" opacity="0.85" pointer-events="none"/></g>
+  <g data-wcoast-param="muteC"><circle cx="41.5" cy="94" r="1.8" fill="url(#redLed)" stroke="#7c0000" stroke-width="0.2366" filter="url(#softShadow)" data-wcoast-role="step-indicator" data-wcoast-step="on"/><circle cx="41.00" cy="93.50" r="0.54" fill="#ffb4b4" opacity="0.85" data-wcoast-role="led-gloss" pointer-events="none"/></g>
   <g data-wcoast-role="vu" data-wcoast-chan="C">
     <rect x="34.00" y="77.50" width="3" height="1" rx="0.35" fill="none" stroke="#7d7d7d" stroke-width="0.3" data-wcoast-seg="0"/>
     <rect x="34.00" y="72.59" width="3" height="1" rx="0.35" fill="none" stroke="#7d7d7d" stroke-width="0.3" data-wcoast-seg="1"/>
@@ -202,7 +204,7 @@
     <circle cx="54.5" cy="86" r="3" fill="#8a8a8a" stroke="#000000" stroke-width="0.3" filter="url(#softShadow)"/>
     <circle cx="54.5" cy="86" r="1.6" fill="#000000"/>
   </g>
-  <g data-wcoast-param="muteD"><circle cx="54.5" cy="94" r="1.8" fill="url(#redLed)" stroke="#7c0000" stroke-width="0.2366" filter="url(#softShadow)" data-wcoast-role="step-indicator" data-wcoast-step="on"/><circle cx="54.00" cy="93.50" r="0.54" fill="#ffb4b4" opacity="0.85" pointer-events="none"/></g>
+  <g data-wcoast-param="muteD"><circle cx="54.5" cy="94" r="1.8" fill="url(#redLed)" stroke="#7c0000" stroke-width="0.2366" filter="url(#softShadow)" data-wcoast-role="step-indicator" data-wcoast-step="on"/><circle cx="54.00" cy="93.50" r="0.54" fill="#ffb4b4" opacity="0.85" data-wcoast-role="led-gloss" pointer-events="none"/></g>
   <g data-wcoast-role="vu" data-wcoast-chan="D">
     <rect x="47.00" y="77.50" width="3" height="1" rx="0.35" fill="none" stroke="#7d7d7d" stroke-width="0.3" data-wcoast-seg="0"/>
     <rect x="47.00" y="72.59" width="3" height="1" rx="0.35" fill="none" stroke="#7d7d7d" stroke-width="0.3" data-wcoast-seg="1"/>
@@ -232,7 +234,7 @@
     <circle cx="67.5" cy="86" r="3" fill="#8a8a8a" stroke="#000000" stroke-width="0.3" filter="url(#softShadow)"/>
     <circle cx="67.5" cy="86" r="1.6" fill="#000000"/>
   </g>
-  <g data-wcoast-param="muteE"><circle cx="67.5" cy="94" r="1.8" fill="url(#redLed)" stroke="#7c0000" stroke-width="0.2366" filter="url(#softShadow)" data-wcoast-role="step-indicator" data-wcoast-step="on"/><circle cx="67.00" cy="93.50" r="0.54" fill="#ffb4b4" opacity="0.85" pointer-events="none"/></g>
+  <g data-wcoast-param="muteE"><circle cx="67.5" cy="94" r="1.8" fill="url(#redLed)" stroke="#7c0000" stroke-width="0.2366" filter="url(#softShadow)" data-wcoast-role="step-indicator" data-wcoast-step="on"/><circle cx="67.00" cy="93.50" r="0.54" fill="#ffb4b4" opacity="0.85" data-wcoast-role="led-gloss" pointer-events="none"/></g>
   <g data-wcoast-role="vu" data-wcoast-chan="E">
     <rect x="60.00" y="77.50" width="3" height="1" rx="0.35" fill="none" stroke="#7d7d7d" stroke-width="0.3" data-wcoast-seg="0"/>
     <rect x="60.00" y="72.59" width="3" height="1" rx="0.35" fill="none" stroke="#7d7d7d" stroke-width="0.3" data-wcoast-seg="1"/>
@@ -262,7 +264,7 @@
     <circle cx="80.5" cy="86" r="3" fill="#8a8a8a" stroke="#000000" stroke-width="0.3" filter="url(#softShadow)"/>
     <circle cx="80.5" cy="86" r="1.6" fill="#000000"/>
   </g>
-  <g data-wcoast-param="muteF"><circle cx="80.5" cy="94" r="1.8" fill="url(#redLed)" stroke="#7c0000" stroke-width="0.2366" filter="url(#softShadow)" data-wcoast-role="step-indicator" data-wcoast-step="on"/><circle cx="80.00" cy="93.50" r="0.54" fill="#ffb4b4" opacity="0.85" pointer-events="none"/></g>
+  <g data-wcoast-param="muteF"><circle cx="80.5" cy="94" r="1.8" fill="url(#redLed)" stroke="#7c0000" stroke-width="0.2366" filter="url(#softShadow)" data-wcoast-role="step-indicator" data-wcoast-step="on"/><circle cx="80.00" cy="93.50" r="0.54" fill="#ffb4b4" opacity="0.85" data-wcoast-role="led-gloss" pointer-events="none"/></g>
   <g data-wcoast-role="vu" data-wcoast-chan="F">
     <rect x="73.00" y="77.50" width="3" height="1" rx="0.35" fill="none" stroke="#7d7d7d" stroke-width="0.3" data-wcoast-seg="0"/>
     <rect x="73.00" y="72.59" width="3" height="1" rx="0.35" fill="none" stroke="#7d7d7d" stroke-width="0.3" data-wcoast-seg="1"/>
@@ -293,8 +295,8 @@
   </g>
   <text x="95.5" y="84.5" font-size="2.4" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">MON</text>
   <text x="108" y="84.5" font-size="2.4" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">MSTR</text>
-  <g data-wcoast-param="monitorEnable"><circle cx="95.5" cy="88" r="1.8" fill="url(#redLed)" stroke="#7c0000" stroke-width="0.2366" filter="url(#softShadow)" data-wcoast-role="step-indicator" data-wcoast-step="on"/><circle cx="95.00" cy="87.50" r="0.54" fill="#ffb4b4" opacity="0.85" pointer-events="none"/></g>
-  <g data-wcoast-param="masterEnable"><circle cx="108" cy="88" r="1.8" fill="url(#redLed)" stroke="#7c0000" stroke-width="0.2366" filter="url(#softShadow)" data-wcoast-role="step-indicator" data-wcoast-step="on"/><circle cx="107.50" cy="87.50" r="0.54" fill="#ffb4b4" opacity="0.85" pointer-events="none"/></g>
+  <g data-wcoast-param="monitorEnable"><circle cx="95.5" cy="88" r="1.8" fill="url(#redLed)" stroke="#7c0000" stroke-width="0.2366" filter="url(#softShadow)" data-wcoast-role="step-indicator" data-wcoast-step="on"/><circle cx="95.00" cy="87.50" r="0.54" fill="#ffb4b4" opacity="0.85" data-wcoast-role="led-gloss" pointer-events="none"/></g>
+  <g data-wcoast-param="masterEnable"><circle cx="108" cy="88" r="1.8" fill="url(#redLed)" stroke="#7c0000" stroke-width="0.2366" filter="url(#softShadow)" data-wcoast-role="step-indicator" data-wcoast-step="on"/><circle cx="107.50" cy="87.50" r="0.54" fill="#ffb4b4" opacity="0.85" data-wcoast-role="led-gloss" pointer-events="none"/></g>
   <g data-wcoast-role="vuMonitor" data-wcoast-chan="MON">
     <rect x="88.00" y="77.50" width="3" height="1" rx="0.35" fill="none" stroke="#7d7d7d" stroke-width="0.3" data-wcoast-seg="0"/>
     <rect x="88.00" y="72.59" width="3" height="1" rx="0.35" fill="none" stroke="#7d7d7d" stroke-width="0.3" data-wcoast-seg="1"/>

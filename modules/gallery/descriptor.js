@@ -44,6 +44,13 @@ for (const id of ['btnStrike', 'btnTrig']) {   // white momentary push-buttons (
 for (const id of ['btnToggle', 'btnOn']) {      // latching toggles (push on, push off)
   params.push({ id, name: id, section: 'controls', curve: 'stepped', steps: ['off', 'on'].map(step), default: 'off' });
 }
+// LED colour specimens. Red is the house default; green and orange exist so lamp columns
+// sitting side by side can mean different things (the sequencer's START / END / PLAY).
+params.push({ id: 'radioGreen', name: 'Green radio', section: 'controls', curve: 'stepped', steps: [1, 2, 3].map(step), default: 1 });
+params.push({ id: 'radioOrange', name: 'Orange radio', section: 'controls', curve: 'stepped', steps: [1, 2, 3].map(step), default: 2 });
+for (const id of ['btnGreen', 'btnOrange']) {
+  params.push({ id, name: id, section: 'controls', curve: 'stepped', steps: ['off', 'on'].map(step), default: 'off' });
+}
 params.push({ id: 'sliderLevel', name: 'Level', section: 'controls', curve: 'linear', min: 0, max: 1, default: 0.7, glideMs: 0 });
 // Stepper buttons: one button cycles a one-of-N setting shown on a lamp row.
 params.push({ id: 'stepWave', name: 'Wave', section: 'controls', curve: 'stepped', steps: ['sawtooth', 'square', 'triangle', 'sustained'].map(step), default: 'sawtooth' });

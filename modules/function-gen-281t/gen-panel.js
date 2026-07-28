@@ -12,6 +12,20 @@ import { renderPanel } from '../../panel/render.js';
 import { applyOverrides } from '../../panel/overrides.js';
 import layout from './panel.layout.js';
 
+// A comment was not enough: this file was in the `npm run panels` chain and ran,
+// silently reverting the knAck faceplate to the four-column layout. It is out of
+// that chain now, and refuses to run without an explicit opt-in as well.
+if (!process.env.WCOAST_REGEN_281T) {
+  console.error(
+    'modules/function-gen-281t/gen-panel.js is SUPERSEDED and will not run.\n' +
+    'panel.layout.js still holds the OLD four-column layout; regenerating from it\n' +
+    'overwrites the hand-authored knAck faceplate. Resync panel.layout.js to the\n' +
+    'shipped SVGs first (the lpg-292 resync is the worked example), then run with\n' +
+    'WCOAST_REGEN_281T=1 to allow it.',
+  );
+  process.exit(1);
+}
+
 const dir = fileURLToPath(new URL('.', import.meta.url));
 const ovPath = dir + 'panel.overrides.json';
 if (fs.existsSync(ovPath)) applyOverrides(layout, JSON.parse(fs.readFileSync(ovPath, 'utf8')));

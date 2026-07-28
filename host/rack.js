@@ -4790,6 +4790,9 @@ export class Rack {
     for (const p of type.descriptor.params) rec.values.set(p.id, p.default);
     this._skinModule(rec, panel);
     for (const [id, v] of rec.values) if (instance.supports(id)) instance.setParam(id, v);
+    // Engine-driven panel indication, for modules that have any (the sequencer's
+    // active-stage lamp). Optional contract method: a module without it is untouched.
+    if (typeof instance.onReadout === 'function') instance.onReadout((map) => this._applyReadout(rec, map));
 
     // Module-level handlers live on the wrapper element, so they survive a skin swap.
     el.addEventListener('pointerdown', (e) => this._startDrag(e, rec));
@@ -4844,6 +4847,19 @@ export class Rack {
     if (rec.pinned && id === 'monitorLevel') this._setMonMaster(value);              // the Monitor fader
     if (rec.pinned && (id === 'masterEnable' || id === 'monitorEnable')) this._applyBusEnables();   // per-bus routing
     this.onChange();                              // a knob/switch change dirties the patch
+  }
+
+  // Paint indication the module's ENGINE owns, from a paramId -> display-value map.
+  // Purely visual, and deliberately not a param write: it does not touch rec.values,
+  // does not reach the instance, and does not call onChange — so a playhead running
+  // never dirties the patch or lands in the save file. After a skin swap the panel
+  // repaints from rec.values and the lamp goes dark until the next push arrives.
+  _applyReadout(rec, map) {
+    if (!rec.panel || !map) return;
+    for (const id of Object.keys(map)) {
+      const b = rec.panel.controls.get(id);
+      if (b) showValue(b, map[id]);
+    }
   }
 
   deleteModule(rec) {
@@ -5283,6 +5299,12 @@ export class Rack {
     if (!type) return;
     const before = new Map(rec.values);
     for (const p of type.descriptor.params) if (rec.values.get(p.id) !== p.default) this._setParam(rec, p.id, p.default);
+    // Params are only half of it for a module that carries state of its own. The
+    // sequencer's playhead is not a param, so restoring every control still left it
+    // wherever it had got to — "reset" that visibly did not reset. Optional contract
+    // method: a module without internal state simply doesn't implement it. Not undoable,
+    // because engine state was never in the snapshot to begin with.
+    if (typeof rec.instance.resetState === 'function') rec.instance.resetState();
     if (this.onControlsReset) this.onControlsReset();   // re-read the mixer's master level
     const after = new Map(rec.values);
     let changed = false; for (const [id, v] of after) if (before.get(id) !== v) { changed = true; break; }

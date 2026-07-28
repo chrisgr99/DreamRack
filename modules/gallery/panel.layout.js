@@ -67,6 +67,14 @@ items.push({ t: 'button', id: 'btnTrig', x: 210, y: 44, opts: { r: 2.4, kind: 'w
 items.push({ t: 'button', id: 'btnToggle', x: 192, y: 60, opts: { r: 2.4, kind: 'white' } }); ink(192, 65.5, 'toggle', { size: 1.8 });
 items.push({ t: 'button', id: 'btnOn', x: 210, y: 60, opts: { r: 2.16, kind: 'red' } }); ink(210, 65, 'on', { size: 1.8 });
 ink(201, 73, 'momentary (strike/trig) · toggle · lamp', { size: 1.8 });
+// LED COLOUR — the same radio and button primitives in the other two hues. Red is the
+// default and is shown by every other specimen here, so only the two new hues need a
+// sample. The caption is kept short: a wider one runs into the stepper's caption beside it.
+items.push({ t: 'radio', id: 'radioGreen', x: 200, y: 80, opts: { orientation: 'h', spacing: 5.2, ledR: 1.8, led: 'green', steps: [{ value: 1 }, { value: 2 }, { value: 3 }] } });
+items.push({ t: 'button', id: 'btnGreen', x: 214, y: 80, opts: { r: 2.16, kind: 'green' } });
+items.push({ t: 'radio', id: 'radioOrange', x: 200, y: 88, opts: { orientation: 'h', spacing: 5.2, ledR: 1.8, led: 'orange', steps: [{ value: 1 }, { value: 2 }, { value: 3 }] } });
+items.push({ t: 'button', id: 'btnOrange', x: 214, y: 88, opts: { r: 2.16, kind: 'orange' } });
+ink(206, 95, 'LED colour · green · orange', { size: 1.7 });
 items.push({ t: 'stepButton', id: 'stepWave', x: 178, y: 84, opts: { orientation: 'v', steps: [{ value: 'sawtooth', glyph: 'sawtooth' }, { value: 'square', glyph: 'square' }, { value: 'triangle', glyph: 'triangle' }, { value: 'sustained', glyph: 'sustained' }] } });
 ink(178, 98, 'stepper · button above · glyphs', { size: 1.7 });
 items.push({ t: 'stepButton', id: 'stepRange', x: 165, y: 106, opts: { orientation: 'h', steps: [{ value: 'lo', label: 'lo' }, { value: 'mid', label: 'mid' }, { value: 'hi', label: 'hi' }] } });

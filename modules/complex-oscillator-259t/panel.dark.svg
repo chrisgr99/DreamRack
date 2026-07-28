@@ -6,6 +6,8 @@
   <radialGradient id="blueDial"><stop offset="0" stop-color="#1d79b7"/><stop offset="0.6" stop-color="#00639a"/><stop offset="1" stop-color="#00456e"/></radialGradient>
   <radialGradient id="knobCap"><stop offset="0" stop-color="#3a3d43"/><stop offset="0.4" stop-color="#4c5058"/><stop offset="0.62" stop-color="#5a5f67"/><stop offset="1" stop-color="#6b7079"/></radialGradient>
   <radialGradient id="redLed"><stop offset="0" stop-color="#ff4a4a"/><stop offset="0.55" stop-color="#d00000"/><stop offset="1" stop-color="#650000"/></radialGradient>
+  <radialGradient id="greenLed"><stop offset="0" stop-color="#5cf07a"/><stop offset="0.55" stop-color="#12a531"/><stop offset="1" stop-color="#054d15"/></radialGradient>
+  <radialGradient id="orangeLed"><stop offset="0" stop-color="#ffbf5c"/><stop offset="0.55" stop-color="#ef7d00"/><stop offset="1" stop-color="#7a3a00"/></radialGradient>
 </defs>
   <rect x="3.9" y="1.036" width="164.133" height="128.5" fill="#262629"/>
   <rect x="4.4" y="7.5994" width="163.133" height="112.5912" rx="2.2" fill="none" stroke="#808085" stroke-width="0.5"/>
@@ -37,19 +39,19 @@
   <text x="49.8" y="23.94832" font-size="2.706" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">signal</text>
   <g data-wcoast-param="modRange">
     <line x1="19.78" y1="36.25" x2="27.78" y2="36.25" stroke="#808085" stroke-width="0.3"/>
-    <circle cx="19.78" cy="34" r="1.9" fill="url(#redLed)" stroke="#7c0000" stroke-width="0.2366" filter="url(#softShadow)" data-wcoast-role="step-indicator" data-wcoast-step="low"/><circle cx="19.25" cy="33.47" r="0.57" fill="#ffb4b4" opacity="0.85" pointer-events="none"/>
+    <circle cx="19.78" cy="34" r="1.9" fill="url(#redLed)" stroke="#7c0000" stroke-width="0.2366" filter="url(#softShadow)" data-wcoast-role="step-indicator" data-wcoast-step="low"/><circle cx="19.25" cy="33.47" r="0.57" fill="#ffb4b4" opacity="0.85" data-wcoast-role="led-gloss" pointer-events="none"/>
       <text x="19.78" y="38.9" font-size="2.806" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">low</text>
-    <circle cx="27.78" cy="34" r="1.9" fill="url(#redLed)" stroke="#7c0000" stroke-width="0.2366" filter="url(#softShadow)" data-wcoast-role="step-indicator" data-wcoast-step="high"/><circle cx="27.25" cy="33.47" r="0.57" fill="#ffb4b4" opacity="0.85" pointer-events="none"/>
+    <circle cx="27.78" cy="34" r="1.9" fill="url(#redLed)" stroke="#7c0000" stroke-width="0.2366" filter="url(#softShadow)" data-wcoast-role="step-indicator" data-wcoast-step="high"/><circle cx="27.25" cy="33.47" r="0.57" fill="#ffb4b4" opacity="0.85" data-wcoast-role="led-gloss" pointer-events="none"/>
       <text x="27.78" y="38.9" font-size="2.806" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">high</text>
   </g>
   <text x="23.78" y="48.5" font-size="2.906" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">RANGE</text>
   <g data-wcoast-param="modWave">
     <line x1="45.95" y1="36.25" x2="61.95" y2="36.25" stroke="#808085" stroke-width="0.3"/>
-    <circle cx="45.95" cy="34" r="1.9" fill="url(#redLed)" stroke="#7c0000" stroke-width="0.2366" filter="url(#softShadow)" data-wcoast-role="step-indicator" data-wcoast-step="sawtooth"/><circle cx="45.42" cy="33.47" r="0.57" fill="#ffb4b4" opacity="0.85" pointer-events="none"/>
+    <circle cx="45.95" cy="34" r="1.9" fill="url(#redLed)" stroke="#7c0000" stroke-width="0.2366" filter="url(#softShadow)" data-wcoast-role="step-indicator" data-wcoast-step="sawtooth"/><circle cx="45.42" cy="33.47" r="0.57" fill="#ffb4b4" opacity="0.85" data-wcoast-role="led-gloss" pointer-events="none"/>
     <polyline points="44.65,39.00 47.25,37.60 47.25,39.00" fill="none" stroke="#b8b8bc" stroke-width="0.3" stroke-linejoin="round"/>
-    <circle cx="53.95" cy="34" r="1.9" fill="url(#redLed)" stroke="#7c0000" stroke-width="0.2366" filter="url(#softShadow)" data-wcoast-role="step-indicator" data-wcoast-step="square"/><circle cx="53.42" cy="33.47" r="0.57" fill="#ffb4b4" opacity="0.85" pointer-events="none"/>
+    <circle cx="53.95" cy="34" r="1.9" fill="url(#redLed)" stroke="#7c0000" stroke-width="0.2366" filter="url(#softShadow)" data-wcoast-role="step-indicator" data-wcoast-step="square"/><circle cx="53.42" cy="33.47" r="0.57" fill="#ffb4b4" opacity="0.85" data-wcoast-role="led-gloss" pointer-events="none"/>
     <path d="M 52.65 39.00 L 52.65 37.60 L 53.95 37.60 L 53.95 39.00 L 55.25 39.00 L 55.25 37.60" fill="none" stroke="#b8b8bc" stroke-width="0.3" stroke-linejoin="round"/>
-    <circle cx="61.95" cy="34" r="1.9" fill="url(#redLed)" stroke="#7c0000" stroke-width="0.2366" filter="url(#softShadow)" data-wcoast-role="step-indicator" data-wcoast-step="triangle"/><circle cx="61.42" cy="33.47" r="0.57" fill="#ffb4b4" opacity="0.85" pointer-events="none"/>
+    <circle cx="61.95" cy="34" r="1.9" fill="url(#redLed)" stroke="#7c0000" stroke-width="0.2366" filter="url(#softShadow)" data-wcoast-role="step-indicator" data-wcoast-step="triangle"/><circle cx="61.42" cy="33.47" r="0.57" fill="#ffb4b4" opacity="0.85" data-wcoast-role="led-gloss" pointer-events="none"/>
     <polyline points="60.65,39.00 61.30,37.60 61.95,39.00 62.60,37.60 63.25,39.00" fill="none" stroke="#b8b8bc" stroke-width="0.3" stroke-linejoin="round"/>
   </g>
   <text x="53.95" y="48.5" font-size="2.906" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">WAVESHAPE</text>
@@ -156,13 +158,13 @@
     <circle cx="39.5" cy="113.3" r="1.6" fill="#000000"/>
   </g>
   <text x="39.5" y="108.7" font-size="2.706" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">1V/oct</text>
-  <g data-wcoast-param="phaseLock"><circle cx="74.4" cy="16.65" r="2" fill="url(#redLed)" stroke="#7c0000" stroke-width="0.2366" filter="url(#softShadow)" data-wcoast-role="step-indicator" data-wcoast-step="on"/><circle cx="73.84" cy="16.09" r="0.60" fill="#ffb4b4" opacity="0.85" pointer-events="none"/></g>
+  <g data-wcoast-param="phaseLock"><circle cx="74.4" cy="16.65" r="2" fill="url(#redLed)" stroke="#7c0000" stroke-width="0.2366" filter="url(#softShadow)" data-wcoast-role="step-indicator" data-wcoast-step="on"/><circle cx="73.84" cy="16.09" r="0.60" fill="#ffb4b4" opacity="0.85" data-wcoast-role="led-gloss" pointer-events="none"/></g>
   <text x="78" y="16.06821" font-size="2.706" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="start" font-family="Arial Narrow, Helvetica, Arial, sans-serif"><tspan x="78" dy="0">phase</tspan><tspan x="78" dy="3.11">lock</tspan></text>
-  <g data-wcoast-param="amplMod"><circle cx="74.4" cy="28.84" r="2" fill="url(#redLed)" stroke="#7c0000" stroke-width="0.2366" filter="url(#softShadow)" data-wcoast-role="step-indicator" data-wcoast-step="on"/><circle cx="73.84" cy="28.28" r="0.60" fill="#ffb4b4" opacity="0.85" pointer-events="none"/></g>
+  <g data-wcoast-param="amplMod"><circle cx="74.4" cy="28.84" r="2" fill="url(#redLed)" stroke="#7c0000" stroke-width="0.2366" filter="url(#softShadow)" data-wcoast-role="step-indicator" data-wcoast-step="on"/><circle cx="73.84" cy="28.28" r="0.60" fill="#ffb4b4" opacity="0.85" data-wcoast-role="led-gloss" pointer-events="none"/></g>
   <text x="78" y="28.258210000000002" font-size="2.706" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="start" font-family="Arial Narrow, Helvetica, Arial, sans-serif"><tspan x="78" dy="0">ampl</tspan><tspan x="78" dy="3.11">mod</tspan></text>
-  <g data-wcoast-param="pitchMod"><circle cx="74.4" cy="41.27" r="2" fill="url(#redLed)" stroke="#7c0000" stroke-width="0.2366" filter="url(#softShadow)" data-wcoast-role="step-indicator" data-wcoast-step="on"/><circle cx="73.84" cy="40.71" r="0.60" fill="#ffb4b4" opacity="0.85" pointer-events="none"/></g>
+  <g data-wcoast-param="pitchMod"><circle cx="74.4" cy="41.27" r="2" fill="url(#redLed)" stroke="#7c0000" stroke-width="0.2366" filter="url(#softShadow)" data-wcoast-role="step-indicator" data-wcoast-step="on"/><circle cx="73.84" cy="40.71" r="0.60" fill="#ffb4b4" opacity="0.85" data-wcoast-role="led-gloss" pointer-events="none"/></g>
   <text x="78" y="40.68821" font-size="2.706" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="start" font-family="Arial Narrow, Helvetica, Arial, sans-serif"><tspan x="78" dy="0">pitch</tspan><tspan x="78" dy="3.11">mod</tspan></text>
-  <g data-wcoast-param="timbreMod"><circle cx="74.4" cy="53.69" r="2" fill="url(#redLed)" stroke="#7c0000" stroke-width="0.2366" filter="url(#softShadow)" data-wcoast-role="step-indicator" data-wcoast-step="on"/><circle cx="73.84" cy="53.13" r="0.60" fill="#ffb4b4" opacity="0.85" pointer-events="none"/></g>
+  <g data-wcoast-param="timbreMod"><circle cx="74.4" cy="53.69" r="2" fill="url(#redLed)" stroke="#7c0000" stroke-width="0.2366" filter="url(#softShadow)" data-wcoast-role="step-indicator" data-wcoast-step="on"/><circle cx="73.84" cy="53.13" r="0.60" fill="#ffb4b4" opacity="0.85" data-wcoast-role="led-gloss" pointer-events="none"/></g>
   <text x="78" y="53.10820999999999" font-size="2.706" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="start" font-family="Arial Narrow, Helvetica, Arial, sans-serif"><tspan x="78" dy="0">timbre</tspan><tspan x="78" dy="3.11">mod</tspan></text>
   <g data-wcoast-param="modIndex" data-wcoast-cx="79.25" data-wcoast-cy="70.8" data-wcoast-angle-min="-150" data-wcoast-angle-max="150">
     <circle cx="79.25" cy="70.8" r="7.69" fill="url(#blueRing)" stroke="#6fa8d6" stroke-width="0.355" filter="url(#softShadow)"/>
