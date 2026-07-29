@@ -394,9 +394,32 @@ async function boot() {
   // Guard the destructive actions (New / Open / Reopen) when there's unsaved work.
   const okToDiscard = () => !dirty || window.confirm('You have unsaved changes. Discard them?');
 
+  // The rack a brand-new user gets on a first run, and exactly what File > New rebuilds.
+  // Shared between the two so they can never drift apart.
+  async function placeDefaultModules() {
+    // Each module is placed at the RUNNING END of its row, not at x = 0. A module added at
+    // zero ties with whatever is already there, and the tie breaks on insertion order, so
+    // it sorts AHEAD of the modules that have since been pushed right — which is how the
+    // Sequencer first landed in the middle of row 0 instead of at its end.
+    const bottom = rack.rowCount - 1;
+    // The mixer is pinned and survives File > New, wherever the discarded patch left it.
+    rack.placeModule('mixer', bottom, 0);
+    let x = 0;
+    for (const d of [oscDescriptor, fnDescriptor, progDescriptor]) {
+      const rec = await rack.addModule(d.id, 0, x);
+      x = rec.x + rec.panelWmm;
+    }
+    await rack.addModule(lpgDescriptor.id, bottom, mixRec.x + mixRec.panelWmm);
+  }
+
   async function newPatch() {
     if (!okToDiscard()) return;
-    rack.clear(); storage.forget(); setPatchName(null); markClean(); afterLoad();
+    // clear() pulls every cable and deletes every module EXCEPT the pinned mixer, which
+    // survives still carrying the discarded patch's fader and pan positions — so reset the
+    // controls too. The modules placed afterwards are fresh, and start at their defaults.
+    rack.clear(); rack.resetAllControls();
+    await placeDefaultModules();
+    storage.forget(); setPatchName(null); markClean(); afterLoad();
   }
   async function openPatch() {
     if (!okToDiscard()) return;
@@ -744,13 +767,7 @@ async function boot() {
       else if (!v.ok) log(`session ignored: ${v.error}`);
     }
   } catch (e) { log(`session restore failed: ${e.message}`); }
-  if (!resumed) {
-    // Row 0: Complex Oscillator + Quad Function Generator. Row 1: Mixer (pinned, added
-    // above) + Quad Low Pass Gate. Same-row modules pack left-to-right (see _resolveRow).
-    await rack.addModule(oscDescriptor.id, 0, 0);
-    await rack.addModule(fnDescriptor.id, 0, 0);
-    await rack.addModule(lpgDescriptor.id, 1, 0);
-  }
+  if (!resumed) await placeDefaultModules();
   // Startup silence: both buses OFF on every launch, regardless of the last-exited state or any
   // monitors that a restored patch would otherwise re-enable — the app never comes up making sound.
   rack.applyParam(mixRec, 'masterEnable', 'off');

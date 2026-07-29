@@ -17,6 +17,8 @@
 
 'use strict';
 
+import { attachKnobHover } from './knob-hover.js';
+
 // Default pointer sweep (degrees each side of straight-up), per the contract.
 // A control may override with data-wcoast-angle-min / -max.
 const KNOB_SPAN = 150;
@@ -318,6 +320,42 @@ export function parsePanel(svg, descriptor) {
         warnings.push(`switch "${id}" is drawn as a knob but has no lamps to click — it cannot be operated. Use curve:'detent' with min/max for a knob that steps to integers.`);
       }
     }
+    // ONE CIRCULAR HIT AREA, exactly the dial. A knob's group holds a dozen shapes — dial,
+    // ring, cap, indicator, gloss, scale numerals, legend — and SVG hit-tests each of them
+    // separately. That made the scrollable region a ragged union: it reached OUTSIDE the dial
+    // wherever a numeral sat, and it had holes INSIDE wherever a shape was unfilled or a
+    // decoration lay on top. Both are invisible, and both are perfectly repeatable, which is
+    // what made the fault feel intermittent.
+    //
+    // So: every other shape in the group is taken out of hit-testing, and one transparent
+    // circle matching the dial is put in. `fill: none` with `pointer-events: all` is an SVG
+    // idiom for "invisible but solid to the pointer". It is inserted as the dial's next
+    // sibling so it inherits exactly the dial's coordinate system — no assumption about
+    // nested transforms — and since nothing else in the group takes events any more, its
+    // depth in the group does not matter.
+    //
+    // Only true knobs: a `stepped` switch is operated by CLICKING ITS LAMPS, so its children
+    // must stay hittable.
+    if (!stepped && binding.indicator && binding.pivot) {
+      let dial = null, dr = -1;
+      for (const c of el.querySelectorAll('circle')) {
+        const r = numAttr(c, 'r');
+        if (r != null && r > dr) { dr = r; dial = c; }
+      }
+      if (dial && dr > 0) {
+        for (const n of el.querySelectorAll('*')) n.setAttribute('pointer-events', 'none');
+        const hit = el.ownerDocument.createElementNS(SVG_NS, 'circle');
+        hit.setAttribute('cx', dial.getAttribute('cx'));
+        hit.setAttribute('cy', dial.getAttribute('cy'));
+        hit.setAttribute('r', String(dr));
+        hit.setAttribute('fill', 'none');
+        hit.setAttribute('pointer-events', 'all');
+        hit.setAttribute('class', 'knob-hit');
+        dial.parentNode.insertBefore(hit, dial.nextSibling);
+        binding.hitArea = hit;
+        attachKnobHover(binding);   // the hover mark hangs off the hit area, so the two agree
+      }
+    }
     controls.set(id, binding);
   }
 
@@ -361,6 +399,26 @@ export function parsePanel(svg, descriptor) {
     if (!ports.has(p.id)) warnings.push(`descriptor port "${p.id}" has no panel element`);
   }
 
+  // DECORATION MUST NOT EAT INPUT. Legends, tick marks, section dividers and rules are drawn
+  // over the face, and some of them cross a knob. SVG hit-tests per shape, not per layer, so a
+  // 0.25 mm divider line lying across a knob is a live element sitting on top of it: the wheel
+  // event targets the LINE, the line has no handler and is not inside the knob's group, so the
+  // knob never sees it. The result is a thin dead streak across the control that is invisible
+  // and perfectly repeatable — scroll there and nothing turns, every time.
+  //
+  // Anything OUTSIDE a control or port group that is text or stroke-only (no fill) is pure
+  // decoration and is made transparent to the pointer. Filled shapes are left alone: the face
+  // itself is a filled rect, and it must stay hittable to carry the panel's right-click menu.
+  // The module title is the move/menu handle and keeps its own explicit pointer-events.
+  for (const el of svg.querySelectorAll('text, line, polyline, path, rect, circle, ellipse, polygon')) {
+    if (el.closest('[data-wcoast-param],[data-wcoast-port]')) continue;   // part of a control
+    if (el.classList && el.classList.contains('module-title')) continue;  // the drag/menu handle
+    const isText = el.tagName === 'text';
+    const fill = (el.getAttribute('fill') || '').trim();
+    const strokeOnly = fill === 'none' || el.tagName === 'line' || el.tagName === 'polyline';
+    if (isText || strokeOnly) el.setAttribute('pointer-events', 'none');
+  }
+
   return { svg, controls, ports, warnings };
 }
 
@@ -393,6 +451,21 @@ function makeHitPad(lamp, growMm) {
   pad.setAttribute('fill', 'none'); pad.setAttribute('pointer-events', 'all'); pad.setAttribute('class', 'hit-pad');
   lamp.parentNode.insertBefore(pad, lamp.parentNode.firstChild);
   return pad;
+}
+
+// The on-screen RADIUS OF THE KNOB ITSELF, in px. Not the group's bounding box: that box also
+// contains the knob's legend and scale numerals, so for a knob with numbers around it the box is
+// half again as wide as the knob (105 px against a 76 px dial on the oscillator's Pitch). Sizing
+// the fine/coarse zones off the box meant the rim never reached the intended quarter rate — it
+// bottomed out near half — and the feel differed from knob to knob purely by how much text was
+// printed beside it. The largest circle in the group is the dial.
+export function knobRadiusPx(el) {
+  let r = 0;
+  for (const c of el.querySelectorAll('circle')) {
+    const w = c.getBoundingClientRect().width;
+    if (w > r) r = w;
+  }
+  return (r / 2) || (el.getBoundingClientRect().width / 2) || 1;
 }
 
 export function attachControlInteraction(binding, hooks, opts = {}) {
@@ -455,7 +528,7 @@ export function attachControlInteraction(binding, hooks, opts = {}) {
       if (ctm && binding.pivot) {
         const cx = ctm.a * binding.pivot.x + ctm.c * binding.pivot.y + ctm.e;
         const cy = ctm.b * binding.pivot.x + ctm.d * binding.pivot.y + ctm.f;
-        const R = (el.getBoundingClientRect().width / 2) || 1;
+        const R = knobRadiusPx(el);
         const r = Math.hypot(e.clientX - cx, e.clientY - cy);
         factor = Math.max(0.25, 1 - 0.75 * Math.min(1, r / R));
       }

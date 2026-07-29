@@ -19,7 +19,7 @@
 //     pointer is over one). Modules are placed and sized by their real panel
 //     width in mm (no HP grid); neighbours butt together edge to edge.
 
-import { loadPanel, showValue, attachControlInteraction, valueToPosition, positionToValue, FACE_H_MM, FACE_TOP_MM, FACE_LEFT_MM, TITLE_STRIP_MM, TITLE_BAR_MM } from './panel-loader.js';
+import { loadPanel, showValue, attachControlInteraction, knobRadiusPx, valueToPosition, positionToValue, FACE_H_MM, FACE_TOP_MM, FACE_LEFT_MM, TITLE_STRIP_MM, TITLE_BAR_MM } from './panel-loader.js';
 import { Patchbay } from './patchbay.js';
 
 const PANEL_H_MM = FACE_H_MM + TITLE_STRIP_MM;   // the cropped functional face plus the 4mm title strip above it
@@ -5002,6 +5002,11 @@ export class Rack {
     if (this.onControlsReset) this.onControlsReset();
   }
   // Set every control back to its descriptor default. Returns whether anything moved.
+  // Put every control on every module back to its descriptor default. Public because
+  // File > New needs it: clear() removes the modules but the PINNED mixer survives, and
+  // it would otherwise keep the faders and pans of the patch you just discarded.
+  resetAllControls() { return this._resetAllControls(); }
+
   _resetAllControls() {
     let changed = false;
     for (const rec of this.records.values()) {
@@ -5191,6 +5196,10 @@ export class Rack {
       this._onJackPointerDown(e, rec.key, portId);
     });
     el.addEventListener('wheel', (e) => this._dualKnackWheel(e, dk), { passive: false });
+    b.hoverProbe = (e) => this._knackHoverProbe(e, dk);   // the hover mark follows the zone
+    // Scrolling the AV band turns the AV POINTER, not the knob's value indicator, so the hover
+    // mark has to watch that element too or its bar sits still while the depth moves under it.
+    b.hoverWatch = avp;
     el.addEventListener('contextmenu', (e) => this._dualKnackMenu(e, dk));
     const val = rec.values.get(b.id); if (val !== undefined) showValue(b, val);   // position the new triangle
     this._renderKnackSplit(dk, this._isKnackPatched(rec.key, portId));
@@ -5201,9 +5210,26 @@ export class Rack {
     if (!ctm || !b.pivot) return 1;
     const sx = ctm.a * b.pivot.x + ctm.c * b.pivot.y + ctm.e;
     const sy = ctm.b * b.pivot.x + ctm.d * b.pivot.y + ctm.f;
-    const R = (b.group.getBoundingClientRect().width / 2) || 1;
+    const R = knobRadiusPx(b.group);   // the dial, not the group box (which carries the legend)
     const r = Math.hypot(e.clientX - sx, e.clientY - sy);
     return Math.max(0.25, 1 - 0.75 * Math.min(1, r / R));
+  }
+
+  // What would a scroll HERE actually do? On a knАck that depends on where the pointer is:
+  // the bottom band of a patched knob with its attenuverter on scrolls CV DEPTH, over its own
+  // travel and on its own speed curve, not the value. The hover mark asks this so it can draw
+  // the control the scroll would really move — otherwise it would sit on the knob's rim
+  // describing the value while the wheel moved depth.
+  _knackHoverProbe(e, dk) {
+    const { zone, frac, greenFrac } = this._knackZone(e, dk);
+    if (zone === 'av') {
+      // The AV pointer's own angle, in the hover mark's convention (zero up, clockwise):
+      // depth 0 points straight down, +1 swings to the right, -1 to the left.
+      const depth = Math.max(-1, Math.min(1, Number(dk.rec.values.get(dk.b.depthId)) || 0));
+      return { mode: 'av', avOuter: dk.greenOut, knobR: dk.R, avAngle: 180 - depth * 90,
+        factor: Math.max(0.2, 1 - 0.8 * Math.min(1, frac / greenFrac)) };
+    }
+    return { mode: 'value', factor: this._knackRadialFactor(dk.b, e) };
   }
 
   _dualKnackWheel(e, dk) {
@@ -5254,7 +5280,7 @@ export class Rack {
     if (ctm && dk.b.pivot) {
       const sx = ctm.a * dk.b.pivot.x + ctm.c * dk.b.pivot.y + ctm.e;
       const sy = ctm.b * dk.b.pivot.x + ctm.d * dk.b.pivot.y + ctm.f;
-      const Rpx = (dk.b.group.getBoundingClientRect().width / 2) || 1;
+      const Rpx = knobRadiusPx(dk.b.group);
       frac = Math.hypot(e.clientX - sx, e.clientY - sy) / Rpx;
       belowCentre = e.clientY > sy;
     }
