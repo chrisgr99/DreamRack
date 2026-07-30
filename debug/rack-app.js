@@ -413,12 +413,13 @@ async function boot() {
   let masterValue = Number(mixRec.values.get('master'));
   const syncMaster = () => { masterValue = Number(mixRec.values.get('master')); };
 
-  // The two buses ARE the transport — there is no engine. masterEnable and monitorEnable each play
-  // or not; `soundOn` is true when either is enabled (the mirror + audio-trace read it). isPlaying =
-  // the audio clock is live (scopes read this to decide when to auto-scale). The context wakes here
-  // and stays up; master defaults on, so the app boots ready to sound.
+  // The transport is the ENGINE over two buses. `soundOn` is true when the engine is on AND at
+  // least one bus is enabled — it answers "can this rack be heard?", which is what the mirror and
+  // the audio-trace mean by it, so it has to account for all three switches. isPlaying = the audio
+  // clock is live (scopes read this to decide when to auto-scale). The context wakes here and
+  // stays up; the engine boots off, so the app is silent until asked.
   const busOn = (id) => mixRec.values.get(id) === 'on';
-  const soundOn = () => busOn('masterEnable') || busOn('monitorEnable');
+  const soundOn = () => busOn('engine') && (busOn('masterEnable') || busOn('monitorEnable'));
   rack.isPlaying = () => audioCtx.state === 'running';
   audioCtx.resume();
   rack._applyBusEnables();   // apply the initial routing (master on, monitor off)
@@ -464,12 +465,12 @@ async function boot() {
   requestAnimationFrame(paintVU);
 
   // The mixer as a save/load endpoint: its settings are the pinned record's values (it stays the
-  // fixed "mixer" key, just now a rack module). The two bus enables (masterEnable / monitorEnable)
-  // are transport state, NOT persistent mixer settings — sound boots to defaults (master on,
-  // monitor off; the monitor bus re-enables itself when saved monitors are restored), so they're
-  // excluded from save/restore. Otherwise a patch saved with the master off would reload silent for
+  // fixed "mixer" key, just now a rack module). The engine and the two bus enables are transport
+  // state, NOT persistent mixer settings — sound boots to defaults (engine off; master on, monitor
+  // off beneath it; the monitor bus re-enables itself when saved monitors are restored), so they're
+  // excluded from save/restore. Otherwise a patch saved with the engine off would reload silent for
   // a non-obvious reason.
-  const TRANSPORT = new Set(['masterEnable', 'monitorEnable']);
+  const TRANSPORT = new Set(['engine', 'masterEnable', 'monitorEnable']);
   const mixerIO = {
     key: 'mixer',
     getParams: () => { const o = Object.fromEntries(mixRec.values); for (const k of TRANSPORT) delete o[k]; return o; },
@@ -677,7 +678,14 @@ async function boot() {
       menuStateTimer = null;
       let recent = [];
       try { recent = await storage.recent(); } catch (_e) { /* none */ }
-      m.setState({ dark: rack.isDark(), rows: rack.rowCount, canUndo: rack.canUndo(), canRedo: rack.canRedo(), recent, examples });
+      // The native menu's Rack items need the same two facts the in-window one computes: whether
+      // the engine is on, and which module types are addable right now (a singleton already in the
+      // rack drops out of the list).
+      const modules = MODULE_TYPES.filter((t) => !t.hidden
+        && !(t.descriptor && t.descriptor.singleton && rack.hasModule(t.descriptorId)))
+        .map((t) => ({ id: t.descriptorId, name: t.name }));
+      m.setState({ dark: rack.isDark(), rows: rack.rowCount, canUndo: rack.canUndo(), canRedo: rack.canRedo(),
+        recent, examples, engine: rack.engineOn(), modules });
     }, 200);
   }
 
@@ -692,6 +700,8 @@ async function boot() {
       toggleDark: () => toggleDark(),
       setRows: (n) => setRows(n),
       fitToWindow: () => rack.resetZoom(),
+      toggleEngine: () => { rack.toggleEngine(); pushMenuState(); },
+      addModule: (id) => rack.addModuleFromMenu(id, null),
       // Run the same items the in-window Help menu offers, rather than restating their URLs here.
       readme: () => { const it = rack.helpMenuItems().find((i) => i.label === 'README'); if (it) it.action(); },
       reference: () => { const it = rack.developerMenuItems().find((i) => i.label === 'Developer guide'); if (it) it.action(); },
@@ -737,6 +747,10 @@ async function boot() {
       { label: rack.isDark() ? 'Light mode' : 'Dark mode', action: () => toggleDark() },
       { label: 'Fit to window', action: () => rack.resetZoom() },
       { label: 'Patch notes', action: () => notes.toggle() },   // info about this patch
+      // A conventional menu bar across the top, for anyone who looks for one there. ON by
+      // default: the title-bar hamburgers are quicker once you know about them, but a menu you
+      // have to be told about is a menu most people never find.
+      { label: 'Menu bar', checkFn: () => rack.menuBarDocked(), action: () => setMenuBar(!rack.menuBarDocked()) },
     ];
     // Capturing what you can SEE belongs under View, beside the other things that change what is
     // on screen — not under File, which is about the patch. Both are desktop only: they need the
@@ -753,10 +767,11 @@ async function boot() {
     // Rack: rack-shaping actions gathered in one place. "Delete this module" acts on the module that was
     // right-clicked (rec); it's disabled when the background was clicked, or the module is pinned (mixer).
     const rackMenu = [
-      // The transport, first: the two things reached most often in here. One bus per row with its
-      // full name — there is room for it, and "Master" says what "MSTR" only abbreviates.
-      { words: [{ label: 'Master', isOn: () => rack.busEnabled('master'), flip: () => rack.toggleBusEnable('master') }] },
-      { words: [{ label: 'Monitor', isOn: () => rack.busEnabled('monitor'), flip: () => rack.toggleBusEnable('monitor') }] },
+      // The transport, first: the thing reached most often in here, and now ONE row rather than a
+      // bus each. The engine is the whole question "is this rack making sound?", which is what
+      // people actually come to this menu to answer; choosing BETWEEN the two buses is a rarer,
+      // more considered act, and it belongs where both are visible side by side — the mixer.
+      { words: [{ label: 'Engine', isOn: () => rack.engineOn(), flip: () => rack.toggleEngine() }] },
       { separator: true },
       { label: 'Rows', submenu: [1, 2, 3, 4, 5].map((n) => ({
         label: String(n), checkFn: () => rack.rowCount === n, action: () => setRows(n),
@@ -776,7 +791,7 @@ async function boot() {
     // last and abbreviated: it earns a place for the people who need it without taking the width
     // of "Developer" from the menus everyone uses.
     return [
-      { label: 'DR', submenu: rack.helpMenuItems().filter((i) => /about/i.test(i.label || '')).concat([
+      { label: 'DreamRack', submenu: rack.helpMenuItems().filter((i) => /about/i.test(i.label || '')).concat([
         { separator: true },
         { label: 'Interactive tutorial', action: () => rack.onTutorial && rack.onTutorial() },
       ]) },
@@ -795,6 +810,21 @@ async function boot() {
   rack.onAppMenuBar = (x, y, rec, rowIndex) => {
     refreshRecent().then(() => rack.openMenuBar(x, y, appMenuItems(rec, rowIndex)));
   };
+
+  // The docked bar. It hands the rack a PROVIDER rather than a fixed set of items, so each menu
+  // is rebuilt as it opens — a bar that lives all session would otherwise keep the Undo state,
+  // the Recent list and the light/dark label it happened to be born with.
+  const MENUBAR_KEY = 'wcoast.menuBar';
+  function setMenuBar(on) {
+    try { localStorage.setItem(MENUBAR_KEY, on ? '1' : '0'); } catch (_e) { /* no storage */ }
+    if (!on) { rack.undockMenuBar(); return; }
+    rack.dockMenuBar(appMenuItems(null, null), () => appMenuItems(null, null));
+    refreshRecent();   // warm the Recent list for the first drop, without blocking the bar
+  }
+  // Default ON, so a first-time user meets a menu where they expect one.
+  let menuBarPref = '1';
+  try { const v = localStorage.getItem(MENUBAR_KEY); if (v === '0' || v === '1') menuBarPref = v; } catch (_e) { /* no storage */ }
+  setMenuBar(menuBarPref === '1');
 
   // The interactive tutorial: modeless cards the reader drives with Next/Back. Opens on a first
   // run (unless "Don't show on startup" is set), and always available from Help ▸ Interactive tutorial.
@@ -860,8 +890,11 @@ async function boot() {
     rack.openMenu(window.innerWidth / 2, window.innerHeight / 2, rack.helpMenuItems(), { centred: true });
   });
 
-  // Spacebar toggles the MASTER bus on/off — a hands-on-keyboard alternative to the Sound menu and
-  // the mixer's master lamp. Ignored while typing in a field, and when a button has focus (Space
+  // Spacebar toggles the ENGINE — a hands-on-keyboard alternative to the Rack menu and the
+  // mixer's engine lamp. It follows the engine rather than the master bus because a transport
+  // key should be the thing that starts and stops sound outright, and because pressing it to
+  // start must never leave you with silence (the engine brings the master bus with it).
+  // Ignored while typing in a field, and when a button has focus (Space
   // would "click" it and double-toggle). No modifier, so Cmd/Ctrl-Space and friends pass straight through.
   window.addEventListener('keydown', (e) => {
     if (e.key !== ' ' && e.code !== 'Space') return;
@@ -869,7 +902,7 @@ async function boot() {
     const t = e.target;
     if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'BUTTON' || t.isContentEditable)) return;
     e.preventDefault();
-    rack.toggleBusEnable('master');
+    rack.toggleEngine();
   });
 
   // R toggles recording. A bare letter is safe here for the same reason Space can toggle
@@ -932,10 +965,13 @@ async function boot() {
     }
   } catch (e) { log(`session restore failed: ${e.message}`); }
   if (!resumed) await placeDefaultModules();
-  // Startup silence: both buses OFF on every launch, regardless of the last-exited state or any
-  // monitors that a restored patch would otherwise re-enable — the app never comes up making sound.
+  // Startup silence: the engine and both buses OFF on every launch, regardless of the last-exited
+  // state or any monitors that a restored patch would otherwise re-enable — the app never comes up
+  // making sound. The engine is cleared LAST, because turning it off is what actually guarantees
+  // the silence and nothing below it can undo that.
   rack.applyParam(mixRec, 'masterEnable', 'off');
   rack.applyParam(mixRec, 'monitorEnable', 'off');
+  rack.applyParam(mixRec, 'engine', 'off');
   booted = true;   // from here on, real edits autosave the session
   markClean();     // the resumed/starting patch is the clean baseline, not unsaved work
   await mirror.init();   // read enabled state + push the first mirror snapshot

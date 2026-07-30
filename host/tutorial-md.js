@@ -58,6 +58,10 @@ const inline = (s, sees) => escapeHtml(s)
   .replace(/\{see:([^}\s]+)\}/g, (_m, t) => { if (sees) sees.push(t); return EYE_BUTTON; })
   .replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, '<a href="$2">$1</a>')
   .replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>')
+  // ==key term== — the tutorial's accent colour rather than weight. Bold is already doing a lot
+  // of work in this document (module names, menu names, control names), so a topic label or the
+  // one surprising word in a sentence needs a channel of its own to stand out from it.
+  .replace(/==([^=]+)==/g, '<span class="tour-key">$1</span>')
   .replace(/(^|[^*])\*([^*]+)\*/g, '$1<em>$2</em>')
   .replace(/`([^`]+)`/g, '<code>$1</code>');
 

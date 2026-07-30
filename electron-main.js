@@ -250,7 +250,7 @@ function registerPatchIpc() {
 //
 // The commands all live in the RENDERER, so every item just names an action and sends it there —
 // which keeps ONE implementation of New/Open/Undo/Dark mode, driven from either menu.
-let menuState = { dark: true, rows: 2, canUndo: false, canRedo: false, recent: [] };
+let menuState = { dark: true, rows: 2, canUndo: false, canRedo: false, recent: [], engine: false, modules: [] };
 let menuSig = null;
 
 function menuSend(action, arg) {
@@ -337,6 +337,15 @@ function applyAppMenu() {
         { label: 'Fit to Window', click: () => menuSend('fitToWindow') },
         { type: 'separator' },
         { label: 'Patch Notes', click: () => menuSend('patchNotes') },   // info about this patch
+      ],
+    },
+    {
+      label: 'Rack',
+      submenu: [
+        { label: 'Engine', type: 'checkbox', checked: !!s.engine, click: () => menuSend('toggleEngine') },
+        { type: 'separator' },
+        { label: 'Rows', submenu: [1, 2, 3, 4, 5].map((n) => ({ label: String(n), type: 'radio', checked: s.rows === n, click: () => menuSend('setRows', n) })) },
+        { label: 'Add module', submenu: (s.modules || []).map((m) => ({ label: m.name, click: () => menuSend('addModule', m.id) })) },
       ],
     },
     {

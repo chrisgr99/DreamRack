@@ -249,6 +249,11 @@ export class Rack {
     // stopPropagation keeps it from reaching the faceplate/jack/knob handlers;
     // `_swallowClick` blocks the trailing click.
     document.addEventListener('pointerdown', (e) => {
+      // A MENU BAR TITLE is not "outside": pressing one is how you move from menu to menu. Left to
+      // the rule below it would preventDefault the press — which, per the pointer-events spec,
+      // suppresses the compatibility click — so the title's own handler never ran and the bar
+      // looked dead whenever anything else was open. The bar decides for itself; get out of its way.
+      if (e.target && e.target.closest && e.target.closest('.rack-menubar')) { this._swallowClick = false; return; }
       if (this._menuEl && !this._menuEl.contains(e.target) && !this._openSubs.some((s) => s.contains(e.target))) {
         this._closeMenu();
         this._swallowClick = true;
@@ -622,8 +627,10 @@ export class Rack {
   // A target is "<descriptorId>" (the whole module), "<descriptorId>#title" (its title bar),
   // "<descriptorId>#<section>" (a quad's channel band, e.g. #A), or "<descriptorId>/<elementId>"
   // (one port or control). The FIRST instance of that module in the rack is used.
+  // Idempotent: showing is showing. It used to toggle, back when a click raised the callout and
+  // the same click had to take it down again — under hover that would mean a second peek at the
+  // same button silently doing nothing.
   showCallout(target, fromEl) {
-    if (this._callout && this._callout.target === target) { this.clearCallout(); return false; }
     const hit = this._resolveCalloutTarget(target);
     if (!hit) { this.clearCallout(); return false; }
     this._callout = { target, fromEl, rec: hit.rec, els: hit.els };
@@ -3808,23 +3815,29 @@ export class Rack {
   // A bus enable (masterEnable / monitorEnable) changed — re-apply the routing.
   _applyBusEnables() { this._applyAudioRouting(); }
 
-  // The two INDEPENDENT buses drive the actual audio. Master audibility gates the main output;
-  // monitor audibility gates the monitor bus (both, either, or neither can play). There is no
-  // engine — these ARE the transport. Normally each follows its persistent enable param, UNLESS a
-  // momentary Sound-menu audition (`_audition`) overrides it; the params are never written during
-  // an audition, so leaving the menu restores for free. The context wakes lazily on first sound.
+  // The ENGINE gates everything; below it the two INDEPENDENT buses drive the actual audio.
+  // Master audibility gates the main output; monitor audibility gates the monitor bus (both,
+  // either, or neither can play) — but only while the engine is on. Normally each bus follows
+  // its persistent enable param, UNLESS a momentary Sound-menu audition (`_audition`) overrides
+  // it; the params are never written during an audition, so leaving the menu restores for free.
+  // The context wakes lazily on first sound.
   _applyAudioRouting() {
     const rec = this._mixerRec(); if (!rec) return;
     const o = this._audition || null;
-    const masterAudible = o ? !!o.master : rec.values.get('masterEnable') !== 'off';
-    const monitorAudible = o ? !!o.monitor : rec.values.get('monitorEnable') === 'on';
+    const engine = rec.values.get('engine') === 'on';
+    const masterAudible = engine && (o ? !!o.master : rec.values.get('masterEnable') !== 'off');
+    const monitorAudible = engine && (o ? !!o.monitor : rec.values.get('monitorEnable') === 'on');
     if ((masterAudible || monitorAudible) && this.host.ctx.resume) this.host.ctx.resume();
     const mix = this._mixerInstance();
     if (mix && mix.setMasterAudible) mix.setMasterAudible(masterAudible);
     if (this._monModeGate) this._monModeGate.gain.setTargetAtTime(monitorAudible ? 1 : 0, this.host.ctx.currentTime, 0.008);
     // Graying + monitor highlights track the PERSISTENT master/monitor state, not a momentary
     // audition, so a hover doesn't flicker the faceplate.
-    this._setChannelsGrayed(rec.values.get('masterEnable') === 'off');
+    this._setChannelsGrayed(!engine || rec.values.get('masterEnable') === 'off');
+    // With the engine off the two bus lamps are dimmed, not merely dark: their own state is
+    // preserved and still shown, but the panel says plainly that it is not what decides the
+    // silence. Without this you would be looking at a lit master lamp and hearing nothing.
+    if (rec.el) rec.el.classList.toggle('engine-off', !engine);
     this._refreshMonHighlights();
   }
 
@@ -3861,6 +3874,20 @@ export class Rack {
     this._audition = null;
     this.applyParam(rec, id, rec.values.get(id) === 'on' ? 'off' : 'on');
   }
+  engineOn() {
+    const rec = this._mixerRec();
+    return !!(rec && rec.values.get('engine') === 'on');
+  }
+  // The engine switch, from the menu or the spacebar (the mixer's own lamp goes through the
+  // same param). Turning it ON also turns the MASTER bus on and LEAVES it on — the one
+  // asymmetry in this control, and a deliberate one: "start the sound" must actually produce
+  // sound, or the master switch has simply moved the confusion up a level. That coupling lives
+  // in _setParam so every route to the switch shares it. Sound can still be stopped at any lamp.
+  toggleEngine() {
+    const rec = this._mixerRec(); if (!rec) return;
+    this._audition = null;
+    this.applyParam(rec, 'engine', rec.values.get('engine') === 'on' ? 'off' : 'on');
+  }
   // Persistently enable both buses (the Sound menu's "Both" click).
   enableBothBuses() {
     const rec = this._mixerRec(); if (!rec) return;
@@ -3873,7 +3900,9 @@ export class Rack {
   // Toggle the class here; the pulse loop drives the glow.
   _refreshMonHighlights() {
     const rec = this._mixerRec();
-    const on = !!(rec && rec.values.get('monitorEnable') === 'on');
+    // Live means AUDIBLE, so the engine counts: a green pulsing ring on a monitor that cannot
+    // be heard would be the same lie the dimmed bus lamps exist to prevent.
+    const on = !!(rec && rec.values.get('monitorEnable') === 'on' && rec.values.get('engine') === 'on');
     let any = false;
     for (const m of this._monitors) {
       const live = on && !m.muted;
@@ -4950,7 +4979,14 @@ export class Rack {
     if (b) showValue(b, value);
     this.patchbay.setDepth(rec.key, id, value);   // if this knob is a cord's depth control
     if (rec.pinned && id === 'monitorLevel') this._setMonMaster(value);              // the Monitor fader
-    if (rec.pinned && (id === 'masterEnable' || id === 'monitorEnable')) this._applyBusEnables();   // per-bus routing
+    if (rec.pinned && (id === 'engine' || id === 'masterEnable' || id === 'monitorEnable')) {
+      // The engine coming on brings the MASTER bus with it, wherever the click came from — the
+      // mixer's own lamp and the menu row must not differ, or the same switch would mean two
+      // things. Done here rather than in toggleEngine for exactly that reason. Recursion is
+      // bounded: this arm only runs for `engine`, and what it sets is `masterEnable`.
+      if (id === 'engine' && value === 'on' && rec.values.get('masterEnable') !== 'on') this._setParam(rec, 'masterEnable', 'on');
+      this._applyBusEnables();   // engine + per-bus routing
+    }
     this.onChange();                              // a knob/switch change dirties the patch
   }
 
@@ -5610,13 +5646,45 @@ export class Rack {
   // Add a module from Rack ▸ Add module: append it to the END of the row the menu was opened over — the
   // row of the right-clicked module, or the right-clicked background row. With no row context (the
   // hamburger), fall back to the row with the most free space.
-  addModuleFromMenu(descriptorId, rowIndex) {
+  async addModuleFromMenu(descriptorId, rowIndex) {
     let row = rowIndex;
     if (row == null || row < 0 || row >= this.rowCount) {
       row = 0; let best = Infinity;
       for (let i = 0; i < this.rowCount; i++) { const w = this._snapLeftX(i, Infinity); if (w < best) { best = w; row = i; } }
     }
-    return this._addModuleWithUndo(descriptorId, row, this._snapLeftX(row, Infinity));
+    const rec = await this._addModuleWithUndo(descriptorId, row, this._snapLeftX(row, Infinity));
+    // A module added from the menu lands at the RIGHT-HAND END of its row, which on any row
+    // already as wide as the window is off screen. Nothing appeared to happen — the command
+    // read as broken when it had worked. So the view follows the module it just made.
+    if (rec) this._panToModule(rec);
+    return rec;
+  }
+
+  // Pan (never zoom) until `rec` is fully on screen, with a little air around it. Horizontal
+  // only in practice — rows are laid out to fill the viewport height — but the vertical case
+  // costs nothing and covers a rack of three rows or more.
+  _panToModule(rec) {
+    const vpW = this.container.clientWidth || 0, vpH = this.container.clientHeight || 0;
+    if (vpW <= 0 || vpH <= 0 || !rec.panelWmm) return;
+    const MARGIN = 16;
+    const s = this.pxPerMm * this.zoom;
+    const left = rec.x * s, right = (rec.x + rec.panelWmm) * s;
+    const top = rec.row * (PANEL_H_MM + ROW_GAP_MM) * s, bottom = top + PANEL_H_MM * s;
+    let tx = this._tx, ty = this._ty;
+    if (right + tx > vpW - MARGIN) tx = vpW - MARGIN - right;
+    if (left + tx < MARGIN) tx = MARGIN - left;          // a module wider than the window: show its left edge
+    if (bottom + ty > vpH - MARGIN) ty = vpH - MARGIN - bottom;
+    if (top + ty < MARGIN) ty = MARGIN - top;
+    // Clamp to the content bounds BEFORE deciding whether anything moved — the same rule
+    // _clampPan applies. Row 0 sits flush with the top of the window, so the margin rule above
+    // always asks to shift the rack down by MARGIN; clamping cancels it, and doing so first is
+    // what stops every single add from playing a pointless eased nudge.
+    const cw = (this._contentWmm || 0) * s, ch = (this._contentHmm || 0) * s;
+    tx = Math.min(0, Math.max(vpW - cw, tx));
+    ty = Math.min(0, Math.max(vpH - ch, ty));
+    if (tx === this._tx && ty === this._ty) return;      // already in view — leave the view alone
+    this._tx = tx; this._ty = ty;
+    this._setView(this.zoom, tx, ty, true);
   }
 
   // A newly added module packs against the nearest module to the left of the
@@ -5711,26 +5779,101 @@ export class Rack {
   // horizontal counterpart of the vertical fit the menus already do. Centring rather than
   // left-aligning means the titles fall either side of where you already are, so the average
   // distance to the one you want is halved.
-  openMenuBar(x, y, items) {
-    this._closeMenuBar();
+  // The titles row, shared by the floating bar and the docked one. `onDrop(i, btn)` decides what
+  // opening a title means, which is the only thing the two arrangements disagree about.
+  _buildBarTitles(items, onDrop) {
     const bar = document.createElement('div');
     bar.className = 'rack-menubar' + (this.isDark() ? ' theme-dark' : '');
     const titles = [];
-    let openIdx = -1;
-
     items.forEach((it, i) => {
       if (!it.label || !it.submenu) return;
       const b = document.createElement('button');
       b.className = 'rack-menubar-item';
       b.textContent = it.label;
-      b.addEventListener('pointerdown', (e) => e.stopPropagation());
-      b.addEventListener('click', (e) => { e.stopPropagation(); drop(i, b); });
+      // Opens on POINTERDOWN, not click. A click is a compatibility event: anything that
+      // preventDefaults the press cancels it, and a menu bar that silently stops working when
+      // some other handler does that is the worst kind of bug to chase. The press is the gesture.
+      b.addEventListener('pointerdown', (e) => { e.stopPropagation(); e.preventDefault(); onDrop(i, b); });
+      b.addEventListener('click', (e) => e.stopPropagation());
       // HOVER OPENS. Not only "switch once one is down" — pointing at a title is enough, so the
-      // whole menu is reachable from the one click that summoned the bar.
-      b.addEventListener('pointerenter', () => { if (openIdx !== i) drop(i, b); });
+      // whole menu is reachable from the one click that reached the bar.
+      b.addEventListener('pointerenter', () => onDrop(i, b, true));
       titles.push({ el: b, idx: i });
       bar.appendChild(b);
     });
+    return { bar, titles };
+  }
+
+  // A bar DOCKED at the top of the window, in the document flow, so it pushes the rack down
+  // rather than covering a module. Optional — the title-bar hamburgers remain the near-to-hand
+  // route — and it is what someone who expects a menu bar will look for.
+  //
+  // Its SUBMENUS are rebuilt every time one is opened. The floating bar is built the instant it is
+  // summoned so its items are current by construction; a docked bar lives for the whole session,
+  // and menus built once at dock time would freeze Undo greyed, strand the Recent list and leave
+  // the theme item naming the wrong mode forever.
+  dockMenuBar(items, provider) {
+    this.undockMenuBar();
+    let openIdx = -1;
+    const drop = (i, btn, hoverOnly) => {
+      if (hoverOnly && openIdx < 0) return;          // hovering a docked bar must not open by itself
+      if (hoverOnly && openIdx === i) return;
+      // Pressing the title that is already open puts it away, the way every menu bar behaves.
+      if (!hoverOnly && openIdx === i && this._menuEl) {
+        this._closeMenu();
+        for (const t of built.titles) t.el.classList.remove('open');
+        openIdx = -1;
+        return;
+      }
+      this._closeMenu();
+      for (const t of built.titles) t.el.classList.toggle('open', t.idx === i);
+      openIdx = i;
+      const r = btn.getBoundingClientRect();
+      const fresh = provider ? provider() : null;
+      const use = (fresh && fresh[i] && fresh[i].submenu) || items[i].submenu;
+      this._openMenu(r.left, r.bottom + 2, use);
+    };
+    const built = this._buildBarTitles(items, drop);
+    built.bar.classList.add('docked');
+    this._dockedBar = built.bar;
+    const rackEl = document.getElementById('rack') || this.container;
+    rackEl.parentNode.insertBefore(built.bar, rackEl);
+    // Clicking away closes the DROP-DOWN only: a docked bar stays put, unlike the floating one
+    // which is dismissed as a whole.
+    this._dockAway = (e) => {
+      if (built.bar.contains(e.target)) return;
+      if (this._menuEl && this._menuEl.contains(e.target)) return;
+      // ...and not a SUBMENU either. Submenus are separate elements in _openSubs, not children of
+      // _menuEl, so without this the press on "Add module ▸ Sine Source" tore the submenu down
+      // before its click could land — every item in every submenu of the docked bar did nothing.
+      if (this._openSubs.some((s) => s.contains(e.target))) return;
+      this._closeMenu();
+      for (const t of built.titles) t.el.classList.remove('open');
+      openIdx = -1;
+    };
+    document.addEventListener('pointerdown', this._dockAway, true);
+  }
+
+  undockMenuBar() {
+    if (this._dockAway) { document.removeEventListener('pointerdown', this._dockAway, true); this._dockAway = null; }
+    if (this._dockedBar) { this._dockedBar.remove(); this._dockedBar = null; }
+  }
+
+  menuBarDocked() { return !!this._dockedBar; }
+
+  openMenuBar(x, y, items) {
+    this._closeMenuBar();
+    let openIdx = -1;
+    const drop = (i, btn, hoverOnly) => {
+      if (hoverOnly && openIdx === i) return;
+      this._closeMenu();
+      for (const t of built.titles) t.el.classList.toggle('open', t.idx === i);
+      openIdx = i;
+      const r = btn.getBoundingClientRect();
+      this._openMenu(r.left, r.bottom + 2, items[i].submenu);
+    };
+    const built = this._buildBarTitles(items, drop);
+    const bar = built.bar, titles = built.titles;
     document.body.appendChild(bar);
 
     const pad = 8, vw = window.innerWidth, vh = window.innerHeight;
@@ -5759,14 +5902,6 @@ export class Rack {
 
     bar.style.left = Math.round(left) + 'px';
     bar.style.top = Math.round(top) + 'px';
-
-    const drop = (i, btn) => {
-      this._closeMenu();
-      for (const t of titles) t.el.classList.toggle('open', t.idx === i);
-      openIdx = i;
-      const r = btn.getBoundingClientRect();
-      this._openMenu(r.left, r.bottom + 2, items[i].submenu);
-    };
 
     // Dismiss: anywhere outside the bar AND outside whatever menu is down, or Escape.
     this._menuBarAway = (e) => {

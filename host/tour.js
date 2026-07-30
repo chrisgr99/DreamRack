@@ -132,22 +132,17 @@ export function createTour({ steps, onExternal, isDark, onSee, canSee, homePos }
     for (const s of sections) { if (s.el.getBoundingClientRect().top <= bodyTop) cur = s; else break; }
     if (titleEl.textContent !== cur.label) titleEl.textContent = cur.label;
     if (homeBtn) homeBtn.style.visibility = bodyEl.scrollTop > 8 ? '' : 'hidden';
-    dropCalloutIfEyeGone();
+    clearCallout();
   };
 
-  // A callout follows its eye, so it must not outlive it. Once the eye that raised it has been
-  // scrolled out of the tutorial window the arrow is pointing from nothing, so it goes — and it
-  // does NOT come back if the eye scrolls into view again, because the reader did not ask for it
-  // a second time. Clicking still closes one; this just means you rarely have to.
-  //
-  // The eye's CENTRE decides, the same rule the knob hover mark uses: the arrow disappears as the
-  // eye passes the edge rather than clinging on by a sliver of a half-clipped glyph.
-  const dropCalloutIfEyeGone = () => {
+  // Take down whatever callout is showing. Hovering off a ? button is the usual way here, but it
+  // is also called on scroll: a wheel turn slides the button out from under a stationary pointer,
+  // and the boundary event for that is not something to rely on across browsers. Clearing on
+  // scroll is unconditional and cheap, and it guarantees no arrow is ever left pointing from a
+  // button that has moved.
+  const clearCallout = () => {
     const lit = bodyEl && bodyEl.querySelector('.tour-eye.lit');
     if (!lit) return;
-    const r = lit.getBoundingClientRect(), b = bodyEl.getBoundingClientRect();
-    const cy = r.top + r.height / 2;
-    if (cy >= b.top && cy <= b.bottom) return;
     lit.classList.remove('lit');
     if (onSee) onSee(null, null);
   };
@@ -258,6 +253,11 @@ export function createTour({ steps, onExternal, isDark, onSee, canSee, homePos }
   // the whole file. That matters now the file is one flow: paired globally, a single missing
   // `{see:}` would shift every callout after it for the rest of the document instead of breaking
   // one section. The reader cannot tell the difference; the failure mode is much smaller.
+  // A contents section is recognised by its title alone, so the markdown decides whether the
+  // tutorial has one at all — remove the "## Contents" heading and everything renumbers itself.
+  const isContents = (t) => slug(t) === 'contents';
+  const contentsBefore = (i) => steps.slice(0, i).filter((x) => isContents(x.title)).length;
+
   const renderAll = () => {
     bodyEl.textContent = '';
     sections = [];
@@ -268,14 +268,18 @@ export function createTour({ steps, onExternal, isDark, onSee, canSee, homePos }
       if (i > 0) sec.appendChild(document.createElement('hr'));   // sections need a visible seam
       // Numbered, so a section can be referred to by number — in conversation, in a bug report,
       // or in the head, where the number is what tells you how far down the document you are.
+      // The CONTENTS is the exception: it is the list OF the numbered sections, not one of them,
+      // so it carries no number and the count starts after it. Otherwise its own entries would
+      // read 2 to 8 and the list would look like it had lost its first item.
+      const num = isContents(s.title) ? 0 : i + 1 - contentsBefore(i);
       const h = document.createElement('h2');
       h.className = 'tour-h';
-      h.textContent = (i + 1) + '. ' + s.title;
+      h.textContent = num ? num + '. ' + s.title : s.title;
       sec.appendChild(h);
       const parts = Array.isArray(s.body) ? s.body : [s.body];
       for (const part of parts) sec.appendChild(renderPart(part));
       bodyEl.appendChild(sec);
-      sections.push({ title: s.title, num: i + 1, label: (i + 1) + '. ' + s.title, el: sec, id: sec.id });
+      sections.push({ title: s.title, num, label: num ? num + '. ' + s.title : s.title, el: sec, id: sec.id });
       wireEyes(sec, s.sees || []);
     });
     wireLinks();
@@ -283,26 +287,40 @@ export function createTour({ steps, onExternal, isDark, onSee, canSee, homePos }
     refreshCurrentSection();
   };
 
-  // SHOW-ME eyes. One callout at a time: the rack toggles it, so clicking a lit eye clears it and
-  // clicking another moves it. An eye whose subject isn't in the rack (the reader removed that
-  // module) shows as unavailable rather than doing nothing.
+  // SHOW-ME buttons. A PEEK, driven by hover: rest the pointer on a ? and its subject is ringed
+  // on the rack with an arrow drawn to it; move off and both go. Nothing to click, nothing to
+  // dismiss, and — because a callout cannot outlive the pointer that is on its button — no tail
+  // to drag along behind a scroll. One at a time falls out of the mechanism rather than being
+  // enforced: the pointer is only ever on one button.
   //
-  // The eyes carry no target of their own, so nothing extra is read aloud when a paragraph is
+  // A button whose subject isn't in the rack (the reader deleted that module) shows as
+  // unavailable rather than doing nothing. Checked on each hover, not at render, because the
+  // card can open before a saved session has finished restoring its modules.
+  //
+  // The buttons carry no target of their own, so nothing extra is read aloud when a paragraph is
   // spoken or copied — the pairing lives in JS, keyed by order within this section.
   const wireEyes = (root, eyeTargets) => {
     [...root.querySelectorAll('.tour-eye')].forEach((eye, i) => {
       const target = eyeTargets[i];
       if (!target) return;
-      eye.addEventListener('pointerdown', (ev) => ev.preventDefault());   // don't start a selection
-      eye.addEventListener('click', (ev) => {
-        ev.preventDefault(); ev.stopPropagation();
-        // Checked HERE, not at render: the card can open before a saved session has finished
-        // restoring its modules, so availability is only meaningful at the moment of use.
-        if (canSee && !canSee(target)) { eye.classList.add('unavailable'); eye.title = 'Not in your rack'; return; }
-        const lit = onSee(target, eye);
-        for (const other of bodyEl.querySelectorAll('.tour-eye.lit')) other.classList.remove('lit');
-        eye.classList.toggle('lit', !!lit);
+      eye.addEventListener('pointerenter', () => {
+        // Re-evaluated BOTH ways on every hover. Under the old click behaviour marking a button
+        // unavailable was a deliberate, rare act, so the mark could be one-way; under hover the
+        // pointer crosses buttons incidentally on its way down the page, and a one-way mark meant
+        // a module that merely happened to be absent greyed its buttons for the rest of the
+        // session — still grey after the reader added the module back.
+        const ok = !canSee || canSee(target);
+        eye.classList.toggle('unavailable', !ok);
+        eye.title = ok ? '' : 'Not in your rack';
+        if (!ok) return;
+        clearCallout();
+        if (onSee && onSee(target, eye)) eye.classList.add('lit');
       });
+      eye.addEventListener('pointerleave', clearCallout);
+      // The button is no longer a control, so a click on it should do nothing at all rather than
+      // select the paragraph around it or fall through to the card.
+      eye.addEventListener('pointerdown', (ev) => ev.preventDefault());
+      eye.addEventListener('click', (ev) => { ev.preventDefault(); ev.stopPropagation(); });
     });
   };
 
@@ -318,7 +336,7 @@ export function createTour({ steps, onExternal, isDark, onSee, canSee, homePos }
         if (sec) {
           // Number the contents entry from the section it points at, rather than asking the
           // markdown to hard-code a number that would rot the moment a section moved.
-          if (!/^\d+\.\s/.test(a.textContent)) a.textContent = sec.num + '. ' + a.textContent;
+          if (sec.num && !/^\d+\.\s/.test(a.textContent)) a.textContent = sec.num + '. ' + a.textContent;
           a.addEventListener('click', (e) => { e.preventDefault(); scrollToSection(sec); });
         }
         else a.replaceWith(document.createTextNode(a.textContent));

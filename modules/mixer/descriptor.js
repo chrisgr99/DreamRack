@@ -51,9 +51,16 @@ params.push({ id: 'master', name: 'Master', section: 'master', curve: 'gainDb', 
 // (see the per-bus enables below) — both, either, or neither bus can play. Enabling a monitor object
 // turns the Monitor bus on. All handled by the host (routing lives in the rack), not the DSP.
 params.push({ id: 'monitorLevel', name: 'Monitor', section: 'master', curve: 'gainDb', min: 0, max: 1, default: 0.29, glideMs: 20 });
+// The ENGINE — the one switch that decides whether this rack makes sound at all. It sits ABOVE
+// the two buses: with it off, neither bus can be heard however its own lamp is set, and both
+// lamps dim to say so. Turning it ON also turns the MASTER bus on, always, even if the master
+// was off beforehand — otherwise "start the sound" could plausibly produce silence, which is
+// precisely the confusion a master switch over two buses invites. Transport state, so it is
+// never saved with a patch and always comes up off: the app never boots making noise.
+params.push({ id: 'engine', name: 'Engine', section: 'master', curve: 'stepped', steps: [{ value: 'off' }, { value: 'on' }], default: 'off' });
 // The two buses, each an independent on/off lamp under its fader (NOT a radio — both, either, or
-// neither can play). There is no separate engine: these ARE the transport. Master defaults on,
-// monitor off; enabling a monitor object turns the monitor bus on. Routing lives in the rack.
+// neither can play), both downstream of the engine. Master defaults on, monitor off; enabling a
+// monitor object turns the monitor bus on. Routing lives in the rack.
 params.push({ id: 'masterEnable', name: 'Master enable', section: 'master', curve: 'stepped', steps: [{ value: 'off' }, { value: 'on' }], default: 'on' });
 params.push({ id: 'monitorEnable', name: 'Monitor enable', section: 'master', curve: 'stepped', steps: [{ value: 'off' }, { value: 'on' }], default: 'off' });
 

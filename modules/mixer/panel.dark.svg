@@ -20,6 +20,7 @@
   <text x="79" y="9" font-size="3.306" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">F</text>
   <text x="95.5" y="16.5" font-size="2.806" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">MON</text>
   <text x="108" y="16.5" font-size="2.806" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">MSTR</text>
+  <text x="101.75" y="6.4" font-size="2.806" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">ENGINE</text>
   <g data-wcoast-param="panA" data-wcoast-cx="14" data-wcoast-cy="104.5" data-wcoast-angle-min="-150" data-wcoast-angle-max="150" data-wcoast-port="panCvA" data-wcoast-depth="panDepthA" data-wcoast-av="off">
     <circle cx="14" cy="104.5" r="4.2" fill="url(#blueRing)" stroke="#6fa8d6" stroke-width="0.355" filter="url(#softShadow)"/>
     <circle cx="14" cy="104.5" r="3.3" fill="url(#knobCap)" stroke="#b8b8bc" stroke-width="0.2366"/>
@@ -323,6 +324,7 @@
       <line x1="104.80" y1="56" x2="111.20" y2="56" stroke="#1c2026" stroke-width="0.7"/>
     </g>
   </g>
+  <g data-wcoast-param="engine"><circle cx="101.75" cy="11.6" r="2.3" fill="url(#redLed)" stroke="#7c0000" stroke-width="0.2366" filter="url(#softShadow)" data-wcoast-role="step-indicator" data-wcoast-step="on"/><circle cx="101.11" cy="10.96" r="0.69" fill="#ffb4b4" opacity="0.85" data-wcoast-role="led-gloss" pointer-events="none"/></g>
   <g data-wcoast-param="monitorEnable"><circle cx="95.5" cy="21.9" r="2.3" fill="url(#redLed)" stroke="#7c0000" stroke-width="0.2366" filter="url(#softShadow)" data-wcoast-role="step-indicator" data-wcoast-step="on"/><circle cx="94.86" cy="21.26" r="0.69" fill="#ffb4b4" opacity="0.85" data-wcoast-role="led-gloss" pointer-events="none"/></g>
   <g data-wcoast-param="masterEnable"><circle cx="108" cy="21.9" r="2.3" fill="url(#redLed)" stroke="#7c0000" stroke-width="0.2366" filter="url(#softShadow)" data-wcoast-role="step-indicator" data-wcoast-step="on"/><circle cx="107.36" cy="21.26" r="0.69" fill="#ffb4b4" opacity="0.85" data-wcoast-role="led-gloss" pointer-events="none"/></g>
   <g data-wcoast-port="ampCvMonitor" data-wcoast-cx="95.5" data-wcoast-cy="91">

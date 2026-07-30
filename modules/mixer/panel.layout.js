@@ -25,6 +25,11 @@ const MID_X = (L) => CH_X[L] - 1.5;
 // removing the old enable row and one of its two separator lines freed more than that, so
 // the faders keep their full 54 mm throw.
 const Y_CHAN_LABEL = 9, Y_INPUT = 15, Y_MUTE = 21.9;
+// The engine's label and lamp, stacked above the MON / MSTR headers and centred across both,
+// because it governs both. The 11 mm between the top edge and those headers takes exactly this:
+// a caption on the first line and a lamp on the second, clear of the headers by about a
+// millimetre. It is the same lamp as the enables below it, deliberately — one kind of switch.
+const Y_ENGINE_LABEL = 6.4, Y_ENGINE = 11.6;
 const SLIDER_TOP = 29, SLIDER_BOT = 83;
 const Y_LINE_FC = 86, Y_AMPCV = 91, Y_LINE_CP = 96, Y_PAN = 104.5;
 const MUTE_R = 2.3;        // 1 mm wider than it was: a small lamp is a small target
@@ -41,6 +46,7 @@ items.push({ t: 'rect', x: 0.5, y: 0.5, w: FACE_W - 1, h: FACE_H - 1, rx: 2.2, f
 for (const L of CH) ink(MID_X(L), Y_CHAN_LABEL, L, { size: 2.6 });
 ink(MON_X, Y_INPUT + 1.5, 'MON', { size: 2.1 });
 ink(MSTR_X, Y_INPUT + 1.5, 'MSTR', { size: 2.1 });
+ink(ENGINE_X, Y_ENGINE_LABEL, 'ENGINE', { size: 2.1 });
 
 // Pan row: a knAck per channel — the knob IS the CV jack, so every channel now has both.
 // Before this, A and F had a pan CV jack and no knob, and B through E had a knob and no CV
@@ -94,6 +100,7 @@ items.push({ t: 'slider', id: 'master', x: MSTR_X, opts: { top: SLIDER_TOP, bot:
 // unbroken line of "is this on?" across the whole panel, each lamp under the thing it
 // enables. They used to sit under their faders with a second pair of MON / MSTR captions;
 // those captions went with them, since the headers at the top already name the columns.
+items.push({ t: 'button', id: 'engine', x: ENGINE_X, y: Y_ENGINE, opts: { r: MUTE_R, kind: 'red' } });
 items.push({ t: 'button', id: 'monitorEnable', x: MON_X, y: Y_MUTE, opts: { r: MUTE_R, kind: 'red' } });
 items.push({ t: 'button', id: 'masterEnable', x: MSTR_X, y: Y_MUTE, opts: { r: MUTE_R, kind: 'red' } });
 // The buses get the channels' two bottom rows: a gain CV jack and a pan knAck each.

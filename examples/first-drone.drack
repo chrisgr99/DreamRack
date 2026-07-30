@@ -1,21 +1,93 @@
 {
   "format": "wcoast-patch",
   "version": 1,
-  "rack": { "rows": 2 },
-  "mixerPos": { "row": 1, "x": 0 },
+  "rack": {
+    "rows": 2
+  },
+  "mixerPos": {
+    "row": 1,
+    "x": 0
+  },
   "modules": [
-    { "id": "m0", "type": "wcoast.complexOsc259t", "row": 0, "x": 0 }
+    {
+      "id": "m5",
+      "type": "wcoast.complexOsc259t",
+      "row": 0,
+      "x": 0
+    }
   ],
   "wiring": [
-    { "from": { "module": "m0", "port": "prinFinalOut" }, "to": { "module": "mixer", "port": "chanA" } }
+    {
+      "from": {
+        "module": "m5",
+        "port": "prinFinalOut"
+      },
+      "to": {
+        "module": "mixer",
+        "port": "chanA"
+      }
+    }
   ],
   "settings": {
     "params": {
-      "m0": { "prinFreq": 110, "timbre": 0.45, "order": 0.3, "symmetry": 0.2 },
-      "mixer": { "levelA": 0.5, "master": 0.4 }
+      "m5": {
+        "modFreq": 220,
+        "modFine": 0,
+        "modCvAmount": 0,
+        "modFmAmount": 0,
+        "modRange": "high",
+        "modWave": "triangle",
+        "prinFreq": 110,
+        "prinFine": 0,
+        "prinCvAmount": 0,
+        "prinFmAmount": 0,
+        "timbre": 0.45,
+        "timbreCvAmount": 0,
+        "order": 0.3,
+        "symmetry": 0.2,
+        "modIndex": 0,
+        "modIndexCvAmount": 0,
+        "amplMod": "off",
+        "pitchMod": "off",
+        "timbreMod": "off",
+        "phaseLock": "off",
+        "phaseLockAmount": 0
+      },
+      "mixer": {
+        "levelA": 0.5,
+        "panA": 0,
+        "panDepthA": 1,
+        "muteA": "on",
+        "levelB": 0.29,
+        "panB": 0,
+        "panDepthB": 1,
+        "muteB": "on",
+        "levelC": 0.29,
+        "panC": 0,
+        "panDepthC": 1,
+        "muteC": "on",
+        "levelD": 0.29,
+        "panD": 0.014239952170726156,
+        "panDepthD": 1,
+        "muteD": "on",
+        "levelE": 0.29,
+        "panE": 0,
+        "panDepthE": 1,
+        "muteE": "on",
+        "levelF": 0.29,
+        "panF": -0.15659658394031228,
+        "panDepthF": 1,
+        "muteF": "on",
+        "master": 0.4,
+        "monitorLevel": 0.29,
+        "panMaster": 0,
+        "panDepthMaster": 1,
+        "panMonitor": 0,
+        "panDepthMonitor": 1
+      }
     }
   },
   "probes": [],
-  "notes": "A first drone. The Complex Oscillator's principal oscillator runs straight into the mixer, and its wavefolder (Timbre, Order, Symmetry) is turned up to add harmonics.\n\nTurn the sound engine on (Engine, in the menu) to hear it. Then scroll the Frequency knob for pitch, and Timbre, Order, and Symmetry to reshape the tone.",
+  "notes": "A first drone. The Complex Oscillator's principal oscillator runs straight into the mixer, and its wavefolder (Timbre, Order, Symmetry) is turned up to add harmonics.\n\nTurn the sound engine on (Engine, in the menu) to hear it. To change the sound, hover the mouse pointer over the Pitdh  knob and operate the scroll wheel. Similarly turning almost any knob above the bottom row in the complex oscillator can change the sound in interesting ways.\nNote that in DreamRack knobs operate by hovering over them and scrolling, not by dragging.\n\n",
   "notesOpen": true
 }

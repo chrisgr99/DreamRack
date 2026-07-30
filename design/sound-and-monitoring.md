@@ -1,142 +1,111 @@
 # Sound and monitoring — specification
 
-Two things people want to hear in DreamRack: the **master** (the finished mix out of
-the mixer) and the **monitor** (a single terminal, tapped by an ear monitor, to check
-it in isolation). Today those sit behind a third, higher concept — the **engine**
-(the On/Off transport, stored as the mixer's `masterMute` param) — so a placed monitor
-can be silent for two different reasons at once (the engine is off, or the monitor bus
-is off), and auditioning one port cleanly means a trip to the mixer to mute the master.
+Two things people want to hear in DreamRack: the **master** (the finished mix out of the
+mixer) and the **monitor** (a single terminal, tapped by an ear monitor, to check it in
+isolation). They are two independent buses, and above them sits one switch — the
+**engine** — that decides whether the rack makes sound at all.
 
-This removes the engine as a user-facing idea and leaves just the two buses, each
-independently on or off, plus a **Sound** menu that lets you audition either bus by
-hovering and toggle it by clicking. It supersedes the On/Off transport, the `masterMute`
-"Engine" param, and the engine item on the panel menu.
+## 1. One engine over two buses
 
-## 1. Two buses, no engine
+Three pieces of transport state, all mixer params, none of them saved with a patch:
 
-The only transport state is two independent enables, both already present as mixer
-params:
-
-- **`masterEnable`** — the master bus (the mixer output). Default on.
+- **`engine`** — the rack makes sound, or it does not. Off at every launch.
+- **`masterEnable`** — the master bus (the mixer output). Default on, beneath the engine.
 - **`monitorEnable`** — the monitor bus (placed ear monitors). Default off.
 
-Either, both, or neither can play. **Silence everything** is simply both off — there is
-no separate global mute. `masterMute` (the old "Engine" param) and the `started`
-On/Off transport in `debug/rack-app.js` go away; the panel menu's sound item becomes
-the Sound menu below.
+A bus is audible only when the engine is on *and* that bus is enabled. Either, both or
+neither bus can play; the engine cuts all of it at a stroke.
 
-Because the master defaults on and the monitor defaults off, an empty rack behaves
-exactly as before: you hear the mix, not monitors, until you place one.
+### Why a switch above the buses
 
-## 2. The audio context is a hidden detail
+Two independent enables and nothing above them is a defensible design, and it is not this
+one. A master switch buys three things worth the extra concept: one obvious place to stop
+all sound, a transport the space bar can own, and a single honest answer to "is this thing
+live?" — which two peer lamps cannot give, since either might be the one that matters.
 
-Web Audio needs a running `AudioContext`, but the user should never think about it.
-Wake it lazily on the first thing that needs sound — a bus being enabled, a monitor
-being placed, or an audition beginning — and, once woken, keep it running for the
-session (opening any menu is already a click, so autoplay's user-gesture requirement
-is satisfied long before anyone hovers a Sound item). Optionally suspend it when both
-buses are off and nothing is auditioning, purely to save CPU; correctness never
-depends on it, since both buses being off is already silence.
+### The hazard it introduces, and the rules that close it
 
-## 3. The Sound menu (panel menu only)
+A switch above two switches invites silence with a lit lamp: engine off, master lamp on,
+nothing audible, no visible reason. Two rules close that gap, and both are load-bearing.
 
-Lives on the **panel** menu (the faceplate-background context menu — global app actions), not on
-the terminal menu. The way you reach the monitor bus *from a terminal* is to open a
-monitor or hover the monitor entry there (§5), so the terminal menu needs no Sound
-control.
+**Starting the engine always enables the master bus** — even if the master was off
+beforehand, and it is left on afterwards. Starting the sound must produce sound, or the
+master switch has only moved the confusion up a level. This coupling lives in `_setParam`
+in `host/rack.js`, not in a menu handler, so the mixer lamp, the menu row and the space
+bar cannot drift apart. The engine is the only control in the app that moves another.
 
-Three items:
+**With the engine off, both bus lamps dim** (`.engine-off` in `index.html`). Their own
+state is preserved and still legible; the dimming says the engine is what the silence is
+about. Monitor rings stop reading "live" for the same reason.
 
-- **Master**
-- **Monitor**
-- **Both**
+Between them: sound is off for exactly one visible reason at a time.
 
-Each item does two things depending on how you touch it:
+## 2. Reaching the switches
 
-- **Hover — momentary audition.** While the pointer rests on an item, you hear that
-  choice, and *only* that choice, regardless of the current bus states. Hover **Master**
-  → the master alone; hover **Monitor** → the monitor alone; hover **Both** → both,
-  whichever was on or off. Leaving the item **restores the exact prior state** — an
-  audition never changes anything persistent.
-- **Click — persistent toggle.** Click **Master** toggles the master bus; click
-  **Monitor** toggles the monitor bus; click **Both** persistently enables both. A
-  click also ends the momentary audition cleanly (the persistent choice takes over).
+- **The mixer**, top right: an `ENGINE` caption and lamp centred above the `MON` and
+  `MSTR` columns it governs, with those two buses' own enables in the panel-wide enable
+  row below. The one place all three are visible together, which is why bus-by-bus choice
+  belongs here and not in a menu.
+- **The Rack menu**, first row: `Engine` alone. The menu answers the common question ("is
+  it making sound?"); choosing *between* buses is rarer and more considered.
+- **The space bar**: toggles the engine. No modifier; ignored while typing or while a
+  button has focus. Safe as a bare key because patching is a pointer activity.
 
-Show each item's current persistent state (a check or a lit mark) so you can see what is
-on without auditioning.
+## 3. Startup and persistence
 
-### Debounce
+The three transport params are excluded from save and restore (`TRANSPORT` in
+`debug/rack-app.js`), and all three are cleared at the end of boot — engine last, since
+that is what guarantees the silence. **The app never comes up making sound**, whatever was
+running when it was last closed and whatever monitors a restored patch brings back. A
+patch saved mid-performance therefore never reloads silent for a non-obvious reason
+either: it reloads with the engine off, which is a visible reason.
 
-Not strictly required — you move the pointer diagonally straight to the item you want,
-rather than tracking down a column past the others. Include a short hover debounce
-anyway (a few tens of milliseconds before an audition starts) so a pointer that merely
-crosses an item on its way elsewhere makes no sound, and so quick passes can't glitch.
+`File ▸ New` resets controls to their descriptor defaults, so a new patch also starts with
+the engine off and the master bus armed beneath it.
 
-## 4. How auditioning works — momentary overlay, no writes
+## 4. The audio context is a hidden detail
 
-Auditioning must not touch the persistent bus params (or restoring would risk clobbering
-a state the user changed meanwhile). Drive it entirely through the gain nodes that
-already exist, as a momentary overlay:
-
-- The mixer's **`soloDuck`** node (`modules/mixer/factory.js`, `setSolo`) silences the
-  main output post-mute *without disturbing `masterEnable`*. Duck it to audition
-  monitor-only; release it to bring the master back.
-- The monitor bus's **mode gate** and **engine gate** (`_monModeGate`, `_monEngineGate`
-  in `host/rack.js` `_monitorBus()`) open the monitor path the same way — the hover
-  "Listen" preview (`_monPreviewGain`) already proves a terminal can be made audible
-  past those gates without changing `monitorEnable`.
-
-So each Sound audition is: capture nothing, open/duck the right nodes for the hovered
-choice, and on leave set those nodes back to what the persistent bus states dictate
-(recomputed from `masterEnable`/`monitorEnable`, not from a snapshot). Because the
-persistent params are never written during an audition, there is nothing to restore and
-nothing to get out of sync — a save mid-audition still saves the user's real settings.
+Web Audio needs a running `AudioContext`, and the user should never think about it. It
+wakes lazily on the first thing that needs sound — a bus becoming audible, or a monitor
+being placed — and then stays up for the session. Autoplay's user-gesture requirement is
+satisfied long before this, since starting the engine is itself a click or a key press.
 
 ## 5. Monitoring a terminal
 
 Enabling the monitor bus from a terminal is implicit, so it needs no menu of its own:
 
-- **Opening a monitor** on a terminal enables the monitor bus, so a freshly placed
-  monitor makes sound immediately — the master is untouched, so you are not forced to
-  turn the mix off to hear the port.
-- **Hovering the monitor entry** in the terminal menu auditions that terminal
-  momentarily (the existing `_monPreviewGain` hover-listen), so you can check a port
-  before committing a monitor.
+- **Opening a monitor** on a terminal enables the monitor bus, so a freshly placed monitor
+  is audible immediately (engine permitting). The master is untouched — you are never
+  forced to turn the mix off to hear a port.
+- **Hovering the monitor entry** in the terminal menu auditions that terminal momentarily
+  via `_monPreviewGain`, so a port can be checked before committing a monitor.
 
-Whether *removing* the last monitor should disable the monitor bus again is an open
-question (§7).
+A monitor's ring is green and pulsing only while it is genuinely audible: monitor bus on,
+engine on, not muted.
 
-## 6. Persistence and defaults
+## 6. Levels
 
-Two booleans, saved and restored with the patch: `masterEnable` and `monitorEnable`.
-No engine/transport state to persist. On load, a sensible floor is master on so a
-reopened patch is never silent for a non-obvious reason; revisit whether monitor-enable
-should persist or always reset to off.
+The master bus carries makeup gain and a brick-wall limiter; the monitor bus has its own
+makeup and limiter, and auto-levels against the loudest peak the master has reached in the
+session. Ear safety is why both limiters exist, and why the monitor bus is never allowed
+to become the louder of the two by accident.
 
-## 7. Open questions (decide at implementation)
+## 7. Open questions
 
-- **A quick silence-all.** With click-Both defined as "enable both," there is no
-  single gesture that silences everything — you toggle each bus off. If that proves
-  clumsy, the cleanest fix is to make Both a true toggle: enable both unless both are
-  already on, in which case silence both. Worth trying the enable-both form first and
-  seeing whether a one-click silence is actually missed.
 - **Monitor bus auto-disable.** Should removing the last placed monitor turn
-  `monitorEnable` back off? Leaving it on is harmless (nothing feeds it) but the lamp
+  `monitorEnable` back off? Leaving it on is harmless — nothing feeds it — but the lamp
   then reads "on" with nothing to hear.
-- **Per-terminal solo.** This design auditions whole buses, so hovering Monitor with
-  several monitors placed sounds them all. Hearing one of many in isolation is rare
-  enough to defer; it could return later as an optional per-monitor solo without
-  disturbing anything here.
+- **Per-terminal solo.** Monitoring works a whole bus, so several placed monitors sound
+  together. Hearing one of many in isolation is rare enough to defer; it would arrive as
+  an optional per-monitor solo without disturbing anything here.
 
-## 8. Implementation touch-points
+## 8. Where it lives
 
-- `debug/rack-app.js` — remove `started` and the `masterMute` transport wiring; the
-  panel-menu sound item becomes the Sound menu; monitor placement enables
-  `monitorEnable`.
-- `modules/mixer/descriptor.js` — retire the `masterMute` ("Engine") param; keep
-  `masterEnable` / `monitorEnable`.
-- `host/rack.js` — the Sound menu's hover-audition and click-toggle, built on
-  `setSolo` / `_monModeGate` / `_monEngineGate` / `_monPreviewGain`; the context
-  wake/sleep lifecycle.
-- `modules/mixer/factory.js` — `masterMute` node's role folds into `masterEnable`;
-  `soloDuck` stays as the momentary-audition duck.
+- `modules/mixer/descriptor.js` — the three transport params.
+- `modules/mixer/panel.layout.js` — the `ENGINE` caption and lamp; the enable row.
+- `host/rack.js` — `_applyAudioRouting` (the engine gates both buses), `engineOn`,
+  `toggleEngine`, the engine→master coupling in `_setParam`, monitor-bus construction and
+  the live-ring logic.
+- `debug/rack-app.js` — the Rack menu's `Engine` row, the space bar, `soundOn`, the
+  `TRANSPORT` exclusion set, and the boot clear-down.
+- `index.html` — `.engine-off`, which dims the two bus lamps.

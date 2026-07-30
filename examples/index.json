@@ -1,5 +1,6 @@
 [
   { "name": "First drone", "file": "first-drone.drack" },
   { "name": "Rotating fold (quadrature)", "file": "rotating-fold.drack" },
-  { "name": "Clocked pluck", "file": "clocked-pluck.drack" }
+  { "name": "Clocked pluck", "file": "clocked-pluck.drack" },
+  { "name": "Modulate complex oscillator", "file": "modulate-complex-oscillator.drack" }
 ]
