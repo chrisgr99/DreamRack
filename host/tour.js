@@ -35,8 +35,8 @@ export function tourSeen() { try { return localStorage.getItem(SEEN_KEY) === '1'
 // this routed through the shell, so the caller supplies it). `isDark()`: the app's current mode —
 // the card is dressed as a faceplate, so it follows View ▸ Light/Dark mode like the panels do.
 export function createTour({ steps, onExternal, isDark, onSee, canSee, homePos }) {
-  let el = null, idx = 0;
-  let titleEl, bodyEl, countEl, prevBtn, nextBtn, neverCb, homeBtn;
+  let el = null;
+  let titleEl, bodyEl, neverCb, homeBtn;
 
   // Keep the card fully on screen. A remembered position can fall outside the window after a
   // resize (or a move between displays), which would strand the card where it can't be reached.
@@ -89,11 +89,20 @@ export function createTour({ steps, onExternal, isDark, onSee, canSee, homePos }
     const r = el.getBoundingClientRect();
     const sx = e.clientX, sy = e.clientY, sw = r.width, sh = r.height;
     const maxH = (window.innerHeight || 0) * 0.9;   // matches max-height: 90vh
+    const maxW = (window.innerWidth || 0) * 0.95;   // matches max-width: 95vw
+    const wide = axis === 'x' || axis === 'xy';
+    const tall = axis === 'y' || axis === 'xy';
     const onMove = (ev) => {
-      if (axis === 'xy') el.style.width = Math.round(Math.max(220, sw + (ev.clientX - sx))) + 'px';
-      let h = Math.max(130, sh + (ev.clientY - sy));
-      if (maxH > 0) h = Math.min(h, maxH);
-      el.style.height = Math.round(h) + 'px';
+      if (wide) {
+        let w = Math.max(320, sw + (ev.clientX - sx));
+        if (maxW > 0) w = Math.min(w, maxW);
+        el.style.width = Math.round(w) + 'px';
+      }
+      if (tall) {
+        let h = Math.max(130, sh + (ev.clientY - sy));
+        if (maxH > 0) h = Math.min(h, maxH);
+        el.style.height = Math.round(h) + 'px';
+      }
     };
     const onUp = () => {
       document.removeEventListener('pointermove', onMove, true);
@@ -104,10 +113,44 @@ export function createTour({ steps, onExternal, isDark, onSee, canSee, homePos }
     document.addEventListener('pointerup', onUp, true);
   };
 
-  // Next stays clickable throughout; it only takes the accent once the section has been scrolled to
-  // the end (or needs no scrolling), so the cue means "you've seen it all" rather than "click here".
-  const atBottom = () => !bodyEl || bodyEl.scrollHeight - bodyEl.clientHeight - bodyEl.scrollTop <= 2;
-  const refreshNextCue = () => { if (nextBtn) nextBtn.classList.toggle('ready', atBottom()); };
+  // Which section is the reader in? The one whose heading is highest on screen without having
+  // scrolled past the top of the view — read on scroll, and the head reports it. Cheap: the
+  // section elements are collected once at render, so this is a walk over eight offsets.
+  let sections = [];                        // { title, el, id }
+
+  // A section's distance below the TOP OF THE SCROLLING BODY. Not `offsetTop`: that is measured
+  // from the nearest POSITIONED ancestor, which here is the card, so it silently includes the
+  // header's height — scrolling to a section overshot it by exactly that, and the document opened
+  // with its first heading already off the top. Client rects have no such ambiguity.
+  const offsetInBody = (elm) => bodyEl.scrollTop
+    + (elm.getBoundingClientRect().top - bodyEl.getBoundingClientRect().top);
+
+  const refreshCurrentSection = () => {
+    if (!bodyEl || !sections.length || !titleEl) return;
+    const bodyTop = bodyEl.getBoundingClientRect().top + 8;
+    let cur = sections[0];
+    for (const s of sections) { if (s.el.getBoundingClientRect().top <= bodyTop) cur = s; else break; }
+    if (titleEl.textContent !== cur.label) titleEl.textContent = cur.label;
+    if (homeBtn) homeBtn.style.visibility = bodyEl.scrollTop > 8 ? '' : 'hidden';
+    dropCalloutIfEyeGone();
+  };
+
+  // A callout follows its eye, so it must not outlive it. Once the eye that raised it has been
+  // scrolled out of the tutorial window the arrow is pointing from nothing, so it goes — and it
+  // does NOT come back if the eye scrolls into view again, because the reader did not ask for it
+  // a second time. Clicking still closes one; this just means you rarely have to.
+  //
+  // The eye's CENTRE decides, the same rule the knob hover mark uses: the arrow disappears as the
+  // eye passes the edge rather than clinging on by a sliver of a half-clipped glyph.
+  const dropCalloutIfEyeGone = () => {
+    const lit = bodyEl && bodyEl.querySelector('.tour-eye.lit');
+    if (!lit) return;
+    const r = lit.getBoundingClientRect(), b = bodyEl.getBoundingClientRect();
+    const cy = r.top + r.height / 2;
+    if (cy >= b.top && cy <= b.bottom) return;
+    lit.classList.remove('lit');
+    if (onSee) onSee(null, null);
+  };
 
   const build = () => {
     el = document.createElement('div');
@@ -115,14 +158,17 @@ export function createTour({ steps, onExternal, isDark, onSee, canSee, homePos }
 
     const head = document.createElement('div');
     head.className = 'tour-head';
+    // The title is not a card's name any more — it reports WHICH SECTION you are currently
+    // scrolled into, updated as you move. That is what replaces the old "4 of 8": with one
+    // continuous document there are no steps to count, but you still need to know where you are.
     titleEl = document.createElement('div'); titleEl.className = 'tour-title';
-    // Back to the first card — which is the contents, with its links to every section — from anywhere.
-    // Hidden on the first card itself (go() toggles it), where it would be a no-op.
+    // The only button left in the head besides Close. A long document with no way back to the
+    // start is worse than one button — everything else that used to live here is gone.
     homeBtn = document.createElement('button');
-    homeBtn.className = 'tour-home'; homeBtn.textContent = 'Home';
-    homeBtn.title = 'Back to start';
-    homeBtn.setAttribute('aria-label', 'Back to start');
-    homeBtn.addEventListener('click', () => go(0));
+    homeBtn.className = 'tour-home'; homeBtn.textContent = 'Top';
+    homeBtn.title = 'Back to the top';
+    homeBtn.setAttribute('aria-label', 'Back to the top');
+    homeBtn.addEventListener('click', () => { if (bodyEl) bodyEl.scrollTo({ top: 0, behavior: 'smooth' }); });
     const close = document.createElement('button');
     close.className = 'tour-x'; close.textContent = '×';
     close.title = 'Close (Help ▸ Interactive tutorial brings it back)';
@@ -132,7 +178,7 @@ export function createTour({ steps, onExternal, isDark, onSee, canSee, homePos }
     head.addEventListener('pointerdown', startDrag);
 
     bodyEl = document.createElement('div'); bodyEl.className = 'tour-body';
-    bodyEl.addEventListener('scroll', refreshNextCue, { passive: true });
+    bodyEl.addEventListener('scroll', refreshCurrentSection, { passive: true });
 
     const foot = document.createElement('div'); foot.className = 'tour-foot';
     // Leaving must be obvious: a plain Close button, not just the ×.
@@ -151,14 +197,10 @@ export function createTour({ steps, onExternal, isDark, onSee, canSee, homePos }
     never.title = 'Stop the tutorial opening by itself on a new session';
     const left = document.createElement('div'); left.className = 'tour-left';
     left.appendChild(closeBtn); left.appendChild(never);
-    countEl = document.createElement('span'); countEl.className = 'tour-count';
-    prevBtn = document.createElement('button'); prevBtn.className = 'tour-btn'; prevBtn.textContent = '‹ Back';
-    nextBtn = document.createElement('button'); nextBtn.className = 'tour-btn tour-next'; nextBtn.textContent = 'Next ›';
-    prevBtn.addEventListener('click', () => go(idx - 1));
-    nextBtn.addEventListener('click', () => (idx >= steps.length - 1 ? hide() : go(idx + 1)));
-    const nav = document.createElement('div'); nav.className = 'tour-nav';
-    nav.appendChild(countEl); nav.appendChild(prevBtn); nav.appendChild(nextBtn);
-    foot.appendChild(left); foot.appendChild(nav);
+    // No Back, no Next, no "4 of 8". Early testing showed people could not tell the difference
+    // between scrolling within a card and stepping to the next one — so there is now only one
+    // kind of movement in the tutorial, and it is scrolling.
+    foot.appendChild(left);
 
     el.appendChild(head); el.appendChild(bodyEl); el.appendChild(foot);
 
@@ -166,9 +208,11 @@ export function createTour({ steps, onExternal, isDark, onSee, canSee, homePos }
     // the corner grip takes both axes.
     const gripY = document.createElement('div'); gripY.className = 'tour-resize-y';
     gripY.addEventListener('pointerdown', startResize('y'));
+    const gripX = document.createElement('div'); gripX.className = 'tour-resize-x';
+    gripX.addEventListener('pointerdown', startResize('x'));
     const gripXY = document.createElement('div'); gripXY.className = 'tour-resize-xy';
     gripXY.addEventListener('pointerdown', startResize('xy'));
-    el.appendChild(gripY); el.appendChild(gripXY);
+    el.appendChild(gripY); el.appendChild(gripX); el.appendChild(gripXY);
 
     document.body.appendChild(el);
 
@@ -179,7 +223,7 @@ export function createTour({ steps, onExternal, isDark, onSee, canSee, homePos }
     const saved = readJSON(SIZE_KEY);
     if (saved && saved.w > 0) { el.style.width = saved.w + 'px'; el.style.height = saved.h + 'px'; }
     if (window.ResizeObserver) new ResizeObserver(() => {
-      refreshNextCue();                     // a taller card may now show the whole section
+      refreshCurrentSection();              // a resize moves every heading
       if (!el.style.width && !el.style.height) return;
       write(SIZE_KEY, JSON.stringify({ w: el.offsetWidth, h: el.offsetHeight }));
     }).observe(el);
@@ -207,54 +251,86 @@ export function createTour({ steps, onExternal, isDark, onSee, canSee, homePos }
     return box;
   };
 
-  const go = (i) => {
-    idx = Math.max(0, Math.min(steps.length - 1, i));
-    const s = steps[idx];
-    titleEl.textContent = s.title;
+  // Render the WHOLE tutorial, once, as one continuous document. There are no cards: each `##`
+  // in tutorial.md becomes a section with a heading, and the reader scrolls.
+  //
+  // The eyes still pair with their targets by document order, but PER SECTION rather than across
+  // the whole file. That matters now the file is one flow: paired globally, a single missing
+  // `{see:}` would shift every callout after it for the rest of the document instead of breaking
+  // one section. The reader cannot tell the difference; the failure mode is much smaller.
+  const renderAll = () => {
     bodyEl.textContent = '';
-    const parts = Array.isArray(s.body) ? s.body : [s.body];
-    for (const part of parts) bodyEl.appendChild(renderPart(part));
-    bodyEl.scrollTop = 0;                   // a long step left scrolled down must not start the next one part-read
-    refreshNextCue();                       // a short section is already "read" — cue Next at once
-    // SHOW-ME eyes. One callout at a time: the rack toggles it, so clicking a lit eye clears it and
-    // clicking another moves it. Changing step clears whatever was lit. An eye whose subject isn't
-    // in the rack (the reader removed that module) shows as unavailable rather than doing nothing.
-    if (onSee) onSee(null, null);           // leaving a step drops its callout
-    // The eyes carry no target of their own (so nothing extra is read aloud when a paragraph is
-    // spoken or copied); they pair with the step's target list by document order.
-    const eyeTargets = s.sees || [];
-    [...bodyEl.querySelectorAll('.tour-eye')].forEach((eye, i) => {
+    sections = [];
+    steps.forEach((s, i) => {
+      const sec = document.createElement('section');
+      sec.className = 'tour-section';
+      sec.id = 'sec-' + slug(s.title);
+      if (i > 0) sec.appendChild(document.createElement('hr'));   // sections need a visible seam
+      // Numbered, so a section can be referred to by number — in conversation, in a bug report,
+      // or in the head, where the number is what tells you how far down the document you are.
+      const h = document.createElement('h2');
+      h.className = 'tour-h';
+      h.textContent = (i + 1) + '. ' + s.title;
+      sec.appendChild(h);
+      const parts = Array.isArray(s.body) ? s.body : [s.body];
+      for (const part of parts) sec.appendChild(renderPart(part));
+      bodyEl.appendChild(sec);
+      sections.push({ title: s.title, num: i + 1, label: (i + 1) + '. ' + s.title, el: sec, id: sec.id });
+      wireEyes(sec, s.sees || []);
+    });
+    wireLinks();
+    bodyEl.scrollTop = 0;
+    refreshCurrentSection();
+  };
+
+  // SHOW-ME eyes. One callout at a time: the rack toggles it, so clicking a lit eye clears it and
+  // clicking another moves it. An eye whose subject isn't in the rack (the reader removed that
+  // module) shows as unavailable rather than doing nothing.
+  //
+  // The eyes carry no target of their own, so nothing extra is read aloud when a paragraph is
+  // spoken or copied — the pairing lives in JS, keyed by order within this section.
+  const wireEyes = (root, eyeTargets) => {
+    [...root.querySelectorAll('.tour-eye')].forEach((eye, i) => {
       const target = eyeTargets[i];
       if (!target) return;
-      eye.addEventListener('pointerdown', (ev) => ev.preventDefault());   // don't start/extend a text selection
+      eye.addEventListener('pointerdown', (ev) => ev.preventDefault());   // don't start a selection
       eye.addEventListener('click', (ev) => {
         ev.preventDefault(); ev.stopPropagation();
-        // Checked HERE, not when the card was built: a card can open before the saved session has
-        // finished restoring its modules, so availability is only meaningful at the moment of use.
+        // Checked HERE, not at render: the card can open before a saved session has finished
+        // restoring its modules, so availability is only meaningful at the moment of use.
         if (canSee && !canSee(target)) { eye.classList.add('unavailable'); eye.title = 'Not in your rack'; return; }
         const lit = onSee(target, eye);
         for (const other of bodyEl.querySelectorAll('.tour-eye.lit')) other.classList.remove('lit');
         eye.classList.toggle('lit', !!lit);
       });
     });
-    countEl.textContent = `${idx + 1} of ${steps.length}`;
-    prevBtn.disabled = idx === 0;
-    homeBtn.style.display = idx === 0 ? 'none' : '';
-    nextBtn.textContent = idx >= steps.length - 1 ? 'Done' : 'Next ›';
-    // Wire the links. An in-tutorial link — href "#slug", matching a card title (see slug()) — jumps
-    // to that card; a normal URL goes to the caller (Electron opens it in the real browser). A #slug
-    // whose card doesn't exist yet (an outline entry not written) drops back to plain text, so those
-    // become live automatically the moment their card lands.
+  };
+
+  // An in-tutorial link — href "#slug", matching a section title — now SCROLLS to that section
+  // rather than switching cards. A normal URL goes to the caller (Electron opens it in the real
+  // browser). A #slug whose section doesn't exist yet drops back to plain text, so an outline
+  // entry becomes live automatically the moment its section is written.
+  const wireLinks = () => {
     for (const a of [...bodyEl.querySelectorAll('a[href]')]) {
       const href = a.getAttribute('href') || '';
       if (href.startsWith('#')) {
-        const target = steps.findIndex((st) => slug(st.title) === href.slice(1));
-        if (target >= 0) a.addEventListener('click', (e) => { e.preventDefault(); go(target); });
+        const sec = sections.find((x) => x.id === 'sec-' + href.slice(1));
+        if (sec) {
+          // Number the contents entry from the section it points at, rather than asking the
+          // markdown to hard-code a number that would rot the moment a section moved.
+          if (!/^\d+\.\s/.test(a.textContent)) a.textContent = sec.num + '. ' + a.textContent;
+          a.addEventListener('click', (e) => { e.preventDefault(); scrollToSection(sec); });
+        }
         else a.replaceWith(document.createTextNode(a.textContent));
       } else if (onExternal) {
         a.addEventListener('click', (e) => { e.preventDefault(); onExternal(href); });
       }
     }
+  };
+
+  const scrollToSection = (sec) => {
+    if (!sec || !bodyEl) return;
+    bodyEl.scrollTo({ top: Math.max(0, offsetInBody(sec.el) - 4), behavior: 'smooth' });
   };
 
   const hide = () => { if (el) el.style.display = 'none'; };
@@ -279,13 +355,22 @@ export function createTour({ steps, onExternal, isDark, onSee, canSee, homePos }
 
   return {
     isOpen: () => !!el && el.style.display !== 'none',
-    open(i = 0) {
+    // `at` is an optional section — an index or a slug — to open scrolled to. Rendering happens
+    // once per open rather than once per step, since there is only one document now.
+    open(at) {
       if (!steps.length) return;
-      if (!el) build();
+      const first = !el;
+      if (first) build();
       el.style.display = '';
       applyTheme();
       neverCb.checked = tourSeen();   // the toggle shows the live setting, however it was last left
-      go(i);
+      if (first) renderAll();
+      if (at != null) {
+        const sec = typeof at === 'number' ? sections[at]
+          : sections.find((x) => x.id === 'sec-' + String(at).replace(/^#/, ''));
+        if (sec) scrollToSection(sec); else bodyEl.scrollTop = 0;
+      }
+      refreshCurrentSection();
       placeInitial();
     },
     close: hide,

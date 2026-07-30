@@ -28,13 +28,25 @@ export const TUTORIAL_URL = new URL('./tutorial.md', import.meta.url);
 
 const escapeHtml = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
-// The SHOW-ME eye. The button carries NO target text of its own — no data attribute, no title, and
+// The SHOW-ME marker. It carries NO target text of its own — no data attribute, no title, and
 // aria-hidden so assistive tech skips it — because a screen reader or text-to-speech picking up a
 // paragraph would otherwise read the target out loud along with the prose. The targets travel
 // beside the copy instead, in step.sees, and the card pairs them up by order.
+//
+// It was an EYE, and a page of them stared back at the reader. It is now a small orange rounded
+// square carrying a black QUESTION MARK — the same orange the callout ring and leader line are
+// drawn in, so the marker and the thing it produces read as one mechanism, and a question mark says
+// "where is this?" which is exactly what clicking it answers.
+//
+// The square is filled with `currentColor` so the `unavailable` and `lit` states can restyle it
+// from CSS alone. The glyph is drawn as SVG text rather than a path so it stays crisp at any size,
+// with the family named explicitly rather than inherited — the card's font must not change it.
 const EYE_BUTTON = '<button type="button" class="tour-eye" aria-hidden="true" tabindex="-1">'
-  + '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 3.2C4.4 3.2 1.7 6 0.8 8c0.9 2 3.6 4.8 7.2 4.8'
-  + 's6.3-2.8 7.2-4.8C14.3 6 11.6 3.2 8 3.2zm0 8a3.2 3.2 0 110-6.4 3.2 3.2 0 010 6.4zm0-1.6a1.6 1.6 0 100-3.2 1.6 1.6 0 000 3.2z"/></svg></button>';
+  + '<svg viewBox="0 0 16 16" aria-hidden="true">'
+  + '<rect x="0.6" y="0.6" width="14.8" height="14.8" rx="3.4" fill="currentColor"/>'
+  + '<text x="8" y="8.1" text-anchor="middle" dominant-baseline="central" fill="#000000"'
+  + ' font-family="-apple-system, system-ui, Helvetica, Arial, sans-serif"'
+  + ' font-size="12.5" font-weight="700">?</text></svg></button>';
 
 // Inline markdown → the small HTML the card renders. Order matters: links before emphasis, so a
 // URL containing an underscore or asterisk isn't mangled.
