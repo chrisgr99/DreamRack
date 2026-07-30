@@ -26,6 +26,8 @@ import sineDescriptor from '../modules/sine-source/descriptor.js';
 import { create as sineCreate } from '../modules/sine-source/factory.js';
 import progDescriptor from '../modules/programmer-8/descriptor.js';
 import { create as progCreate } from '../modules/programmer-8/factory.js';
+import vidDescriptor from '../modules/video-out/descriptor.js';
+import { create as vidCreate } from '../modules/video-out/factory.js';
 import { serialize, restore, validate, APP_NAME, APP_VERSION } from '../host/patch-io.js';
 import { createStorage } from '../host/storage.js';
 import { buildCatalogue, createMirror } from '../host/mirror.js';
@@ -46,6 +48,7 @@ registry.register({ descriptor: fnDescriptor, create: fnCreate });
 registry.register({ descriptor: galleryDescriptor, create: galleryCreate });
 registry.register({ descriptor: sineDescriptor, create: sineCreate });
 registry.register({ descriptor: progDescriptor, create: progCreate });
+registry.register({ descriptor: vidDescriptor, create: vidCreate });
 
 const MODULE_TYPES = [{
   descriptorId: oscDescriptor.id,
@@ -90,6 +93,15 @@ const MODULE_TYPES = [{
   hp: 16,
   panelUrl: 'modules/programmer-8/panel.svg',
   descriptor: progDescriptor,
+}, {
+  // Video Output — the terminal of the video graph. Not pinned like the mixer: video is
+  // optional and should not occupy rack space for someone who never uses it. `singleton` on
+  // the descriptor takes it out of the Add menu while one is already in the rack.
+  descriptorId: vidDescriptor.id,
+  name: 'Video Output',
+  hp: 12,
+  panelUrl: 'modules/video-out/panel.svg',
+  descriptor: vidDescriptor,
 }, {
   // The mixer is a pinned singleton placed at boot, so it's hidden from the
   // "Add module" menu (no second mixer). Still a normal module type otherwise.
@@ -149,49 +161,188 @@ function paintRecBadge() {
   }
 }
 
-// A take that lands silently in Downloads leaves you wondering whether it worked and
-// where it went. This says both and STAYS until dismissed, so the filename is still
-// there when you come back to it — click the name to open it in Finder, or the × to
-// dismiss. A pill that faded on its own took the filename with it.
-let savedPill = null;
-function showSavedPill(filePath) {
-  if (savedPill) savedPill.remove();          // one at a time; a new take replaces the last
-  const name = filePath.split('/').pop();
-  const pill = document.createElement('button');
-  pill.type = 'button';
-  pill.title = filePath;
-  pill.style.cssText = [
-    'position:fixed', 'top:10px', 'right:12px', 'z-index:2000',
-    'display:flex', 'align-items:center', 'gap:7px',
-    'padding:5px 11px', 'border-radius:16px',
+// WHERE THINGS WENT, said next to where you were looking. Capturing something and having nothing
+// happen on screen is indistinguishable from a broken menu item, so every capture answers back.
+//
+// This replaced a pill pinned to the top-right corner that stayed until dismissed. Two reasons it
+// moved: a corner is nowhere near where you just clicked, and — the one that decided it — a
+// notification that never goes away is still on screen the NEXT time you take a snapshot, so it
+// ends up IN the picture. It keeps everything the pill carried: the filename, and a click that
+// reveals the file in Finder. It just expires rather than waiting to be dismissed.
+//
+// The pointer is tracked continuously because the trigger is not always a click: R starts a
+// recording from the keyboard, and the pointer may be anywhere or nowhere useful. Last known
+// position, falling back to the top centre of the window.
+let lastPointer = null;
+document.addEventListener('pointermove', (e) => { lastPointer = { x: e.clientX, y: e.clientY }; }, true);
+document.addEventListener('pointerdown', (e) => { lastPointer = { x: e.clientX, y: e.clientY }; }, true);
+
+// Two lines, always: what happened, then which file (or what to do next). Stacked rather than
+// strung out on one line because a short wide banner is a thing you have to READ across, while
+// two short lines are a thing you take in at a glance — and this has four seconds to be taken in.
+let noteEl = null, noteTimer = 0;
+// `at` is WHERE THE ACTION HAPPENED, not where the pointer is by the time the work finishes.
+// That distinction matters: stopping a recording waits on the recorder to finalise and the last
+// chunks to reach disk, and reading the pointer after that wait put "Recording saved" wherever the
+// pointer had drifted to — somewhere other than where "Recording started" had appeared. Callers
+// capture the position before they await anything, so the pair lands in one place.
+function notify(message, { detail = null, path = null, ms = 4000, at = null, sticky = false } = {}) {
+  if (noteEl) { clearTimeout(noteTimer); noteEl.remove(); noteEl = null; }
+  const note = document.createElement('div');
+  note.style.cssText = [
+    'position:fixed', 'z-index:2000', 'transform:translate(-50%,-100%)',
+    'display:flex', 'flex-direction:column', 'align-items:flex-start', 'gap:2px',
+    'padding:8px 13px', 'border-radius:9px',
     'border:1px solid #3d6b46', 'background:#152418', 'color:#cfe9d5',
-    'font:600 12px/1 -apple-system,system-ui,sans-serif', 'cursor:pointer',
-    'box-shadow:0 3px 14px rgba(0,0,0,.5)', 'transition:opacity .5s',
-    'max-width:52ch', 'overflow:hidden', 'text-overflow:ellipsis', 'white-space:nowrap',
+    'font:600 12.5px/1.4 -apple-system,system-ui,sans-serif',
+    'box-shadow:0 4px 18px rgba(0,0,0,.55)', 'transition:opacity .35s',
+    'max-width:30ch', 'pointer-events:auto',
   ].join(';');
   const text = document.createElement('span');
-  text.textContent = `Saved to Downloads · ${name}`;
-  text.style.cssText = 'overflow:hidden;text-overflow:ellipsis;white-space:nowrap';
-  const close = document.createElement('span');
-  close.textContent = '×';
-  close.title = 'Dismiss';
-  close.style.cssText = 'flex:none;opacity:.65;font-size:15px;line-height:1;padding:0 1px';
-  close.addEventListener('click', (e) => { e.stopPropagation(); pill.remove(); });
-  pill.append(text, close);
-  pill.addEventListener('click', () => window.wcoast?.record?.reveal?.(filePath));
-  document.body.appendChild(pill);
-  savedPill = pill;
+  text.textContent = message;
+  note.appendChild(text);
+  const second = detail || (path ? path.split('/').pop() : null);
+  if (second != null || sticky) {
+    const sub2 = document.createElement('span');
+    sub2.textContent = second == null ? '' : second;
+    // A filename wraps rather than truncating: an elided name is no use for finding the file,
+    // which is the only reason it is shown.
+    sub2.style.cssText = 'opacity:.75;font-weight:400;word-break:break-word';
+    note.appendChild(sub2);
+  }
+  if (path) {
+    note.title = `${path}\nClick to show in Finder`;
+    note.style.cursor = 'pointer';
+    note.addEventListener('click', () => window.wcoast?.record?.reveal?.(path));
+  } else {
+    note.style.pointerEvents = 'none';
+  }
+  document.body.appendChild(note);
+
+  // Just above the pointer, then nudged back on screen if that put it over an edge — the same
+  // courtesy the menus get.
+  const p = at || lastPointer || { x: (window.innerWidth || 800) / 2, y: 90 };
+  const r = note.getBoundingClientRect();
+  const pad = 8;
+  let x = p.x, y = p.y - 14;
+  x = Math.min(Math.max(x, pad + r.width / 2), (window.innerWidth || 800) - pad - r.width / 2);
+  if (y - r.height < pad) y = p.y + 14 + r.height;      // no room above → below the pointer
+  note.style.left = Math.round(x) + 'px';
+  note.style.top = Math.round(y) + 'px';
+
+  noteEl = note;
+  const fade = (after) => {
+    clearTimeout(noteTimer);
+    noteTimer = setTimeout(() => {
+      note.style.opacity = '0';
+      setTimeout(() => { note.remove(); if (noteEl === note) noteEl = null; }, 400);
+    }, after);
+  };
+  if (!sticky) fade(ms);
+  // A STICKY note stays until the caller says otherwise, and can be rewritten in place — which is
+  // how the recording countdown works: one note that counts down and then becomes the confirmation,
+  // rather than five notes flickering in and out.
+  return {
+    set(msg, det) {
+      text.textContent = msg;
+      const line2 = note.children[1];
+      if (line2) line2.textContent = det == null ? '' : det;
+    },
+    dismissAfter: fade,
+    close() { clearTimeout(noteTimer); note.remove(); if (noteEl === note) noteEl = null; },
+  };
 }
+
+// A still of the window, saved beside the video takes. It goes through the main process rather
+// than trying to rasterise the DOM here: capturePage reads the COMPOSITED window, so the scopes'
+// live traces, the cables and the video preview are all in it — a DOM-to-image conversion would
+// lose every canvas, which is most of what is worth a picture.
+function snapshotAvailable() {
+  return !!(window.wcoast && window.wcoast.isElectron && window.wcoast.snapshot);
+}
+
+async function takeSnapshot() {
+  if (!snapshotAvailable()) return;
+  const at = lastPointer && { ...lastPointer };   // where you were when you asked, not after the wait
+  // Shut the menu first — and WAIT FOR A FRAME so it is actually gone. capturePage reads what is
+  // composited, so a menu still on screen is a menu in the photograph, and taking the snapshot
+  // from that very menu is the commonest way to do it.
+  if (rack) rack.closeMenus();
+  await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+  const d = new Date();
+  const p = (n) => String(n).padStart(2, '0');
+  const name = `DreamRack ${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} `
+    + `${p(d.getHours())}.${p(d.getMinutes())}.${p(d.getSeconds())}.png`;
+  // Failures here are REPORTED, not swallowed to the console. A menu item that silently does
+  // nothing is indistinguishable from a broken one, and the console is not somewhere a user looks.
+  try {
+    const res = await window.wcoast.snapshot.save(name);
+    if (res && res.path) { notify('Image written to Downloads', { path: res.path, at }); return; }
+    log(`snapshot: no path returned (${JSON.stringify(res)})`);
+    window.alert(`Snapshot failed: ${(res && res.error) || 'the window returned no image'}`);
+  } catch (e) {
+    log(`snapshot failed: ${e && e.message}`);
+    window.alert(`Snapshot failed: ${e && e.message}`);
+  }
+}
+
+// The lead-in before a take starts rolling. Five seconds of "get ready" so a demonstration can
+// begin the moment recording does, rather than opening with a shot of someone reaching for the
+// mouse. Pressing R again during the count calls it off.
+let countdown = null;
 
 async function toggleRecording() {
   if (!recorder) return;
+  const at = lastPointer && { ...lastPointer };   // fixed before any await, so start and stop agree
+  if (rack) rack.closeMenus();                    // never leave a menu open over a take
+  if (countdown) {                                // a second press during the lead-in calls it off
+    clearTimeout(countdown.timer);
+    countdown.note.set('Recording cancelled', '');
+    countdown.note.dismissAfter(1200);
+    const settle = countdown.resolve;
+    countdown = null;
+    settle(false);                                // let the waiting call return instead of hanging
+    return;
+  }
+  try {
+    if (!recorder.recording) {
+      // The countdown resolves with its OUTCOME rather than merely finishing: cancelled and
+      // completed both end the wait, and only one of them should start a recording.
+      const ready = await new Promise((resolve) => {
+        const note = notify('Recording starts in', { detail: '5', at, sticky: true });
+        let n = 5;
+        const tick = () => {
+          n -= 1;
+          if (n >= 2) { note.set('Recording starts in', String(n)); countdown.timer = setTimeout(tick, 1000); return; }
+          // The last beat says "Starting" rather than "1" — by then the number is no longer
+          // information — and it carries "Press R to stop", because this is the LAST moment that
+          // instruction can be shown. Anything on screen after the stream opens is IN the take,
+          // so the note has to say its piece and be gone before recording begins.
+          note.set('Starting', 'Press R to stop');
+          countdown.timer = setTimeout(() => { countdown = null; resolve(true); }, 1000);
+        };
+        countdown = { note, resolve, timer: setTimeout(tick, 1000) };
+      });
+      if (!ready) return;
+      // Clear the note and let a frame pass so it is actually off the screen, THEN open the
+      // stream. Otherwise the first second of every take is a picture of the countdown.
+      if (noteEl) { noteEl.remove(); noteEl = null; }
+      await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+      const file = await recorder.start();
+      if (file) log(`recording to ${file}`);
+      return;
+    }
+  } catch (err) {
+    countdown = null;
+    log(`recording failed — ${err && err.message ? err.message : err}`);
+    notify('Recording failed', { detail: (err && err.message) || String(err), at });
+    paintRecBadge();
+    return;
+  }
   try {
     if (recorder.recording) {
       const file = await recorder.stop();
-      if (file) { log(`recording saved — ${file}`); showSavedPill(file); }
-    } else {
-      const file = await recorder.start();
-      if (file) log(`recording to ${file}`);
+      if (file) { log(`recording saved — ${file}`); notify('Recording saved to Downloads', { path: file, at }); }
     }
   } catch (err) {
     // A refused screen-share, or a codec the build cannot produce. Say so rather than
@@ -559,7 +710,7 @@ async function boot() {
   // The panel menu's File entry opens the File menu, reusing the rack's pop-up menu.
   // Hierarchical menu: the top level shows File / Edit / View; hovering (or clicking) a
   // heading opens its submenu, Electron-style.
-  const openAppMenu = (x, y, rec, rowIndex) => {
+  const appMenuItems = (rec, rowIndex) => {
     const file = [
       { label: 'New', action: () => newPatch() },
       { label: 'Open…', action: () => openPatch() },
@@ -575,11 +726,6 @@ async function boot() {
       file.push({ label: 'Recent', submenu: recentFiles.map((f) => ({ label: f.name, action: () => openRecent(f.id) })) });
     }
     file.push({ label: 'Share this patch…', disabled: true });   // greyed until there's a person-to-person channel
-    // Recording the window to a video file. Desktop only — it needs the main process to
-    // answer the screen-share prompt and to stream the file to disk.
-    if (recorder && recorder.available()) {
-      file.push({ label: `${recorder.recording ? 'Stop recording' : 'Record video…'}   R`, action: () => toggleRecording() });
-    }
     const edit = [
       { label: 'Undo', disabled: !rack.canUndo(), action: () => rack.undo() },
       { label: 'Redo', disabled: !rack.canRedo(), action: () => rack.redo() },
@@ -592,45 +738,63 @@ async function boot() {
       { label: 'Fit to window', action: () => rack.resetZoom() },
       { label: 'Patch notes', action: () => notes.toggle() },   // info about this patch
     ];
+    // Capturing what you can SEE belongs under View, beside the other things that change what is
+    // on screen — not under File, which is about the patch. Both are desktop only: they need the
+    // main process to reach the window's pixels and to write to disk.
+    if ((recorder && recorder.available()) || snapshotAvailable()) {
+      view.push({ separator: true });
+      // "Snapshot VIEW", not just "snapshot": on an instrument, an unqualified snapshot sounds
+      // like it might capture the sound or the patch state. This one captures what you can see.
+      if (snapshotAvailable()) view.push({ label: 'Snapshot view', action: () => takeSnapshot() });
+      if (recorder && recorder.available()) {
+        view.push({ label: `${recorder.recording ? 'Stop recording' : 'Record video…'}   R`, action: () => toggleRecording() });
+      }
+    }
     // Rack: rack-shaping actions gathered in one place. "Delete this module" acts on the module that was
     // right-clicked (rec); it's disabled when the background was clicked, or the module is pinned (mixer).
     const rackMenu = [
-      { label: 'Rows in rack', submenu: [1, 2, 3, 4, 5].map((n) => ({
+      // The transport, first: the two things reached most often in here. One bus per row with its
+      // full name — there is room for it, and "Master" says what "MSTR" only abbreviates.
+      { words: [{ label: 'Master', isOn: () => rack.busEnabled('master'), flip: () => rack.toggleBusEnable('master') }] },
+      { words: [{ label: 'Monitor', isOn: () => rack.busEnabled('monitor'), flip: () => rack.toggleBusEnable('monitor') }] },
+      { separator: true },
+      { label: 'Rows', submenu: [1, 2, 3, 4, 5].map((n) => ({
         label: String(n), checkFn: () => rack.rowCount === n, action: () => setRows(n),
       })) },
-      { label: 'Add module', submenu: MODULE_TYPES.filter((t) => !t.hidden).map((t) => ({
+      // A SINGLETON type leaves the menu once one is in the rack — Video Output, where a second
+      // one would be meaningless. Checked here rather than by hiding the entry permanently, so
+      // it comes back the moment the module is deleted.
+      { label: 'Add module', submenu: MODULE_TYPES.filter((t) => !t.hidden
+        && !(t.descriptor && t.descriptor.singleton && rack.hasModule(t.descriptorId))).map((t) => ({
         label: t.name, action: () => rack.addModuleFromMenu(t.descriptorId, rowIndex),
       })) },
-      { label: 'Delete this module', disabled: !(rec && !rec.pinned),
-        action: rec && !rec.pinned ? () => rack.deleteModuleFromMenu(rec) : undefined },
+      // Deleting a module is NOT here. It lives on the module's own right-click menu, where
+      // "this module" means the one under the pointer rather than whichever title bar happened to
+      // open this menu.
     ];
-    rack.openMenu(x, y, [
-      // Sound sits at the very top: one row with two word-buttons, MSTR and MON. Clicking a word
-      // toggles that bus (red when on, greyed when off) and the menu STAYS OPEN; hovering an OFF
-      // word auditions it momentarily (a write-free peek) and stops on leave. The words are twins
-      // of the mixer's own enable lamps.
-      { words: [
-        { label: 'MSTR', isOn: () => rack.busEnabled('master'), flip: () => rack.toggleBusEnable('master'), peek: (on) => rack.auditionSound(on ? 'master' : null) },
-        { label: 'MON', isOn: () => rack.busEnabled('monitor'), flip: () => rack.toggleBusEnable('monitor'), peek: (on) => rack.auditionSound(on ? 'monitor' : null) },
-      ] },
+    // DR is the application menu, in the position and role the app menu holds on a Mac. DEV is
+    // last and abbreviated: it earns a place for the people who need it without taking the width
+    // of "Developer" from the menus everyone uses.
+    return [
+      { label: 'DR', submenu: rack.helpMenuItems().filter((i) => /about/i.test(i.label || '')).concat([
+        { separator: true },
+        { label: 'Interactive tutorial', action: () => rack.onTutorial && rack.onTutorial() },
+      ]) },
       { label: 'File', submenu: file },
       { label: 'Edit', submenu: edit },
       { label: 'View', submenu: view },
       { label: 'Rack', submenu: rackMenu },
-      { label: 'Developer', submenu: rack.developerMenuItems(rec) },
       { label: 'Help', submenu: rack.helpMenuItems() },
-    ]);
+      { label: 'DEV', submenu: rack.developerMenuItems(rec) },
+    ];
   };
   // Read the folder, THEN open. It's a local readdir of a handful of files, so the wait is
   // imperceptible — and opening first and re-opening once it lands makes the menu flicker.
-  rack.onAppMenu = (x, y, rec, rowIndex) => { refreshRecent().then(() => openAppMenu(x, y, rec, rowIndex)); };
-  // The always-visible hamburger: the same main menu, for anyone who hasn't met right-click yet
-  // (or dismissed the tour before it said so). Opens under the button, like a menu bar would.
-  document.getElementById('burger').addEventListener('click', async (e) => {
-    const r = e.currentTarget.getBoundingClientRect();
-    await refreshRecent();
-    openAppMenu(r.left, r.bottom + 4);   // drop it DOWNWARD from a top-left button, like a menu bar
-  });
+  // Every module's title-bar hamburger opens this. The window's own corner button is gone: with a
+  // hamburger on each module the menu is always near the pointer, which was the whole point.
+  rack.onAppMenuBar = (x, y, rec, rowIndex) => {
+    refreshRecent().then(() => rack.openMenuBar(x, y, appMenuItems(rec, rowIndex)));
+  };
 
   // The interactive tutorial: modeless cards the reader drives with Next/Back. Opens on a first
   // run (unless "Don't show on startup" is set), and always available from Help ▸ Interactive tutorial.

@@ -54,6 +54,32 @@ A video oscillator is therefore a video module with a *frequency* CV input, not
 something you patch an audio oscillator into. Get this wrong and the result is a
 slideshow.
 
+#### Audio rate does have one route in: as a texture
+
+The rule above forbids audio-rate CV from reaching a *parameter*. It does not forbid
+audio-rate signal from reaching the image — it just has to arrive as DATA rather than as
+a knob position. One frame's worth of samples uploaded as a one-dimensional texture, read
+by the shader along a coordinate, gives genuine audio-rate variation ACROSS the frame:
+a 200 Hz waveform becomes two hundred cycles of structure between one edge and the other.
+
+This is the honest equivalent of what analog gets from an oscillator changing thousands
+of times within a scan line, and it is the only mechanism in the design that produces
+fine texture from the audio patch rather than from a shader's own maths. A module taking
+an audio-domain input and emitting luma — the waveform read as a field — is the natural
+home for it.
+
+#### Sync by phase, not by edges
+
+A clock resetting a video oscillator is the obvious patch, and doing it by detecting the
+pulse's edge is the obvious implementation. It is also the wrong one: the edge happens in
+the audio thread and the video sees it at the next frame boundary, so every reset lands
+with up to 17 ms of jitter, which reads as sloppiness at any real tempo.
+
+Sample the clock's rising PHASE instead. A phase that climbs from zero to one over each
+beat is correct whenever it is read, so a per-frame sample is exact rather than late, and
+the video is locked to the beat's position rather than to its edge. Modules therefore
+expose *phase* inputs where the hardware idiom would suggest a reset input.
+
 ## 2. Architecture
 
 ### Multi-pass render-to-texture
@@ -113,6 +139,23 @@ is to be tuned during implementation — a pure white risks reading as one of th
 push-button discs, so it may want lifting off pure or carrying a stronger edge, and it
 has to hold up on the light face as well as the dark one.
 
+### One context, one canvas
+
+Every video module, every preview and the output share a SINGLE WebGL2 context. This is
+not a preference: textures cannot be shared between contexts, so two contexts could not
+pass an image from one module to the next at all, and browsers cap a page at around
+sixteen. The engine owns the context; modules own passes within it; the output window
+receives the result through a transferred `OffscreenCanvas` rather than a context of its
+own.
+
+### Render resolution is not display resolution
+
+The engine renders at its own internal resolution and scales to the display. They are
+decoupled deliberately: cost is per-pixel per-pass, so this is the one dial that trades
+quality for headroom, and it is the honest way to degrade under load (question 1) rather
+than stuttering. It defaults BELOW native — the aesthetic tolerates it, and feedback
+positively benefits, since a softer buffer is what makes trails bloom rather than alias.
+
 ### Video edges are logical, not audio-graph
 This is the one genuinely new idea. A luma or rgb cable connects two shader passes; it
 wires no AudioNode. The patchbay records the edge, draws the cable, and reports it to the
@@ -144,10 +187,42 @@ frame. The scopes and monitors already tap live signals through AnalyserNodes; t
 the same mechanism at a far lower rate. One tap per connected CV input, read at the top
 of each frame.
 
-### The output window
-A second window — a BrowserWindow under Electron, a popup with a transferred
-OffscreenCanvas in the browser — carrying nothing but the canvas. Movable to another
-monitor, resizable, and remembering its size and position the way the main window does.
+### The output window — the same document, floated
+
+The requirement is a window carrying nothing but the picture, draggable to a second
+monitor, resizable, remembering its size and position the way the main window does.
+
+What decides the mechanism is the constraint above: **textures cannot cross a WebGL
+context**, and a second Electron `BrowserWindow` is a second process, so it can never
+render this graph. That leaves two shapes, and they differ in where the engine lives.
+
+The engine could live IN the output window, receiving only parameter values — pixels never
+cross the boundary, and it fullscreens natively on any display. The cost is that the
+window stops being optional: close it and all video stops, including the monitor probes,
+whose thumbnails would have to be shipped back over IPC every frame.
+
+**Take the other shape.** The engine stays in the main window and the floating window is a
+dumb mirror, opened with the **Document Picture-in-Picture API**. That gives a real
+OS-level window — always on top, resizable, draggable to another monitor — which
+nonetheless belongs to the *same document and the same JS context*. So there is no IPC, no
+pixel copying, no second engine, and one code path for Electron, Chrome and Edge alike.
+The monitor probes stay trivial because they render in the same context, and capture
+(section 5) comes off the same canvas. Close the window and the canvas returns to a pane
+in the rack, so the video never stops — it just changes where it is shown.
+
+**One risk, worth spiking in phase 0:** adopting a canvas element into another document can
+drop its WebGL context. If it does, the fallback needs no new architecture — `captureStream`
+from the canvas into a video element inside the PiP window, still one context and still no
+IPC, at the cost of an encode step and a frame of latency. Ten minutes of phase 0 decides
+which, and it is the difference between moving a DOM node and plumbing a stream.
+
+Firefox and Safari have no Document PiP; there the picture stays in a floating pane inside
+the app. Same position as file-saving: the full experience on Chromium, everything still
+working elsewhere.
+
+**Fullscreen on a projector is a different requirement** and does want a second Electron
+window fed by a WebRTC loopback of the canvas stream. That is a presentation feature, not
+part of the instrument, and it belongs with capture in the last phase.
 
 **No sync generation and no genlock.** We are drawing frames, not producing a video
 signal. A large part of the hardware world's complexity does not apply.
@@ -160,35 +235,78 @@ processing is monochrome, and colour happens at two specific places.
 ### First set — enough to be worth using
 1. **Video Output** · rgb in. Owns the window and the final image. Terminal module, one
    per rack, like the Mixer. Inputs: the image, plus a background colour.
-2. **Coordinate warp** · luma. Emits a transformed coordinate space: translate, rotate,
-   scale, polarise, twist, mirror, tile. CV over every one. The workhorse.
+2. **Coordinate warp / fields** · luma. Both halves of the same job: it EMITS a coordinate
+   field and it TRANSFORMS one. The fields replace the hardware idea of horizontal and
+   vertical ramp voltages, and are the design's most-used signal: X, Y, diagonal, radial,
+   angle, mirrored, quantised, scrolling. The transforms are translate, rotate, scale,
+   polarise, twist, mirror and tile, with CV over every one. The workhorse.
 3. **Shapes** · luma. Thresholds and window comparators over a coordinate input — bars,
    rectangles, discs, rings, wedges — with CV over position, size and edge softness.
 4. **Video oscillator** · luma out. Per-pixel high-frequency source with CV over
    frequency, shape and phase. The origin of texture, moiré and interference.
 5. **Video maths** · luma. Multiply, ring-modulate, difference, min, max, mix. Nearly
    free to build and combinatorially enormous.
-6. **Encoder** · three luma in, rgb out. The bridge to colour, and the one that gives the
+6. **Video mixer / compositor** · luma or rgb. Two images, a blend mode and a mix amount
+   under CV, plus an optional third input used as a KEY so the blend is per-pixel rather
+   than global. Blend modes: crossfade, add, multiply, screen, difference, lighten,
+   darken, alpha-over. Distinct from video maths, which combines single channels
+   arithmetically — this one composites pictures, and it is what turns a rack full of
+   sources into one image. Luma and chroma keying live here too.
+7. **Encoder** · three luma in, rgb out. The bridge to colour, and the one that gives the
    patched look: three independently processed monochrome chains become red, green and
    blue. With CV over each channel's gain.
-7. **Decoder** · rgb in, three luma out. The way back, and the only sanctioned route from
+8. **Decoder** · rgb in, three luma out. The way back, and the only sanctioned route from
    colour to monochrome — the connection rules deny it silently precisely so this module
    is where the choice gets made.
-8. **Colorizer** · luma in, rgb out. A different job from the encoder: one channel mapped
+9. **Colorizer** · luma in, rgb out. A different job from the encoder: one channel mapped
    through a palette, with CV over palette position and rotation. The quick route to
    colour when three chains are more than the patch needs.
 
 ### Second set — where it gets strange
-9. **Frame feedback** · luma or rgb. Last frame, affinely or polar-transformed, blended
+10. **Frame feedback** · luma or rgb. Last frame, affinely or polar-transformed, blended
    under the new frame. This single module produces the tunnelling, blooming, recursive
    imagery that people build whole instruments around. Ping-pong framebuffers; the
    one-frame delay is the effect, not a defect.
-10. **Keyer / compositor** · rgb. Luma and chroma keys, soft keys, layer blending.
 11. **Scan processor** · luma. Rutt/Etra style geometric displacement driven by an
     input's brightness.
 12. **External source** · rgb out. Camera or a still image as a texture input.
 13. **Image to CV** · luma or rgb in, control out. Average, movable probe, and centroid
     X/Y — the loop back to the audio side. See section 4.
+
+### The video monitor — a probe, not a module
+
+Rate this above any module on the list. A patch of eight video modules has one output, so
+without something else you cannot see what the third module in a chain is emitting except
+by unplugging the chain and routing it to the output — and the hardware answer, a wall of
+monitors, is not available.
+
+The rack already solves this for audio: clip-on oscilloscopes and ear monitors attach to
+any terminal and draw a line back to the point they are watching. The video monitor is
+the same object for a video jack — a small live picture of whatever that terminal is
+emitting, clipped anywhere, as many at once as wanted, with the same callout line and the
+same freeze button. It costs one extra small pass per monitor in a context that is already
+rendering, and it reuses machinery that exists rather than inventing a preview system.
+
+It is the difference between patching video by prediction and patching it by looking.
+
+### Panel and control conventions
+
+- **knAcks for three or four parameters per module, not for all of them.** Almost every
+  video parameter *wants* modulation, which makes it tempting to give every knob a centre
+  jack. Resist it: eight knAcks on one panel is a field of identical circles with no
+  visual hierarchy, and every one of them is a cable target on a panel already crossed by
+  video cables. Choose the parameters that are actually worth automating and leave the
+  rest as plain knobs.
+- **A knAck always means "a cable here modulates this parameter."** Video signal routing
+  uses ordinary jacks. Never a knAck for an image input or output — that would make the
+  same control mean two unrelated things.
+- **Short fixed labels, no numeric readouts on the faceplate.** FREQ, PHASE, ANGLE, SIZE,
+  HUE, SAT, MIX, FEED, ZOOM, ROT, KEY, SOFT. Exact values belong in the right-click menu
+  and the inspector, not printed on the panel.
+- **Video jacks must differ by more than colour.** luma is white and rgb magenta, but a
+  jack that can ONLY be told apart by hue is a jack that cannot be told apart at a glance,
+  under magnification, or by anyone whose colour vision differs. Give the video domains a
+  distinct outline or shape as well, so the difference survives the colour being missed.
 
 ## 4. Video back to CV — in scope
 
@@ -240,56 +358,163 @@ actually want.
 1. **How many video modules is realistic in one patch?** Twenty passes at 1080p is
    comfortable, but the ceiling should be measured rather than assumed, and the engine
    should degrade honestly (drop render resolution) rather than stutter.
-2. **Does the video graph allow cycles anywhere, or only through the feedback module?**
-   Allowing them everywhere is more modular and makes every cable a potential feedback
-   path; restricting them to one module is far easier to reason about and to draw.
-3. **What happens to a video patch on save/load?** Video edges are ordinary graph edges
-   and should serialise like any other, but the framebuffer state does not — a restored
-   feedback patch starts from black.
-4. **The exact white for luma jacks**, per section 2 — a tuning job at implementation,
+2. **The exact white for luma jacks**, per section 2 — a tuning job at implementation,
    not a design decision.
 
-## 8. Build sequence
+## 8. Decided
+
+**Cycles go through the feedback module only.** Allowing a loop on any cable would be more
+modular, but it makes every cable a potential feedback path, it is hard to draw honestly,
+and it means the patchbay can no longer reject cycles — a rule that currently protects the
+audio graph. Frame feedback keeps its loop INTERNAL, where the one-frame delay is
+explicit and the ping-pong buffers have one owner.
+
+**A video patch saves and restores from the first phase, not the last.** Video edges are
+ordinary graph edges and serialise like any other; the framebuffers do not, so a restored
+feedback patch starts from black. This is deliberately not deferred: a graph that
+evaporates on restart reads as broken, and retrofitting persistence after the module set
+exists means revisiting every descriptor.
+
+## 9. Build sequence
 
 Phases, in the sense the sequencer used them — each ends somewhere you can see whether
 the idea is working.
 
+Phases 0 to 4 all serve ONE module, Video Output. Almost none of that work is the module:
+it is the spine — two domains, a context, an engine, a new kind of patchbay endpoint, and a
+window — and the module is the thin thing on top that proves each piece before the next
+lands on it.
+
 ### Phase 0 — Spike, outside the rack
-A standalone page: a window, a WebGL2 context, two hard-coded passes with the second
-sampling the first, driven by fake uniforms. No rack integration. **Checkpoint:** a
-moving image on screen and a measured frame time for twenty passes at 1080p, so
-question 1 is answered before anything is designed around the answer.
+A standalone page: a WebGL2 context, two hard-coded passes with the second sampling the
+first, driven by fake uniforms. No rack integration. It exists to answer three questions
+before anything is designed around a guess.
 
-### Phase 1 — The domains and one module
-Both `luma` and `rgb` domains, the patchbay's logical-edge handling and its connection
-rules, the video engine, the output window, and **Video Output** alone showing a test
-pattern with CV over one parameter. Both domains land here even though only `rgb` is
-used yet — retrofitting a second domain after modules exist means revisiting every
-descriptor and every jack.
-**Checkpoint:** a cable from an LFO visibly moves something in a separate window that
-can be dragged to another monitor.
+**Checkpoint:** a moving image on screen, plus
+1. frame time against pass count at 1080p, answering question 1 by measurement;
+2. whether a single-channel R8 framebuffer is meaningfully cheaper than RGBA8, which is the
+   assumption the whole luma/rgb split rests on;
+3. whether a canvas keeps its WebGL context when moved into a Document Picture-in-Picture
+   window — which decides whether the output is a moved DOM node or a piped stream.
 
-### Phase 2 — A patchable monochrome chain
+Built: `spikes/video-phase0.html`. Delete it once phase 2 supersedes it.
+
+#### Results — Apple M4, ANGLE Metal renderer, 1920×1080
+
+**Q1, answered. Cost is linear in passes and there is a great deal of headroom.**
+
+| passes | RGBA8 ms/frame | R8 ms/frame |
+|---|---|---|
+| 1 | 0.39 | 0.34 |
+| 10 | 2.21 | 1.18 |
+| 20 | 3.82 | 2.02 |
+| 40 | 7.64 | 3.50 |
+| 60 | 12.26 | 5.2 |
+
+About **0.20 ms per RGBA8 pass** and **0.10 ms per R8 pass**, straight-line, so roughly
+**80 RGBA8 or 190 R8 full-screen passes fit inside one 60 Hz frame** at 1080p. The spec's
+"a modern GPU is untroubled by twenty of them" holds with a factor of four to spare. Twenty
+passes cost 3.82 ms, under a quarter of the frame budget.
+
+Consequence for the design: **pass count is not the thing to worry about.** The internal
+render-resolution dial stays (it is still how to degrade on weaker hardware), but there is
+no need to fuse passes, cache aggressively, or cap the module count in a first version.
+
+**Q2, answered, and it settles the domain split on cost as well as on idiom.** R8 is a
+little over **half** the cost of RGBA8 per pass — 47% cheaper at twenty passes — so the
+common case, a monochrome chain, is also the cheap one, and a luma patch can be about twice
+as deep as an rgb one for the same time. That is a stronger result than "keeping them apart
+is the compositional idiom" needed.
+
+**Q3, answered: the canvas SURVIVES the move.** Run in a real window, `requestWindow()`
+opens and the canvas — adopted into the PiP window's document — still shows the pattern. A
+lost WebGL context paints nothing at all, so an image on screen is proof the context
+survived. **The moved-DOM-node route is the one to build**, and the `captureStream` fallback
+is not needed: one context, no IPC, no encode, no latency.
+
+Both of the behaviours that "survived" does not by itself prove were also confirmed by hand:
+the picture keeps **animating** once moved — so the main document's render loop goes on
+driving a canvas that now lives in another window — and **closing the window returns the
+canvas to its pane** in the page. That is the whole of the output-window design verified
+before a line of it is written, including the claim that the video never stops and only
+changes where it is shown.
+
+Inside an embedded browser view — the harness this was first attempted in —
+`requestWindow()` fails with `InvalidStateError: Internal error: no window`, since there is
+no OS window to attach to. Worth knowing: it means automated tests cannot cover the output
+window, and that path needs a human at a real window.
+
+#### A measurement note worth keeping
+
+The first version of the spike timed frames around `gl.finish()` and reported **0.07 ms for
+sixty 1080p passes**, which is impossible. On Apple's Metal backend through ANGLE, `finish()`
+does not block until the GPU is idle, so the timing measured only the CPU cost of submitting
+commands. A **one-pixel `readPixels`** is the reliable sync point: it cannot return without
+real pixel data, so the driver has to complete the work first. Any future performance work
+in this engine should use that, and should distrust any figure that looks too good.
+
+### Phase 1 — Domains and jacks, with nothing rendering
+The `luma` and `rgb` domains, the `canConnect` matrix, jack painting with a distinct
+outline as well as a colour, and panel-editor and control-library support so a video jack
+can be drawn at all. No graphics.
+**Checkpoint:** a panel shows a video jack that reads as clearly different from an audio
+one; a CV cable into it is allowed and an audio cable refused. The whole domain layer
+verified before any GL exists.
+
+### Phase 2 — The context and the test pattern
+The rack-owned, lazily created WebGL context; one framebuffer; the test-pattern shader; the
+module's descriptor, factory and faceplate; and the preview thumbnail. No window yet.
+The test pattern earns its keep: bars for colour, a centre cross for framing, a gradient
+for banding, and one moving element so it is visibly live.
+**Checkpoint:** place the module and watch the pattern move inside a 20 mm square on its
+own panel. The biggest phase, and the whole graphics spine proven with none of the
+window's complexity.
+
+### Phase 3 — The floating window
+Open and close with its lamp, size and position remembered, `FRAME` and `RES`, and
+whichever of the two window mechanisms phase 0 chose.
+**Checkpoint:** drag it to a second monitor, resize it, switch to vertical framing, close it
+and reopen it where it was.
+
+### Phase 4 — CV reaches a uniform
+A new endpoint kind for the patchbay: every target it has today is an AudioParam or a node
+input, and a video parameter is neither. Per-frame sampling, `BRIGHT` as a knАck, `LIMIT`.
+Persistence rides along, being small once the params exist.
+**Checkpoint:** an envelope fades the image, an over-bright input cannot exceed the
+ceiling, and it survives a restart.
+
+The phase to watch is 4. The rest is conventional work; "a cable lands on a video
+parameter" is a genuinely new shape, and every later video module depends on it.
+
+### Phase 5 — A patchable monochrome chain
 Coordinate warp, Shapes and Video maths — all luma — plus **Colorizer** to reach the rgb
 input of Video Output. Video cables between modules become real and the topological sort
 earns its keep. **Checkpoint:** three luma modules in series produce an image none of
 them could alone.
 
-### Phase 3 — Three chains and real colour
+### Phase 6 — Composite, and see inside the patch
+**Video mixer / compositor** and the **video monitor** probe. They belong together: the
+moment a patch has two sources worth combining is the moment you can no longer tell what
+either of them looks like on its own. **Checkpoint:** two sources crossfaded under CV,
+with a monitor clipped to each one showing what is going into the blend.
+
+### Phase 7 — Three chains and real colour
 Video oscillator, **Encoder** and **Decoder**. This is where the two-domain split pays
 off: three independently processed monochrome chains driving red, green and blue.
 **Checkpoint:** the same shape patched through three chains with different warps per
 channel, giving colour fringing that a single RGB chain cannot produce — and moiré
 responding to a CV sweep.
 
-### Phase 4 — Feedback
+### Phase 8 — Feedback
 Frame feedback with its transform. **Checkpoint:** the tunnel.
 
-### Phase 5 — Closing the loop
+### Phase 9 — Closing the loop
 **Image to CV**: the GPU-side reduction, the once-per-frame readback, and the average,
 probe and centroid outputs. **Checkpoint:** a shape drifting across the frame moves an
 oscillator's pitch — the image playing the synth that is drawing it.
 
-### Phase 6 — Capture
+### Phase 10 — Capture
 `captureStream` into `MediaRecorder`, with framing options and the patch audio as the
-soundtrack. **Checkpoint:** a shareable clip written to a file.
+soundtrack. The projector window belongs here too — an Electron-only second window fed by
+a WebRTC loopback of the same stream, for genuine fullscreen on a second display.
+**Checkpoint:** a shareable clip written to a file, and the picture filling a projector.

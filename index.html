@@ -121,13 +121,20 @@
     /* ---- always-visible hamburger: the main menu without needing to know about right-click ----
        Fixed chrome drawn over whatever panel corner is beneath it; the rack pans and zooms under it.
        Below menus and the overview (which is meant to cover everything) so it never fights them. */
-    #burger { position: fixed; top: 8px; left: 8px; z-index: 1300; width: 26px; height: 26px; padding: 0;
-      display: inline-flex; align-items: center; justify-content: center; cursor: pointer;
-      border: 1px solid var(--line); border-radius: 6px; background: var(--panel);
-      box-shadow: 0 2px 8px rgba(0,0,0,0.45); }
-    #burger svg { width: 16px; height: 16px; fill: var(--ink); }
-    #burger:hover { background: var(--accent); }
-    #burger:hover svg { fill: var(--accent-ink); }
+    /* The MENU BAR. A horizontal strip of menu titles that appears where it is summoned — from
+       any module's title-bar hamburger — rather than living permanently across the top of the
+       window. A menu bar's shape and reach, with none of the vertical space given up to it. */
+    .rack-menubar { position: fixed; z-index: 1305; display: flex; align-items: stretch;
+      background: var(--panel); border: 1px solid var(--line); border-radius: 7px;
+      box-shadow: 0 6px 22px rgba(0,0,0,0.5); padding: 3px 5px; gap: 0.34em;
+      font: 500 13px/1 -apple-system, system-ui, sans-serif; user-select: none; }
+    /* As narrow as the words themselves: no column padding, one space between items, so each
+       title takes exactly the width of its own text. "DR" is short and "View" is longer, and the
+       bar is only as wide as it has to be. */
+    .rack-menubar-item { padding: 5px 3px; border: none; border-radius: 4px; background: none;
+      color: var(--ink); font: inherit; cursor: pointer; white-space: nowrap; }
+    .rack-menubar-item:hover { background: rgba(128,128,128,0.22); }
+    .rack-menubar-item.open { background: var(--accent); color: var(--accent-ink); }
 
     /* ---- getting-started tour: a MODELESS floating card (no backdrop — you must be able to work
        while it's up). Above the scopes/monitors band, below menus and the overview. ---- */
@@ -352,6 +359,10 @@
     .rack-submenu { z-index: 1410; }
     .rack-menu { border-width: 1.5px; border-color: #141414; }            /* light mode: dark line to stand out */
     .rack-menu.theme-dark { border-color: #d2d2d6; }                       /* dark mode: light line */
+    /* The bar wears the SAME outline as the menus that drop from it, so the two read as one
+       object rather than a strip with unrelated panels hanging off it. */
+    .rack-menubar { border-width: 1.5px; border-color: #141414; }
+    .rack-menubar.theme-dark { border-color: #d2d2d6; }
     .confirm-overlay { position: fixed; inset: 0; z-index: 3200; background: rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; }
     .confirm-box { background: var(--panel); color: var(--ink); border: 1px solid var(--line); border-radius: 10px; padding: 18px 20px;
       min-width: 240px; max-width: 360px; box-shadow: 0 12px 36px rgba(0,0,0,0.55); font: 13px/1.45 -apple-system, system-ui, sans-serif; }
@@ -369,13 +380,6 @@
   </style>
 </head>
 <body>
-  <button id="burger" title="Menu" aria-label="Menu">
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <rect x="4" y="6" width="16" height="2.4" rx="1"/>
-      <rect x="4" y="11" width="16" height="2.4" rx="1"/>
-      <rect x="4" y="16" width="16" height="2.4" rx="1"/>
-    </svg>
-  </button>
   <svg id="tutorialCallout"></svg>
   <div id="rack"></div>
 

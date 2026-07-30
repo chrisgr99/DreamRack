@@ -38,6 +38,11 @@ contextBridge.exposeInMainWorld('wcoast', {
     cancel: () => ipcRenderer.invoke('record:cancel'),
     reveal: (p) => ipcRenderer.invoke('record:reveal', p),
   },
+  // A still of the window, written to Downloads as a PNG. Same destination and naming as a video
+  // take, and the same "saved" pill afterwards, so the two feel like one feature.
+  snapshot: {
+    save: (suggestedName) => ipcRenderer.invoke('snapshot:save', suggestedName),
+  },
   // Patch files. open() -> { path, text } | null; save/saveAs -> { path } | null.
   // setDirty tells the main process about unsaved changes so it can guard the
   // window close.

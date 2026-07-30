@@ -41,6 +41,10 @@ export const FACE_LEFT_MM = 3.9;
 // band live here (they used to run vertically up the left edge). The strip occupies part
 // of the top gutter the crop used to discard, so no module content moves — the module
 // simply displays 4mm taller.
+// Room kept clear at the LEFT of the title bar for the menu hamburger. Shared by the glyph and
+// the identity banner so the two cannot disagree about it: the banner grows leftward from the
+// name, and without this it would slide straight under the hamburger on a narrow module.
+export const TITLE_BURGER_MM = 6.4;
 export const TITLE_STRIP_MM = 4;
 // The DRAWN title bar is taller than the revealed gutter: the extra 2mm overlays the face's
 // blank top margin, so total module height and all content positions stay put.
@@ -691,6 +695,12 @@ const JACK = {
   cv: '#ff7300',       // CV / control — orange
   trigger: '#5aa0e6',  // trigger / gate / pulse — light blue (black dashes read on it)
   pitch: '#39a85a',    // 1V/oct pitch — green (kept distinct)
+  luma: '#babab6',     // video, one channel — off-white knocked back 20%. NOT pure white: the
+                       //   square carries no outline, so it is the drop shadow and this greyer
+                       //   value that separate it from a light face and from a lamp disc — and
+                       //   at full brightness a 6 mm block of white shouts louder than a jack
+                       //   should on a panel you look at for hours.
+  rgb: '#e0359b',      // video, three channels — magenta (black dashes read on it)
   ring: '#000000',     // the direction dashes
   hole: '#2f2f33',     // centre plug-hole
   holeRim: '#cfcfd3',  // hair-thin light rim around the hole
@@ -704,6 +714,8 @@ function jackFill(meta) {
   if (isPitch(meta)) return JACK.pitch;         // 1V/oct pitch stays green
   if (meta.domain === 'audio') return JACK.audio;
   if (meta.domain === 'trigger') return JACK.trigger;
+  if (meta.domain === 'luma') return JACK.luma;
+  if (meta.domain === 'rgb') return JACK.rgb;
   return JACK.cv;                               // control / CV
 }
 
@@ -712,6 +724,18 @@ function jackFill(meta) {
 // the dark panel, so it's dropped there); inner hole = dark grey with a hair-thin
 // light rim.
 function paintJack(port, dark) {
+  // A VIDEO jack's body is a rounded square, not a circle — see vjack() in primitives.
+  // It deliberately keeps NO outline in either theme: the drop shadow defines it, and a black
+  // edge this close to the black direction dashes would read as one thick smudge.
+  const body = port.element.querySelector('rect[data-wcoast-role="jackbody"]');
+  if (body && port.meta) {
+    const hole = port.element.querySelector('[data-wcoast-role="jackhole"]');
+    body.setAttribute('fill', jackFill(port.meta));
+    body.setAttribute('stroke', 'none');
+    if (hole) { hole.setAttribute('fill', JACK.hole); hole.setAttribute('stroke', JACK.holeRim); hole.setAttribute('stroke-width', JACK.holeRimW); }
+    addSquareDirRing(port, body, hole);
+    return;
+  }
   const circles = [...port.element.querySelectorAll('circle')];
   if (!circles.length || !port.meta) return;
   let outer = circles[0], hole = circles[0], ro = -1, rh = Infinity;
@@ -746,6 +770,52 @@ function addDirRing(port, outer, ro, rh) {
   ring.setAttribute('stroke', JACK.ring);
   ring.setAttribute('stroke-width', round3(w));
   ring.setAttribute('stroke-dasharray', round3(seg) + ' ' + round3(seg));
+  port.element.appendChild(ring);
+}
+
+// The direction mark on a SQUARE video jack. Same rule as the round ones, applied to the
+// shape the jack actually has: an OUTPUT's dashes hug the outer boundary — which here is the
+// square, so they trace a rounded rectangle just inside it — and an INPUT's hug the round
+// hole, so those stay a circle. One dashed element per jack, outward or inward, exactly as
+// every other jack on the panel. Idempotent: a re-paint replaces it.
+function addSquareDirRing(port, body, hole) {
+  const old = port.element.querySelector('.jack-dir-ring');
+  if (old) old.remove();
+  if (!port.meta.dir) return;
+  const x = parseFloat(body.getAttribute('x')), y = parseFloat(body.getAttribute('y'));
+  const wd = parseFloat(body.getAttribute('width')), ht = parseFloat(body.getAttribute('height'));
+  const rr = parseFloat(body.getAttribute('rx')) || 0;
+  const rh = hole ? parseFloat(hole.getAttribute('r')) || 0 : 0;
+  const half = wd / 2;
+  if (!(half > 0) || !(rh < half)) return;
+  const band = half - rh, w = band / 3;               // same third-of-the-surround weight
+  const doc = port.element.ownerDocument;
+  let ring;
+  if (port.meta.dir === 'out') {
+    const inset = w / 2;
+    const rx2 = x + inset, ry2 = y + inset, rw = wd - w, rhh = ht - w;
+    const per = 2 * (rw + rhh);                       // close the dash cycle on the perimeter
+    const n = Math.max(8, Math.round(per / (w * 1.6)));
+    const seg = per / (2 * n);
+    ring = doc.createElementNS(SVG_NS, 'rect');
+    ring.setAttribute('x', round3(rx2)); ring.setAttribute('y', round3(ry2));
+    ring.setAttribute('width', round3(rw)); ring.setAttribute('height', round3(rhh));
+    ring.setAttribute('rx', round3(Math.max(0, rr - inset)));
+    ring.setAttribute('stroke-dasharray', round3(seg) + ' ' + round3(seg));
+  } else {
+    const ringR = rh + w / 2;
+    const circ = 2 * Math.PI * ringR;
+    const n = Math.max(6, Math.round(circ / (w * 1.6)));
+    const seg = circ / (2 * n);
+    ring = doc.createElementNS(SVG_NS, 'circle');
+    ring.setAttribute('cx', round3(x + half)); ring.setAttribute('cy', round3(y + ht / 2));
+    ring.setAttribute('r', round3(ringR));
+    ring.setAttribute('stroke-dasharray', round3(seg) + ' ' + round3(seg));
+  }
+  ring.setAttribute('class', 'jack-dir-ring');
+  ring.setAttribute('fill', 'none');
+  ring.setAttribute('stroke', JACK.ring);
+  ring.setAttribute('stroke-width', round3(w));
   port.element.appendChild(ring);
 }
 
@@ -939,7 +1009,10 @@ function drawIdentityStrip(svg, descriptor, ports, name) {
   const SEG_MM = 12, SEG_SHIFT = 1;         // the pill sits 1mm left of the name's gap edge
   const segs = [];
   const segEnd = gapL - SEG_SHIFT;
-  const segL = Math.max(left, segEnd - SEG_MM);
+  // The banner grows leftward from the name and stops clear of the hamburger — SHORTENED rather
+  // than overlapped, so on a narrow module the colour gives way to the control rather than sitting
+  // underneath it. On a wide one there is room for the full 12 mm and nothing changes.
+  const segL = Math.max(left + TITLE_BURGER_MM, segEnd - SEG_MM);
   if (segEnd - segL > 0.3) segs.push([segL, segEnd]);
   const segClipId = `title-seg-clip-${stripClipSeq++}`;
   const sclip = doc.createElementNS(SVG_NS, 'clipPath'); sclip.setAttribute('id', segClipId);
@@ -1000,11 +1073,61 @@ function decoratePanel(parsed, descriptor, opts) {
     t.setAttribute('pointer-events', 'auto');   // the title is the delete/move handle (right-click for its menu)
     t.textContent = name;
     svg.appendChild(t);
+
+    // The MENU HAMBURGER, at the right end of the title bar. Every module carries one and they
+    // all open the same application menu — the point is proximity: the menu appears where you are
+    // already working instead of at a far corner. It replaces the window's own corner button.
+    //
+    // Drawn here rather than injected by the rack so it scales with the panel and inherits the
+    // title strip's own geometry. The rack binds the click and, importantly, swallows pointerdown
+    // — the title bar is the module's drag handle, so without that a click would start a drag.
+    const bg = svg.ownerDocument.createElementNS(SVG_NS, 'g');
+    bg.setAttribute('class', 'module-burger');
+    bg.setAttribute('pointer-events', 'auto');
+    bg.style.cursor = 'pointer';
+    const bcx = FACE_LEFT_MM + TITLE_BURGER_MM / 2;            // LEFT end, inside the strip
+    const bcy = FACE_TOP_MM - TITLE_STRIP_MM + (TITLE_BAR_MM - 0.5) / 2;
+    const bw = 3.4, gap = 1.15;
+    // An invisible pad first, so the target is the whole end of the bar rather than three hairlines.
+    const pad = svg.ownerDocument.createElementNS(SVG_NS, 'rect');
+    pad.setAttribute('x', round2(bcx - 2.6)); pad.setAttribute('y', round2(bcy - 2.6));
+    pad.setAttribute('width', '5.2'); pad.setAttribute('height', '5.2');
+    pad.setAttribute('fill', 'none'); pad.setAttribute('pointer-events', 'all');
+    bg.appendChild(pad);
+    for (let i = -1; i <= 1; i++) {
+      const ln = svg.ownerDocument.createElementNS(SVG_NS, 'line');
+      ln.setAttribute('x1', round2(bcx - bw / 2)); ln.setAttribute('x2', round2(bcx + bw / 2));
+      ln.setAttribute('y1', round2(bcy + i * gap)); ln.setAttribute('y2', round2(bcy + i * gap));
+      ln.setAttribute('stroke', '#ffffff'); ln.setAttribute('stroke-width', '0.55');
+      ln.setAttribute('stroke-linecap', 'round'); ln.setAttribute('opacity', '0.85');
+      ln.setAttribute('pointer-events', 'none');
+      bg.appendChild(ln);
+    }
+    svg.appendChild(bg);
   }
   // The light panel border now wraps the TITLE STRIP too: retire the authored frame (which ran
   // around the face only, drawing a line UNDER the title bar) and draw one border around the
   // whole module — slightly rounded corners at the strip's upper left and right.
-  const frame = svg.querySelector('rect[fill="none"][stroke]');
+  // Find the authored frame by WHAT IT IS, not by where it sits or what order it comes in.
+  // "First unfilled stroked rect anywhere" picks up any stroked outline inside a control — a
+  // video output's dashed direction ring matches it exactly, and was getting its stroke
+  // stripped as though it were the frame. "Direct child only" is no better: only one of the
+  // five panels authors its frame at the top level, so it silently dropped the border from
+  // the other four. What actually identifies a frame is its SIZE: it spans the face.
+  const frame = (() => {
+    const vb = (svg.getAttribute('viewBox') || '').trim().split(/\s+/).map(Number);
+    const faceW = vb.length === 4 && vb[2] > 0 ? vb[2] : 0;
+    for (const r of svg.querySelectorAll('rect[fill="none"][stroke]')) {
+      const st = r.getAttribute('stroke');
+      if (!st || st === 'none') continue;                       // already retired by an earlier paint
+      if (r.closest('[data-wcoast-param],[data-wcoast-port]')) continue;   // part of a control
+      const w = parseFloat(r.getAttribute('width'));
+      if (!(w > 0)) continue;
+      if (faceW && w < faceW * 0.8) continue;                   // a frame spans the face
+      return r;
+    }
+    return null;
+  })();
   if (frame) {
     const vbF = (svg.getAttribute('viewBox') || '').trim().split(/\s+/).map(Number);
     const wF = vbF.length === 4 ? vbF[2] : 142;

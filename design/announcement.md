@@ -42,7 +42,7 @@ The screenshot attached below shows a patch mid-flight. Three oscilloscopes are 
 **What's in it**
 
 - **Four modules to start:** a Complex Oscillator (two oscillators, cross-modulation, wavefolding), a Quad Low Pass Gate with its own clock, a Quad Function Generator, and a six-channel Mixer with independent master and monitor buses.
-- **See what affects what.** Point at any module and the whole signal chain it belongs to lights up, so you can read what feeds it and what it feeds without tracing cables by eye. The cables show their direction of flow too, so you can see which way a signal is running at a glance.
+- **See what affects what.** Hover any control or terminal and the whole signal chain it belongs to lights up, so you can read what feeds it and what it feeds without tracing cables by eye. The cables show their direction of flow too, so you can see which way a signal is running at a glance.
 - **Hear any point in the circuit** without rewiring — hover a terminal to audition it, or drop a monitor that stays live and runs on its own bus, separate from your mix.
 - **See any point too.** Clip-on oscilloscopes, as many at once as you like, auto-scaling and auto-triggering, with a freeze button for signals too complex to hold still. Each also reports frequency, level range and DC offset.
 - **The knAck** — a new space-saving control type that combines a knob and its CV input in one place: you plug the cable straight into the middle of the knob, rather than giving the parameter a knob and a separate jack beside it. A knAck can also include an attenuverter without taking any more space.
@@ -62,7 +62,7 @@ One caveat: turn off any page-recolouring extension such as Dark Reader for the 
 
 **Price and availability**
 
-Free. The source is on GitHub, for non-commercial use with attribution.
+Free.
 
 It's in alpha, and this is the first time it has been public at all — if you try it, you'll be among the first people to use it other than me. So expect rough edges, and things that may need tweaking. 😅 It plays a single voice today; polyphony, input from external sequencers and hosts, and a way to inject test signals into any jack are all on the list.
 
@@ -111,7 +111,7 @@ That's a patch mid-flight. Three oscilloscopes are clipped onto terminals, each 
 **What's in it**
 
 - **Four modules to start:** a Complex Oscillator (two oscillators, cross-modulation, wavefolding), a Quad Low Pass Gate with its own clock, a Quad Function Generator, and a six-channel Mixer with independent master and monitor buses.
-- **See what affects what.** Point at any module and the whole signal chain it belongs to lights up, and the cables show which way the signal is running.
+- **See what affects what.** Hover any control or terminal and the whole signal chain it belongs to lights up, and the cables show which way the signal is running.
 - **Hear any point in the circuit** without rewiring — hover a terminal to audition it, or drop a monitor that stays live on its own bus, separate from your mix.
 - **See any point too.** Clip-on oscilloscopes, as many at once as you like, auto-scaling and auto-triggering, with a freeze button. Each reports frequency, level range and DC offset.
 - **The knAck** — a control that combines a knob and its CV input in one place: you plug the cable into the middle of the knob instead of into a separate jack beside it. It can carry an attenuverter without taking any more space.
@@ -127,7 +127,7 @@ One caveat: turn off any page-recolouring extension such as Dark Reader for the 
 
 **Price**
 
-Free. Source on GitHub, non-commercial use with attribution.
+Free.
 
 It's in alpha and this is the first time it has been public, so expect rough edges. It plays a single voice today; polyphony, external sequencer and host input, and a way to inject test signals into any jack are all on the list.
 

@@ -1,0 +1,49 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Video jack — shape review</title>
+<!--
+  A side-by-side of the four existing round jack families and the two new video squares,
+  input and output of each, painted through the REAL host path (loadPanel -> paintJack) so
+  the colours and direction dashes are the ones that will ship rather than an impression.
+  Both themes, at panel scale and at 4x. Delete once the shape is signed off.
+-->
+<style>
+  body { margin: 0; font: 13px/1.5 -apple-system, system-ui, sans-serif; background: #1a1c1e; color: #e6e8ea; }
+  h2 { font-size: 13px; font-weight: 500; color: #9aa0a6; margin: 18px 14px 6px; }
+  .board { padding: 10px 14px; }
+  .light { background: #cfcfcf; }
+  .dark  { background: #262629; }
+  .row { display: flex; align-items: flex-start; gap: 30px; padding: 8px 14px; flex-wrap: wrap; }
+  .cell svg { display: block; }
+  .x1 svg { height: 46mm; }
+  .x4 svg { height: 184mm; }
+  .cap { color: #9aa0a6; font-size: 11px; margin: 4px 0 0; }
+</style>
+<h2>Light faceplate — panel scale, then 4x</h2>
+<div class="row light" id="rowLight"></div>
+<h2>Dark faceplate — panel scale, then 4x</h2>
+<div class="row dark" id="rowDark"></div>
+<script type="module">
+import { loadPanel } from '../host/panel-loader.js';
+
+// A descriptor is all the host needs to know a jack's family and direction.
+const ports = [];
+for (const dom of ['audio', 'control', 'trigger', 'luma', 'rgb']) {
+  ports.push({ id: `${dom}In`,  name: `${dom} in`,  domain: dom, dir: 'in' });
+  ports.push({ id: `${dom}Out`, name: `${dom} out`, domain: dom, dir: 'out' });
+}
+const descriptor = { id: 'vjackpreview', apiVersion: 1, name: 'Jack review', params: [], ports };
+
+for (const [theme, rowId] of [['light', 'rowLight'], ['dark', 'rowDark']]) {
+  const row = document.getElementById(rowId);
+  for (const scale of ['x1', 'x4']) {
+    const panel = await loadPanel(`vjack-${theme}.svg`, descriptor, { dark: theme === 'dark' });
+    const cell = document.createElement('div');
+    cell.className = 'cell ' + scale;
+    panel.svg.removeAttribute('width'); panel.svg.removeAttribute('height');
+    cell.appendChild(panel.svg);
+    row.appendChild(cell);
+  }
+  console.log(theme, 'warnings:', (await loadPanel(`vjack-${theme}.svg`, descriptor, { dark: theme === 'dark' })).warnings);
+}
+</script>

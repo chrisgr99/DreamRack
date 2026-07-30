@@ -39,6 +39,30 @@ function jack(id, cx, cy, { r = 3.0, hole = 1.6, fill = JACK_NEUTRAL, label: lab
   return out;
 }
 
+// vjack — a VIDEO jack. Same anatomy as jack() but the coloured surround is a ROUNDED
+// SQUARE rather than a circle, which is what marks the video signal family apart from
+// audio, CV and trigger at a glance. Shape, not colour: a jack told apart only by hue is a
+// jack that cannot be told apart in peripheral vision, under magnification, or by anyone
+// whose colour vision differs.
+//
+// The square carries NO outline. Every jack already has a soft drop shadow, and that is what
+// defines a pale surround against a light faceplate — the black edge the round jacks wear on
+// the light panel would fight the black direction dashes at this size.
+//
+// The host repaints the body in the domain colour and lays the direction dashes on it
+// (paintJack / addDirRing): hugging the square's inner edge for an output, hugging the round
+// hole for an input. `r` is the half-width, so a vjack and a jack of the same r occupy the
+// same footprint.
+function vjack(id, cx, cy, { r = 3.0, hole = 1.6, fill = JACK_NEUTRAL, label: lab = null } = {}) {
+  const rr = (r * 0.34).toFixed(2);                 // corner radius: square, but not sharp
+  let out = `  <g data-wcoast-port="${id}" data-wcoast-cx="${cx}" data-wcoast-cy="${cy}">
+    <rect x="${(cx - r).toFixed(2)}" y="${(cy - r).toFixed(2)}" width="${(r * 2).toFixed(2)}" height="${(r * 2).toFixed(2)}" rx="${rr}" fill="${fill}" data-wcoast-role="jackbody" filter="url(#softShadow)"/>
+    <circle cx="${cx}" cy="${cy}" r="${hole}" fill="${JACK_HOLE}" data-wcoast-role="jackhole"/>
+  </g>`;
+  if (lab) out += '\n' + attachedLabel(cx, cy, r, r, lab);
+  return out;
+}
+
 // Knob (continuous control). House blue ring + metal cap + tick marks + a single
 // pointer (the indicator the host rotates). Emits the binding tags and the angle
 // sweep. Style is fixed; radius, cap, sweep, and tick count are params. Scales
@@ -435,4 +459,4 @@ function bipolarMark(kx, ky, kr, { gap = 2.0, spanDeg = 23, r = 1.27, color = '#
   return `  <g>\n    ${parts.join('\n    ')}\n  </g>`;
 }
 
-export { defs, jack, knob, knack, label, attachedLabel, evenScale, bipolarMark, ledLamp, waveGlyph, button, radioGroup, stepButton, slider, vuMeter, textWidth, wrapLines };
+export { defs, jack, vjack, knob, knack, label, attachedLabel, evenScale, bipolarMark, ledLamp, waveGlyph, button, radioGroup, stepButton, slider, vuMeter, textWidth, wrapLines };

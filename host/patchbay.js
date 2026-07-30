@@ -26,10 +26,35 @@ export const ALLOW = 'allow';
 export const WARN = 'warn';
 export const DENY = 'deny';
 
-// The one place the domain policy lives (DESIGN §2). Nothing is denied today:
-// same-domain and audio->control (FM) are allowed; anything touching trigger,
-// or otherwise odd, warns but still connects.
+// The video domains. Held apart from audio/control/trigger because an image is not a
+// signal you can sum into an AudioParam: a `luma` or `rgb` cable is a LOGICAL edge that the
+// video engine reads, not a Web Audio connection.
+const VIDEO = new Set(['luma', 'rgb']);
+export function isVideoDomain(d) { return VIDEO.has(d); }
+
+// The one place the domain policy lives (see design/video-synthesis.md §2). Among the
+// audio-side domains nothing is denied — same-domain and audio->control (FM) are allowed,
+// oddities warn but still connect. The VIDEO rules are the first real denials, and each
+// earns it:
+//
+//   luma -> rgb   ALLOW, broadcasting one channel to all three, so a monochrome chain drops
+//                 into a colour input without ceremony.
+//   rgb -> luma   DENY. Reducing three channels to one is a creative choice — which channel,
+//                 or weighted luminance? — so it goes through the decoder module rather than
+//                 happening silently.
+//   control -> video   ALLOW. CV driving a video parameter is the commonest cable of all.
+//   audio/trigger -> video   DENY. Not prudishness: CV is sampled ONCE PER FRAME, so a
+//                 200 Hz signal aliases into a slow wobble. An audio-rate signal reaches the
+//                 image as a texture, through a module, never as a parameter.
+//   video -> audio/control/trigger   DENY. Extracting CV from an image is the image-to-CV
+//                 module's job, where the reduction and its one frame of latency are visible.
 export function canConnect(srcDomain, dstDomain) {
+  const sv = VIDEO.has(srcDomain), dv = VIDEO.has(dstDomain);
+  if (sv !== dv) {
+    if (!sv && dv) return dstDomain && srcDomain === 'control' ? ALLOW : DENY;
+    return DENY;                                                        // video out of the video world
+  }
+  if (sv && dv) return srcDomain === dstDomain || srcDomain === 'luma' ? ALLOW : DENY;
   if (srcDomain === dstDomain) return ALLOW;
   if (srcDomain === 'audio' && dstDomain === 'control') return ALLOW;   // audio-rate modulation (FM)
   return WARN;                                                          // trigger mismatches / oddities
@@ -41,6 +66,7 @@ export function familyOfPort(port) {
   if (port.role === 'pitch' || port.name === '1V/Oct') return 'pitch';
   if (port.domain === 'audio') return 'audio';
   if (port.domain === 'trigger') return 'trigger';
+  if (VIDEO.has(port.domain)) return port.domain;   // luma and rgb are their own cable colours
   return 'control';
 }
 

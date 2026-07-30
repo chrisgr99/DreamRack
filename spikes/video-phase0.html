@@ -1,0 +1,408 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Video phase 0 — spike</title>
+<!--
+  video-phase0.html — the phase 0 spike from design/video-synthesis.md.
+
+  Deliberately standalone: no rack, no modules, no imports. It exists to answer three
+  questions by measurement before the design commits to an answer.
+
+    1. How does frame time grow with pass count at 1080p? (spec question 1)
+    2. Is a single-channel R8 framebuffer meaningfully cheaper than RGBA8? The whole
+       luma/rgb domain split rests on that being true.
+    3. Does a canvas keep its WebGL context when moved into a Document Picture-in-Picture
+       window? This decides whether the output window is a moved DOM node or a piped
+       stream — see "The output window" in the spec.
+
+  Delete once phase 0 is answered and recorded.
+-->
+<style>
+  :root { color-scheme: dark; }
+  body { margin: 0; background: #131416; color: #e6e8ea;
+         font: 13px/1.5 -apple-system, system-ui, sans-serif; }
+  header { padding: 10px 14px; border-bottom: 1px solid #2c2f33; }
+  h1 { font-size: 15px; margin: 0 0 2px; }
+  .sub { color: #9aa0a6; font-size: 12px; }
+  #wrap { display: flex; gap: 14px; padding: 14px; align-items: flex-start; flex-wrap: wrap; }
+  #stage { border: 1px solid #2c2f33; background: #000; }
+  canvas { display: block; width: 480px; height: 270px; }
+  .panel { min-width: 340px; }
+  button { font: inherit; background: #24272b; color: #e6e8ea; border: 1px solid #3a3e44;
+           border-radius: 5px; padding: 6px 11px; cursor: pointer; }
+  button:hover { background: #2d3136; }
+  button:disabled { opacity: .5; cursor: default; }
+  label { color: #9aa0a6; margin-right: 10px; }
+  select, input { font: inherit; background: #1b1e21; color: #e6e8ea;
+                  border: 1px solid #3a3e44; border-radius: 4px; padding: 3px 5px; }
+  pre { background: #0e1012; border: 1px solid #2c2f33; border-radius: 5px;
+        padding: 9px 11px; white-space: pre-wrap; margin: 10px 0 0; font-size: 12px; }
+  table { border-collapse: collapse; font-variant-numeric: tabular-nums; font-size: 12px; }
+  th, td { border: 1px solid #2c2f33; padding: 3px 9px; text-align: right; }
+  th { color: #9aa0a6; font-weight: 500; }
+  .ok { color: #6ee7a0; } .bad { color: #ff8a8a; } .warn { color: #ffcc66; }
+  .row { margin: 9px 0; }
+</style>
+
+<header>
+  <h1>Video synthesis — phase 0 spike</h1>
+  <div class="sub">Multi-pass render-to-texture, cost against pass count, R8 against RGBA8,
+    and the Document Picture-in-Picture canvas question.</div>
+</header>
+
+<div id="wrap">
+  <div id="stage"><canvas id="c"></canvas></div>
+  <div class="panel">
+    <div class="row">
+      <label>passes <input id="passes" type="number" min="1" max="80" value="20" style="width:56px"></label>
+      <label>render <select id="res">
+        <option value="1920x1080" selected>1920×1080</option>
+        <option value="1280x720">1280×720</option>
+        <option value="960x540">960×540</option>
+        <option value="2560x1440">2560×1440</option>
+      </select></label>
+      <label>format <select id="fmt">
+        <option value="RGBA8" selected>RGBA8</option>
+        <option value="R8">R8 (luma)</option>
+      </select></label>
+    </div>
+    <div class="row">
+      <button id="sweep">Measure cost sweep</button>
+      <button id="pip">Open PiP window (move canvas)</button>
+      <button id="pipStream">Open PiP window (stream)</button>
+    </div>
+    <pre id="out">Rendering. Press "Measure cost sweep" for question 1 and 2, and a PiP
+button for question 3. PiP needs a real click — it requires user activation.</pre>
+    <div id="table"></div>
+  </div>
+</div>
+
+<script>
+'use strict';
+
+const canvas = document.getElementById('c');
+const out = document.getElementById('out');
+const gl = canvas.getContext('webgl2', { antialias: false, depth: false, stencil: false,
+  preserveDrawingBuffer: false, powerPreference: 'high-performance' });
+
+if (!gl) { out.textContent = 'No WebGL2 context. Everything below is moot.'; throw new Error('no webgl2'); }
+
+const dbg = gl.getExtension('WEBGL_debug_renderer_info');
+const RENDERER = dbg ? gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL) : '(renderer hidden)';
+
+// ---- shaders -------------------------------------------------------------
+// A 3-vertex full-screen triangle from gl_VertexID: no buffers, no VAO contents.
+const VERT = `#version 300 es
+void main() {
+  vec2 p = vec2(float((gl_VertexID << 1) & 2), float(gl_VertexID & 2));
+  gl_Position = vec4(p * 2.0 - 1.0, 0.0, 1.0);
+}`;
+
+// Pass 1: the SOURCE. A rotated stripe field times an expanding ring — the two things a
+// video oscillator actually does, so the cost is representative rather than a flat fill.
+const SRC = `#version 300 es
+precision highp float;
+uniform vec2 uRes; uniform float uTime; uniform float uFreq; uniform float uAngle;
+out vec4 o;
+void main() {
+  vec2 uv = gl_FragCoord.xy / uRes;
+  vec2 c = uv - 0.5;
+  float s = sin(uAngle), k = cos(uAngle);
+  vec2 r = vec2(c.x * k - c.y * s, c.x * s + c.y * k);
+  float stripe = 0.5 + 0.5 * sin((r.x * uFreq + uTime) * 6.2831853);
+  float ring   = 0.5 + 0.5 * sin((length(c) * uFreq * 2.0 - uTime * 0.7) * 6.2831853);
+  o = vec4(stripe * ring, 0.0, 0.0, 1.0);
+}`;
+
+// Passes 2..N: PROCESS. Samples the previous texture with a small coordinate warp — a
+// dependent texture read, which is the expensive shape a real chain has.
+const PROC = `#version 300 es
+precision highp float;
+uniform sampler2D uTex; uniform vec2 uRes; uniform float uTime; uniform float uAmt;
+out vec4 o;
+void main() {
+  vec2 uv = gl_FragCoord.xy / uRes;
+  vec2 c = uv - 0.5;
+  vec2 s = uv + uAmt * vec2(sin(uTime + c.y * 6.0), cos(uTime + c.x * 6.0)) * 0.012;
+  float v = texture(uTex, s).r;
+  o = vec4(abs(v * 1.02 - 0.012), 0.0, 0.0, 1.0);
+}`;
+
+// Final pass to the screen: the one place colour appears, standing in for the Colorizer.
+const SHOW = `#version 300 es
+precision highp float;
+uniform sampler2D uTex; uniform vec2 uRes; uniform float uTime;
+out vec4 o;
+void main() {
+  float v = texture(uTex, gl_FragCoord.xy / uRes).r;
+  o = vec4(v, v * 0.55 + 0.25 * (0.5 + 0.5 * sin(uTime * 0.6)), 1.0 - v, 1.0);
+}`;
+
+function compile(type, src) {
+  const sh = gl.createShader(type);
+  gl.shaderSource(sh, src); gl.compileShader(sh);
+  if (!gl.getShaderParameter(sh, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(sh));
+  return sh;
+}
+function program(fs) {
+  const p = gl.createProgram();
+  gl.attachShader(p, compile(gl.VERTEX_SHADER, VERT));
+  gl.attachShader(p, compile(gl.FRAGMENT_SHADER, fs));
+  gl.linkProgram(p);
+  if (!gl.getProgramParameter(p, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(p));
+  const u = {};
+  for (let i = 0; i < gl.getProgramParameter(p, gl.ACTIVE_UNIFORMS); i++) {
+    const n = gl.getActiveUniform(p, i).name;
+    u[n] = gl.getUniformLocation(p, n);
+  }
+  return { p, u };
+}
+const pSrc = program(SRC), pProc = program(PROC), pShow = program(SHOW);
+gl.bindVertexArray(gl.createVertexArray());
+
+// ---- ping-pong framebuffers ---------------------------------------------
+// Two are enough for a chain: read one, write the other, swap. Feedback needs the same
+// pair, which is why the spec calls the one-frame delay the effect rather than a defect.
+let RW = 1920, RH = 1080, FMT = 'RGBA8';
+let fbo = [null, null], tex = [null, null];
+
+function allocate() {
+  for (let i = 0; i < 2; i++) {
+    if (tex[i]) gl.deleteTexture(tex[i]);
+    if (fbo[i]) gl.deleteFramebuffer(fbo[i]);
+    const t = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, t);
+    const internal = FMT === 'R8' ? gl.R8 : gl.RGBA8;
+    gl.texStorage2D(gl.TEXTURE_2D, 1, internal, RW, RH);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    const f = gl.createFramebuffer();
+    gl.bindFramebuffer(gl.FRAMEBUFFER, f);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, t, 0);
+    const status = gl.checkFramebufferStatus(gl.FRAMEBUFFER);
+    if (status !== gl.FRAMEBUFFER_COMPLETE) throw new Error(FMT + ' framebuffer incomplete: 0x' + status.toString(16));
+    tex[i] = t; fbo[i] = f;
+  }
+  gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+}
+allocate();
+
+let passes = 20;
+let t0 = performance.now();
+
+// One frame: source into A, then (passes-1) process passes ping-ponging, then show.
+function renderFrame(now) {
+  const time = (now - t0) / 1000;
+  let read = 0, write = 1;
+
+  gl.viewport(0, 0, RW, RH);
+  gl.bindFramebuffer(gl.FRAMEBUFFER, fbo[write]);
+  gl.useProgram(pSrc.p);
+  gl.uniform2f(pSrc.u.uRes, RW, RH);
+  gl.uniform1f(pSrc.u.uTime, time);
+  gl.uniform1f(pSrc.u.uFreq, 9.0 + 5.0 * Math.sin(time * 0.21));    // stands in for CV
+  gl.uniform1f(pSrc.u.uAngle, time * 0.14);
+  gl.drawArrays(gl.TRIANGLES, 0, 3);
+  read = write; write = 1 - write;
+
+  for (let i = 1; i < passes; i++) {
+    gl.bindFramebuffer(gl.FRAMEBUFFER, fbo[write]);
+    gl.useProgram(pProc.p);
+    gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, tex[read]);
+    gl.uniform1i(pProc.u.uTex, 0);
+    gl.uniform2f(pProc.u.uRes, RW, RH);
+    gl.uniform1f(pProc.u.uTime, time + i * 0.11);
+    gl.uniform1f(pProc.u.uAmt, 1.0);
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
+    read = write; write = 1 - write;
+  }
+
+  gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+  gl.viewport(0, 0, canvas.width, canvas.height);
+  gl.useProgram(pShow.p);
+  gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, tex[read]);
+  gl.uniform1i(pShow.u.uTex, 0);
+  gl.uniform2f(pShow.u.uRes, canvas.width, canvas.height);
+  gl.uniform1f(pShow.u.uTime, time);
+  gl.drawArrays(gl.TRIANGLES, 0, 3);
+}
+
+canvas.width = 960; canvas.height = 540;
+
+let frames = 0, lost = false;
+let collecting = null;
+function loop(now) {
+  if (gl.isContextLost()) { lost = true; report(); return; }
+  renderFrame(now);
+  frames++;
+  if (collecting) collecting.push(now);
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+
+// ---- measurement ---------------------------------------------------------
+// Timed SYNCHRONOUSLY, not from rAF deltas: rAF is clamped to the display refresh, so it
+// cannot see GPU cost while there is headroom — a chain running at 4 ms and one at 15 ms
+// both read 16.7 — and it stops entirely when the window is not visible.
+//
+// The sync point is a ONE-PIXEL readPixels, NOT gl.finish(). finish() is documented as
+// blocking until the GPU is idle, and on Apple's Metal backend through ANGLE it does not:
+// timing around it reported 0.07 ms for sixty 1080p passes, which is impossible, because it
+// was only measuring the CPU-side cost of submitting commands. readPixels cannot lie — it
+// has to return actual pixel data, so the driver must complete the work first.
+const oneP = new Uint8Array(4);
+function syncGpu() {
+  gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+  gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, oneP);
+}
+
+function measure(nPasses, fmt, w, h, nFrames = 20) {
+  RW = w; RH = h; FMT = fmt; passes = nPasses;
+  allocate();
+  const base = performance.now();
+  for (let i = 0; i < 4; i++) renderFrame(base + i * 16.7);      // warm up: shader + FBO first use
+  syncGpu();
+  const t0m = performance.now();
+  for (let i = 0; i < nFrames; i++) renderFrame(t0m + i * 16.7);
+  syncGpu();
+  return (performance.now() - t0m) / nFrames;
+}
+
+document.getElementById('sweep').onclick = () => {
+  const btn = document.getElementById('sweep');
+  btn.disabled = true;
+  const [w, h] = document.getElementById('res').value.split('x').map(Number);
+  const counts = [1, 5, 10, 20, 30, 40, 60];
+  const rows = [];
+  try {
+    for (const fmt of ['RGBA8', 'R8']) {
+      for (const n of counts) rows.push({ fmt, n, ms: measure(n, fmt, w, h) });
+    }
+  } catch (err) {
+    out.textContent = 'measurement failed: ' + err.message;
+    btn.disabled = false;
+    return;
+  }
+
+  let html = '<table><tr><th>format</th><th>passes</th><th>ms / frame</th><th>fps ceiling</th><th>ms / pass</th></tr>';
+  for (const r of rows) {
+    const fps = 1000 / r.ms;
+    const cls = fps > 60 ? 'ok' : fps > 30 ? 'warn' : 'bad';
+    html += `<tr><td>${r.fmt}</td><td>${r.n}</td><td class="${cls}">${r.ms.toFixed(2)}</td>`
+      + `<td class="${cls}">${fps.toFixed(0)}</td><td>${(r.ms / r.n).toFixed(3)}</td></tr>`;
+  }
+  html += '</table>';
+  document.getElementById('table').innerHTML = html;
+
+  const at = (fmt, n) => rows.find((r) => r.fmt === fmt && r.n === n).ms;
+  const budget = (fmt) => {
+    // Passes that fit in one 60 Hz frame, from the SLOPE between two far-apart measurements
+    // so the fixed per-frame overhead is subtracted rather than counted once per pass.
+    const perPass = (at(fmt, 60) - at(fmt, 10)) / 50;
+    if (!(perPass > 0.0005)) return '>60 (too fast to slope reliably)';
+    const fixed = at(fmt, 10) - 10 * perPass;
+    return Math.max(0, Math.floor((16.7 - fixed) / perPass));
+  };
+  out.textContent = [
+    `renderer: ${RENDERER}`,
+    `render size: ${w}x${h}    (timed with a 1-pixel readPixels sync, not gl.finish)`,
+    ``,
+    `Q1  20 passes RGBA8: ${at('RGBA8', 20).toFixed(2)} ms/frame  ->  ${(1000 / at('RGBA8', 20)).toFixed(0)} fps ceiling`,
+    `    passes that fit in a 60 Hz frame: ${budget('RGBA8')} RGBA8, ${budget('R8')} R8`,
+    ``,
+    `Q2  20 passes R8: ${at('R8', 20).toFixed(2)} ms  vs RGBA8 ${at('RGBA8', 20).toFixed(2)} ms`,
+    `    R8 is ${((1 - at('R8', 20) / at('RGBA8', 20)) * 100).toFixed(0)}% cheaper`
+      + `  ->  the luma/rgb split ${at('R8', 20) < at('RGBA8', 20) * 0.9 ? 'PAYS FOR ITSELF' : 'is NOT justified on cost alone'}`,
+    ``,
+    `Live view is back at ${passes} passes. Press a PiP button for Q3.`,
+  ].join('\n');
+  btn.disabled = false;
+};
+
+// ---- question 3: the PiP window -----------------------------------------
+let pip = null;
+
+function report(extra) {
+  const bits = [
+    `renderer: ${RENDERER}`,
+    `context lost: ${lost ? 'YES' : 'no'}`,
+    `frames drawn: ${frames}`,
+  ];
+  if (extra) bits.push('', extra);
+  out.textContent = bits.join('\n');
+}
+
+async function openPip(mode) {
+  if (!('documentPictureInPicture' in window)) {
+    out.textContent = 'No Document Picture-in-Picture in this browser. The output window '
+      + 'falls back to an in-app floating pane here (Firefox / Safari).';
+    return;
+  }
+  const before = frames;
+  try {
+    pip = await documentPictureInPicture.requestWindow({ width: 640, height: 360 });
+  } catch (err) {
+    // Worth reporting rather than swallowing: the API can be PRESENT and still refuse —
+    // no user activation, an embedded view, or a permissions policy. Each of those means
+    // something different for the design, so the message matters.
+    out.textContent = [
+      'Q3  requestWindow REFUSED',
+      `    ${err.name}: ${err.message}`,
+      '',
+      'The API exists here but would not open. If this is an embedded browser view, the',
+      'answer is inconclusive and Q3 has to be run in the real app or in Chrome directly.',
+    ].join('\n');
+    return;
+  }
+  pip.document.body.style.cssText = 'margin:0;background:#000;overflow:hidden';
+
+  if (mode === 'move') {
+    // The question: does adopting the canvas into another document keep its GL context?
+    pip.document.body.append(canvas);
+    canvas.style.cssText = 'display:block;width:100vw;height:100vh';
+    await new Promise((r) => setTimeout(r, 700));
+    const advanced = frames - before;
+    const ok = !gl.isContextLost() && advanced > 5;
+    out.textContent = [
+      `renderer: ${RENDERER}`,
+      ``,
+      `Q3  canvas MOVED into the PiP window`,
+      `    context lost: ${gl.isContextLost() ? 'YES' : 'no'}`,
+      `    frames advanced while moved: ${advanced}`,
+      ``,
+      ok ? 'VERDICT: the moved-DOM-node route works. One context, no IPC, no stream.'
+         : 'VERDICT: moving the canvas breaks it. Use the captureStream fallback.',
+    ].join('\n');
+  } else {
+    // The fallback: leave the canvas where it is and pipe its stream into a video element.
+    const v = pip.document.createElement('video');
+    v.autoplay = true; v.muted = true; v.playsInline = true;
+    v.style.cssText = 'display:block;width:100vw;height:100vh;object-fit:contain';
+    v.srcObject = canvas.captureStream(60);
+    pip.document.body.append(v);
+    await new Promise((r) => setTimeout(r, 700));
+    out.textContent = [
+      `renderer: ${RENDERER}`,
+      ``,
+      `Q3  fallback: canvas stays put, stream into a <video> in the PiP window`,
+      `    video size: ${v.videoWidth}×${v.videoHeight}`,
+      `    frames advanced: ${frames - before}`,
+      ``,
+      v.videoWidth > 0 ? 'VERDICT: the stream route works. Costs an encode and a frame.'
+                       : 'VERDICT: no frames in the stream yet — look again in a second.',
+    ].join('\n');
+  }
+
+  pip.addEventListener('pagehide', () => {
+    // Whatever happened, put the canvas back so the spike keeps running.
+    if (canvas.ownerDocument !== document) {
+      document.getElementById('stage').append(canvas);
+      canvas.style.cssText = 'display:block;width:480px;height:270px';
+    }
+    pip = null;
+  });
+}
+document.getElementById('pip').onclick = () => openPip('move');
+document.getElementById('pipStream').onclick = () => openPip('stream');
+</script>

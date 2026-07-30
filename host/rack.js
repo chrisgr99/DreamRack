@@ -21,6 +21,7 @@
 
 import { loadPanel, showValue, attachControlInteraction, knobRadiusPx, valueToPosition, positionToValue, FACE_H_MM, FACE_TOP_MM, FACE_LEFT_MM, TITLE_STRIP_MM, TITLE_BAR_MM } from './panel-loader.js';
 import { Patchbay } from './patchbay.js';
+import { VideoEngine } from './video-engine.js';
 
 const PANEL_H_MM = FACE_H_MM + TITLE_STRIP_MM;   // the cropped functional face plus the 4mm title strip above it
 const ROW_GAP_MM = 0;           // vertical gap between rows (0 = flush, faceplates touch)
@@ -3730,6 +3731,66 @@ export class Rack {
     return this._monBus;
   }
 
+  // The video engine, created the FIRST time a video module is realized and not before — the
+  // same laziness the monitor bus uses. A patch with no video pays for no GL context, and the
+  // engine belongs to the rack rather than to Video Output so that a probe can look at a video
+  // chain before anything has been committed to a screen.
+  _ensureVideoEngine() {
+    if (!this._videoEngine) {
+      this._videoEngine = new VideoEngine();
+      this._videoEngine.start();
+    }
+    return this._videoEngine;
+  }
+
+  // A video module's live preview. Placed INSIDE the panel SVG in a `foreignObject` at the
+  // rect the descriptor declares, in panel millimetres — so the SVG itself positions and
+  // scales it, and it follows rack zoom, pan and relayout for nothing.
+  //
+  // The first attempt positioned an HTML canvas over the module as a PERCENTAGE of the
+  // element, and it would not stay in its well: an SVG with a viewBox letterboxes inside its
+  // box (preserveAspectRatio defaults to "meet"), so element percentages and panel
+  // coordinates are only the same when the two aspect ratios happen to agree. A foreignObject
+  // has no such gap — it is in panel coordinates by construction.
+  //
+  // A canvas, not more SVG: the picture is a GPU texture, and a SECOND WebGL context could not
+  // see the engine's textures. The engine blits its one canvas into this one each frame.
+  _attachVideoModule(rec, desc) {
+    const engine = this._ensureVideoEngine();
+    if (typeof rec.instance.attachEngine === 'function') rec.instance.attachEngine(engine);
+    const pv = desc && desc.preview;
+    const svg = rec.el.querySelector('svg');
+    if (!pv || !engine.ok || !svg) return;
+    if (rec.videoView) { rec.videoView(); rec.videoView = null; }      // a re-skin replaces it
+    for (const old of svg.querySelectorAll('.video-preview-host')) old.remove();
+    const doc = svg.ownerDocument;
+    const fo = doc.createElementNS(SVG_NS, 'foreignObject');
+    fo.setAttribute('class', 'video-preview-host');
+    fo.setAttribute('x', r2(pv.x)); fo.setAttribute('y', r2(pv.y));
+    fo.setAttribute('width', r2(pv.w)); fo.setAttribute('height', r2(pv.h));
+    fo.style.pointerEvents = 'none';
+    const c = doc.createElementNS('http://www.w3.org/1999/xhtml', 'canvas');
+    c.className = 'video-preview';
+    c.width = Math.round(pv.w * 8); c.height = Math.round(pv.h * 8);   // ample for a thumbnail
+    c.setAttribute('style', 'display:block;width:100%;height:100%');
+    fo.appendChild(c);
+    // Into the panel's own COORDINATE GROUP, not the SVG root. A `wrap: true` layout (the
+    // mixer style) has the renderer put every item inside a translate to the cropped face, so
+    // layout millimetres are relative to that group — appending alongside it offset the
+    // picture from its well by exactly that translate. A `wrap: false` panel lays out in root
+    // coordinates and has no such group, so the root is the right parent there.
+    const host = svg.querySelector(':scope > g[transform^="translate"]') || svg;
+    host.appendChild(fo);
+    rec.videoView = engine.addView(c);
+  }
+
+  // Is a module of this type already in the rack? Used by the Add menu to drop a singleton
+  // type (Video Output) while one exists, and to put it back when it is deleted.
+  hasModule(descriptorId) {
+    for (const rec of this.records.values()) if (rec.descriptorId === descriptorId) return true;
+    return false;
+  }
+
   // The pinned mixer's record (the output stage).
   _mixerRec() {
     for (const rec of this.records.values()) if (rec.descriptorId === 'mixer') return rec;
@@ -4731,6 +4792,24 @@ export class Rack {
     svg.style.display = 'block';
     el.appendChild(svg);
     rec.panel = panel;
+    // A re-skin (a light/dark swap) throws the old SVG away, and the video preview lives
+    // inside it — so it has to be put back, or the picture vanishes on a theme change.
+    if (rec.instance && typeof rec.instance.attachEngine === 'function') {
+      const t = this.moduleTypes.find((x) => x.descriptorId === rec.descriptorId);
+      if (t) queueMicrotask(() => this._attachVideoModule(rec, t.descriptor));
+    }
+    // The title-bar hamburger: every module has one and they all open the same application menu.
+    // pointerdown is swallowed because the title bar is the drag handle — without that, pressing
+    // the hamburger would start dragging the module out from under the menu it just opened.
+    const burger = svg.querySelector('.module-burger');
+    if (burger) {
+      burger.addEventListener('pointerdown', (e) => e.stopPropagation());
+      burger.addEventListener('click', (e) => {
+        e.preventDefault(); e.stopPropagation();
+        if (this._barDismissedAt(e.clientX, e.clientY)) return;   // pressing it again puts it away
+        if (this.onAppMenuBar) this.onAppMenuBar(e.clientX, e.clientY, rec, rec.row);
+      });
+    }
     const btnGrow = this._buttonGrowMap(svg);   // adaptive hit-pad size per single push button
     for (const b of panel.controls.values()) {
       const v = rec.values.get(b.id);
@@ -4818,6 +4897,7 @@ export class Rack {
     // Engine-driven panel indication, for modules that have any (the sequencer's
     // active-stage lamp). Optional contract method: a module without it is untouched.
     if (typeof instance.onReadout === 'function') instance.onReadout((map) => this._applyReadout(rec, map));
+    if (typeof instance.attachEngine === 'function') this._attachVideoModule(rec, type.descriptor);
 
     // Module-level handlers live on the wrapper element, so they survive a skin swap.
     el.addEventListener('pointerdown', (e) => this._startDrag(e, rec));
@@ -4897,6 +4977,7 @@ export class Rack {
     const i = row.indexOf(rec);
     if (i >= 0) row.splice(i, 1);
     rec.el.remove();
+    if (rec.videoView) { rec.videoView(); rec.videoView = null; }   // stop blitting into a gone panel
     this.host.dispose(rec.instanceId);
     this.records.delete(rec.key);
     this._drawCables();
@@ -5457,6 +5538,10 @@ export class Rack {
     const startX = e.clientX, startY = e.clientY;
     const rect0 = this._rowEls[rec.row].getBoundingClientRect();
     const grabDx = e.clientX - (rect0.left + rec.x * sz);
+    // Was the menu already up when this press started? The document-level dismiss handler will
+    // have closed it before pointerup arrives, so without remembering this a second click would
+    // close and immediately reopen it. A menu should toggle, like every other menu here.
+    const barWasOpen = !!this._menuBarEl;
     let moved = false;
     let dropRow = rec.row, dropX = rec.x;
     const ghost = this._ensureGhost();
@@ -5482,8 +5567,14 @@ export class Rack {
       ghost.style.display = 'none';
       if (moved) { this._moveModule(rec, dropRow, dropX); return; }
       if (this._isolateNet) { this._exitIsolate(); }   // a left click on empty faceplate leaves isolate mode
-      // The panel and title pies open on a RIGHT click now (see the contextmenu
-      // bindings); a clean left click does nothing else.
+      // A CLEAN CLICK ANYWHERE IN THE TITLE BAND opens the application menu. The hamburger at the
+      // left end is the SIGN that says so, not the target: the whole bar is the target, which is a
+      // far easier thing to hit than a 4 mm glyph and means the affordance never has to be aimed at.
+      //
+      // Only a click, never a drag (`moved` has already returned above), and the hamburger's own
+      // handler stops propagation so pressing it does not arrive here twice.
+      if (barWasOpen || this._barDismissedAt(ev.clientX, ev.clientY)) return;   // second press = dismiss
+      if (this.onAppMenuBar) this.onAppMenuBar(ev.clientX, ev.clientY, rec, rec.row);
     };
     document.addEventListener('pointermove', onMove);
     document.addEventListener('pointerup', onUp);
@@ -5511,7 +5602,9 @@ export class Rack {
   _onRowContextMenu(e, rowIndex) {
     if (e.target.closest('.rack-module')) return;
     e.preventDefault();
-    this.onAppMenu(e.clientX, e.clientY, null, rowIndex);   // background right-click → the main menu; Add module appends to this row
+    // Background right-click still reaches the application menu, but as the BAR — so there is one
+    // main menu with one shape, wherever it is summoned from.
+    if (this.onAppMenuBar) this.onAppMenuBar(e.clientX, e.clientY, null, rowIndex);
   }
 
   // Add a module from Rack ▸ Add module: append it to the END of the row the menu was opened over — the
@@ -5541,11 +5634,23 @@ export class Rack {
 
   // Right-click a panel → the main menu (Engine / File / Edit / View / Rack / Help). rack-app fills the
   // items via onAppMenu; the module `rec` is passed so Rack ▸ Delete this module can act on it.
+  // Right-click a module → THAT MODULE's menu. The application menu moved to the title-bar
+  // hamburgers, which freed right-click to mean the obvious thing: act on the thing under the
+  // pointer. It also means reset and delete are reachable from the whole panel rather than only
+  // from the title bar, which is where they used to hide.
   _onModuleContextMenu(e, rec) {
     e.preventDefault();
     e.stopPropagation();
     if (e.target.closest && e.target.closest('[data-wcoast-param]')) { this._openScopeMenuForControl(e, rec); return; }   // over a knob/control → the Scopes roster
-    this.onAppMenu(e.clientX, e.clientY, rec, rec.row);   // Add module appends to this module's row; Delete targets rec
+    this._openModuleMenu(e.clientX, e.clientY, rec);
+  }
+
+  _openModuleMenu(x, y, rec) {
+    this._openMenu(x, y, [
+      { label: `Reset ${rec.name}`, action: () => this._resetModuleWithUndo(rec) },
+      { label: `Delete ${rec.name}`, disabled: !!rec.pinned,
+        action: rec.pinned ? undefined : () => this._deleteModuleWithUndo(rec) },
+    ]);
   }
 
   // Right-click a knob or any control → the Scopes roster. It lists every scope by the terminal it
@@ -5584,18 +5689,121 @@ export class Rack {
     this._openMenu(e.clientX, e.clientY, items);
   }
 
-  // Delete a module chosen from Rack ▸ Delete this module (the right-clicked panel). Pinned modules
-  // (the mixer) can't be deleted — the menu item is disabled for them.
-  deleteModuleFromMenu(rec) { if (rec && !rec.pinned) this._deleteModuleWithUndo(rec); }
-
   // Right-click a module's vertical title (its left edge) → a small menu to reset its controls (cables
   // untouched). Deleting a module now lives in Rack ▸ Delete this module.
   _onTitleContextMenu(e, rec) {
     e.preventDefault();
     e.stopPropagation();
-    this._openMenu(e.clientX, e.clientY, [
-      { label: `Reset ${rec.name}`, action: () => this._resetModuleWithUndo(rec) },
-    ]);
+    this._openModuleMenu(e.clientX, e.clientY, rec);   // the same menu the panel gives
+  }
+
+  // ---- the menu BAR ----
+  // A horizontal strip of menu titles — DR, File, Edit, View, Rack, Help, DEV — that appears where
+  // it is summoned rather than living permanently across the top of the window. It is the same idea
+  // as a menu bar and none of the cost: no row of screen given up to it, and it opens under your
+  // pointer instead of at a far corner.
+  //
+  // It deliberately does NOT reimplement menus. Each title just opens the ORDINARY vertical menu
+  // beneath itself, so submenus, dwell, keyboard focus, sliding-to-fit and every other behaviour
+  // are shared with the rest of the app for free.
+  //
+  // CENTRED ON THE POINTER and dropped just below it, then clamped so it stays on screen — the
+  // horizontal counterpart of the vertical fit the menus already do. Centring rather than
+  // left-aligning means the titles fall either side of where you already are, so the average
+  // distance to the one you want is halved.
+  openMenuBar(x, y, items) {
+    this._closeMenuBar();
+    const bar = document.createElement('div');
+    bar.className = 'rack-menubar' + (this.isDark() ? ' theme-dark' : '');
+    const titles = [];
+    let openIdx = -1;
+
+    items.forEach((it, i) => {
+      if (!it.label || !it.submenu) return;
+      const b = document.createElement('button');
+      b.className = 'rack-menubar-item';
+      b.textContent = it.label;
+      b.addEventListener('pointerdown', (e) => e.stopPropagation());
+      b.addEventListener('click', (e) => { e.stopPropagation(); drop(i, b); });
+      // HOVER OPENS. Not only "switch once one is down" — pointing at a title is enough, so the
+      // whole menu is reachable from the one click that summoned the bar.
+      b.addEventListener('pointerenter', () => { if (openIdx !== i) drop(i, b); });
+      titles.push({ el: b, idx: i });
+      bar.appendChild(b);
+    });
+    document.body.appendChild(bar);
+
+    const pad = 8, vw = window.innerWidth, vh = window.innerHeight;
+    const bw = bar.offsetWidth, bh = bar.offsetHeight;
+    let left = x - bw / 2, top = y + 10;
+    if (left + bw > vw - pad) left = vw - pad - bw;                   // shift to fit, like the vertical slide
+    if (left < pad) left = pad;
+    if (top + bh > vh - pad) top = Math.max(pad, y - bh - 10);        // no room below → above the pointer
+
+    // ...and keep clear of any FLOATING WINDOW — the tutorial card, a scope, the patch notes. A
+    // menu that opens underneath one is no more use than a menu that opens off-screen, so it is
+    // the same problem and gets the same answer: slide sideways until it is clear, choosing the
+    // side that leaves it closest to where it was asked for.
+    const obstacles = [...document.querySelectorAll('.tour-card, .scope, .patch-notes, .about-card, .composer')]
+      .map((o) => o.getBoundingClientRect())
+      .filter((r) => r.width > 1 && r.height > 1 && r.bottom > top && r.top < top + bh);
+    const hits = (l) => obstacles.some((o) => l < o.right && l + bw > o.left);
+    if (hits(left)) {
+      const want = x - bw / 2;
+      const fits = obstacles
+        .flatMap((o) => [o.left - bw - 6, o.right + 6])
+        .filter((l) => l >= pad && l + bw <= vw - pad && !hits(l))
+        .sort((a, b) => Math.abs(a - want) - Math.abs(b - want));
+      if (fits.length) left = fits[0];
+    }
+
+    bar.style.left = Math.round(left) + 'px';
+    bar.style.top = Math.round(top) + 'px';
+
+    const drop = (i, btn) => {
+      this._closeMenu();
+      for (const t of titles) t.el.classList.toggle('open', t.idx === i);
+      openIdx = i;
+      const r = btn.getBoundingClientRect();
+      this._openMenu(r.left, r.bottom + 2, items[i].submenu);
+    };
+
+    // Dismiss: anywhere outside the bar AND outside whatever menu is down, or Escape.
+    this._menuBarAway = (e) => {
+      if (bar.contains(e.target)) return;
+      if (this._menuEl && this._menuEl.contains(e.target)) return;
+      // Remember WHERE this dismissal happened. The handler is on `document` in the capture
+      // phase, so it runs BEFORE the title bar's own handler — which would otherwise see the bar
+      // as already closed and cheerfully reopen it, and the menu would never toggle off. Recording
+      // the place rather than a bare flag keeps "click another module's title" working: that is a
+      // different spot, so it moves the menu there instead of being swallowed.
+      this._barDismiss = { x: e.clientX, y: e.clientY, t: performance.now() };
+      this._closeMenuBar();
+    };
+    this._menuBarKey = (e) => { if (e.key === 'Escape') this._closeMenuBar(); };
+    setTimeout(() => {
+      document.addEventListener('pointerdown', this._menuBarAway, true);
+      document.addEventListener('keydown', this._menuBarKey, true);
+    }, 0);
+    this._menuBarEl = bar;
+  }
+
+  // Did the press that is now finishing just dismiss the bar? Then this gesture is the "off" half
+  // of a toggle and must not reopen it.
+  _barDismissedAt(x, y) {
+    const d = this._barDismiss;
+    return !!d && (performance.now() - d.t) < 600 && Math.hypot(x - d.x, y - d.y) < 8;
+  }
+
+  // Shut every menu — the bar and whatever is dropped from it. Used before anything that CAPTURES
+  // the window: a menu left open is both a distraction and, for a snapshot, literally in the shot.
+  closeMenus() { this._closeMenuBar(); }
+
+  _closeMenuBar() {
+    this._closeMenu();
+    if (this._menuBarAway) { document.removeEventListener('pointerdown', this._menuBarAway, true); this._menuBarAway = null; }
+    if (this._menuBarKey) { document.removeEventListener('keydown', this._menuBarKey, true); this._menuBarKey = null; }
+    if (this._menuBarEl) { this._menuBarEl.remove(); this._menuBarEl = null; }
   }
 
   // items: { label, action } clickable rows, plus optional { header:true } group
@@ -5672,28 +5880,37 @@ export class Rack {
       const item = document.createElement('div');
       item.className = 'rack-menu-item' + (it.dim ? ' dim' : '');
       if (it.words) {
-        // A row of word-buttons (the sound buses: MSTR / MON). Each word toggles its bus on a
-        // click — red when on, greyed when off — and the menu STAYS OPEN. Hovering an OFF word
-        // auditions that bus momentarily (a write-free peek) and stops on leave. The words are
-        // twins of the mixer's own enable lamps.
+        // A row of word-buttons — the sound buses, one bus per row: Master, Monitor. The word and
+        // a round enable lamp beside it, a twin of the mixer's own: dark when off, red when on.
+        // Clicking toggles the bus and the menu STAYS OPEN, so both can be set in one visit.
+        //
+        // Hovering used to AUDITION an off bus — sound while the pointer rested on it. That is
+        // gone deliberately: a menu that makes sound when you merely pass over it on the way to
+        // something else is a trap, and toggling twice is no hardship. Nothing here can now make
+        // sound without a click.
         item.classList.add('rack-menu-words');
         for (const w of it.words) {
           const label = document.createElement('span');
           label.className = 'rack-menu-word';
           label.textContent = w.label;
           item.appendChild(label);
-          // A round enable button after the word, like the mixer's own enable lamp: dark disc when
-          // off, red when on. Clicking it toggles the bus and the menu STAYS OPEN; hovering it while
-          // OFF auditions that bus momentarily (a write-free peek), stopping on leave.
           const led = document.createElement('span');
           led.className = 'rack-menu-led' + (w.isOn() ? ' on' : '');
-          led.addEventListener('pointerenter', () => { if (!w.isOn()) { w.peek(true); led.classList.add('on'); } });   // light the lamp while auditioning, even un-clicked
-          led.addEventListener('pointerleave', () => { w.peek(false); led.classList.toggle('on', w.isOn()); });        // sound stops → lamp returns to its true state (dark if still off)
           led.addEventListener('pointerdown', (ev) => ev.stopPropagation());
           led.addEventListener('click', (ev) => { ev.stopPropagation(); w.flip(); led.classList.toggle('on', w.isOn()); });
           item.appendChild(led);
         }
-        item.addEventListener('click', (e) => e.stopPropagation());   // the row itself never dismisses the menu
+        // The whole row toggles, not just the lamp — a full-width row is a big target and the word
+        // beside the lamp is the obvious thing to press.
+        item.addEventListener('click', (e) => {
+          e.stopPropagation();
+          if (it.words.length === 1) {
+            const w = it.words[0];
+            w.flip();
+            const led = item.querySelector('.rack-menu-led');
+            if (led) led.classList.toggle('on', w.isOn());
+          }
+        });
         (group || menu).appendChild(item);
         continue;
       }

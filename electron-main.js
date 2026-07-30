@@ -100,6 +100,31 @@ function uniquePath(p) {
   return p;
 }
 
+// A still of the window, saved as a PNG beside the video takes. capturePage() grabs the
+// COMPOSITED window — every canvas, every SVG, the cables, the scopes' live traces, the video
+// preview — because it reads rendered pixels rather than trying to re-draw the DOM. Nothing else
+// in a browser does that faithfully: serialising the DOM into an image loses canvas contents,
+// which here is most of what you actually want a picture of.
+function registerSnapshotIpc(getWindow) {
+  ipcMain.handle('snapshot:save', async (_e, suggestedName) => {
+    try {
+      const win = getWindow();
+      if (!win) return { error: 'no window' };
+      const img = await win.webContents.capturePage();
+      const png = img && img.toPNG();
+      if (!png || !png.length) return { error: 'the window produced an empty image' };
+      const base = (typeof suggestedName === 'string' && suggestedName) || 'DreamRack.png';
+      const out = uniquePath(path.join(app.getPath('downloads'), base));
+      fs.writeFileSync(out, png);
+      console.log('[wcoast] snapshot written:', out, png.length, 'bytes');
+      return { path: out };
+    } catch (err) {
+      console.error('[wcoast] snapshot failed:', err);
+      return { error: String((err && err.message) || err) };
+    }
+  });
+}
+
 function registerRecordIpc() {
   // Open the file and start writing. NO dialog: a take goes straight to Downloads under
   // a timestamped name, so hitting the shortcut records immediately rather than stopping
@@ -604,6 +629,7 @@ app.whenReady().then(async () => {
   try { await session.defaultSession.clearCache(); } catch (_e) { /* best effort */ }
   registerPatchIpc();
   registerRecordIpc();
+  registerSnapshotIpc(() => mainWindow);
   // getDisplayMedia() in the renderer normally raises a picker asking which surface to
   // share. There is only ever one answer here, so answer it in the main process and
   // "start recording" becomes a single click.

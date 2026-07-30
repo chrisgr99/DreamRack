@@ -21,7 +21,11 @@
 
 // The port domains and directions the schema allows. Kept here so validation
 // has one place to check against and callers can reuse the sets.
-export const DOMAINS = Object.freeze(['audio', 'control', 'trigger']);
+// The signal families a port may declare. `luma` and `rgb` are the VIDEO domains: a single
+// channel and three channels, kept apart because building in monochrome and combining three
+// separately processed chains at the end is the compositional idiom of video synthesis, and a
+// single RGBA domain cannot express it. See design/video-synthesis.md §2.
+export const DOMAINS = Object.freeze(['audio', 'control', 'trigger', 'luma', 'rgb']);
 export const DIRECTIONS = Object.freeze(['in', 'out']);
 
 // Validate a descriptor enough to catch the mistakes that would otherwise
