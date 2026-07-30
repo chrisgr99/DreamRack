@@ -12,7 +12,7 @@
 // reader there must tell them how to come back.
 //
 // Steps are plain data — { title, body } — so the copy can be rewritten without touching any of
-// this. A step's body is a list of parts: a string is prose, and { try: '...' } is a "Do this"
+// this. A step's body is a list of parts: a string is prose, and { try: '...' } is an "Example"
 // block. They render in the order written and scroll together, because a step often has more than
 // one thing to do and each belongs next to the prose that sets it up — not parked in one fixed
 // slot at the bottom. The copy itself comes from host/tutorial.md, via host/tutorial-md.js.
@@ -224,7 +224,7 @@ export function createTour({ steps, onExternal, isDark, onSee, canSee, homePos }
     }).observe(el);
   };
 
-  // One part of a step: prose, or a "Do this" block. The label is inline rather than a heading —
+  // One part of a step: prose, or an "Example" block. The label is inline rather than a heading —
   // a stacked one would cost a line every time, and a step may carry several.
   const renderPart = (part) => {
     if (typeof part === 'string') {
@@ -237,11 +237,11 @@ export function createTour({ steps, onExternal, isDark, onSee, canSee, homePos }
     box.className = 'tour-try';
     const lab = document.createElement('b');
     lab.className = 'tour-try-label';
-    lab.textContent = part.label || 'Do this';
+    lab.textContent = part.label || 'Example';
     const text = document.createElement('span');
     text.innerHTML = part.try;               // ours, not user input — a task may carry <b> or a link
     box.appendChild(lab);
-    box.appendChild(document.createTextNode(' — '));
+    box.appendChild(document.createTextNode(': '));
     box.appendChild(text);
     return box;
   };

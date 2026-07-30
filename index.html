@@ -150,7 +150,7 @@
     /* ---- getting-started tour: a MODELESS floating card (no backdrop — you must be able to work
        while it's up). Above the scopes/monitors band, below menus and the overview. ---- */
     /* A column: only the BODY scrolls, so the title and the buttons stay put while the prose and its
-       "Do this" blocks move together. max-height caps the card so a long step can't swallow the window. */
+       "Example" blocks move together. max-height caps the card so a long step can't swallow the window. */
     /* The card is dressed as a FACEPLATE, not as chrome: the exact colours the module panels use
        (light face #cfcfcf with #163a69 labels; dark face #262629 with #b8b8bc), switched by .theme-dark
        to follow View ▸ Light/Dark mode. The border matches the context menus — 1.5px, a dark line on a
@@ -162,7 +162,7 @@
       overflow: hidden; display: flex; flex-direction: column;
       background: var(--t-face); color: var(--t-ink);
       border: 1.5px solid var(--t-edge); border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-      font: 400 1rem/1.5 -apple-system, system-ui, sans-serif; user-select: none; -webkit-user-select: none; }
+      font: 400 0.8rem/1.5 -apple-system, system-ui, sans-serif; user-select: none; -webkit-user-select: none; }
     .tour-card.theme-dark { --t-face: #262629; --t-ink: #b8b8bc; --t-dim: #8a8a90; --t-edge: #d2d2d6;
       --t-sep: rgba(184,184,188,0.24); --t-accent: #e0a353; --t-tint: rgba(224,163,83,0.10); }
     /* Resize grips. The whole bottom edge grabs height (so the card is easy to pull up off a module
@@ -249,7 +249,7 @@
        seam above it. The head reports which section you are scrolled into, so the heading here is
        for scanning while you scroll rather than for telling you where you are. */
     .tour-section { scroll-margin-top: 4px; }
-    .tour-h { margin: 0 0 6px; font-size: 14px; font-weight: 600; color: var(--t-ink); }
+    .tour-h { margin: 0 0 6px; font-size: 0.875em; font-weight: 600; color: var(--t-ink); }
     /* As bright as the seam under the title bar — same --t-edge — so a section boundary is
        unmistakable. Thinner than the head's 2.5px, so the head still reads as the heavier line
        and the hierarchy survives: window chrome, then section, then text. */
@@ -258,7 +258,7 @@
     .tour-p ul { margin: 4px 0 0; padding-left: 15px; }
     .tour-p li { margin: 3px 0; }
     .tour-p li::marker { color: var(--t-dim); }
-    /* A "Do this" block sits INSIDE the scrolling body, in among the prose, because a step can carry
+    /* An "Example" block sits INSIDE the scrolling body, in among the prose, because a step can carry
        several and each belongs beside the text that sets it up. */
     .tour-p + .tour-try, .tour-try + .tour-p, .tour-p + .tour-p, .tour-try + .tour-try { margin-top: 10px; }
     .tour-try { padding: 7px 9px; border-left: 2px solid var(--t-accent);

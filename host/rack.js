@@ -4827,18 +4827,6 @@ export class Rack {
       const t = this.moduleTypes.find((x) => x.descriptorId === rec.descriptorId);
       if (t) queueMicrotask(() => this._attachVideoModule(rec, t.descriptor));
     }
-    // The title-bar hamburger: every module has one and they all open the same application menu.
-    // pointerdown is swallowed because the title bar is the drag handle — without that, pressing
-    // the hamburger would start dragging the module out from under the menu it just opened.
-    const burger = svg.querySelector('.module-burger');
-    if (burger) {
-      burger.addEventListener('pointerdown', (e) => e.stopPropagation());
-      burger.addEventListener('click', (e) => {
-        e.preventDefault(); e.stopPropagation();
-        if (this._barDismissedAt(e.clientX, e.clientY)) return;   // pressing it again puts it away
-        if (this.onAppMenuBar) this.onAppMenuBar(e.clientX, e.clientY, rec, rec.row);
-      });
-    }
     const btnGrow = this._buttonGrowMap(svg);   // adaptive hit-pad size per single push button
     for (const b of panel.controls.values()) {
       const v = rec.values.get(b.id);
@@ -5603,14 +5591,10 @@ export class Rack {
       ghost.style.display = 'none';
       if (moved) { this._moveModule(rec, dropRow, dropX); return; }
       if (this._isolateNet) { this._exitIsolate(); }   // a left click on empty faceplate leaves isolate mode
-      // A CLEAN CLICK ANYWHERE IN THE TITLE BAND opens the application menu. The hamburger at the
-      // left end is the SIGN that says so, not the target: the whole bar is the target, which is a
-      // far easier thing to hit than a 4 mm glyph and means the affordance never has to be aimed at.
-      //
-      // Only a click, never a drag (`moved` has already returned above), and the hamburger's own
-      // handler stops propagation so pressing it does not arrive here twice.
-      if (barWasOpen || this._barDismissedAt(ev.clientX, ev.clientY)) return;   // second press = dismiss
-      if (this.onAppMenuBar) this.onAppMenuBar(ev.clientX, ev.clientY, rec, rec.row);
+      // A plain click on the title bar does NOTHING beyond that. It used to open the application
+      // menu, with the hamburger as its visible sign; the menu now lives on a right-click of the
+      // faceplate, so an invisible left-click target on the module's own drag handle would only be
+      // a way to summon a menu by accident.
     };
     document.addEventListener('pointermove', onMove);
     document.addEventListener('pointerup', onUp);
@@ -5700,17 +5684,20 @@ export class Rack {
     return x;
   }
 
-  // Right-click a panel → the main menu (Engine / File / Edit / View / Rack / Help). rack-app fills the
-  // items via onAppMenu; the module `rec` is passed so Rack ▸ Delete this module can act on it.
-  // Right-click a module → THAT MODULE's menu. The application menu moved to the title-bar
-  // hamburgers, which freed right-click to mean the obvious thing: act on the thing under the
-  // pointer. It also means reset and delete are reachable from the whole panel rather than only
-  // from the title bar, which is where they used to hide.
+  // Right-click a FACEPLATE → the application menu, as the horizontal bar: the same menu that sits
+  // at the top of the window, summoned where you are already working. The faceplate is the biggest
+  // target on screen and the menu you want most often is the main one, so they are paired.
+  //
+  // A module's own menu — reset, delete — moved to a right-click on its TITLE BAR, which is the
+  // one part of a module that means "this module" rather than any of its controls.
+  //
+  // A control keeps its own menu: right-clicking a knob or jack is about that control, and is far
+  // too useful to spend on the application menu.
   _onModuleContextMenu(e, rec) {
     e.preventDefault();
     e.stopPropagation();
     if (e.target.closest && e.target.closest('[data-wcoast-param]')) { this._openScopeMenuForControl(e, rec); return; }   // over a knob/control → the Scopes roster
-    this._openModuleMenu(e.clientX, e.clientY, rec);
+    if (this.onAppMenuBar) this.onAppMenuBar(e.clientX, e.clientY, rec, rec.row);
   }
 
   _openModuleMenu(x, y, rec) {
@@ -5757,8 +5744,9 @@ export class Rack {
     this._openMenu(e.clientX, e.clientY, items);
   }
 
-  // Right-click a module's vertical title (its left edge) → a small menu to reset its controls (cables
-  // untouched). Deleting a module now lives in Rack ▸ Delete this module.
+  // Right-click a module's TITLE BAR → that module's own menu: reset it, or delete it. The title
+  // bar is the module's handle in every other sense (it is what you drag), so it is also what
+  // "this module" means to a menu.
   _onTitleContextMenu(e, rec) {
     e.preventDefault();
     e.stopPropagation();

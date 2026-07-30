@@ -805,8 +805,9 @@ async function boot() {
   };
   // Read the folder, THEN open. It's a local readdir of a handful of files, so the wait is
   // imperceptible — and opening first and re-opening once it lands makes the menu flicker.
-  // Every module's title-bar hamburger opens this. The window's own corner button is gone: with a
-  // hamburger on each module the menu is always near the pointer, which was the whole point.
+  // A RIGHT-CLICK ON A FACEPLATE opens this — the same items as the bar at the top of the window,
+  // summoned where the pointer already is. That is the whole point: the faceplate is the largest
+  // target on screen, so the main menu costs no aim at all.
   rack.onAppMenuBar = (x, y, rec, rowIndex) => {
     refreshRecent().then(() => rack.openMenuBar(x, y, appMenuItems(rec, rowIndex)));
   };

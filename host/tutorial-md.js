@@ -12,7 +12,7 @@
 //   ## Heading         starts a CARD. The heading text becomes the card's title.
 //   paragraph          a paragraph of the current card. Write it on ONE line — the card wraps it.
 //   - item             consecutive items become one bulleted list.
-//   > **Do this** — …  a "Do this" block. The bold text is its label, so a card can say something
+//   > **Example** — …  an "Example" block. The bold text is its label, so a card can say something
 //                      else ("> **Now play** — …") and the document still reads right.
 //   <!-- … -->         ignored, including across lines.
 //
@@ -65,7 +65,7 @@ const inline = (s, sees) => escapeHtml(s)
   .replace(/(^|[^*])\*([^*]+)\*/g, '$1<em>$2</em>')
   .replace(/`([^`]+)`/g, '<code>$1</code>');
 
-// `> **Do this** — text` → { try: text, label: 'Do this' }. The dash after the label is optional
+// `> **Example** — text` → { try: text, label: 'Example' }. The dash after the label is optional
 // and may be an em dash or a hyphen; without a label the block still works and takes the default.
 const LABELLED = /^\*\*(.+?)\*\*\s*(?:—|–|--|-)?\s*([\s\S]*)$/;
 

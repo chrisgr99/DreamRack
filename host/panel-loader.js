@@ -41,10 +41,6 @@ export const FACE_LEFT_MM = 3.9;
 // band live here (they used to run vertically up the left edge). The strip occupies part
 // of the top gutter the crop used to discard, so no module content moves — the module
 // simply displays 4mm taller.
-// Room kept clear at the LEFT of the title bar for the menu hamburger. Shared by the glyph and
-// the identity banner so the two cannot disagree about it: the banner grows leftward from the
-// name, and without this it would slide straight under the hamburger on a narrow module.
-export const TITLE_BURGER_MM = 6.4;
 export const TITLE_STRIP_MM = 4;
 // The DRAWN title bar is taller than the revealed gutter: the extra 2mm overlays the face's
 // blank top margin, so total module height and all content positions stay put.
@@ -1009,10 +1005,10 @@ function drawIdentityStrip(svg, descriptor, ports, name) {
   const SEG_MM = 12, SEG_SHIFT = 1;         // the pill sits 1mm left of the name's gap edge
   const segs = [];
   const segEnd = gapL - SEG_SHIFT;
-  // The banner grows leftward from the name and stops clear of the hamburger — SHORTENED rather
-  // than overlapped, so on a narrow module the colour gives way to the control rather than sitting
-  // underneath it. On a wide one there is room for the full 12 mm and nothing changes.
-  const segL = Math.max(left + TITLE_BURGER_MM, segEnd - SEG_MM);
+  // The banner grows leftward from the name to the strip's left edge, or 12 mm, whichever comes
+  // first. It used to stop clear of a hamburger at that end; with the hamburger gone it can run
+  // the full width the module allows.
+  const segL = Math.max(left, segEnd - SEG_MM);
   if (segEnd - segL > 0.3) segs.push([segL, segEnd]);
   const segClipId = `title-seg-clip-${stripClipSeq++}`;
   const sclip = doc.createElementNS(SVG_NS, 'clipPath'); sclip.setAttribute('id', segClipId);
@@ -1074,36 +1070,6 @@ function decoratePanel(parsed, descriptor, opts) {
     t.textContent = name;
     svg.appendChild(t);
 
-    // The MENU HAMBURGER, at the right end of the title bar. Every module carries one and they
-    // all open the same application menu — the point is proximity: the menu appears where you are
-    // already working instead of at a far corner. It replaces the window's own corner button.
-    //
-    // Drawn here rather than injected by the rack so it scales with the panel and inherits the
-    // title strip's own geometry. The rack binds the click and, importantly, swallows pointerdown
-    // — the title bar is the module's drag handle, so without that a click would start a drag.
-    const bg = svg.ownerDocument.createElementNS(SVG_NS, 'g');
-    bg.setAttribute('class', 'module-burger');
-    bg.setAttribute('pointer-events', 'auto');
-    bg.style.cursor = 'pointer';
-    const bcx = FACE_LEFT_MM + TITLE_BURGER_MM / 2;            // LEFT end, inside the strip
-    const bcy = FACE_TOP_MM - TITLE_STRIP_MM + (TITLE_BAR_MM - 0.5) / 2;
-    const bw = 3.4, gap = 1.15;
-    // An invisible pad first, so the target is the whole end of the bar rather than three hairlines.
-    const pad = svg.ownerDocument.createElementNS(SVG_NS, 'rect');
-    pad.setAttribute('x', round2(bcx - 2.6)); pad.setAttribute('y', round2(bcy - 2.6));
-    pad.setAttribute('width', '5.2'); pad.setAttribute('height', '5.2');
-    pad.setAttribute('fill', 'none'); pad.setAttribute('pointer-events', 'all');
-    bg.appendChild(pad);
-    for (let i = -1; i <= 1; i++) {
-      const ln = svg.ownerDocument.createElementNS(SVG_NS, 'line');
-      ln.setAttribute('x1', round2(bcx - bw / 2)); ln.setAttribute('x2', round2(bcx + bw / 2));
-      ln.setAttribute('y1', round2(bcy + i * gap)); ln.setAttribute('y2', round2(bcy + i * gap));
-      ln.setAttribute('stroke', '#ffffff'); ln.setAttribute('stroke-width', '0.55');
-      ln.setAttribute('stroke-linecap', 'round'); ln.setAttribute('opacity', '0.85');
-      ln.setAttribute('pointer-events', 'none');
-      bg.appendChild(ln);
-    }
-    svg.appendChild(bg);
   }
   // The light panel border now wraps the TITLE STRIP too: retire the authored frame (which ran
   // around the face only, drawing a line UNDER the title bar) and draw one border around the
