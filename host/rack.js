@@ -5483,6 +5483,8 @@ export class Rack {
       redo: () => { this._disconnectAll(); this._resetAllControls(); },
     });
   }
+  // The confirm dialog, for a host command that needs one (Rack ▸ Reset to default).
+  confirm(message, yesLabel, onYes) { this._confirm(message, yesLabel, onYes); }
   confirmDeleteAllCables() {
     if (!this.patchbay.list().length && !this._anyControlChanged()) return;
     this._confirm('Delete all connections and reset every control to its default?', 'Reset all', () => this.deleteAllCables());

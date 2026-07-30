@@ -346,6 +346,8 @@ function applyAppMenu() {
         { type: 'separator' },
         { label: 'Rows', submenu: [1, 2, 3, 4, 5].map((n) => ({ label: String(n), type: 'radio', checked: s.rows === n, click: () => menuSend('setRows', n) })) },
         { label: 'Add module', submenu: (s.modules || []).map((m) => ({ label: m.name, click: () => menuSend('addModule', m.id) })) },
+        { type: 'separator' },
+        { label: 'Reset to Default…', click: () => menuSend('resetToDefault') },
       ],
     },
     {

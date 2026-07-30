@@ -573,6 +573,36 @@ async function boot() {
     await placeDefaultModules();
     storage.forget(); setPatchName(null); markClean(); afterLoad();
   }
+  // RESET TO DEFAULT — the rack and the app exactly as a first-run user meets them.
+  //
+  // Distinct from File ▸ New, which starts a new PATCH and leaves your view settings where you put
+  // them. This also returns dark mode, the row count, the menu bar and the zoom, because the thing
+  // it exists for is recovery: "put everything back" should not leave you hunting for the one
+  // setting it decided was yours to keep.
+  //
+  // The order matters. Row count is set BEFORE the modules are placed, since placeDefaultModules
+  // lays out against the current number of rows and would otherwise put the mixer in a row that is
+  // about to disappear.
+  async function resetToDefault() {
+    rack.confirm(
+      'Reset to default? This puts your modules back to the initial complement and state, '
+      + 'and returns the view settings to their defaults. Unsaved work is lost.',
+      'Reset', async () => {
+        rack.clear();
+        rack.resetAllControls();
+        setRows(2);
+        if (!rack.isDark()) toggleDark();
+        setMenuBar(true);
+        rack.resetZoom();
+        await placeDefaultModules();
+        // Silent, the way a launch is: the engine last, since that is what guarantees it.
+        rack.applyParam(mixRec, 'masterEnable', 'off');
+        rack.applyParam(mixRec, 'monitorEnable', 'off');
+        rack.applyParam(mixRec, 'engine', 'off');
+        storage.forget(); setPatchName(null); markClean(); afterLoad();
+      });
+  }
+
   async function openPatch() {
     if (!okToDiscard()) return;
     let f;
@@ -702,6 +732,7 @@ async function boot() {
       fitToWindow: () => rack.resetZoom(),
       toggleEngine: () => { rack.toggleEngine(); pushMenuState(); },
       addModule: (id) => rack.addModuleFromMenu(id, null),
+      resetToDefault: () => resetToDefault(),
       // Run the same items the in-window Help menu offers, rather than restating their URLs here.
       readme: () => { const it = rack.helpMenuItems().find((i) => i.label === 'README'); if (it) it.action(); },
       reference: () => { const it = rack.developerMenuItems().find((i) => i.label === 'Developer guide'); if (it) it.action(); },
@@ -783,6 +814,8 @@ async function boot() {
         && !(t.descriptor && t.descriptor.singleton && rack.hasModule(t.descriptorId))).map((t) => ({
         label: t.name, action: () => rack.addModuleFromMenu(t.descriptorId, rowIndex),
       })) },
+      { separator: true },
+      { label: 'Reset to default…', action: () => resetToDefault() },
       // Deleting a module is NOT here. It lives on the module's own right-click menu, where
       // "this module" means the one under the pointer rather than whichever title bar happened to
       // open this menu.
