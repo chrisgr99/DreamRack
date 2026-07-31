@@ -35,7 +35,7 @@ export function create(ctx, services) {
   const { descriptor } = services;
   const meta = new Map(descriptor.params.map((p) => [p.id, p]));
   const values = new Map(descriptor.params.map((p) => [p.id, p.default]));
-  let engine = null, unSource = null;
+  let engine = null, unSource = null, onParam = null;
 
   // Brightness is the one parameter with a CV input, so it is the one that needs a real node.
   const bright = ctx.createConstantSource();
@@ -62,7 +62,13 @@ export function create(ctx, services) {
   // replayed, so a restored patch's settings survive whichever order the two arrive in.
   function attachEngine(e) {
     engine = e;
-    for (const [id, v] of values) push(id, v);
+    for (const [id, v] of values) { if (id !== 'window') push(id, v); }
+    // The window is NEVER reopened by a restore, whatever the patch says. Opening a real OS
+    // window needs a user gesture; a load has none, so the request would be refused and this
+    // would quietly open the in-app fallback pane instead — a different window from the one the
+    // patch asked for. Better to come up closed, visibly, and let the lamp be clicked. The same
+    // reasoning as the engine coming up off: the app should not start doing things at you.
+    if (values.get('window') !== 'off') { values.set('window', 'off'); if (onParam) onParam('window', 'off'); }
     if (unSource) unSource();
     unSource = engine.addParamSource((params) => {
       tap.getFloatTimeDomainData(buf);
@@ -75,6 +81,17 @@ export function create(ctx, services) {
   function push(id, value) {
     if (id === 'bright') { bright.offset.value = Number(value); return; }   // sampled, not pushed
     if (!engine) return;
+    if (id === 'window') {
+      // The window can also be closed from its own chrome, so the lamp is not the only record of
+      // whether it is open: the engine calls back and the host writes the param, which is what
+      // keeps the two in step. Guarded against re-entry — that callback would otherwise arrive
+      // while this very push is still running.
+      const want = String(value) === 'on';
+      if (want === engine.windowOpen()) return;
+      if (want) engine.openWindow(() => { values.set('window', 'off'); if (onParam) onParam('window', 'off'); });
+      else engine.closeWindow();
+      return;
+    }
     if (id === 'limit') engine.params.limit = Number(value);
     else if (id === 'test') engine.params.test = String(value);
     else if (id === 'res' || id === 'frame') {
@@ -88,12 +105,16 @@ export function create(ctx, services) {
   function getParam(id) { return id === 'bright' ? bright.offset : null; }
   function supports() { return true; }
   function setParam(id, value) { values.set(id, value); push(id, value); }
+  // The host's channel back: the module telling it that one of its OWN params has changed, so
+  // the stored value and the panel follow. Distinct from onReadout, which only paints.
+  function onParamChange(cb) { onParam = cb; }
   function dispose() {
+    if (engine) engine.closeWindow();
     if (unSource) { unSource(); unSource = null; }
     try { bright.stop(); } catch (_e) { /* already stopped */ }
     try { bright.disconnect(); tap.disconnect(); mute.disconnect(); } catch (_e) { /* gone */ }
     engine = null;
   }
 
-  return { getOutput, getInput, getParam, setParam, supports, dispose, attachEngine };
+  return { getOutput, getInput, getParam, setParam, supports, dispose, attachEngine, onParamChange };
 }

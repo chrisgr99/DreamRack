@@ -3742,10 +3742,22 @@ export class Rack {
   // same laziness the monitor bus uses. A patch with no video pays for no GL context, and the
   // engine belongs to the rack rather than to Video Output so that a probe can look at a video
   // chain before anything has been committed to a screen.
+  // The engine is SCENERY: if it cannot be built, the module must still be placed. Creating a
+  // WebGL2 context, compiling shaders and linking programs are all things that can fail on a
+  // machine or driver we have never seen, and an exception here used to propagate out through
+  // _realize and abandon the whole add — the module simply never appeared, with nothing said.
+  // Now a failure costs the preview and the picture, and nothing else.
   _ensureVideoEngine() {
-    if (!this._videoEngine) {
-      this._videoEngine = new VideoEngine();
-      this._videoEngine.start();
+    if (this._videoEngine === undefined || this._videoEngine === null) {
+      try {
+        this._videoEngine = new VideoEngine();
+        this._videoEngine.start();
+      } catch (e) {
+        console.warn('[wcoast] video engine unavailable —', e && e.message);
+        this._videoEngine = { ok: false, params: {}, setSize() {}, addView() { return () => {}; },
+          addParamSource() { return () => {}; }, openWindow() { return false; }, closeWindow() {},
+          windowOpen() { return false; }, start() {}, stop() {}, dispose() {} };
+      }
     }
     return this._videoEngine;
   }
@@ -3764,7 +3776,9 @@ export class Rack {
   // see the engine's textures. The engine blits its one canvas into this one each frame.
   _attachVideoModule(rec, desc) {
     const engine = this._ensureVideoEngine();
-    if (typeof rec.instance.attachEngine === 'function') rec.instance.attachEngine(engine);
+    // Same rule one level down: a module whose attachEngine throws is still a placed module.
+    try { if (typeof rec.instance.attachEngine === 'function') rec.instance.attachEngine(engine); }
+    catch (e) { console.warn('[wcoast] video module could not attach to the engine —', e && e.message); }
     const pv = desc && desc.preview;
     const svg = rec.el.querySelector('svg');
     if (!pv || !engine.ok || !svg) return;
@@ -4914,6 +4928,11 @@ export class Rack {
     // Engine-driven panel indication, for modules that have any (the sequencer's
     // active-stage lamp). Optional contract method: a module without it is untouched.
     if (typeof instance.onReadout === 'function') instance.onReadout((map) => this._applyReadout(rec, map));
+    // ...and the stronger version: the module reporting that one of its own params CHANGED, so
+    // the stored value moves with the panel. onReadout only paints, which is right for a transient
+    // indication like a sequencer's active-stage lamp and wrong for a state the patch must record —
+    // the video window closed from its own chrome, say.
+    if (typeof instance.onParamChange === 'function') instance.onParamChange((id, v) => this.applyParam(rec, id, v));
     if (typeof instance.attachEngine === 'function') this._attachVideoModule(rec, type.descriptor);
 
     // Module-level handlers live on the wrapper element, so they survive a skin swap.
@@ -5897,6 +5916,12 @@ export class Rack {
     this._menuBarAway = (e) => {
       if (bar.contains(e.target)) return;
       if (this._menuEl && this._menuEl.contains(e.target)) return;
+      // ...and not a SUBMENU. Submenus are separate elements in _openSubs, not children of
+      // _menuEl, so without this the press on "Add module ▸ Video Output" tore the whole bar down
+      // before the click could land: every submenu item in the FLOATING bar silently did nothing,
+      // with no error to show for it. The docked bar had the identical fault; this is its twin,
+      // and the two dismiss handlers must keep agreeing about what counts as "outside".
+      if (this._openSubs.some((sub) => sub.contains(e.target))) return;
       // Remember WHERE this dismissal happened. The handler is on `document` in the capture
       // phase, so it runs BEFORE the title bar's own handler — which would otherwise see the bar
       // as already closed and cheerfully reopen it, and the menu would never toggle off. Recording

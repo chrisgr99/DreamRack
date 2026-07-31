@@ -22,8 +22,12 @@ ports.push({ id: 'imageIn', name: 'Image', section: 'out', domain: 'rgb', dir: '
 
 // WINDOW — open or close the floating output window. The module's most-used control, so it
 // is a lamp you can see the state of rather than a menu item you have to remember.
+// TRANSIENT: never saved with a patch. Opening the output window needs a user gesture, which a
+// patch load does not have — a saved "on" would be refused and quietly fall back to the in-app
+// pane, giving a different window from the one the patch asked for. So it always comes up closed
+// and is opened by a click, the same reasoning as the engine coming up off.
 params.push({ id: 'window', name: 'Window', section: 'out', curve: 'stepped',
-  steps: [{ value: 'off' }, { value: 'on' }], default: 'off' });
+  steps: [{ value: 'off' }, { value: 'on' }], default: 'off', transient: true });
 
 // BRIGHT — master brightness, and the one video parameter that most wants CV: fading the
 // whole image from an envelope is the video equivalent of a master fader. A knАck, so the

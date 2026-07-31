@@ -245,6 +245,17 @@
     /* ==key term== — the same accent the contents links use, so a topic label reads as a heading
        for its line without the weight that bold spends on module and menu names. */
     .tour-body .tour-key { color: var(--t-accent); }
+    /* The video output's IN-APP pane — the fallback where Document Picture-in-Picture is missing
+       (Firefox, Safari). Chromium gets a real OS window instead and never draws this. */
+    .video-window { position: fixed; right: 24px; bottom: 24px; z-index: 1400;
+      display: flex; flex-direction: column; background: #000; resize: both; overflow: hidden;
+      border: 1px solid #444; border-radius: 6px; box-shadow: 0 10px 30px rgba(0,0,0,0.6); }
+    .video-window-bar { flex: none; display: flex; align-items: center; justify-content: space-between;
+      padding: 3px 4px 3px 8px; background: #1b1b1e; color: #c8c8cc; cursor: grab;
+      font: 600 11px/1.4 -apple-system, system-ui, sans-serif; user-select: none; }
+    .video-window-close { border: none; background: none; color: #c8c8cc; cursor: pointer;
+      font: 400 15px/1 -apple-system, system-ui, sans-serif; padding: 0 4px; }
+    .video-window-close:hover { color: #fff; }
     /* One continuous document: each `##` in tutorial.md is a section with its own heading and a
        seam above it. The head reports which section you are scrolled into, so the heading here is
        for scanning while you scroll rather than for telling you where you are. */

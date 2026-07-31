@@ -46,7 +46,16 @@ export function serialize(rack, mixer) {
   }));
 
   const params = {};
-  for (const rec of recs) params[rec.key] = Object.fromEntries(rec.values);
+  // A param marked `transient` in its descriptor is state, not a setting: it belongs to this
+  // session rather than to the patch, so it is left out and comes back at its default. The video
+  // output's window is the first — see that descriptor for why it cannot be restored.
+  for (const rec of recs) {
+    const desc = rack.host.registry.descriptor(rec.descriptorId);
+    const skip = new Set((desc && desc.params || []).filter((p) => p.transient).map((p) => p.id));
+    const o = Object.fromEntries(rec.values);
+    for (const id of skip) delete o[id];
+    params[rec.key] = o;
+  }
   params[mixer.key] = { ...mixer.getParams() };
 
   const wiring = rack.patchbay.list().map((e) => {

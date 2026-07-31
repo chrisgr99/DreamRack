@@ -89,9 +89,18 @@ export class VideoEngine {
     this.ok = !!this.gl;
     if (!this.ok) { console.warn('[wcoast] no WebGL2 — video is unavailable'); return; }
     const gl = this.gl;
-    gl.bindVertexArray(gl.createVertexArray());
-    this._test = this._program(TEST);
-    this._show = this._program(SHOW);
+    // Shader compilation and linking can fail on a driver we have never met. Failing here must
+    // cost the picture, not the module: `ok` false is the same state as no WebGL2 at all, which
+    // every caller already handles.
+    try {
+      gl.bindVertexArray(gl.createVertexArray());
+      this._test = this._program(TEST);
+      this._show = this._program(SHOW);
+    } catch (e) {
+      console.warn('[wcoast] video shaders failed to build —', e && e.message);
+      this.ok = false;
+      return;
+    }
     this._fbo = null; this._tex = null;
     this._w = 0; this._h = 0;
     this._views = [];                    // { canvas, ctx } — thumbnails blitting this canvas
@@ -222,8 +231,142 @@ export class VideoEngine {
     }
   }
 
+  // ---- the output window ----
+  //
+  // The window shows a VIEW of the engine canvas — a 2-D blit, the same mechanism the module's
+  // thumbnail uses — rather than the engine canvas itself.
+  //
+  // Moving the real canvas into the window was the original design and it is wrong here. It works
+  // only if the window is genuinely displayed: Electron accepts requestWindow and then may never
+  // show anything, and the canvas is left in a document nobody is compositing. The picture stops
+  // — including the module's own preview — with no error and no window, which is exactly what it
+  // looked like from the outside. A view cannot fail that way: the engine canvas never leaves this
+  // document, so whatever happens to the window, the rack keeps drawing.
+  //
+  // The cost is one drawImage per frame, GPU-composited, of a canvas that is already on the GPU.
+  // Still one WebGL context, still no IPC, no encode and no latency.
+  async openWindow(onClose) {
+    if (!this.ok || this.windowOpen()) return false;
+    this._onWinClose = onClose || null;
+    const size = this._savedWindowSize();
+    // Document Picture-in-Picture, but NOT under Electron. Electron exposes the API and resolves
+    // requestWindow, then shows nothing: the request succeeds, the code takes the window branch,
+    // and the user gets no window at all with no error to explain it. The in-app pane is the
+    // honest choice there — it appears, it moves, it resizes. (A real second-monitor window in
+    // Electron means a second renderer and a stream between them, which the design places with
+    // fullscreen capture in a later phase, not here.)
+    const pip = window.wcoast ? null : window.documentPictureInPicture;
+    if (pip && typeof pip.requestWindow === 'function') {
+      try {
+        const w = await pip.requestWindow({ width: size.w, height: size.h });
+        w.document.body.style.cssText = 'margin:0;background:#000;overflow:hidden';
+        this._winView = this._addOutputCanvas(w.document, w.document.body, w);
+        // The user can close it from the OS chrome, so the module's lamp cannot be the only
+        // record of whether it is open — the close has to travel back.
+        w.addEventListener('pagehide', () => this._windowGone());
+        this._win = w;
+        return true;
+      } catch (_e) { /* refused, or no gesture left — fall through to the in-app pane */ }
+    }
+    return this._openPane(size);
+  }
+
+  // A canvas in `doc`, kept sized to its box, showing the engine's output.
+  _addOutputCanvas(doc, parent, win) {
+    const c = doc.createElement('canvas');
+    c.style.cssText = 'display:block;width:100%;height:100%;background:#000';
+    parent.appendChild(c);
+    const fit = () => {
+      const w = Math.max(16, c.clientWidth || (win ? win.innerWidth : 640));
+      const h = Math.max(16, c.clientHeight || (win ? win.innerHeight : 360));
+      const dpr = (win && win.devicePixelRatio) || window.devicePixelRatio || 1;
+      c.width = Math.round(w * dpr); c.height = Math.round(h * dpr);
+    };
+    fit();
+    const ro = (win && win.ResizeObserver) ? new win.ResizeObserver(fit) : new ResizeObserver(fit);
+    ro.observe(c);
+    const drop = this.addView(c);
+    this._winCanvas = c;
+    return () => { try { ro.disconnect(); } catch (_e) { /* gone */ } drop(); c.remove(); };
+  }
+
+  // The in-app fallback: a floating pane, draggable by its bar, showing the same view.
+  _openPane(size) {
+    const d = document.createElement('div');
+    d.className = 'video-window';
+    d.style.width = size.w + 'px';
+    d.style.height = size.h + 'px';
+    const bar = document.createElement('div');
+    bar.className = 'video-window-bar';
+    const title = document.createElement('span');
+    title.textContent = 'Video Output';
+    const close = document.createElement('button');
+    close.className = 'video-window-close';
+    close.type = 'button';
+    close.textContent = '×';
+    close.addEventListener('click', () => this._windowGone());
+    bar.append(title, close);
+    const body = document.createElement('div');
+    body.style.cssText = 'flex:1 1 auto;min-height:0';
+    d.append(bar, body);
+    document.body.appendChild(d);
+    this._winView = this._addOutputCanvas(document, body, window);
+    bar.addEventListener('pointerdown', (e) => {
+      if (e.target === close) return;
+      const r = d.getBoundingClientRect(), ox = e.clientX - r.left, oy = e.clientY - r.top;
+      const move = (ev) => { d.style.left = (ev.clientX - ox) + 'px'; d.style.top = (ev.clientY - oy) + 'px'; d.style.right = 'auto'; };
+      const up = () => { document.removeEventListener('pointermove', move); document.removeEventListener('pointerup', up); };
+      document.addEventListener('pointermove', move);
+      document.addEventListener('pointerup', up);
+    });
+    this._pane = d;
+    return true;
+  }
+
+  closeWindow() {
+    if (this._win) { const w = this._win; this._win = null; try { w.close(); } catch (_e) { /* already gone */ } }
+    this._teardownWindow();
+  }
+
+  // The window went away — by its own close button, by the OS chrome, or by closeWindow above.
+  _windowGone() {
+    const cb = this._onWinClose;
+    this._win = null;
+    this._teardownWindow();
+    if (cb) { this._onWinClose = null; cb(); }
+  }
+
+  _teardownWindow() {
+    this._rememberWindowSize();
+    if (this._winView) { this._winView(); this._winView = null; }
+    this._winCanvas = null;
+    if (this._pane) { this._pane.remove(); this._pane = null; }
+  }
+
+  windowOpen() { return !!(this._win || this._pane); }
+
+  // Size is remembered; POSITION is not, because Document Picture-in-Picture does not accept one
+  // — the browser places the window. Storing a position we could never honour would be a lie.
+  _savedWindowSize() {
+    try {
+      const v = JSON.parse(localStorage.getItem('wcoast.videoWindow') || 'null');
+      if (v && v.w > 120 && v.h > 80) return { w: Math.round(v.w), h: Math.round(v.h) };
+    } catch (_e) { /* no storage */ }
+    return { w: 640, h: 360 };
+  }
+  _rememberWindowSize() {
+    // offsetWidth, not clientWidth: the pane's border is inside the size we SET, so measuring the
+    // content box and setting it back as the border-box size shrinks the pane by the border on
+    // every open-close cycle. Two pixels a time is invisible once and obvious after twenty.
+    const w = this._win ? this._win.innerWidth : (this._pane ? this._pane.offsetWidth : 0);
+    const h = this._win ? this._win.innerHeight : (this._pane ? this._pane.offsetHeight : 0);
+    if (!(w > 120 && h > 80)) return;
+    try { localStorage.setItem('wcoast.videoWindow', JSON.stringify({ w, h })); } catch (_e) { /* no storage */ }
+  }
+
   dispose() {
     this.stop();
+    this.closeWindow();
     this._views.length = 0;
     this._sources.length = 0;
     if (!this.ok) return;
