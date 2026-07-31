@@ -42,8 +42,15 @@ const EAR_ICON = '<svg viewBox="0 0 24 24"><g fill="none" stroke="currentColor" 
 // orange, trigger blue, 1V/oct pitch green. A cord takes its DESTINATION port's
 // colour (see patchbay familyOfPort). One thin weight for every cord — thin lines
 // obscure less as they cross the panel, and colour separates them.
-const STYLE_COLOR = { audio: '#f3c40b', control: '#ff7300', trigger: '#5aa0e6', pitch: '#39a85a' };
-const domainStyle = (domain) => (domain === 'audio' ? 'audio' : domain === 'trigger' ? 'trigger' : 'control');
+// luma and rgb carry the SAME values the jacks use (see JACK in panel-loader): a video cord has
+// to match the port it lands in, and two tables of the same colour drift apart the moment one is
+// tuned. Missing them was why a luma cord into an rgb input drew in the control colour.
+const STYLE_COLOR = { audio: '#f3c40b', control: '#ff7300', trigger: '#5aa0e6', pitch: '#39a85a',
+  luma: '#babab6', rgb: '#e0359b' };
+const domainStyle = (domain) => (domain === 'audio' ? 'audio'
+  : domain === 'trigger' ? 'trigger'
+  : (domain === 'luma' || domain === 'rgb') ? domain
+  : 'control');
 const CABLE_PX = 3.8;   // cord thickness in px at zoom 1 (scales up as you zoom in)
 const CABLE_HOVER_FADE = 0.28;   // opacity a cable drops to while it obscures a control you're hovering
 const CABLE_FADE_TAU = 0.3;      // opacity easing time constant — cables brighten/dim over ~1s so quick sweeps don't flash
@@ -1434,6 +1441,7 @@ export class Rack {
     const origSnap = this._edgeSnapshot(edge);
 
     this.patchbay.disconnect(edge);   // break immediately: hear the patch WITHOUT it while deciding
+    this._rebuildVideoGraph();        // ...and SEE it without: a lifted video cord must stop feeding
     this._drawCables();
 
     const tmp = document.createElementNS(SVG_NS, 'path');
@@ -3774,6 +3782,40 @@ export class Rack {
   //
   // A canvas, not more SVG: the picture is a GPU texture, and a SECOND WebGL context could not
   // see the engine's textures. The engine blits its one canvas into this one each frame.
+  // THE VIDEO GRAPH, rebuilt from the patchbay whenever the wiring changes. The engine is told
+  // the nodes and the edges; it compiles, allocates and topologically sorts. Called on every
+  // connect and disconnect, not per frame — a graph rebuild is cheap and a stale graph is not.
+  //
+  // A module joins the graph by implementing videoPass(); the terminal joins by declaring which
+  // of its inputs the screen follows. Neither the rack nor the engine knows what any of them do.
+  _rebuildVideoGraph() {
+    const engine = this._videoEngine;
+    if (!engine || !engine.ok || typeof engine.setGraph !== 'function') return;
+    const nodes = [];
+    let terminal = null;
+    for (const rec of this.records.values()) {
+      const inst = rec.instance;
+      if (!inst) continue;
+      if (typeof inst.videoPass === 'function') {
+        const pass = inst.videoPass();
+        if (pass && pass.glsl) {
+          nodes.push({ key: rec.key, glsl: pass.glsl, inputs: pass.inputs || [],
+            uniforms: () => (typeof inst.videoUniforms === 'function' ? inst.videoUniforms() : {}) });
+        }
+      }
+      // The terminal is the module with a video input and no video output — Video Output, and
+      // for now only it. Found by shape rather than by name, so the next terminal needs no code.
+      const desc = this.host.registry.descriptor(rec.descriptorId);
+      const vin = (desc && desc.ports || []).filter((pt) => pt.dir === 'in' && (pt.domain === 'luma' || pt.domain === 'rgb'));
+      const vout = (desc && desc.ports || []).filter((pt) => pt.dir === 'out' && (pt.domain === 'luma' || pt.domain === 'rgb'));
+      if (vin.length && !vout.length) terminal = { key: rec.key, port: vin[0].id };
+    }
+    const edges = this.patchbay.list().filter((e) => e.video)
+      .map((e) => ({ from: e.src.key, to: e.dst.key, port: e.dst.portId }));
+    engine.setGraph(nodes, edges);
+    if (typeof engine.setTerminal === 'function') engine.setTerminal(terminal && terminal.key, terminal && terminal.port);
+  }
+
   _attachVideoModule(rec, desc) {
     const engine = this._ensureVideoEngine();
     // Same rule one level down: a module whose attachEngine throws is still a placed module.
@@ -3803,6 +3845,7 @@ export class Rack {
     const host = svg.querySelector(':scope > g[transform^="translate"]') || svg;
     host.appendChild(fo);
     rec.videoView = engine.addView(c);
+    this._rebuildVideoGraph();
   }
 
   // Is a module of this type already in the rack? Used by the Add menu to drop a singleton
@@ -4361,6 +4404,9 @@ export class Rack {
         } else if (e.style !== feed.style) { e.style = feed.style; changed = true; }
       }
     }
+    // Every path that adds, moves or removes a cord passes through here, so this is the one
+    // place the video graph needs rebuilding from — rather than each call site remembering to.
+    this._rebuildVideoGraph();
   }
 
   // Back to the fit-to-height home view (zoom 1) with no pan — from a double-click or the View menu.

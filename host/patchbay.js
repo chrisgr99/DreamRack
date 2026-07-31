@@ -99,6 +99,25 @@ export class Patchbay {
     // An input takes at most one cable — reject a second (outputs still fan out).
     if (this.inputOccupied(dst.key, dst.portId)) return { ok: false, reason: 'input already connected' };
 
+    // A VIDEO edge carries no audio node at either end. It is a LOGICAL connection — module X's
+    // output texture becomes module Y's input sampler — and the whole of it lives inside the
+    // video engine's frame loop. So it is recorded and nothing is wired: no getOutput, no
+    // getInput, no gain. The rack reads these edges back out to build the render graph.
+    if (VIDEO.has(srcPort.domain) && VIDEO.has(dstPort.domain)) {
+      const vEdge = {
+        id: 'e' + (this._seq++),
+        src: { ...src }, dst: { ...dst },
+        srcDomain: srcPort.domain, dstDomain: dstPort.domain,
+        style: familyOfPort(dstPort),
+        viaParamId: null,
+        out: null, nodeIn: null, gainNode: null, target: null,
+        video: true,
+        verdict,
+      };
+      this.edges.set(vEdge.id, vEdge);
+      return { ok: true, edge: vEdge, verdict };
+    }
+
     const out = src.instance.getOutput(src.portId);
     if (!out) return { ok: false, reason: `output "${src.portId}" not realized` };
 
@@ -151,6 +170,9 @@ export class Patchbay {
   }
 
   disconnect(edge) {
+    // A video edge has nothing to unwire — removing it from the list IS the disconnection, and
+    // the rack rebuilds the render graph from what is left.
+    if (edge && edge.video) { this.edges.delete(edge.id); return; }
     if (!edge || !this.edges.has(edge.id)) return;
     try {
       if (edge.nodeIn) edge.out.node.disconnect(edge.nodeIn.node, edge.out.index, edge.nodeIn.index);

@@ -78,9 +78,12 @@ void main() {
 // arrive, this is the only thing that changes: it samples whatever texture the graph ended on.
 const SHOW = `#version 300 es
 precision highp float;
-uniform sampler2D uTex; uniform vec2 uRes;
+uniform sampler2D uTex; uniform vec2 uRes; uniform float uBright; uniform float uLimit;
 out vec4 o;
-void main() { o = vec4(texture(uTex, gl_FragCoord.xy / uRes).rgb, 1.0); }`;
+void main() {
+  vec3 c = texture(uTex, gl_FragCoord.xy / uRes).rgb * uBright;
+  o = vec4(min(c, vec3(uLimit)), 1.0);
+}`;
 
 export class VideoEngine {
   constructor() {
@@ -105,6 +108,10 @@ export class VideoEngine {
     this._w = 0; this._h = 0;
     this._views = [];                    // { canvas, ctx } — thumbnails blitting this canvas
     this._sources = [];                  // per-frame parameter samplers — see addParamSource
+    this._nodes = new Map();             // key -> { glsl, prog, fbo, tex, inputs, uniforms }
+    this._edges = [];                    // { from, to, port } — the video wiring, from the rack
+    this._order = [];                    // node keys, feeders first
+    this._terminal = null;               // { key, port } — whose input the SHOW pass displays
     this._raf = 0;
     this._t0 = performance.now();
     // Uniform state, written by the module and read at the top of each frame. Deliberately
@@ -160,6 +167,140 @@ export class VideoEngine {
     gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, t, 0);
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     this._tex = t; this._fbo = f;
+    this._resizeTargets();               // every module's own target follows the render size
+  }
+
+  // ---- the video graph ----
+  //
+  // A module hands over SHADER SOURCE and a per-frame uniform block; the engine owns every
+  // scrap of GL. That split is what keeps thirteen planned modules from each growing their own
+  // WebGL code, and it is why a module never sees a texture, a framebuffer or a program.
+  //
+  // setGraph is called by the rack whenever the video wiring changes — not per frame. It
+  // compiles what is new, allocates a framebuffer per node, and topologically sorts the nodes so
+  // that a module is always drawn after everything feeding it.
+  //
+  // nodes: [{ key, glsl, inputs: [portName], uniforms() }]
+  // edges: [{ from: key, to: key, port: portName }]
+  setGraph(nodes, edges) {
+    if (!this.ok) return;
+    const gl = this.gl;
+    const wanted = new Set(nodes.map((n) => n.key));
+    for (const [key, n] of this._nodes) {                    // modules that have gone
+      if (!wanted.has(key)) { this._freeTarget(n); this._nodes.delete(key); }
+    }
+    for (const spec of nodes) {
+      let n = this._nodes.get(spec.key);
+      if (!n) { n = { key: spec.key }; this._nodes.set(spec.key, n); }
+      n.uniforms = spec.uniforms;
+      n.inputs = spec.inputs || [];
+      if (n.glsl !== spec.glsl) {                            // a shader only compiles on a change
+        n.glsl = spec.glsl;
+        try { n.prog = this._program(spec.glsl); }
+        catch (e) { console.warn('[wcoast] video shader failed for', spec.key, '—', e && e.message); n.prog = null; }
+      }
+      if (!n.fbo) this._makeTarget(n);
+    }
+    this._edges = edges.slice();
+    this._order = this._topoSort();
+  }
+
+  // Depth-first, with a seen set that also catches a cycle: video FEEDBACK is a real technique
+  // and a later module owns it deliberately (ping-pong buffers, one frame of delay). An
+  // accidental cycle here would simply hang, so the edge that closes it is dropped and said so.
+  _topoSort() {
+    const out = [], mark = new Map();
+    const feeders = (key) => this._edges.filter((e) => e.to === key).map((e) => e.from);
+    const visit = (key, stack) => {
+      if (mark.get(key) === 'done') return;
+      if (mark.get(key) === 'open') {
+        console.warn('[wcoast] video graph has a loop through', key, '— that edge is ignored');
+        return;
+      }
+      mark.set(key, 'open');
+      for (const f of feeders(key)) if (this._nodes.has(f)) visit(f, stack);
+      mark.set(key, 'done');
+      out.push(key);
+    };
+    for (const key of this._nodes.keys()) visit(key, []);
+    return out;
+  }
+
+  // The texture a module's input port is fed by, or null. Used both to bind samplers and to
+  // decide what the terminal shows.
+  sourceTexture(key, port) {
+    const e = this._edges.find((x) => x.to === key && x.port === port);
+    const n = e && this._nodes.get(e.from);
+    return n ? n.tex : null;
+  }
+
+  _makeTarget(n) {
+    const gl = this.gl;
+    const t = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, t);
+    gl.texStorage2D(gl.TEXTURE_2D, 1, gl.RGBA8, this._w, this._h);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    const f = gl.createFramebuffer();
+    gl.bindFramebuffer(gl.FRAMEBUFFER, f);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, t, 0);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    n.tex = t; n.fbo = f;
+    // RGBA8 for every node in this phase, luma included. Phase 0 measured an R8 pass at about
+    // half the cost, so a monochrome chain should eventually allocate R8 and save it; doing that
+    // now would mean two texture formats and two sampler idioms before there is a chain long
+    // enough to notice. The measurement is recorded; the optimisation waits for a reason.
+  }
+
+  _freeTarget(n) {
+    const gl = this.gl;
+    if (n.tex) gl.deleteTexture(n.tex);
+    if (n.fbo) gl.deleteFramebuffer(n.fbo);
+    n.tex = null; n.fbo = null;
+  }
+
+  // Every node's target follows the render size, so a RES or FRAME change reallocates them all.
+  _resizeTargets() {
+    for (const n of this._nodes.values()) { this._freeTarget(n); this._makeTarget(n); }
+  }
+
+  // Draw one module into its own framebuffer, with its feeders bound as samplers.
+  _drawNode(n, time) {
+    const gl = this.gl;
+    if (!n.prog || !n.fbo) return;
+    gl.bindFramebuffer(gl.FRAMEBUFFER, n.fbo);
+    gl.useProgram(n.prog.p);
+    if (n.prog.u.uRes) gl.uniform2f(n.prog.u.uRes, this._w, this._h);
+    if (n.prog.u.uTime) gl.uniform1f(n.prog.u.uTime, time);
+    let unit = 0;
+    for (const port of n.inputs) {
+      const tex = this.sourceTexture(n.key, port);
+      const loc = n.prog.u['u_' + port];
+      const has = n.prog.u['has_' + port];
+      gl.activeTexture(gl.TEXTURE0 + unit);
+      gl.bindTexture(gl.TEXTURE_2D, tex || this._blankTex());
+      if (loc) gl.uniform1i(loc, unit);
+      if (has) gl.uniform1i(has, tex ? 1 : 0);
+      unit++;
+    }
+    const vals = (typeof n.uniforms === 'function' && n.uniforms()) || {};
+    for (const k of Object.keys(vals)) {
+      const loc = n.prog.u['u_' + k];
+      if (loc) gl.uniform1f(loc, Number(vals[k]) || 0);
+    }
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
+  }
+
+  // One black pixel, for an input port with nothing patched into it.
+  _blankTex() {
+    if (this._blank) return this._blank;
+    const gl = this.gl, t = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, t);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([0, 0, 0, 255]));
+    this._blank = t;
+    return t;
   }
 
   // Register a canvas that should show the output. A THUMBNAIL, the eventual monitor probes
@@ -194,11 +335,32 @@ export class VideoEngine {
     // Sample every module's parameters first, so one frame is drawn from one consistent set of
     // values rather than from values that changed halfway through it.
     for (const fn of this._sources) { try { fn(this.params); } catch (_e) { /* a bad sampler must not stop the frame */ } }
-    const showTest = this.params.test === 'on';
-
     gl.viewport(0, 0, this._w, this._h);
+
+    // THE GRAPH, feeders first. Each module draws into its own framebuffer, sampling the
+    // textures of whatever feeds it; nothing is read back to the CPU at any point.
+    for (const key of this._order) {
+      const n = this._nodes.get(key);
+      if (n) this._drawNode(n, time);
+    }
+
+    // What the terminal is looking at: the texture of whatever is patched into its image input.
+    // A patched chain wins over the test pattern — the pattern is scaffolding, and the moment
+    // there is a real image the module should be showing it.
+    const patched = this._terminal ? this.sourceTexture(this._terminal.key, this._terminal.port) : null;
+    const showTest = !patched && this.params.test === 'on';
+
     gl.bindFramebuffer(gl.FRAMEBUFFER, this._fbo);
-    if (showTest) {
+    if (patched) {
+      // Straight through the show shader's own sampler, then treated by BRIGHT and LIMIT below.
+      gl.useProgram(this._show.p);
+      gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, patched);
+      gl.uniform1i(this._show.u.uTex, 0);
+      gl.uniform2f(this._show.u.uRes, this._w, this._h);
+      if (this._show.u.uBright) gl.uniform1f(this._show.u.uBright, this.params.bright);
+      if (this._show.u.uLimit) gl.uniform1f(this._show.u.uLimit, this.params.limit);
+      gl.drawArrays(gl.TRIANGLES, 0, 3);
+    } else if (showTest) {
       gl.useProgram(this._test.p);
       gl.uniform2f(this._test.u.uRes, this._w, this._h);
       gl.uniform1f(this._test.u.uTime, time);
@@ -215,6 +377,10 @@ export class VideoEngine {
     gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, this._tex);
     gl.uniform1i(this._show.u.uTex, 0);
     gl.uniform2f(this._show.u.uRes, this._w, this._h);
+    // Unity here: BRIGHT and LIMIT were already applied when the image was written into _tex,
+    // and applying them twice would square the fade.
+    if (this._show.u.uBright) gl.uniform1f(this._show.u.uBright, 1);
+    if (this._show.u.uLimit) gl.uniform1f(this._show.u.uLimit, 1);
     gl.drawArrays(gl.TRIANGLES, 0, 3);
 
     for (const v of this._views) {
@@ -344,6 +510,9 @@ export class VideoEngine {
   }
 
   windowOpen() { return !!(this._win || this._pane); }
+
+  // The terminal declares which of its inputs the screen follows. One per rack, like the mixer.
+  setTerminal(key, port) { this._terminal = key ? { key, port } : null; }
 
   // Size is remembered; POSITION is not, because Document Picture-in-Picture does not accept one
   // — the browser places the window. Storing a position we could never honour would be a lie.

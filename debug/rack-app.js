@@ -28,6 +28,8 @@ import progDescriptor from '../modules/programmer-8/descriptor.js';
 import { create as progCreate } from '../modules/programmer-8/factory.js';
 import vidDescriptor from '../modules/video-out/descriptor.js';
 import { create as vidCreate } from '../modules/video-out/factory.js';
+import fieldDescriptor from '../modules/coordinate-field/descriptor.js';
+import { create as fieldCreate } from '../modules/coordinate-field/factory.js';
 import { serialize, restore, validate, APP_NAME, APP_VERSION } from '../host/patch-io.js';
 import { createStorage } from '../host/storage.js';
 import { buildCatalogue, createMirror } from '../host/mirror.js';
@@ -49,6 +51,7 @@ registry.register({ descriptor: galleryDescriptor, create: galleryCreate });
 registry.register({ descriptor: sineDescriptor, create: sineCreate });
 registry.register({ descriptor: progDescriptor, create: progCreate });
 registry.register({ descriptor: vidDescriptor, create: vidCreate });
+registry.register({ descriptor: fieldDescriptor, create: fieldCreate });
 
 const MODULE_TYPES = [{
   descriptorId: oscDescriptor.id,
@@ -102,6 +105,15 @@ const MODULE_TYPES = [{
   hp: 12,
   panelUrl: 'modules/video-out/panel.svg',
   descriptor: vidDescriptor,
+}, {
+  // Coordinate Field — the first module of the patchable video chain. It owns a coordinate
+  // space, moves it, and reads a field out of it; with an image patched in it warps that
+  // instead. 16 HP, three columns: place, warp, field.
+  descriptorId: fieldDescriptor.id,
+  name: 'Coordinate Field',
+  hp: 16,
+  panelUrl: 'modules/coordinate-field/panel.svg',
+  descriptor: fieldDescriptor,
 }, {
   // The mixer is a pinned singleton placed at boot, so it's hidden from the
   // "Add module" menu (no second mixer). Still a normal module type otherwise.

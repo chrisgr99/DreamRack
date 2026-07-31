@@ -234,7 +234,8 @@ processing is monochrome, and colour happens at two specific places.
 
 ### First set — enough to be worth using
 1. **Video Output** · rgb in. Owns the window and the final image. Terminal module, one
-   per rack, like the Mixer. Inputs: the image, plus a background colour.
+   per rack, like the Mixer. One input: the image. Backgrounds belong to the compositor
+   (6), not here — a terminal that also composites is two modules doing one job badly.
 2. **Coordinate warp / fields** · luma. Both halves of the same job: it EMITS a coordinate
    field and it TRANSFORMS one. The fields replace the hardware idea of horizontal and
    vertical ramp voltages, and are the design's most-used signal: X, Y, diagonal, radial,
