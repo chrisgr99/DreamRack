@@ -256,6 +256,51 @@
     .video-window-close { border: none; background: none; color: #c8c8cc; cursor: pointer;
       font: 400 15px/1 -apple-system, system-ui, sans-serif; padding: 0 4px; }
     .video-window-close:hover { color: #fff; }
+    /* The pointer follower: a small picture that tracks the cursor, for working a control while
+       magnified. Click-through — it must never be a target, only something to look at. */
+    /* A video monitor: a live picture of ONE point in the graph, clipped anywhere, as many as
+       wanted. The audio side's ear monitors and scopes, for the other sense.
+
+       The BORDER carries the state, the way the scope's does: green while it is live, red while
+       it is frozen. No title bar — at 160px wide a bar spends a tenth of the picture saying what
+       the object already says. */
+    .video-monitor { position: fixed; z-index: 1260; background: #000; padding: 0;
+      border: 1px solid #3ad16b; border-radius: 6px; box-shadow: 0 6px 18px rgba(0,0,0,0.55);
+      cursor: var(--move); }
+    .video-monitor.frozen { border-color: #e22a2a; }
+    .video-monitor-canvas { display: block; width: 80px; height: 45px; border-radius: 5px; }
+    /* The scope's own close dot, in the same corner and with the same hover behaviour. */
+    .video-monitor-close { position: absolute; left: 2px; top: 2px; width: 10px; height: 10px;
+      border-radius: 50%; background: #ff5f57; color: rgba(70,8,8,0.55); opacity: 0;
+      transition: opacity 0.1s; cursor: pointer; display: flex; align-items: center;
+      justify-content: center; font: 700 9px/1 sans-serif; user-select: none; -webkit-user-select: none; }
+    .video-monitor-close::after { content: '\00d7'; }
+    .video-monitor:hover .video-monitor-close { opacity: 0.9; }
+    .video-monitor-close:hover { opacity: 1; }
+    /* A faceplate TEXT READOUT — the Formula module's expression. Sized in the panel's own
+       millimetres, so it scales with rack zoom like everything else on the face. */
+    .module-readout-text { width: 100%; height: 100%; margin: 0; padding: 0.6px 0.8px;
+      font: 600 3.1px/1.25 ui-monospace, SFMono-Regular, Menlo, monospace; color: #dfe4ea;
+      overflow: hidden; word-break: break-word; user-select: none; -webkit-user-select: none; }
+    .module-readout-text.bad { color: #ff8a80; }
+    /* Its editor: a floating panel, deliberately at normal reading size rather than panel size. */
+    .readout-editor { position: fixed; z-index: 1450; width: 340px; display: flex;
+      flex-direction: column; gap: 6px; padding: 8px; border-radius: 8px;
+      background: #cfcfcf; color: #163a69; border: 1.5px solid #141414;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5); font: 400 13px/1.4 -apple-system, system-ui, sans-serif; }
+    .readout-editor.theme-dark { background: #262629; color: #b8b8bc; border-color: #d2d2d6; }
+    .readout-editor-title { font-weight: 600; cursor: grab; user-select: none; }
+    .readout-editor-text { width: 100%; min-height: 54px; resize: vertical; padding: 5px 6px;
+      font: 400 13px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;
+      background: #ffffff; color: #111; border: 1px solid #8a8d92; border-radius: 4px; }
+    .readout-editor.theme-dark .readout-editor-text { background: #1a1a1c; color: #e6e6ea; }
+    .readout-editor-msg { font-size: 12px; opacity: 0.75; min-height: 15px; }
+    .readout-editor-msg.bad { color: #e2422a; opacity: 1; }
+    .readout-editor-close { align-self: flex-end; padding: 3px 12px; border-radius: 6px;
+      border: 1px solid currentColor; background: none; color: inherit; cursor: pointer; font: inherit; }
+    .video-follow { position: fixed; z-index: 1500; width: 96px; height: 54px;
+      pointer-events: none; background: #000; border: 1px solid #555; border-radius: 4px;
+      box-shadow: 0 4px 14px rgba(0,0,0,0.6); }
     /* One continuous document: each `##` in tutorial.md is a section with its own heading and a
        seam above it. The head reports which section you are scrolled into, so the heading here is
        for scanning while you scroll rather than for telling you where you are. */

@@ -250,7 +250,7 @@ function registerPatchIpc() {
 //
 // The commands all live in the RENDERER, so every item just names an action and sends it there —
 // which keeps ONE implementation of New/Open/Undo/Dark mode, driven from either menu.
-let menuState = { dark: true, rows: 2, canUndo: false, canRedo: false, recent: [], engine: false, modules: [] };
+let menuState = { dark: true, rows: 2, canUndo: false, canRedo: false, recent: [], engine: false, modules: [], videoFollow: false };
 let menuSig = null;
 
 function menuSend(action, arg) {
@@ -335,6 +335,7 @@ function applyAppMenu() {
         { label: s.dark ? 'Light Mode' : 'Dark Mode', click: () => menuSend('toggleDark') },
         { label: 'Rows in Rack', submenu: [1, 2, 3, 4, 5].map((n) => ({ label: String(n), type: 'radio', checked: s.rows === n, click: () => menuSend('setRows', n) })) },
         { label: 'Fit to Window', click: () => menuSend('fitToWindow') },
+        { label: 'Video Follows Pointer', type: 'checkbox', checked: !!s.videoFollow, click: () => menuSend('toggleVideoFollow') },
         { type: 'separator' },
         { label: 'Patch Notes', click: () => menuSend('patchNotes') },   // info about this patch
       ],

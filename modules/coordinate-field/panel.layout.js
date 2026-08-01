@@ -77,7 +77,11 @@ const knack = (id, x, y, label, { ends = null, bipolar = false } = {}) => {
     ink(x - END_DX, y + END_DY, ends[0], { size: SC.size, anchor: 'end' });
     ink(x + END_DX, y + END_DY, ends[1], { size: SC.size, anchor: 'start' });
   }
-  items.push({ t: 'knack', id, x, y, opts: { radius: R, cap: CAP, port: `${id}Cv`, depth: `${id}Depth`, scale } });
+  // av: 'off' EXPLICITLY. The loader reads a missing data-wcoast-av as "on", so leaving it out
+  // gives every knob here an attenuverter band nobody asked for. These are plain knАcks: a cable
+  // in the centre drives the full sweep, and any single knob can still be given an attenuverter
+  // from its own right-click menu if a patch ever wants one.
+  items.push({ t: 'knack', id, x, y, opts: { radius: R, cap: CAP, port: `${id}Cv`, depth: `${id}Depth`, av: 'off', scale } });
   if (bipolar) items.push({ t: 'bipolarMark', x, y, r: R, opts: { gap: 1.5, spanDeg: 21, r: 1.0, sw: 0.34 } });
   ink(x, y + R + NAME_DROP, label, { size: NAME_SIZE });
 };

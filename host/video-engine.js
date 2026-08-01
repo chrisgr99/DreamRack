@@ -27,6 +27,10 @@ const BASE_W = 1920, BASE_H = 1080;
 
 // Framings, as width over height. Square and vertical are here because that is what the
 // places these clips get posted actually want, and deciding it at render time costs nothing.
+// How many frames of history a module that asks for it gets — about half a second at 60Hz,
+// which is where delay, trails and slit-scan all have their useful settings.
+export const HIST_LEN = 32;
+
 export const FRAMES = { '16:9': 16 / 9, '1:1': 1, '9:16': 9 / 16 };
 
 const VERT = `#version 300 es
@@ -107,11 +111,13 @@ export class VideoEngine {
     this._fbo = null; this._tex = null;
     this._w = 0; this._h = 0;
     this._views = [];                    // { canvas, ctx } — thumbnails blitting this canvas
+    this._nodeViews = [];                // { canvas, ctx, key, port } — monitors on one graph point
     this._sources = [];                  // per-frame parameter samplers — see addParamSource
     this._nodes = new Map();             // key -> { glsl, prog, fbo, tex, inputs, uniforms }
     this._edges = [];                    // { from, to, port } — the video wiring, from the rack
     this._order = [];                    // node keys, feeders first
     this._terminal = null;               // { key, port } — whose input the SHOW pass displays
+    this._histHead = 0;                  // which ring layer this frame is being written to
     this._raf = 0;
     this._t0 = performance.now();
     // Uniform state, written by the module and read at the top of each frame. Deliberately
@@ -194,6 +200,7 @@ export class VideoEngine {
       if (!n) { n = { key: spec.key }; this._nodes.set(spec.key, n); }
       n.uniforms = spec.uniforms;
       n.inputs = spec.inputs || [];
+      if (!!spec.history !== !!n.wantsHistory) { n.wantsHistory = !!spec.history; this._freeTarget(n); }
       if (n.glsl !== spec.glsl) {                            // a shader only compiles on a change
         n.glsl = spec.glsl;
         try { n.prog = this._program(spec.glsl); }
@@ -234,6 +241,46 @@ export class VideoEngine {
     return n ? n.tex : null;
   }
 
+  // The FRAME HISTORY: a ring of past frames, as a 2D TEXTURE ARRAY.
+  //
+  // An array rather than a list of samplers, and that is the whole trick. GLSL will not let a
+  // fragment shader pick between separate samplers per pixel, but it will sample an array at a
+  // layer computed per pixel — which is exactly what slit-scan needs: every row of the output
+  // taken from a different moment. Sampler arrays would give delay and trails and stop there.
+  //
+  // A module asks for history by declaring it; the engine writes that module's INPUT into the
+  // ring once per frame and hands the whole ring to its shader. Cost is one extra pass, and
+  // memory: HIST_LEN frames at the render size. 32 is roughly half a second at 60Hz, which is
+  // where the interesting settings are, and it is allocated only for a module that asks.
+  _makeHistory(n) {
+    const gl = this.gl;
+    const t = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D_ARRAY, t);
+    gl.texStorage3D(gl.TEXTURE_2D_ARRAY, 1, gl.RGBA8, this._w, this._h, HIST_LEN);
+    gl.texParameteri(gl.TEXTURE_2D_ARRAY, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D_ARRAY, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D_ARRAY, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D_ARRAY, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    n.hist = t;
+    n.histFbo = gl.createFramebuffer();
+  }
+
+  // Write this frame's input into the ring at `head`.
+  _writeHistory(n, head) {
+    const gl = this.gl;
+    const src = this.sourceTexture(n.key, n.inputs[0]);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, n.histFbo);
+    gl.framebufferTextureLayer(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, n.hist, 0, head);
+    gl.useProgram(this._show.p);
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, src || this._blankTex());
+    gl.uniform1i(this._show.u.uTex, 0);
+    gl.uniform2f(this._show.u.uRes, this._w, this._h);
+    if (this._show.u.uBright) gl.uniform1f(this._show.u.uBright, 1);
+    if (this._show.u.uLimit) gl.uniform1f(this._show.u.uLimit, 1);
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
+  }
+
   _makeTarget(n) {
     const gl = this.gl;
     const t = gl.createTexture();
@@ -248,6 +295,7 @@ export class VideoEngine {
     gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, t, 0);
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     n.tex = t; n.fbo = f;
+    if (n.wantsHistory) this._makeHistory(n);
     // RGBA8 for every node in this phase, luma included. Phase 0 measured an R8 pass at about
     // half the cost, so a monochrome chain should eventually allocate R8 and save it; doing that
     // now would mean two texture formats and two sampler idioms before there is a chain long
@@ -258,7 +306,9 @@ export class VideoEngine {
     const gl = this.gl;
     if (n.tex) gl.deleteTexture(n.tex);
     if (n.fbo) gl.deleteFramebuffer(n.fbo);
-    n.tex = null; n.fbo = null;
+    if (n.hist) gl.deleteTexture(n.hist);
+    if (n.histFbo) gl.deleteFramebuffer(n.histFbo);
+    n.tex = null; n.fbo = null; n.hist = null; n.histFbo = null;
   }
 
   // Every node's target follows the render size, so a RES or FRAME change reallocates them all.
@@ -285,6 +335,14 @@ export class VideoEngine {
       if (has) gl.uniform1i(has, tex ? 1 : 0);
       unit++;
     }
+    if (n.hist) {
+      gl.activeTexture(gl.TEXTURE0 + unit);
+      gl.bindTexture(gl.TEXTURE_2D_ARRAY, n.hist);
+      if (n.prog.u.u_history) gl.uniform1i(n.prog.u.u_history, unit);
+      if (n.prog.u.u_histLen) gl.uniform1f(n.prog.u.u_histLen, HIST_LEN);
+      if (n.prog.u.u_histHead) gl.uniform1f(n.prog.u.u_histHead, this._histHead);
+      unit++;
+    }
     const vals = (typeof n.uniforms === 'function' && n.uniforms()) || {};
     for (const k of Object.keys(vals)) {
       const loc = n.prog.u['u_' + k];
@@ -301,6 +359,59 @@ export class VideoEngine {
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([0, 0, 0, 255]));
     this._blank = t;
     return t;
+  }
+
+  // ---- the video monitor: a view of ONE POINT in the graph ----
+  //
+  // The design rates this above any module, and the reason is arithmetic: a patch of eight video
+  // modules has one output, so without it you cannot see what the third module in a chain emits
+  // except by unplugging the chain. It is the same object the audio side already has — clip it
+  // anywhere, as many as you like.
+  //
+  // `port` null means "this module's own output"; naming an INPUT port means "whatever is feeding
+  // that input", which is what you want when you clip one to a compositor's A and B.
+  //
+  // Cost is one pass and one blit per monitor, in a context that is already rendering. The passes
+  // happen BEFORE the terminal's, so the canvas is left holding the terminal image for the window
+  // and the pointer follower to blit — the monitors borrow the canvas and give it back.
+  addNodeView(key, port, canvas) {
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return () => {};
+    const view = { canvas, ctx, key, port, frozen: false };
+    this._nodeViews.push(view);
+    return {
+      remove: () => { const i = this._nodeViews.indexOf(view); if (i >= 0) this._nodeViews.splice(i, 1); },
+      // FREEZE holds the last picture: the view stops being drawn, so whatever is in its canvas
+      // stays there. Nothing is copied and nothing is stored — the canvas already IS the frame.
+      setFrozen: (f) => { view.frozen = !!f; },
+      frozen: () => view.frozen,
+    };
+  }
+
+  _drawNodeViews() {
+    if (!this._nodeViews.length) return;
+    const gl = this.gl;
+    for (const v of this._nodeViews) {
+      if (!v.canvas.isConnected || v.frozen) continue;
+      const tex = v.port ? this.sourceTexture(v.key, v.port) : (this._nodes.get(v.key) || {}).tex;
+      const { canvas: c, ctx } = v;
+      const cw = c.width, ch = c.height;
+      if (!tex) { ctx.fillStyle = '#000'; ctx.fillRect(0, 0, cw, ch); continue; }
+      gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+      gl.useProgram(this._show.p);
+      gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, tex);
+      gl.uniform1i(this._show.u.uTex, 0);
+      gl.uniform2f(this._show.u.uRes, this._w, this._h);
+      // A monitor reports what is THERE, untouched: BRIGHT and LIMIT are the terminal's treatment
+      // of the final image, and applying them here would make the monitor lie about its point.
+      if (this._show.u.uBright) gl.uniform1f(this._show.u.uBright, 1);
+      if (this._show.u.uLimit) gl.uniform1f(this._show.u.uLimit, 1);
+      gl.drawArrays(gl.TRIANGLES, 0, 3);
+      const s = Math.min(cw / this._w, ch / this._h);
+      const dw = this._w * s, dh = this._h * s;
+      ctx.fillStyle = '#000'; ctx.fillRect(0, 0, cw, ch);
+      ctx.drawImage(this.canvas, (cw - dw) / 2, (ch - dh) / 2, dw, dh);
+    }
   }
 
   // Register a canvas that should show the output. A THUMBNAIL, the eventual monitor probes
@@ -339,10 +450,20 @@ export class VideoEngine {
 
     // THE GRAPH, feeders first. Each module draws into its own framebuffer, sampling the
     // textures of whatever feeds it; nothing is read back to the CPU at any point.
+    // The ring is written BEFORE anything is drawn, so every history module sees the same head
+    // and a shader reading "one frame ago" means the same thing across the whole graph.
+    this._histHead = (this._histHead + 1) % HIST_LEN;
+    for (const n of this._nodes.values()) if (n.hist) this._writeHistory(n, this._histHead);
+    gl.viewport(0, 0, this._w, this._h);
+
     for (const key of this._order) {
       const n = this._nodes.get(key);
       if (n) this._drawNode(n, time);
     }
+
+    // The monitors first, each borrowing the canvas for one pass — see _drawNodeViews. They go
+    // before the terminal so the canvas is left holding the terminal's image afterwards.
+    this._drawNodeViews();
 
     // What the terminal is looking at: the texture of whatever is patched into its image input.
     // A patched chain wins over the test pattern — the pattern is scaffolding, and the moment
@@ -511,6 +632,58 @@ export class VideoEngine {
 
   windowOpen() { return !!(this._win || this._pane); }
 
+  // ---- the pointer follower ----
+  //
+  // A small live picture that tracks the cursor. It exists for SCREEN MAGNIFICATION: magnified,
+  // you see a small region around the pointer, so a picture anywhere else on the desktop — in a
+  // module's thumbnail, or in the output window — is simply not visible while you are working a
+  // control. Adjusting a knob and seeing what it does to the image is otherwise two operations
+  // that cannot happen at once.
+  //
+  // It is a VIEW, like every other preview: the same blit of the same canvas, so it costs one
+  // drawImage and cannot affect what the engine renders.
+  //
+  // Placed BELOW AND RIGHT of the hotspot, far enough to clear the arrow itself — the cursor is
+  // drawn down-right from its hotspot, so a closer offset would put the picture under the pointer
+  // and you would be looking through the thing you are aiming with.
+  setFollowPointer(on) {
+    if (!this.ok) return false;
+    if (!on) {
+      if (this._followOff) { this._followOff(); this._followOff = null; }
+      if (this._follow) { this._follow.remove(); this._follow = null; }
+      return false;
+    }
+    if (this._follow) return true;
+    const c = document.createElement('canvas');
+    c.className = 'video-follow';
+    c.width = 192; c.height = 108;                 // 16:9, two device pixels per CSS pixel on a retina panel
+    document.body.appendChild(c);
+    // CLOSE. Magnified, the useful area around the pointer is small, so a picture held at arm's
+    // length is off the edge of what you can see — which defeats the whole point. It sits just
+    // below the arrow's tail, straddling the pointer: a THIRD of its width to the left, two
+    // thirds to the right, so it reads as belonging to the cursor rather than trailing it.
+    const TAIL = 16;              // just clear of the arrow's tail, almost touching it
+    const EDGE = 6;
+    const place = (e) => {
+      const w = c.offsetWidth, h = c.offsetHeight;
+      let x = e.clientX - w / 3, y = e.clientY + TAIL;
+      // No room to the right: the straddle mirrors — a third to the RIGHT of the pointer and two
+      // thirds to the left — rather than the picture being clipped or shoved bodily off the
+      // cursor. Same object, same relationship, other hand.
+      if (x + w > window.innerWidth - EDGE) x = e.clientX - (w * 2) / 3;
+      if (y + h > window.innerHeight - EDGE) y = e.clientY - h - 6;
+      c.style.left = Math.round(Math.max(EDGE, Math.min(window.innerWidth - w - EDGE, x))) + 'px';
+      c.style.top = Math.round(Math.max(EDGE, y)) + 'px';
+    };
+    const move = (e) => place(e);
+    document.addEventListener('pointermove', move, { passive: true });
+    const dropView = this.addView(c);
+    this._followOff = () => { document.removeEventListener('pointermove', move); dropView(); };
+    this._follow = c;
+    return true;
+  }
+  followsPointer() { return !!this._follow; }
+
   // The terminal declares which of its inputs the screen follows. One per rack, like the mixer.
   setTerminal(key, port) { this._terminal = key ? { key, port } : null; }
 
@@ -535,6 +708,7 @@ export class VideoEngine {
 
   dispose() {
     this.stop();
+    this.setFollowPointer(false);
     this.closeWindow();
     this._views.length = 0;
     this._sources.length = 0;

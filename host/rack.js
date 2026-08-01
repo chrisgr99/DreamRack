@@ -236,6 +236,7 @@ export class Rack {
     // an SVG overlay the cords are drawn onto (pointer-transparent, so it never
     // steals clicks from the jacks and knobs beneath it).
     this.patchbay = new Patchbay(this.host.ctx, this.host.registry);
+    this._videoMonitors = [];            // floating pictures of one point in the video graph
 
     this.container.classList.add('rack');
     this.content = document.createElement('div');
@@ -246,7 +247,11 @@ export class Rack {
     this._buildRows();
     this._startFlow();   // animated flow-dashes run continuously on every cable
 
-    window.addEventListener('resize', () => this.relayout());
+    window.addEventListener('resize', () => {
+      this.relayout();
+      // A window that shrinks can strand a monitor outside it, so they are pulled back in.
+      for (const m of this._videoMonitors) this._placeVideoMonitor(m.el, m.el.offsetLeft, m.el.offsetTop);
+    });
     // Suppress the native right-click menu everywhere. Our right-click pies and menus
     // run on their own elements first (and preventDefault themselves); this is the
     // catch-all for areas without one (controls, empty space).
@@ -2409,6 +2414,16 @@ export class Rack {
   _onJackContextMenu(e, key, portId) {
     e.preventDefault(); e.stopPropagation();
     const ox = e.clientX, oy = e.clientY;
+    // A VIDEO terminal gets its own menu. Scope and Listen are audio instruments and there is no
+    // audio here to give them; what a video jack wants is a MONITOR — a small live picture of
+    // what is at this point in the chain. Same idea as the ear monitor, different sense.
+    const vPort = this._videoPortMeta(key, portId);
+    if (vPort) {
+      this._openMenu(ox, oy, [
+        { label: 'Monitor', action: (ev) => this._createVideoMonitor(key, portId, vPort, ev.clientX, ev.clientY) },
+      ]);
+      return;
+    }
     let tempScope = null, tempMon = null;
     // The subnet item follows the signal's natural direction for this terminal: an OUTPUT looks
     // forward ("Show downstream"), an INPUT looks back ("Show upstream"). It's greyed when there's
@@ -3788,6 +3803,85 @@ export class Rack {
   //
   // A module joins the graph by implementing videoPass(); the terminal joins by declaring which
   // of its inputs the screen follows. Neither the rack nor the engine knows what any of them do.
+  // The port's descriptor entry, if it is a video port; null otherwise.
+  _videoPortMeta(key, portId) {
+    const rec = this.records.get(key);
+    if (!rec) return null;
+    const desc = this.host.registry.descriptor(rec.descriptorId);
+    const port = (desc && desc.ports || []).find((p) => p.id === portId);
+    return port && (port.domain === 'luma' || port.domain === 'rgb') ? port : null;
+  }
+
+  // A floating video monitor: a small live picture of one point in the graph, dropped where you
+  // clicked, dragged by its bar, closed by its button. On an OUTPUT it shows that module's own
+  // image; on an INPUT it shows whatever is feeding it, which is what you want when you clip one
+  // to each side of a compositor.
+  _createVideoMonitor(key, portId, port, x, y) {
+    const engine = this._ensureVideoEngine();
+    if (!engine || !engine.ok || typeof engine.addNodeView !== 'function') return null;
+    const d = document.createElement('div');
+    d.className = 'video-monitor';
+    const c = document.createElement('canvas');
+    c.width = 160; c.height = 90;                       // 2 device pixels per CSS pixel
+    c.className = 'video-monitor-canvas';
+    // The scope's own chrome: a close dot at the upper left, hidden until you hover the object.
+    // No title bar — the picture is the object, and a bar over a 160px picture spends a tenth of
+    // it saying what the callout line will say better.
+    const close = document.createElement('div');
+    close.className = 'video-monitor-close';
+    close.title = 'Close';
+    d.append(c, close);
+    document.body.appendChild(d);
+    // Placed only once it is in the document, so its real size is known: dropped at the click
+    // point and then pulled back inside the window. A monitor half off the screen is the one
+    // thing this object must never be, since seeing it IS its whole purpose.
+    this._placeVideoMonitor(d, x + 12, y + 12);
+    const view = engine.addNodeView(key, port.dir === 'in' ? portId : null, c);
+    const entry = { el: d, key, portId, view, remove: null };
+    const remove = () => {
+      view.remove(); d.remove();
+      const i = this._videoMonitors.indexOf(entry); if (i >= 0) this._videoMonitors.splice(i, 1);
+    };
+    entry.remove = remove;
+    this._videoMonitors.push(entry);
+    close.addEventListener('pointerdown', (ev) => ev.stopPropagation());
+    close.addEventListener('click', (ev) => { ev.stopPropagation(); remove(); });
+
+    // Drag by the PICTURE, since there is no bar to drag by. A clean press-and-release without
+    // movement is a click, and a click FREEZES — the same "drag or click, decided by whether you
+    // moved" the rack uses for cables and modules.
+    d.addEventListener('pointerdown', (ev) => {
+      if (ev.target === close) return;
+      const r = d.getBoundingClientRect(), ox = ev.clientX - r.left, oy = ev.clientY - r.top;
+      const sx = ev.clientX, sy = ev.clientY;
+      let moved = false;
+      const move = (m) => {
+        if (!moved && Math.hypot(m.clientX - sx, m.clientY - sy) > 3) moved = true;
+        if (!moved) return;
+        this._placeVideoMonitor(d, m.clientX - ox, m.clientY - oy);
+      };
+      const up = () => {
+        document.removeEventListener('pointermove', move);
+        document.removeEventListener('pointerup', up);
+        if (!moved) { view.setFrozen(!view.frozen()); d.classList.toggle('frozen', view.frozen()); }
+      };
+      document.addEventListener('pointermove', move);
+      document.addEventListener('pointerup', up);
+    });
+    this._closeMenu();
+    return entry;
+  }
+
+  // Put a monitor at (x, y), clamped so the whole of it stays on screen.
+  _placeVideoMonitor(d, x, y) {
+    const EDGE = 6;
+    const w = d.offsetWidth || 82, h = d.offsetHeight || 47;
+    const maxX = Math.max(EDGE, window.innerWidth - w - EDGE);
+    const maxY = Math.max(EDGE, window.innerHeight - h - EDGE);
+    d.style.left = Math.round(Math.min(maxX, Math.max(EDGE, x))) + 'px';
+    d.style.top = Math.round(Math.min(maxY, Math.max(EDGE, y))) + 'px';
+  }
+
   _rebuildVideoGraph() {
     const engine = this._videoEngine;
     if (!engine || !engine.ok || typeof engine.setGraph !== 'function') return;
@@ -3799,7 +3893,10 @@ export class Rack {
       if (typeof inst.videoPass === 'function') {
         const pass = inst.videoPass();
         if (pass && pass.glsl) {
-          nodes.push({ key: rec.key, glsl: pass.glsl, inputs: pass.inputs || [],
+          // `history` travels with the rest. Dropping it here was silent and total: the engine
+          // allocated no ring, the shader's array sampler stayed unbound, and Time rendered black
+          // with no error anywhere. Anything a module declares in videoPass must be forwarded.
+          nodes.push({ key: rec.key, glsl: pass.glsl, inputs: pass.inputs || [], history: !!pass.history,
             uniforms: () => (typeof inst.videoUniforms === 'function' ? inst.videoUniforms() : {}) });
         }
       }
@@ -3814,6 +3911,119 @@ export class Rack {
       .map((e) => ({ from: e.src.key, to: e.dst.key, port: e.dst.portId }));
     engine.setGraph(nodes, edges);
     if (typeof engine.setTerminal === 'function') engine.setTerminal(terminal && terminal.key, terminal && terminal.port);
+  }
+
+  // The pointer-following video picture. Public because it is a VIEW preference, not a patch
+  // setting: the app remembers it, a patch never carries it.
+  videoFollowPointer(on) {
+    const engine = on ? this._ensureVideoEngine() : this._videoEngine;
+    if (!engine || typeof engine.setFollowPointer !== 'function') return false;
+    const res = engine.setFollowPointer(on);
+    // The picture MOVES to the pointer rather than being copied there: the module's own preview
+    // stops updating and goes black while it is away. One picture in one place is the honest
+    // reading of a control that says "put it on the pointer", and it also makes the state
+    // unmistakable — a black well on the module says where the image went.
+    for (const rec of this.records.values()) {
+      const c = rec.el && rec.el.querySelector('.video-preview');
+      if (!c) continue;
+      if (on) {
+        if (rec.videoView) { rec.videoView(); rec.videoView = null; }
+        const g = c.getContext('2d');
+        if (g) { g.fillStyle = '#000'; g.fillRect(0, 0, c.width, c.height); }
+      } else if (!rec.videoView && engine.ok) {
+        rec.videoView = engine.addView(c);
+      }
+    }
+    return res;
+  }
+  videoFollowsPointer() {
+    const e = this._videoEngine;
+    return !!(e && typeof e.followsPointer === 'function' && e.followsPointer());
+  }
+
+  // A TEXT READOUT on a faceplate. Declared by the descriptor as a rect in panel millimetres and
+  // filled by the instance, so the panel SVG — generated once at build time — does not have to
+  // know what the text will say. Placed in a foreignObject inside the panel's own coordinate
+  // group, exactly as the video preview is, so it scales and pans with the module for free.
+  //
+  // Clicking it opens the editor. That is the only way in: a text field ON the faceplate would
+  // be a poor target magnified and would fight every panel convention in the instrument.
+  _attachReadout(rec, desc) {
+    const ro = desc && desc.readout;
+    const svg = rec.el && rec.el.querySelector('svg');
+    if (!ro || !svg || typeof rec.instance.readoutText !== 'function') return;
+    for (const old of svg.querySelectorAll('.module-readout')) old.remove();
+    const doc = svg.ownerDocument;
+    const fo = doc.createElementNS(SVG_NS, 'foreignObject');
+    fo.setAttribute('class', 'module-readout');
+    fo.setAttribute('x', r2(ro.x)); fo.setAttribute('y', r2(ro.y));
+    fo.setAttribute('width', r2(ro.w)); fo.setAttribute('height', r2(ro.h));
+    const d = doc.createElementNS('http://www.w3.org/1999/xhtml', 'div');
+    d.className = 'module-readout-text';
+    fo.appendChild(d);
+    const host = svg.querySelector(':scope > g[transform^="translate"]') || svg;
+    host.appendChild(fo);
+    const paint = () => {
+      d.textContent = rec.instance.readoutText();
+      const err = typeof rec.instance.readoutError === 'function' ? rec.instance.readoutError() : null;
+      d.classList.toggle('bad', !!err);
+      d.title = err || '';
+    };
+    paint();
+    rec.repaintReadout = paint;
+    fo.style.pointerEvents = 'auto';
+    fo.style.cursor = 'text';
+    d.addEventListener('pointerdown', (e) => e.stopPropagation());
+    d.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); this._openReadoutEditor(rec); });
+    // A module whose SHADER depends on its text has to be able to say "I changed" — the graph is
+    // rebuilt from videoPass, and nothing else would ever ask again.
+    if (typeof rec.instance.onShaderChange === 'function') {
+      rec.instance.onShaderChange(() => { paint(); this._rebuildVideoGraph(); });
+    }
+  }
+
+  // The editor: a floating panel, not a field on the face. Applies as you type, because the
+  // module keeps its last GOOD expression running — so a half-typed one costs nothing and you
+  // see the result the moment it becomes valid.
+  _openReadoutEditor(rec) {
+    if (this._readoutEditor) this._readoutEditor.remove();
+    const d = document.createElement('div');
+    d.className = 'readout-editor' + (this.isDark() ? ' theme-dark' : '');
+    const title = document.createElement('div');
+    title.className = 'readout-editor-title';
+    title.textContent = `${rec.name} — expression`;
+    const ta = document.createElement('textarea');
+    ta.className = 'readout-editor-text';
+    ta.value = rec.instance.readoutText();
+    ta.spellcheck = false;
+    const msg = document.createElement('div');
+    msg.className = 'readout-editor-msg';
+    const close = document.createElement('button');
+    close.type = 'button'; close.className = 'readout-editor-close'; close.textContent = 'Close';
+    d.append(title, ta, msg, close);
+    document.body.appendChild(d);
+    const r = rec.el.getBoundingClientRect();
+    d.style.left = Math.round(Math.min(window.innerWidth - d.offsetWidth - 12, r.left)) + 'px';
+    d.style.top = Math.round(Math.min(window.innerHeight - d.offsetHeight - 12, r.bottom + 8)) + 'px';
+    const apply = () => {
+      this.applyParam(rec, 'expr', ta.value);
+      const err = typeof rec.instance.readoutError === 'function' ? rec.instance.readoutError() : null;
+      msg.textContent = err || 'running';
+      msg.classList.toggle('bad', !!err);
+      if (rec.repaintReadout) rec.repaintReadout();
+    };
+    ta.addEventListener('input', apply);
+    ta.addEventListener('keydown', (e) => { if (e.key === 'Escape') { e.stopPropagation(); d.remove(); this._readoutEditor = null; } });
+    close.addEventListener('click', () => { d.remove(); this._readoutEditor = null; });
+    title.addEventListener('pointerdown', (ev) => {
+      const q = d.getBoundingClientRect(), ox = ev.clientX - q.left, oy = ev.clientY - q.top;
+      const move = (m) => { d.style.left = (m.clientX - ox) + 'px'; d.style.top = (m.clientY - oy) + 'px'; };
+      const up = () => { document.removeEventListener('pointermove', move); document.removeEventListener('pointerup', up); };
+      document.addEventListener('pointermove', move); document.addEventListener('pointerup', up);
+    });
+    apply();
+    ta.focus();
+    this._readoutEditor = d;
   }
 
   _attachVideoModule(rec, desc) {
@@ -3831,7 +4041,11 @@ export class Rack {
     fo.setAttribute('class', 'video-preview-host');
     fo.setAttribute('x', r2(pv.x)); fo.setAttribute('y', r2(pv.y));
     fo.setAttribute('width', r2(pv.w)); fo.setAttribute('height', r2(pv.h));
-    fo.style.pointerEvents = 'none';
+    // CLICKABLE, unlike every other piece of panel decoration: clicking the picture sends it to
+    // the pointer and clicking again brings it back. It is the most direct way to say "put this
+    // where I am looking", which is what magnified working needs.
+    fo.style.pointerEvents = 'auto';
+    fo.style.cursor = 'pointer';
     const c = doc.createElementNS('http://www.w3.org/1999/xhtml', 'canvas');
     c.className = 'video-preview';
     c.width = Math.round(pv.w * 8); c.height = Math.round(pv.h * 8);   // ample for a thumbnail
@@ -3844,7 +4058,14 @@ export class Rack {
     // coordinates and has no such group, so the root is the right parent there.
     const host = svg.querySelector(':scope > g[transform^="translate"]') || svg;
     host.appendChild(fo);
-    rec.videoView = engine.addView(c);
+    c.style.cursor = 'pointer';
+    c.addEventListener('pointerdown', (ev) => ev.stopPropagation());   // not a module drag
+    c.addEventListener('click', (ev) => {
+      ev.preventDefault(); ev.stopPropagation();
+      this.videoFollowPointer(!this.videoFollowsPointer());
+      if (this.onVideoFollowChange) this.onVideoFollowChange(this.videoFollowsPointer());
+    });
+    if (!this.videoFollowsPointer()) rec.videoView = engine.addView(c);
     this._rebuildVideoGraph();
   }
 
@@ -4885,7 +5106,7 @@ export class Rack {
     // inside it — so it has to be put back, or the picture vanishes on a theme change.
     if (rec.instance && typeof rec.instance.attachEngine === 'function') {
       const t = this.moduleTypes.find((x) => x.descriptorId === rec.descriptorId);
-      if (t) queueMicrotask(() => this._attachVideoModule(rec, t.descriptor));
+      if (t) queueMicrotask(() => { this._attachVideoModule(rec, t.descriptor); this._attachReadout(rec, t.descriptor); });
     }
     const btnGrow = this._buttonGrowMap(svg);   // adaptive hit-pad size per single push button
     for (const b of panel.controls.values()) {
@@ -4980,6 +5201,7 @@ export class Rack {
     // the video window closed from its own chrome, say.
     if (typeof instance.onParamChange === 'function') instance.onParamChange((id, v) => this.applyParam(rec, id, v));
     if (typeof instance.attachEngine === 'function') this._attachVideoModule(rec, type.descriptor);
+    this._attachReadout(rec, type.descriptor);
 
     // Module-level handlers live on the wrapper element, so they survive a skin swap.
     el.addEventListener('pointerdown', (e) => this._startDrag(e, rec));
@@ -5370,7 +5592,17 @@ export class Rack {
     // Scrolling the AV band turns the AV POINTER, not the knob's value indicator, so the hover
     // mark has to watch that element too or its bar sits still while the depth moves under it.
     b.hoverWatch = avp;
-    el.addEventListener('contextmenu', (e) => this._dualKnackMenu(e, dk));
+    // RIGHT-CLICK IS TWO MENUS, split by the same test the cable drop uses. On the CENTRE JACK it
+    // is the terminal's menu — scope, monitor, upstream — because that centre IS a terminal and
+    // was otherwise the only jack in the rack you could not probe. Anywhere else on the knob it
+    // is the knob's menu: reset, disconnect, attenuverter.
+    //
+    // _onKnackTerminal, not a radius of my own choosing: a cable is picked up from exactly the
+    // region it can be dropped onto, and the menu now agrees with both.
+    el.addEventListener('contextmenu', (e) => {
+      if (this._onKnackTerminal(e, rec.key, portId)) { this._onJackContextMenu(e, rec.key, portId); return; }
+      this._dualKnackMenu(e, dk);
+    });
     const val = rec.values.get(b.id); if (val !== undefined) showValue(b, val);   // position the new triangle
     this._renderKnackSplit(dk, this._isKnackPatched(rec.key, portId));
   }

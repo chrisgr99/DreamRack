@@ -207,7 +207,13 @@ export function validate(obj, registry) {
         warnings.push(`unknown param "${pid}" on "${mid}" ignored`);
         continue;
       }
-      if (p.curve === 'stepped') {
+      if (p.curve === 'text') {
+        // A TEXT param: the Formula module's expression. Length-capped because it is compiled
+        // into a shader, and an unbounded string in a patch file is an unbounded string handed
+        // to a driver. The grammar is checked by the module, not here — this only has to be
+        // sure the file is carrying a string of a sane size.
+        if (typeof v !== 'string' || v.length > 512) warnings.push(`param "${pid}" on "${mid}" is not a short string — ignored`);
+      } else if (p.curve === 'stepped') {
         const steps = (p.steps || []).map((s) => s.value);
         if (!steps.includes(v)) warnings.push(`param "${pid}" on "${mid}" is not one of ${steps.join(', ')} — ignored`);
       } else if (typeof v !== 'number' || !Number.isFinite(v)) {

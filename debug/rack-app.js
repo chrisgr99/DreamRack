@@ -30,6 +30,14 @@ import vidDescriptor from '../modules/video-out/descriptor.js';
 import { create as vidCreate } from '../modules/video-out/factory.js';
 import fieldDescriptor from '../modules/coordinate-field/descriptor.js';
 import { create as fieldCreate } from '../modules/coordinate-field/factory.js';
+import timeDescriptor from '../modules/time-machine/descriptor.js';
+import { create as timeCreate } from '../modules/time-machine/factory.js';
+import shapesDescriptor from '../modules/shapes/descriptor.js';
+import { create as shapesCreate } from '../modules/shapes/factory.js';
+import mathsDescriptor from '../modules/video-maths/descriptor.js';
+import { create as mathsCreate } from '../modules/video-maths/factory.js';
+import formulaDescriptor from '../modules/formula/descriptor.js';
+import { create as formulaCreate } from '../modules/formula/factory.js';
 import { serialize, restore, validate, APP_NAME, APP_VERSION } from '../host/patch-io.js';
 import { createStorage } from '../host/storage.js';
 import { buildCatalogue, createMirror } from '../host/mirror.js';
@@ -52,6 +60,10 @@ registry.register({ descriptor: sineDescriptor, create: sineCreate });
 registry.register({ descriptor: progDescriptor, create: progCreate });
 registry.register({ descriptor: vidDescriptor, create: vidCreate });
 registry.register({ descriptor: fieldDescriptor, create: fieldCreate });
+registry.register({ descriptor: timeDescriptor, create: timeCreate });
+registry.register({ descriptor: shapesDescriptor, create: shapesCreate });
+registry.register({ descriptor: mathsDescriptor, create: mathsCreate });
+registry.register({ descriptor: formulaDescriptor, create: formulaCreate });
 
 const MODULE_TYPES = [{
   descriptorId: oscDescriptor.id,
@@ -114,6 +126,44 @@ const MODULE_TYPES = [{
   hp: 16,
   panelUrl: 'modules/coordinate-field/panel.svg',
   descriptor: fieldDescriptor,
+}, {
+  // Time — the module a hardware video synth cannot have: a ring of the last 32 frames, read as
+  // a delay, as decaying trails, or as a slit-scan where every line comes from a different
+  // moment. 10 HP.
+  descriptorId: timeDescriptor.id,
+  name: 'Time',
+  hp: 8,
+  panelUrl: 'modules/time-machine/panel.svg',
+  descriptor: timeDescriptor,
+}, {
+  // Shapes — a window comparator over a field. It makes no shapes of its own: which shape you
+  // get is decided by what is patched in, so a radius field gives discs and rings, an angle
+  // field gives wedges, and an axis field gives bars. 8 HP.
+  descriptorId: shapesDescriptor.id,
+  name: 'Shapes',
+  hp: 8,
+  panelUrl: 'modules/shapes/panel.svg',
+  descriptor: shapesDescriptor,
+}, {
+  // Video Maths — two images, one arithmetic. The smallest shader in the set and the largest
+  // change to what the rack can do: until this exists a patch has ONE image however many
+  // modules it passes through, and interference needs two. 8 HP.
+  descriptorId: mathsDescriptor.id,
+  name: 'Video Maths',
+  hp: 8,
+  panelUrl: 'modules/video-maths/panel.svg',
+  descriptor: mathsDescriptor,
+}, {
+  // Formula — four images, four knobs and a typed expression, shown on the faceplate. It exists
+  // beside Video Maths rather than replacing it: Maths is one cable and a switch, Formula is for
+  // when a patch would otherwise be three Maths modules whose arithmetic is spread across the
+  // rack and can only be read by navigating to each in turn. 8 HP: the inputs and knobs are
+  // stacked two by two, because a module that replaces three others should not be the widest.
+  descriptorId: formulaDescriptor.id,
+  name: 'Formula',
+  hp: 8,
+  panelUrl: 'modules/formula/panel.svg',
+  descriptor: formulaDescriptor,
 }, {
   // The mixer is a pinned singleton placed at boot, so it's hidden from the
   // "Add module" menu (no second mixer). Still a normal module type otherwise.
@@ -727,7 +777,7 @@ async function boot() {
         && !(t.descriptor && t.descriptor.singleton && rack.hasModule(t.descriptorId)))
         .map((t) => ({ id: t.descriptorId, name: t.name }));
       m.setState({ dark: rack.isDark(), rows: rack.rowCount, canUndo: rack.canUndo(), canRedo: rack.canRedo(),
-        recent, examples, engine: rack.engineOn(), modules });
+        recent, examples, engine: rack.engineOn(), modules, videoFollow: rack.videoFollowsPointer() });
     }, 200);
   }
 
@@ -745,6 +795,7 @@ async function boot() {
       toggleEngine: () => { rack.toggleEngine(); pushMenuState(); },
       addModule: (id) => rack.addModuleFromMenu(id, null),
       resetToDefault: () => resetToDefault(),
+      toggleVideoFollow: () => setVideoFollow(!rack.videoFollowsPointer()),
       // Run the same items the in-window Help menu offers, rather than restating their URLs here.
       readme: () => { const it = rack.helpMenuItems().find((i) => i.label === 'README'); if (it) it.action(); },
       reference: () => { const it = rack.developerMenuItems().find((i) => i.label === 'Developer guide'); if (it) it.action(); },
@@ -794,6 +845,8 @@ async function boot() {
       // default: the title-bar hamburgers are quicker once you know about them, but a menu you
       // have to be told about is a menu most people never find.
       { label: 'Menu bar', checkFn: () => rack.menuBarDocked(), action: () => setMenuBar(!rack.menuBarDocked()) },
+      { label: 'Video follows pointer', checkFn: () => rack.videoFollowsPointer(),
+        action: () => setVideoFollow(!rack.videoFollowsPointer()) },
     ];
     // Capturing what you can SEE belongs under View, beside the other things that change what is
     // on screen — not under File, which is about the patch. Both are desktop only: they need the
@@ -860,6 +913,22 @@ async function boot() {
   // The docked bar. It hands the rack a PROVIDER rather than a fixed set of items, so each menu
   // is rebuilt as it opens — a bar that lives all session would otherwise keep the Undo state,
   // the Recent list and the light/dark label it happened to be born with.
+  // The pointer-following video picture, remembered like the menu bar: an app preference rather
+  // than anything a patch carries. It exists for magnified working — see video-engine.
+  const FOLLOW_KEY = 'wcoast.videoFollow';
+  function setVideoFollow(on) {
+    try { localStorage.setItem(FOLLOW_KEY, on ? '1' : '0'); } catch (_e) { /* no storage */ }
+    rack.videoFollowPointer(!!on);
+    pushMenuState();
+  }
+
+  // Clicking the Video Output module's picture toggles the same thing the menu item does, so the
+  // menu's tick has to follow it — otherwise the two disagree about a state they share.
+  rack.onVideoFollowChange = (on) => {
+    try { localStorage.setItem(FOLLOW_KEY, on ? '1' : '0'); } catch (_e) { /* no storage */ }
+    pushMenuState();
+  };
+
   const MENUBAR_KEY = 'wcoast.menuBar';
   function setMenuBar(on) {
     try { localStorage.setItem(MENUBAR_KEY, on ? '1' : '0'); } catch (_e) { /* no storage */ }
@@ -871,6 +940,10 @@ async function boot() {
   let menuBarPref = '1';
   try { const v = localStorage.getItem(MENUBAR_KEY); if (v === '0' || v === '1') menuBarPref = v; } catch (_e) { /* no storage */ }
   setMenuBar(menuBarPref === '1');
+  // The pointer follower is remembered but defaults OFF: it is an aid for magnified working, not
+  // something to spring on someone who never asked for it. It also does nothing until a video
+  // module exists, so switching it on early costs only the engine coming up.
+  try { if (localStorage.getItem(FOLLOW_KEY) === '1') setVideoFollow(true); } catch (_e) { /* no storage */ }
 
   // The interactive tutorial: modeless cards the reader drives with Next/Back. Opens on a first
   // run (unless "Don't show on startup" is set), and always available from Help ▸ Interactive tutorial.
