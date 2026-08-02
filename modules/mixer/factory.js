@@ -1,14 +1,14 @@
 // factory.js — the Mixer's Web Audio graph.
 //
-// Six channels, each: input gain (level) -> mute gain -> stereo panner. All the
-// panners sum into a master gain, which feeds the context destination (your two
-// outputs) and drops the hot internal level toward line level. Channels A and F
-// expose their panner's pan AudioParam so a control cord can voltage-control it
-// (Web Audio sums the CV onto the manual pan value).
+// Ten channels, each: input gain (level) -> mute gain -> stereo panner, with a tap off the mute
+// into each of the two shared send buses. All the panners sum into a master gain, which feeds the
+// context destination (your two outputs) and drops the hot internal level toward line level. Every
+// channel exposes its panner's pan AudioParam so a control cord can voltage-control it (Web Audio
+// sums the CV onto the manual pan value), and the same is true of each send amount.
 //
 // The realized-instance contract matches every other module so the patchbay
 // treats it uniformly:
-//   getOutput(portId) -> null            (the mixer is terminal — it IS the output)
+//   getOutput(portId) -> the send buses  (the only outputs; otherwise the mixer IS the output)
 //   getInput(portId)  -> { node, index } (a channel audio input)
 //   getParam(paramId) -> AudioParam      (level/pan/master; pan is also a CV target)
 //   setParam(id, v)   -> level/pan/master glide; mute toggles a gain
@@ -75,6 +75,11 @@ export function create(ctx, services) {
   monPan.pan.value = paramDefault('panMonitor');
   monLevel.connect(monPan);
 
+  // The shared effect buses. Every channel taps into each after its fader and before its pan, and
+  // each leaves by its own output jack — the only outputs this module has.
+  const SENDS = ['1', '2'];
+  const sendBus = new Map(SENDS.map((N) => { const g = ctx.createGain(); g.gain.value = 1; return [N, g]; }));
+
   const channels = CH.map((L) => {
     const level = ctx.createGain();
     const mute = ctx.createGain();
@@ -82,6 +87,15 @@ export function create(ctx, services) {
     level.gain.value = paramDefault(`level${L}`);
     mute.gain.value = paramDefault(`mute${L}`) === 'on' ? 1 : 0;
     level.connect(mute); mute.connect(pan); pan.connect(master);
+    // POST-FADER, PRE-PAN. Post-fader so the send follows the fader — pull a channel down and its
+    // reverb goes with it. Pre-pan so the effect returns wherever you place it, instead of arriving
+    // already panned to wherever the dry channel happens to sit.
+    const sends = new Map(SENDS.map((N) => {
+      const g = ctx.createGain();
+      g.gain.value = paramDefault(`send${N}${L}`);
+      mute.connect(g); g.connect(sendBus.get(N));
+      return [N, g];
+    }));
     // Pan is a knAck on every channel: the knob sets pan.pan's own value and a patched CV
     // SUMS onto it, which is exactly Web Audio's rule for an AudioParam with a connected
     // input. No scaling node is needed here — the port declares `via: panDepth`, so the
@@ -94,7 +108,7 @@ export function create(ctx, services) {
     // reads as silence): a read-only fan-out for the VU meters and audio-trace.
     const meter = ctx.createAnalyser(); meter.fftSize = 1024;
     mute.connect(meter);
-    return { L, level, mute, pan, meter };
+    return { L, level, mute, pan, sends, meter };
   });
 
   const byLetter = new Map(channels.map((c) => [c.L, c]));
@@ -105,7 +119,11 @@ export function create(ctx, services) {
     return p ? p.default : 0;
   }
 
-  function getOutput() { return null; }                 // terminal
+  // The send buses are the module's only outputs; everything else about it is terminal.
+  function getOutput(portId) {
+    const m = /^send([12])Out$/.exec(portId || '');
+    return m ? { node: sendBus.get(m[1]), index: 0 } : null;
+  }
   function getInput(portId) {
     const i = inIndex.get(portId);
     if (i !== undefined) return { node: channels[i].level, index: 0 };
@@ -121,8 +139,8 @@ export function create(ctx, services) {
     if (paramId === 'panMaster') return masterPan.pan;
     if (paramId === 'panMonitor') return monPan.pan;
     if (paramId.startsWith('level')) { const c = byLetter.get(paramId.slice(5)); return c ? c.level.gain : null; }
-    // Inner channels expose their pan AudioParam; outer (CV-only) channels do not.
-    if (/^pan[A-F]$/.test(paramId)) { const c = byLetter.get(paramId.slice(3)); return c ? c.pan.pan : null; }
+    { const m = /^send([12])([A-J])$/.exec(paramId); if (m) { const c = byLetter.get(m[2]); return c ? c.sends.get(m[1]).gain : null; } }
+    if (/^pan[A-J]$/.test(paramId)) { const c = byLetter.get(paramId.slice(3)); return c ? c.pan.pan : null; }
     return null;
   }
   function supports() { return true; }
@@ -140,7 +158,11 @@ export function create(ctx, services) {
   function dispose() {
     try { master.disconnect(); masterPan.disconnect(); masterGate.disconnect(); makeup.disconnect(); limiter.disconnect(); } catch (_e) { /* gone */ }
     try { monLevel.disconnect(); monPan.disconnect(); } catch (_e) { /* gone */ }
-    for (const c of channels) { try { c.level.disconnect(); c.mute.disconnect(); c.pan.disconnect(); } catch (_e) { /* gone */ } }
+    for (const g of sendBus.values()) { try { g.disconnect(); } catch (_e) { /* gone */ } }
+    for (const c of channels) {
+      try { c.level.disconnect(); c.mute.disconnect(); c.pan.disconnect(); } catch (_e) { /* gone */ }
+      for (const g of c.sends.values()) { try { g.disconnect(); } catch (_e) { /* gone */ } }
+    }
   }
 
   // RMS level (0..~1) of each output channel, for the VU meters.
@@ -165,7 +187,10 @@ export function create(ctx, services) {
   function levels() {
     const ch = {};
     for (const c of channels) ch[c.L] = levelOf(c.meter);
-    return { channels: ch, master: Math.max(levelOf(meterL), levelOf(meterR)) };
+    // The master is reported per SIDE as well as summed. Panning is the whole reason: with one bar
+    // you can see that the mix is loud and not where it is going.
+    const l = levelOf(meterL), rr = levelOf(meterR);
+    return { channels: ch, master: Math.max(l, rr), masterL: l, masterR: rr };
   }
 
   // Read-only analyser taps for the audio-trace mirror: the master (stereo) plus

@@ -1,23 +1,25 @@
 // descriptor.js — the output Mixer (207-style), a data-only module schema.
 //
-// The mixer is our output stage, modelled on the Buchla 207: a six-input,
-// two-output stereo mixer with per-channel level and pan, plus voltage control
-// of pan on the two OUTER channels (A and F) — the CV jack takes the pan knob's
-// spot there (no manual pan knob). Every channel rests CENTRED; on A and F the
-// pan CV sums onto centre (a bipolar CV sweeps full left..right). We drop
-// the parts that don't
-// apply to a computer — the microphone preamp, headphone/monitor output, preset
-// storage — and add a per-channel mute (our own, not on the real panel).
+// The mixer is our output stage, in the spirit of the Buchla 207: a stereo mixer whose channels
+// each have a level fader, an enable lamp, a gain CV input, a pan knAck and two send amounts.
+// Every channel rests CENTRED, and every pan is both a knob and a CV input — the knob sets the
+// panner's own value and a patched voltage sums onto it. We drop the parts that don't apply to a
+// computer — the microphone preamp, preset storage — and add per-channel enables and the sends.
 //
-// The mixer is a normal rack module — a terminal one: it has no output jacks
-// because it IS the output (its master feeds the speakers). It's a singleton the
-// host always keeps present (default lower-right, draggable, not deletable), and
-// the patchbay wires module outputs into its channel inputs like any other input.
-// A master level + stereo VU also mirror into the toolbar for always-on reach.
+// The mixer is a normal rack module, and very nearly a terminal one: its only output jacks are the
+// two send buses, because everything else about it ends at the speakers rather than at a cable.
+// It's a singleton the host always keeps present (draggable, not deletable), and the patchbay wires
+// module outputs into its channel inputs like any other input. A master level + stereo VU also
+// mirror into the toolbar for always-on reach.
 
 'use strict';
 
-const CH = ['A', 'B', 'C', 'D', 'E', 'F'];
+// TEN channels: eight to mix, and two the faceplate labels as RETURNS for the two send buses. Six
+// was a compromise with rack width, and it ran out before a patch ran out of ideas. Nothing in the
+// code distinguishes the last two — a return is an ordinary channel, which is the point: the effect
+// comes back with its own fader, pan, enable and sends, instead of being a lesser kind of strip.
+const CH = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J'];
+const SENDS = ['1', '2'];   // two shared effect buses
 
 const ports = [];
 const params = [];
@@ -36,13 +38,35 @@ for (const L of CH) {
   // Enable lamp: lit = channel enabled (passing audio). Internally still a mute
   // gain, but the sense is flipped — 'on' now means enabled, and it defaults on.
   params.push({ id: `mute${L}`, name: `Enable ${L}`, section: 'channel', curve: 'stepped', steps: [{ value: 'off' }, { value: 'on' }], default: 'on' });
+  // TWO SENDS: how much of this channel goes to each shared effect bus. Post-fader and pre-pan, the
+  // way a desk does it — the send follows the fader, so pulling a channel down takes its reverb with
+  // it, and the effect returns in whatever position you give it rather than inheriting the channel's.
+  //
+  // Two rather than one because the pair you actually want is a reverb and a delay, and a single bus
+  // makes you choose. Zero by default: a send that came up open would put every new patch through
+  // whatever happens to be on the bus.
+  for (const N of SENDS) {
+    params.push({ id: `send${N}${L}`, name: `Send ${N} ${L}`, section: 'channel', curve: 'gainDb', min: 0, max: 1, default: 0, glideMs: 20 });
+    params.push({ id: `send${N}Depth${L}`, name: `Send ${N} depth ${L}`, section: 'channel', curve: 'linear', min: -1, max: 1, default: 1, glideMs: 0 });
+    ports.push({ id: `send${N}Cv${L}`, name: `Send ${N} ${L}`, section: 'channel', domain: 'control', dir: 'in', target: `send${N}${L}`, via: `send${N}Depth${L}` });
+  }
 }
+// Each bus leaves by its own jack. These are the mixer's only outputs — everything else about this
+// module is terminal — and they exist because a shared effect is the one thing a modular rack is
+// genuinely bad at: without a send bus, putting four voices through one reverb means four cables
+// into a mixer you do not have, or four reverbs.
+//
+// There is deliberately no dedicated return CIRCUIT to match them. The effect comes back into an
+// ordinary channel — the two the panel labels RET 1 and RET 2 are ordinary channels — so it reaches
+// the main bus by the usual route with a full strip of its own. A special return would be a channel
+// with fewer features and one more thing to explain.
+for (const N of SENDS) ports.push({ id: `send${N}Out`, name: `Send ${N}`, section: 'master', domain: 'audio', dir: 'out' });
 // Pan CV, EVERY channel. It targets the channel's pan param — Web Audio sums the CV onto
 // the knob's own value, which is what lets one knAck be both the knob and the input. `via`
 // names the depth param, so the patchbay puts the cord through an attenuator gain it owns.
 //
-// Only A and F used to have this, and they had no knob in exchange; B through E had a knob
-// and no pan CV port at all. Six knAcks give every channel both.
+// The knAck is what makes this possible: before it, a channel had either a knob or a CV jack,
+// because there was only room on the panel for one of them. Every channel now has both.
 for (const L of CH) {
   ports.push({ id: `panCv${L}`, name: `Pan ${L}`, section: 'panCv', domain: 'control', dir: 'in', target: `pan${L}`, via: `panDepth${L}` });
 }
@@ -64,10 +88,10 @@ params.push({ id: 'engine', name: 'Engine', section: 'master', curve: 'stepped',
 params.push({ id: 'masterEnable', name: 'Master enable', section: 'master', curve: 'stepped', steps: [{ value: 'off' }, { value: 'on' }], default: 'on' });
 params.push({ id: 'monitorEnable', name: 'Monitor enable', section: 'master', curve: 'stepped', steps: [{ value: 'off' }, { value: 'on' }], default: 'off' });
 
-// The two buses get the same pair of rows the six channels have: a gain CV jack and a pan
+// The two buses get the same pair of rows every channel has: a gain CV jack and a pan
 // knAck. There is nothing special about a bus in this respect — a master fade is the most
 // ordinary thing you would want an envelope to drive, and a bus that cannot be panned is
-// the odd one out on a panel where all six channels can.
+// the odd one out on a panel where every channel can.
 for (const [B, N] of [['Master', 'Master'], ['Monitor', 'Monitor']]) {
   const lvl = B === 'Master' ? 'master' : 'monitorLevel';
   ports.push({ id: `ampCv${B}`, name: `Gain ${N}`, section: 'ampCv', domain: 'control', dir: 'in', target: lvl });
@@ -82,11 +106,11 @@ export default {
   name: 'Mixer / Output',
   abbreviation: 'Mix',
   worklets: [],          // native Web Audio nodes only
-  sectioned: true,       // six independent channel strips — net highlight scopes to the hovered channel
+  sectioned: true,       // ten independent channel strips — net highlight scopes to the hovered channel
   channels: CH,
-  // No output jacks (it's the terminal output), so the identity strip has no
-  // ports to derive from. Declare it explicitly: this module outputs audio — to
-  // the speakers rather than to a jack — so it wears the audio-yellow band.
+  // The identity strip: this module outputs audio — to the speakers, mostly, rather than to a jack
+  // — so it wears the audio-yellow band. Declared rather than derived, since its one real output
+  // (the send bus) is not what the module is for.
   signalIdentity: ['audio'],
   ports,
   params,

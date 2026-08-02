@@ -169,7 +169,7 @@ const MODULE_TYPES = [{
   // "Add module" menu (no second mixer). Still a normal module type otherwise.
   descriptorId: mixerDescriptor.id,
   name: 'Mixer / Output',
-  hp: 32,
+  hp: 51,
   panelUrl: 'modules/mixer/panel.svg',
   descriptor: mixerDescriptor,
   hidden: true,
@@ -518,7 +518,13 @@ async function boot() {
     if (soundOn() && masterAn) { const mp = Math.max(peakOf(masterAn.l), peakOf(masterAn.r)); if (mp > (rack._sessionMaxMaster || 0)) rack._sessionMaxMaster = mp; }
     for (const col of vuColumns) {
       const n = col.segs.length;
-      const level = col.chan === 'M' ? lv.master : col.chan === 'MON' ? rack.monVuLevel() : (lv.channels[col.chan] || 0);
+      // The master reads per SIDE ('ML'/'MR'), since the pan knobs above it are meaningless if you
+      // cannot see where they are putting the sound. 'M' is the summed reading, kept for any meter
+      // that asks for one bar.
+      const level = col.chan === 'ML' ? lv.masterL
+        : col.chan === 'MR' ? lv.masterR
+          : col.chan === 'M' ? lv.master
+            : col.chan === 'MON' ? rack.monVuLevel() : (lv.channels[col.chan] || 0);
       const lit = Math.round(vuScale(level) * n);
       for (let i = 0; i < n; i++) col.segs[i].setAttribute('fill', i < lit ? vuColour(i, n) : 'none');
     }
