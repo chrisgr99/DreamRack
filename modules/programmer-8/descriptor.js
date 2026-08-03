@@ -106,7 +106,7 @@ export default {
   id: 'programmer-8',
   apiVersion: 1,
   name: 'Sequencer / Programmer Eight',
-  abbreviation: 'Prog 8',
+  abbreviation: 'SQ8',
   hp: 16,
   stages: N,
   scope: 'shared',        // one playhead for the whole patch, not one per voice

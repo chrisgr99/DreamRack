@@ -54,7 +54,7 @@ export default {
   id: 'shapes',
   apiVersion: 1,
   name: 'Shapes',
-  abbreviation: 'Shape',
+  abbreviation: 'Shp',
   worklets: [],
   signalIdentity: ['luma'],
   ports,

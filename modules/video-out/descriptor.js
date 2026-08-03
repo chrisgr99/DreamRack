@@ -62,7 +62,7 @@ export default {
   id: 'video-out',
   apiVersion: 1,
   name: 'Video Output',
-  abbreviation: 'VidOut',
+  abbreviation: 'VdO',
   worklets: [],
   // No output jacks — it is the terminal, so there is nothing to derive an identity from.
   // Declared: this module's business is the image.

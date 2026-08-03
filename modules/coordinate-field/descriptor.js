@@ -69,7 +69,7 @@ export default {
   id: 'coordinate-field',
   apiVersion: 1,
   name: 'Coordinate Field',
-  abbreviation: 'Field',
+  abbreviation: 'CF',
   worklets: [],
   signalIdentity: ['luma'],
   ports,

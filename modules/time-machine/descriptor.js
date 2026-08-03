@@ -51,7 +51,7 @@ export default {
   id: 'time-machine',
   apiVersion: 1,
   name: 'Time',
-  abbreviation: 'Time',
+  abbreviation: 'TM',
   worklets: [],
   signalIdentity: ['luma'],
   ports,

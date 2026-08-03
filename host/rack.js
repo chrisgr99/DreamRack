@@ -52,6 +52,15 @@ const domainStyle = (domain) => (domain === 'audio' ? 'audio'
   : (domain === 'luma' || domain === 'rgb') ? domain
   : 'control');
 const CABLE_PX = 3.8;   // cord thickness in px at zoom 1 (scales up as you zoom in)
+// The stretch of a cord that can be clicked to hold it bright, measured in JACK RADII from the jack's
+// own centre — so it scales with the terminal rather than being a number that happens to suit one panel.
+// It starts just past the rim and runs about one terminal's diameter. Short and close: close so it is
+// found where you are already looking, short so it rarely lies over a control you meant to click.
+const LIT_GRAB_FROM_R = 1.25;   // just outside the rim
+const LIT_GRAB_TO_R = 3.25;     // ...and a diameter beyond it
+const LIT_GRAB_W = 3.2;    // hit width, in cord widths
+const LIT_GRAB_SHOW = 2.2;   // ...and the width it is drawn at once you have dwelt on it
+const LIT_HOVER_MS = 300;    // dwell before the stretch reveals itself
 const CABLE_HOVER_FADE = 0.28;   // opacity a cable drops to while it obscures a control you're hovering
 const CABLE_FADE_TAU = 0.3;      // opacity easing time constant — cables brighten/dim over ~1s so quick sweeps don't flash
 const CABLE_BRIGHT = 0.9;        // opacity of a fully-highlighted cable — a touch under full so it reads bright without dazzling
@@ -93,6 +102,15 @@ const TITLE_BAND_MM = TITLE_BAR_MM;     // a panel drags only by its top title b
 // to zoom + jump. VIEW_ZOOM_MAX caps magnification. VIEW_EASE(_MS) is used only by resetZoom's glide back
 // to the fit-to-window home view (View ▸ Fit to window, or double-click a panel background).
 const VIEW_ZOOM_MAX = 8;
+// The most a frozen stand-in is rasterised at. Higher is sharper when zoomed in and costs memory across
+// the whole rack; 2 keeps a wide rack well under a few thousand pixels a side.
+const FROZEN_MAX_SCALE = 2;
+// How much of a row must be showing before it counts as a row you meant to see, as a fraction of a row.
+const SNAP_EDGE_FRAC = 0.30;
+// Fanning cords that leave one jack together: FAN_MIN_DEG is how far apart two must set off before they
+// read as separate, and FAN_MAX_DEG the furthest a cord will be swung from its natural path to get there.
+const FAN_MIN_DEG = 26;
+const FAN_MAX_DEG = 50;
 const PAN_SCROLL_GAIN = 2;   // Option-scroll pans this many px per px of scroll (2× so it keeps up)
 const ZOOM_WHEEL_GAIN = 0.0015;   // Option-scroll zoom factor per wheel unit: e^(-deltaY*this), focal at the pointer
 const VIEW_DRAG_PX = 4;   // a press-move past this many px on a panel is a pan, not a click (so a plain click still drops a cable)
@@ -173,6 +191,10 @@ export class Rack {
     this.host = opts.host;
     this.moduleTypes = opts.moduleTypes;
     this.onChange = opts.onChange || (() => {});
+    // Fired whenever the view moves, so the host can remember where you were looking. A VIEW setting,
+    // not patch data: it belongs to the app the way dark mode does, and should survive a restart even
+    // when the patch itself was never saved.
+    this.onViewChange = opts.onViewChange || (() => {});
     this.onSelect = opts.onSelect || (() => {});   // module the pointer entered (deixis)
     // Panel-menu hooks into app-level actions the rack doesn't own (set by rack-app).
     this.onTutorial = null;   // set by the app to (re)open the in-app tutorial; Help omits the item without it
@@ -260,6 +282,14 @@ export class Rack {
     // DISMISSES it — that click must not also nudge a control. Capture phase +
     // stopPropagation keeps it from reaching the faceplate/jack/knob handlers;
     // `_swallowClick` blocks the trailing click.
+    // A press anywhere that is not the cable's own grab stretch puts a held cable out: you have arrived
+    // and started work, which is the end of needing it held.
+    document.addEventListener('pointerdown', (e) => {
+      if (!this._litEdgeId) return;
+      if (e.target && e.target.closest && e.target.closest('.cable-grab')) return;
+      this._litEdgeId = null;
+      this._drawCables();
+    }, true);
     document.addEventListener('pointerdown', (e) => {
       // A MENU BAR TITLE is not "outside": pressing one is how you move from menu to menu. Left to
       // the rule below it would preventDefault the press — which, per the pointer-events spec,
@@ -295,6 +325,7 @@ export class Rack {
       if (this._ovActive || !e.altKey) return;   // plain scroll stays with the control under the pointer
       e.preventDefault(); e.stopPropagation();
       this._optUsed = true;
+      this._navZoomed = true;   // this gesture has changed the magnification, not merely moved about
       this._panBusyUntil = performance.now() + 300;
       this.content.style.transition = '';
       const rect = this.container.getBoundingClientRect();
@@ -387,6 +418,10 @@ export class Rack {
         // skipped while Option is held; see the container pointermove handler).
         if (this._netOrigin !== null) { this._netOrigin = null; this._rebuildHoverFocus(); }
         if (this._hoverCableEdgeId !== null || this._fadedCables) { this._hoverCableEdgeId = null; this._fadedCables = null; this._cableFadeCtrl = null; this._drawCables(); }
+        // What the view was when the gesture began, so a pure pan can be put back at the same height.
+        this._navRows = Math.max(1, Math.min(this.rowCount, Math.round(this._rowsAt(this.zoom))));
+        this._navZoomed = false;
+        this._freezeView();
         this._armPanWheel(true);
         document.addEventListener('pointermove', this._navMove, true);         // pointer motion pans while held
         this._setNavCursor(true);
@@ -394,10 +429,23 @@ export class Rack {
         this._updateNavClass();
         return;
       }
+      // NUMBER KEYS set how many whole rows fill the window. A view setting only — it never changes how
+      // many rows the RACK has, which is structure and belongs to the menu.
+      if (e.key >= '1' && e.key <= '9' && !e.metaKey && !e.ctrlKey && !e.altKey && !e.shiftKey) {
+        e.preventDefault();
+        this.setRowsVisible(+e.key);
+        return;
+      }
+      // Escape puts out a held cable. Only Escape: Control is a key too, and Control is how the macOS
+      // accessibility zoom is driven — any-key would extinguish the cable at the moment you magnified
+      // to look at where it went.
+      if (e.key === 'Escape' && this._litEdgeId) { this._litEdgeId = null; this._drawCables(); return; }
       if (this._ovActive) this._cancelOverview();   // Escape or any other key → close without moving
     });
     const endNav = () => {
       this._optDown = false;
+      this._settleOnWholeRows();   // before the thaw, so the picture and the live rack agree
+      this._thawView();
       this._armPanWheel(false);
       document.removeEventListener('pointermove', this._navMove, true);
       if (this._navEdgeRaf) { cancelAnimationFrame(this._navEdgeRaf); this._navEdgeRaf = null; }
@@ -811,6 +859,11 @@ export class Rack {
     }
     for (const rec of this.records.values()) this._rowEls[rec.row].appendChild(rec.el);
     this.content.appendChild(this.cables);   // cords paint above the panels
+    // A STAND-IN for the live rack, used while the Option key is held. It sits OUTSIDE the transformed
+    // content and carries its own transform, so panning and zooming it is a single GPU composite.
+    this.frozen = document.createElement('canvas');
+    this.frozen.className = 'rack-frozen';
+    this.container.appendChild(this.frozen);
   }
 
   // ---- geometry / scaling ----
@@ -852,6 +905,15 @@ export class Rack {
   // Apply the current zoom + pan as one CSS transform on the content (origin top-left). The layout under
   // it is drawn at base scale, so this scales AND positions the whole rack at once.
   _applyTransform() {
+    // While frozen it is the PICTURE that moves. Its own scale is baked in, so it is displayed at
+    // zoom/cS — and because it is one bitmap, the browser composites it instead of re-rasterising every
+    // faceplate. That is the whole reason a zoom gesture can be smooth: the live rack re-renders once,
+    // when the gesture ends, rather than on every wheel tick.
+    if (this._frozenBm) {
+      const k = this.zoom / this._frozenBm.cS;
+      this.frozen.style.transformOrigin = '0 0';
+      this.frozen.style.transform = `translate(${this._tx.toFixed(3)}px, ${this._ty.toFixed(3)}px) scale(${k.toFixed(5)})`;
+    }
     this.content.style.transformOrigin = '0 0';
     // Zoom is written at HIGH precision, not r2's 2 decimals: the focal-zoom offset that pins the point
     // under the cursor scales with a module's distance from the top-left origin, so a coarse 0.01 step in
@@ -860,6 +922,7 @@ export class Rack {
     this.content.style.transform = `translate(${this._tx.toFixed(3)}px, ${this._ty.toFixed(3)}px) scale(${this.zoom.toFixed(5)})`;
     this._reprojectViewers();   // scopes/monitors live outside the transform, so move+scale them to match
     if (this._viewMovedHook) this._viewMovedHook();   // a cable in hand re-anchors to the pointer (see _startLinkRegrab)
+    this.onViewChange();
   }
 
   // ---- drag-to-pan the view (grab-drag) ----
@@ -1043,6 +1106,42 @@ export class Rack {
     return { a, b, w, uA, uB, pA, pB, c1, c2 };
   }
 
+  // The path of a slice of a cord, between two distances from one end — used for the grab stretch.
+  _cordSegment(g, fromA, fromMm, toMm) {
+    const P = [g.pA, g.c1, g.c2, g.pB];
+    const at = (t) => {
+      const u = 1 - t, a = u * u * u, b = 3 * u * u * t, c = 3 * u * t * t, d = t * t * t;
+      return { x: a * P[0].x + b * P[1].x + c * P[2].x + d * P[3].x,
+        y: a * P[0].y + b * P[1].y + c * P[2].y + d * P[3].y };
+    };
+    const N = 40, pts = [];
+    let prev = at(0), total = 0;
+    pts.push({ p: prev, len: 0 });
+    for (let i = 1; i <= N; i++) {
+      const p = at(i / N);
+      total += Math.hypot(p.x - prev.x, p.y - prev.y);
+      pts.push({ p, len: total }); prev = p;
+    }
+    if (total < fromMm + 1) return null;   // too short to carry a grab stretch at all
+    const lo = fromA ? fromMm : Math.max(0, total - Math.min(toMm, total));
+    const hi = fromA ? Math.min(toMm, total) : total - fromMm;
+    if (!(hi > lo)) return null;
+    // The point at an exact DISTANCE, interpolated between samples rather than snapped to one. Picking
+    // whole samples was fine while the stretch was long; now that it is about a jack's diameter it can
+    // fall entirely between two samples and yield nothing at all — which is how it disappeared.
+    const atLen = (want) => {
+      let i = 1;
+      while (i < pts.length - 1 && pts[i].len < want) i++;
+      const p0 = pts[i - 1], p1 = pts[i];
+      const f = p1.len > p0.len ? (want - p0.len) / (p1.len - p0.len) : 0;
+      return { x: p0.p.x + (p1.p.x - p0.p.x) * f, y: p0.p.y + (p1.p.y - p0.p.y) * f };
+    };
+    const STEPS = 8;
+    const out = [];
+    for (let i = 0; i <= STEPS; i++) out.push(atLen(lo + (hi - lo) * (i / STEPS)));
+    return 'M' + out.map((q) => `${r2(q.x)},${r2(q.y)}`).join(' L');
+  }
+
   _drawCables() {
     if (!this.cables) return;
     this._refreshDualKnacks();   // a cable in/out of a knAck centre splits/unsplits it
@@ -1095,6 +1194,8 @@ export class Rack {
       // behind it — a cord is grabbed and re-routed from the PORT it ends on, not
       // from the cord itself. Its only grab point is the middle reshape handle.
       const bodyD = `M${r2(g.pA.x)},${r2(g.pA.y)} C${r2(g.c1.x)},${r2(g.c1.y)} ${r2(g.c2.x)},${r2(g.c2.y)} ${r2(g.pB.x)},${r2(g.pB.y)}`;
+      // A held cable is the SAME WIDTH as any other; brightness alone marks it, with everything else
+      // pulled back. Drawing it heavier as well made it a stripe across the rack.
       const bp = mk(bodyD, color, wmm, bodyOp, null);
       if (!this._isolateNet) { bp.setAttribute('class', 'cable-body'); bp.dataset.edge = e.id; }
       // Flow direction: black dashes crawl source->dest (path runs pA=src -> pB=dst),
@@ -1103,13 +1204,63 @@ export class Rack {
       // dimmed, no dashes. Dash length is per destination family; the crawl offset is
       // driven by a clock in _startFlow so it survives the frequent redraws.
       if (!this._isolateNet || this._isolateNet.has(e.id)) {
-        const fd = mk(bodyD, '#000', wmm / 2, dashOp, null);
+        // A HELD cable's direction dash is drawn PROPORTIONALLY FINER. At the usual half-width it eats
+        // half of a cable that is already twice as wide, so the coloured part ends up as two thin edges
+        // either side of black — and next to the solid stub the hover preview just showed you, that
+        // reads as the cable shrinking to the dash. Held, the colour should dominate and the dash
+        // should be a fine line through it saying which way the signal runs.
+        // Its direction dash is drawn FINER, though — the only concession. At the usual half-width the
+        // black takes so much of the cable that what is left reads as a thin line rather than a bright
+        // cable. Finer dash, same overall width, more colour.
+        const dashW = e.id === this._litEdgeId ? wmm * 0.28 : wmm / 2;
+        const fd = mk(bodyD, '#000', dashW, dashOp, null);
         fd.setAttribute('class', 'flow-dash');
         fd.dataset.edge = e.id;
         fd.dataset.src = e.src.key + '|' + e.src.portId;   // source jack tag → its live level drives this cable's crawl in isolate mode
         fd.setAttribute('stroke-linecap', 'butt');
         fd.setAttribute('stroke-dasharray', `${r2((FLOW_DASH[e.style] || FLOW_DASH.control) * wmm)} ${r2(FLOW_GAP * wmm)}`);
         fd.setAttribute('stroke-dashoffset', r2(this._flowOffset()));
+      }
+      // A short GRAB STRETCH just off each terminal: click it and this cable stays bright while you
+      // follow it. Only a stretch, and only near the ends, so it sits over panel face rather than over
+      // the controls you might want to click. It is invisible until hovered — a cable that advertised
+      // this everywhere would be a cable wearing decoration it does not need.
+      if (!this._isolateNet) {
+        for (const fromA of [true, false]) {
+          // The cord's geometry starts at the rim, not the centre, so the distances are measured from
+          // there — hence the ring subtracted off.
+          const ring = (fromA ? g.a.ring : g.b.ring) || 2.3;
+          const seg = this._cordSegment(g, fromA, Math.max(0, ring * (LIT_GRAB_FROM_R - 1)), ring * (LIT_GRAB_TO_R - 1));
+          if (!seg) continue;
+          const hit = mk(seg, 'transparent', wmm * LIT_GRAB_W, null, 'stroke');
+          hit.setAttribute('class', 'cable-grab');
+          hit.style.cursor = 'pointer';
+          // SHOW AND HIDE BY MUTATING THIS ELEMENT — never by redrawing. A redraw rebuilds the cable
+          // layer wholesale, which destroys the element the pointer is over; the replacement fires
+          // another enter, and the leave that should have hidden it never arrives on the corpse. That
+          // is why the thickened stretch stuck on screen whatever you did afterwards.
+          const show = () => { hit.setAttribute('stroke', color); hit.setAttribute('stroke-width', r2(wmm * LIT_GRAB_SHOW)); hit.style.opacity = '0.9'; };
+          const hide = () => { hit.setAttribute('stroke', 'transparent'); hit.setAttribute('stroke-width', r2(wmm * LIT_GRAB_W)); hit.style.opacity = ''; };
+          hit.addEventListener('pointerenter', () => {
+            clearTimeout(this._litHoverTimer);
+            // A DWELL first. Without it the stretch flickers up every time the pointer crosses a cable
+            // on its way somewhere else, which is most of the time.
+            this._litHoverTimer = setTimeout(() => { this._litHoverId = e.id; show(); }, LIT_HOVER_MS);
+          });
+          hit.addEventListener('pointerleave', () => {
+            clearTimeout(this._litHoverTimer);
+            if (this._litHoverId === e.id) this._litHoverId = null;
+            hide();
+          });
+          hit.addEventListener('pointerdown', (ev) => {
+            if (ev.button !== 0) return;
+            ev.preventDefault(); ev.stopPropagation();
+            clearTimeout(this._litHoverTimer);
+            this._litEdgeId = this._litEdgeId === e.id ? null : e.id;
+            this._drawCables();
+          });
+          if (this._litHoverId === e.id) show();   // a redraw for some other reason keeps the state
+        }
       }
       // Middle reshape handle, shown only while this cable is hovered.
       if (e.id === this._hoverCableEdgeId) {
@@ -1142,6 +1293,11 @@ export class Rack {
   // under the pointer go fully opaque so you can trace them. Purely visual — the
   // body stays click-through either way.
   _cableOpacity(e) {
+    // ONE CABLE HELD BRIGHT, so you can follow it across the rack by eye. Without it a cable dims the
+    // moment you leave its terminal — you look away to pan and lose which one you were tracing, which
+    // was the single thing that made following a cable hard. Same treatment isolate gives a subnet,
+    // scoped to one cord.
+    if (this._litEdgeId) return e.id === this._litEdgeId ? CABLE_BRIGHT : 0.25;
     if (this._isolateNet) return this._isolateNet.has(e.id) ? CABLE_BRIGHT : 0.25;    // isolate: subnet bright, the rest dimmed (no dashes)
     if (this._netEdges) return this._netEdges.has(e.id) ? CABLE_BRIGHT : 0.5;          // net highlight: members full, rest as normal
     const h = this._hoverRec;
@@ -4563,15 +4719,12 @@ export class Rack {
 
     // An input takes one cable: patchbay.connect rejects a drop onto an occupied
     // input (moving a cord is done by grabbing its stub, not by dropping over it).
-    const initialDepth = (dst.meta.via && dst.rec) ? dst.rec.values.get(dst.meta.via) : undefined;
-    const res = this.patchbay.connect(
-      { key: src.key, instance: src.instance, descriptorId: src.descriptorId, portId: src.portId },
-      { key: dst.key, instance: dst.instance, descriptorId: dst.descriptorId, portId: dst.portId },
-      initialDepth,
-    );
-    if (res.ok) { this._reconcileLinks(); this._drawCables(); this.onChange(); return res.edge; }
-    console.warn(`[wcoast] connect refused: ${src.key}.${src.portId} -> ${dst.key}.${dst.portId} — ${res.reason}`);
-    return null;
+    // Through _connectResolved, which is the ONE place a cord is made — this used to carry its own
+    // copy of the same call, so anything added to the shared one applied to mults and nothing else.
+    const edge = this._connectResolved(src, dst);
+    if (!edge) return null;
+    this._reconcileLinks(); this._drawCables(); this.onChange();
+    return edge;
   }
 
   // Create a LINK between two inputs — the empty one shares the fed one's signal. Under the hood
@@ -4594,7 +4747,9 @@ export class Rack {
     return edge;
   }
 
-  // Wire src-output → dst-input in the patchbay (the raw connect links reuse), returning the edge.
+  // Wire src-output → dst-input in the patchbay, returning the edge. EVERY cord is made here — an
+  // ordinary drop, a mult, a restore, an undo — so it is the one place that gets a say in how a new
+  // cord starts life.
   _connectResolved(src, dst) {
     const initialDepth = (dst.meta.via && dst.rec) ? dst.rec.values.get(dst.meta.via) : undefined;
     const res = this.patchbay.connect(
@@ -4602,7 +4757,73 @@ export class Rack {
       { key: dst.key, instance: dst.instance, descriptorId: dst.descriptorId, portId: dst.portId },
       initialDepth,
     );
-    return res.ok ? res.edge : null;
+    if (!res.ok) {
+      console.warn(`[wcoast] connect refused: ${src.key}.${src.portId} -> ${dst.key}.${dst.portId} — ${res.reason}`);
+      return null;
+    }
+    // Give the new cord a swing that keeps it clear of the ones already leaving this terminal the same
+    // way. Callers with a REAL shape to restore — a patch loading, an undo, a relinked mult — overwrite
+    // it afterwards, which is right: a shape you chose beats a shape we guessed.
+    const fan = this._fanBow(res.edge);
+    if (fan) res.edge.bow = fan;
+    return res.edge;
+  }
+
+  // Swing this cord clear of the ones already leaving the same jack.
+  //
+  // The quantity that matters is the DEPARTURE ANGLE — a cord leaves its jack aimed at the belly of its
+  // own bow (see _cordGeom), so several cords crowding one hole are several cords leaving at nearly the
+  // same angle. Work out where this one would naturally leave, and if that is within FAN_MIN_DEG of a
+  // cord already there, rotate its belly about the jack by the smallest amount that clears them all.
+  //
+  // Two other levers looked obvious and were wrong. Scaling each cord's own `perp` moves its belly along
+  // that chord's own normal, which points somewhere different for every cord — it swung some departures
+  // back TOWARD each other. Pushing every belly the same way down the screen was worse: it makes them
+  // all leave pointing at the floor, collapsing a 14-degree natural spread to 4.
+  //
+  // Being targeted also means it usually does nothing, which is the point: cords bound for different
+  // places already leave at different angles, and a shape nobody needed is a shape nobody asked for.
+  _fanBow(e) {
+    const srcRef = e.link || e.src;
+    const a = this._jackPosMm(srcRef.key, srcRef.portId);
+    const b = this._jackPosMm(e.dst.key, e.dst.portId);
+    if (!a || !b) return null;
+    const len = Math.hypot(b.x - a.x, b.y - a.y);
+    if (!(len > 0)) return null;
+    const belly = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 + Math.max(5, 0.14 * len) };
+    const natural = Math.atan2(belly.y - a.y, belly.x - a.x);
+    const taken = [];
+    for (const o of this.patchbay.list()) {
+      if (o === e) continue;
+      const oRef = o.link || o.src;
+      if (oRef.key !== srcRef.key || oRef.portId !== srcRef.portId) continue;   // a different jack
+      const g = this._cordGeom(o);
+      if (g) taken.push(Math.atan2(g.uA.y, g.uA.x));
+    }
+    if (!taken.length) return null;
+    const gapTo = (ang) => {
+      let worst = Infinity;
+      for (const t of taken) {
+        let d = Math.abs(ang - t) % (2 * Math.PI);
+        if (d > Math.PI) d = 2 * Math.PI - d;
+        worst = Math.min(worst, d);
+      }
+      return worst;
+    };
+    const need = FAN_MIN_DEG * Math.PI / 180;
+    if (gapTo(natural) >= need) return null;   // already clear — leave the default alone
+    const stepR = 2 * Math.PI / 180;
+    let best = null;
+    for (let k = 1; k <= FAN_MAX_DEG / 2 && best === null; k++) {
+      for (const sign of [1, -1]) {
+        const d = sign * k * stepR;
+        if (gapTo(natural + d) >= need) { best = d; break; }
+      }
+    }
+    if (best === null) return null;   // a jack this busy cannot be untangled by swinging; leave it be
+    const cos = Math.cos(best), sin = Math.sin(best);
+    const vx = belly.x - a.x, vy = belly.y - a.y;
+    return this._bowFromPoint(a, b, { x: a.x + vx * cos - vy * sin, y: a.y + vx * sin + vy * cos });
   }
 
   // Keep every LINK true to its target: prune links whose target lost its feed (which cascades down
@@ -4628,6 +4849,42 @@ export class Rack {
     // Every path that adds, moves or removes a cord passes through here, so this is the one
     // place the video graph needs rebuilding from — rather than each call site remembering to.
     this._rebuildVideoGraph();
+  }
+
+  // One row's height in the layout's own base px (zoom 1). Rows sit flush today (ROW_GAP_MM is 0), but
+  // the pitch is spelled out so introducing a gap would not silently break the arithmetic.
+  _rowPitch() { return (PANEL_H_MM + ROW_GAP_MM) * (this.pxPerMm || 1); }
+
+  // Show this many whole rows, capped at what the rack has. relayout fits every row into the height at
+  // zoom 1, so this is a pure ratio — which makes the digit keys a zoom control whose steps all mean
+  // something, instead of a continuum you have to hunt through. The topmost row you are looking at
+  // stays put, as does the horizontal centre.
+  setRowsVisible(n) {
+    const rows = Math.max(1, Math.min(this.rowCount, Math.round(n)));
+    const pitch = this._rowPitch();
+    const vpH = this.container.clientHeight || 0, vpW = this.container.clientWidth || 0;
+    if (!(pitch > 0) || !(vpH > 0)) return;
+    const zoom = vpH / (rows * pitch);
+    const top = Math.floor(-this._ty / (pitch * this.zoom) + 1e-4);
+    const midBase = (-this._tx + vpW / 2) / this.zoom;
+    this.zoom = zoom;
+    this._tx = vpW / 2 - midBase * zoom;
+    this._ty = -top * pitch * zoom;
+    this._clampPan();
+    this.content.style.transition = '';
+    this._applyTransform();
+  }
+
+  // Where the view is, and putting it back — used to carry the zoom across a restart. Clamped on the
+  // way in, since the window may be a different size than it was when this was written down.
+  viewState() { return { zoom: this.zoom, tx: this._tx, ty: this._ty }; }
+  setViewState(v) {
+    if (!v || !(v.zoom > 0)) return;
+    this.zoom = Math.max(1, Math.min(VIEW_ZOOM_MAX, v.zoom));
+    this._tx = v.tx || 0; this._ty = v.ty || 0;
+    this._clampPan();
+    this.content.style.transition = '';
+    this._applyTransform();
   }
 
   // Back to the fit-to-height home view (zoom 1) with no pan — from a double-click or the View menu.
@@ -4686,7 +4943,7 @@ export class Rack {
   // Build the off-screen bitmap of the whole rack: real module faces, cables, scopes (with their traces),
   // and monitor rings, sized to half the window height at the rack's true proportions. Returns null if
   // the rack isn't laid out yet. Async because the module faces rasterise via image decode.
-  async _buildOverviewBitmap() {
+  async _buildOverviewBitmap(forceScale) {
     const pxmm = this.pxPerMm || 1;
     // Extent in base px — modules AND any scope/monitor that sticks out past the last panel, so the picture
     // (and the viewport's right/bottom limits) include them and they can be zoomed into.
@@ -4703,7 +4960,10 @@ export class Rack {
     // so this inset becomes a landing strip: the pointer stays on OUR window even jammed into a corner (or
     // overshooting a little), which keeps click-to-accept working instead of hitting the app behind.
     const inset = Math.min(OVERVIEW_INSET, winW * 0.06, winH * 0.06);
-    const cS = Math.min((winW - 2 * inset) / W0, (winH - 2 * inset) / H0);
+    // Normally fitted to the window (the overview's job). A FROZEN view asks for a specific scale
+    // instead: it has to stand in for the live rack at whatever magnification you are working at, so a
+    // picture built to fit the window would be visibly soft the moment you zoomed in on it.
+    const cS = forceScale || Math.min((winW - 2 * inset) / W0, (winH - 2 * inset) / H0);
     const ovW = W0 * cS, ovH = H0 * cS;          // fills the tighter dimension (less the inset); the other letterboxes
     const mmC = pxmm * cS;                                  // overview px per mm
     const dpr = Math.min(2, window.devicePixelRatio || 1);
@@ -4723,15 +4983,24 @@ export class Rack {
     await Promise.all(jobs);
     // cables (thin coloured beziers, in mm space)
     if (this.patchbay) {
-      cx.lineWidth = 1.5;
       for (const e of this.patchbay.list()) {
         const g = this._cordGeom(e); if (!g) continue;
+        // A HELD cable is drawn as it looks live — full weight, the rest pulled back — so freezing the
+        // picture to move around does not lose the one thing you were following.
+        // AT THE SAME APPARENT WIDTH AS THE LIVE RACK. This was a flat 1.5 canvas px, where a live
+        // cable is CABLE_PX of base px — so every cable thinned out the moment the view froze, which is
+        // exactly when you are following one and least want it to. Scaling by cS keeps it honest at any
+        // rasterising scale, including the small overview picture.
+        const held = this._litEdgeId ? e.id === this._litEdgeId : null;
+        cx.lineWidth = CABLE_PX * cS;
+        cx.globalAlpha = held === false ? 0.28 : 1;
         cx.strokeStyle = STYLE_COLOR[e.style] || STYLE_COLOR.control;
         cx.beginPath();
         cx.moveTo(g.pA.x * mmC, g.pA.y * mmC);
         cx.bezierCurveTo(g.c1.x * mmC, g.c1.y * mmC, g.c2.x * mmC, g.c2.y * mmC, g.pB.x * mmC, g.pB.y * mmC);
         cx.stroke();
       }
+      cx.globalAlpha = 1;
     }
     // scopes (trace canvas + frame) and monitors (rings), at their scene anchors (base px)
     for (const sc of this._scopes) {
@@ -4747,7 +5016,7 @@ export class Rack {
       cx.beginPath(); cx.arc(m.ax * cS + r, m.ay * cS + r, Math.max(1, r), 0, Math.PI * 2);
       cx.fillStyle = '#0d0f0c'; cx.fill(); cx.strokeStyle = '#8a8d92'; cx.lineWidth = 1; cx.stroke();
     }
-    return { canvas: cv, ovW, ovH, cS, winW, winH, rackRightPx, sig: this._ovSignature() };
+    return { canvas: cv, ovW, ovH, cS, winW, winH, rackRightPx, W0, H0, sig: this._ovSignature() };
   }
 
   // Rebuild the bitmap in the background; swap it in (and repaint if the overview is up) when ready.
@@ -4772,7 +5041,7 @@ export class Rack {
   _ovSignature() {
     let sig = (this.container.clientWidth || 0) + 'x' + (this.container.clientHeight || 0) + '|';
     for (const rec of this.records.values()) sig += rec.key + ':' + rec.x + ',' + rec.row + ',' + (rec.panelWmm || 0) + ';';
-    sig += 'c' + (this.patchbay ? this.patchbay.list().length : 0) + '|';
+    sig += 'c' + (this.patchbay ? this.patchbay.list().length : 0) + '|L' + (this._litEdgeId || '-') + '|';
     for (const sc of this._scopes) sig += 's' + Math.round(sc.ax || 0) + ',' + Math.round(sc.ay || 0) + ',' + (sc.el ? sc.el.offsetWidth : 0) + ';';
     for (const m of this._monitors) sig += 'm' + Math.round(m.ax || 0) + ',' + Math.round(m.ay || 0) + ';';
     return sig;
@@ -4977,6 +5246,119 @@ export class Rack {
   _armPanWheel(on) {
     if (on) document.addEventListener('wheel', this._panWheel, { passive: false, capture: true });
     else document.removeEventListener('wheel', this._panWheel, { capture: true });
+  }
+
+  // ---- frozen view -----------------------------------------------------------
+  // Hold Option and the live rack is replaced by a picture of itself, which is what is panned and
+  // zoomed; releasing puts the real thing back at wherever you left off. Rescaling the live rack means
+  // re-rasterising every faceplate against a stream of wheel events it can never catch up with, which
+  // is what made zooming feel like wading. A bitmap scales for free.
+  //
+  // Built at the CURRENT zoom (capped) rather than fitted to the window, so it stands in at the
+  // magnification you are actually working at. Zooming in a long way during one gesture will soften it;
+  // it sharpens the moment you let go.
+  _freezeView() {
+    if (this._frozenBm) return;
+    const scale = Math.min(FROZEN_MAX_SCALE, Math.max(1, this.zoom));
+    const show = (bm) => {
+      if (!bm || !this._optDown) return;         // let go before it was ready — nothing to stand in for
+      this._frozenBm = bm;
+      const cv = this.frozen;
+      cv.width = bm.canvas.width; cv.height = bm.canvas.height;
+      cv.style.width = bm.ovW + 'px'; cv.style.height = bm.ovH + 'px';
+      cv.getContext('2d').drawImage(bm.canvas, 0, 0);
+      cv.style.display = 'block';
+      this.content.style.visibility = 'hidden';   // hidden, not display:none — a display:none subtree
+      this._applyTransform();                     // cannot resolve the url(#id) filters the jacks use
+    };
+    const cached = this._frozenCache;
+    if (cached && cached.sig === this._ovSignature() && cached.cS >= scale) { show(cached); return; }
+    this._buildOverviewBitmap(scale).then((bm) => { this._frozenCache = bm; show(bm); });
+  }
+
+  _thawView() {
+    if (!this._frozenBm) { this.content.style.visibility = ''; this.frozen.style.display = 'none'; return; }
+    this._frozenBm = null;
+    this.frozen.style.display = 'none';
+    this.content.style.visibility = '';
+    this._applyTransform();   // the live rack takes over at exactly where the picture was left
+    this._drawCables();
+  }
+
+  // ---- landing on whole rows -------------------------------------------------
+  // Free zoom will not naturally stop where a whole number of rows fills the window, so a gesture
+  // usually ends with a row sliced by the top or bottom edge. These two put that right without taking
+  // the freedom away: a gentle pull while you scroll, and an exact snap when you let go.
+  //
+  // BOTH WORK ON WHERE THE ZOOM IS, NOT ON HOW MUCH YOU SCROLLED. That distinction matters: the last
+  // attempt at this thresholded on scroll travel, and travel is the one thing a trackpad and a
+  // trackball report completely differently — which is why it could be tuned for one and not the
+  // other. A position has no such argument with itself.
+
+  // How many rows the window holds at a given zoom.
+  _rowsAt(zoom) {
+    const pitch = (PANEL_H_MM + ROW_GAP_MM) * (this.pxPerMm || 1);
+    const vpH = this.container.clientHeight || 0;
+    return (pitch > 0 && zoom > 0) ? vpH / (zoom * pitch) : 0;
+  }
+  _zoomForRows(rows) {
+    const pitch = (PANEL_H_MM + ROW_GAP_MM) * (this.pxPerMm || 1);
+    const vpH = this.container.clientHeight || 0;
+    return (pitch > 0 && rows > 0) ? vpH / (rows * pitch) : this.zoom;
+  }
+
+  // ON RELEASE, SHOW WHOLE WHATEVER YOU WERE PARTLY LOOKING AT.
+  //
+  // Zooming stays completely free while Option is held — no detent, no lean, nothing to fight. When you
+  // let go, the rows you can see ANY PART of are taken as the rows you meant, and the view is sized to
+  // hold exactly those, from the top of the first to the bottom of the last.
+  //
+  // That makes the gesture something you can aim rather than something you have to land. Want three
+  // rows: let the middle one and a sliver of the ones above and below show. Want the top two: show
+  // those and keep the third out. There is no arithmetic to hit, and it cannot end with a row sliced by
+  // an edge — which was the whole complaint.
+  //
+  // Earlier attempts pulled the zoom toward whole rows AS YOU SCROLLED. Even done as a pure mapping,
+  // which cured the trackpad-versus-trackball inconsistency, it stayed unpredictable in the hand: the
+  // snap arrived while you were still moving, so whether it caught depended on where you happened to
+  // stop. Doing nothing until you let go removes the guesswork entirely.
+  _settleOnWholeRows() {
+    const pitch = (PANEL_H_MM + ROW_GAP_MM) * (this.pxPerMm || 1);
+    const vpH = this.container.clientHeight || 0;
+    if (!(pitch > 0) || !(vpH > 0) || !(this.zoom > 0)) return;
+    const top = -this._ty / this.zoom;             // the visible span, in base px
+    const bot = top + vpH / this.zoom;
+    // A PURE PAN KEEPS THE HEIGHT IT STARTED WITH. Moving about is not a request to change how much you
+    // are looking at, and it should not be able to: following a cable down from a two-row view and
+    // letting go over a sliver of a third row would otherwise land you in a three-row view you never
+    // asked for. Only the wheel changes the number of rows.
+    if (!this._navZoomed && this._navRows) {
+      const n = Math.max(1, Math.min(this.rowCount, this._navRows));
+      const firstPan = Math.max(0, Math.min(this.rowCount - n, Math.round(top / pitch)));
+      this.zoom = Math.max(1, Math.min(VIEW_ZOOM_MAX, vpH / (n * pitch)));
+      this._ty = -firstPan * pitch * this.zoom;
+      this._clampPan();
+      this.content.style.transition = '';
+      this._applyTransform();
+      return;
+    }
+    // A row counts as one you were looking at only if a REAL PORTION of it is showing — a third of it,
+    // not a sliver. Being generous here is what stops a near-miss on the zoom turning "I want these two
+    // rows" into three, and it is the forgiving direction: too little of a row showing was almost
+    // certainly not deliberate, whereas a third of one is hard to leave on screen by accident.
+    //
+    // As a FRACTION of a row rather than a number of pixels, so it means the same thing at every zoom.
+    const edge = pitch * SNAP_EDGE_FRAC;
+    let first = Math.floor((top + edge) / pitch);
+    let last = Math.ceil((bot - edge) / pitch) - 1;
+    first = Math.max(0, Math.min(this.rowCount - 1, first));
+    last = Math.max(first, Math.min(this.rowCount - 1, last));
+    const n = last - first + 1;
+    this.zoom = Math.max(1, Math.min(VIEW_ZOOM_MAX, vpH / (n * pitch)));
+    this._ty = -first * pitch * this.zoom;
+    this._clampPan();
+    this.content.style.transition = '';
+    this._applyTransform();
   }
 
   // Navigate-mode cursor: shown while Option is held (wheel zooms, motion pans), cleared on release.

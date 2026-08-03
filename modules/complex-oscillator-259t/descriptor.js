@@ -51,7 +51,7 @@ export default {
   apiVersion: 1,
   id: "wcoast.complexOsc259t",
   name: "Complex Oscillator",
-  abbreviation: "Cpx Osc",
+  abbreviation: 'CO',
   model: "Buchla & TipTop 259t",
   scope: "voice",          // one full copy per polyphonic voice
   hp: 34,                  // panel width reference, for faithful layout

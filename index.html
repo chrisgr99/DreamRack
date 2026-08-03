@@ -445,6 +445,8 @@
 
     /* ---- patch cables (SVG overlay; pointer-transparent) ---- */
     .rack-cables { position: absolute; top: 0; left: 0; pointer-events: none; z-index: 12; overflow: visible; }
+    /* The stand-in picture used while Option is held: same origin as the content it replaces. */
+    .rack-frozen { position: absolute; top: 0; left: 0; display: none; pointer-events: none; z-index: 14; }
     .rack-cable { fill: none; stroke-linecap: round; opacity: 0.95; }
     .rack-cable-temp { opacity: 0.95; }   /* the cord in hand looks like a real thick cable — no dash, no fade */
   </style>

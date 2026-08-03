@@ -46,7 +46,7 @@ export default {
   id: 'video-maths',
   apiVersion: 1,
   name: 'Video Maths',
-  abbreviation: 'Maths',
+  abbreviation: 'VdM',
   worklets: [],
   signalIdentity: ['luma'],
   ports,

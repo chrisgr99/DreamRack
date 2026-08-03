@@ -426,14 +426,25 @@ async function boot() {
   ensureAudio();
   let darkMode = true;   // first run defaults to DARK; a saved choice (below) overrides
   try { const s = localStorage.getItem('wcoast.dark'); if (s !== null) darkMode = s === '1'; } catch (_e) { /* no storage */ }
+  // Where the view was left, remembered like dark mode: an app preference, not part of any patch.
+  const VIEW_KEY = 'wcoast.view';
   // Unsaved-changes state, declared BEFORE the rack: its onChange fires during
   // relayout and the mixer addModule below, calling onEdit -> markDirty, which
   // reads `dirty` — so `dirty` must already be initialized (no temporal dead zone).
   // `menuStateTimer` is here for exactly the same reason: onEdit/markClean also push the native
   // menu's state, and pushMenuState is hoisted while a `let` beside it would not be.
   let dirty = false, patchName = null, mirror = null, booted = false, menuStateTimer = null, notes = null, examples = [];
+  let viewSaveTimer = null;
   rack = new Rack(document.getElementById('rack'), {
     host, moduleTypes: MODULE_TYPES, rowCount: 2, dark: darkMode, onChange: () => onEdit(),
+    // Remember where the view is between runs. Debounced hard: the view moves on every frame of a
+    // pan, and this only needs to be right by the time the app closes.
+    onViewChange: () => {
+      clearTimeout(viewSaveTimer);
+      viewSaveTimer = setTimeout(() => {
+        try { localStorage.setItem(VIEW_KEY, JSON.stringify(rack.viewState())); } catch (_e) { /* no storage */ }
+      }, 400);
+    },
   });
   rack.relayout();
 
@@ -1090,6 +1101,12 @@ async function boot() {
     }
   } catch (e) { log(`session restore failed: ${e.message}`); }
   if (!resumed) await placeDefaultModules();
+  // Put the view back where it was left. AFTER the modules exist, since relayout resets the transform
+  // as it fits the rows — restoring earlier would simply be overwritten.
+  try {
+    const v = localStorage.getItem(VIEW_KEY);
+    if (v) rack.setViewState(JSON.parse(v));
+  } catch (_e) { /* no storage, or nonsense in it — the default view is fine */ }
   // Startup silence: the engine and both buses OFF on every launch, regardless of the last-exited
   // state or any monitors that a restored patch would otherwise re-enable — the app never comes up
   // making sound. The engine is cleared LAST, because turning it off is what actually guarantees
