@@ -490,11 +490,18 @@
        one end and the fixed tab bar at the other — so it is painted in its own layer pinned to the
        window rather than inside the rack's cable overlay. Above the panels so it reads as passing
        over them, below the menus, and never in the way of a click. */
-    .page-stubs { position: fixed; inset: 0; z-index: 1250; pointer-events: none; overflow: visible; }
+    .page-stubs { position: fixed; inset: 0; z-index: 1290; pointer-events: none; overflow: visible; }
     /* A cable IN HAND, drawn over the whole window so carrying one up to a tab does not run it into
        the rack's clipped edge and make it look dropped. Above the menu bar it has to reach, below
        the menus themselves. */
     .hand-cable { position: fixed; inset: 0; z-index: 1320; pointer-events: none; overflow: visible; }
+    /* The one label shown at a time, flown off the stub under the pointer. Above the tab bar, because
+       it has to stay readable while the pointer is still on the stub near the bar — and click-through,
+       so it can never swallow a press on the tab it happens to be lying over. */
+    .stub-flag { position: fixed; z-index: 1340; display: none; pointer-events: none;
+      color: #000; font: 600 11.5px system-ui, -apple-system, sans-serif;
+      padding: 2px 7px; border-radius: 3px; white-space: nowrap;
+      box-shadow: 0 1px 4px rgba(0,0,0,.45); }
     .rack-cables { position: absolute; top: 0; left: 0; pointer-events: none; z-index: 12; overflow: visible; }
     /* The stand-in picture used while Option is held: same origin as the content it replaces. */
     .rack-frozen { position: absolute; top: 0; left: 0; display: none; pointer-events: none; z-index: 14; }

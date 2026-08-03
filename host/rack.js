@@ -62,10 +62,46 @@ const domainStyle = (domain) => (domain === 'audio' ? 'audio'
 // so that it follows the audio pages and reads as their output, rather than sitting past Video where
 // it would read as the output of the video side too.
 const PAGE_MAX_AUDIO = 8;
-const PAGE_FIXED = [{ id: 'output', kind: 'output', name: 'Output' }, { id: 'video', kind: 'video', name: 'Video' }];
+// The two pages that always exist, in bar order — after the audio pages and last of all. Named for
+// what LEAVES by them rather than for what sits on them: 'Audio output' says where the sound goes, and
+// the tab is wide enough to hold ten cable slots, so the longer name costs nothing.
+//
+// VIDEO SITS BETWEEN the audio pages and the audio output, which looks like it breaks up the audio
+// side of the bar and once did. What settles it is the name: while the tab read only 'Output' it had
+// to stay next to the audio pages to be understood as belonging to them, and now that it says so
+// itself it can take the far end of the bar — which is where the video page never wanted to be.
+const PAGE_FIXED = [{ id: 'video', kind: 'video', name: 'Video' }, { id: 'output', kind: 'output', name: 'Audio output' }];
 const CABLE_PX = 3.8;   // cord thickness in px at zoom 1 (scales up as you zoom in)
-const STUB_GAP_PX = 7;  // spacing between the stubs of several cables bound for the same page
-const CARRY_MORPH_MS = 1000;   // the held cord's anchor sliding from the tab you clicked to the one you left
+// A crossing cable arrives at its tab in its own LANE. The spacing is what a turned label needs, so a
+// label can hang under each stub without either moving when you hover.
+const STUB_GAP_PX = 18;
+// A stub's HOVER STRIP: as wide as a slot, so the strips of one bundle sit shoulder to shoulder and
+// scanning along them never falls into a gap between two, and deep enough to hover well clear of the
+// bar. A stub is a four-pixel line — far too fine to aim at, especially under magnification.
+const STRIP_H = 60;
+// Tooltip timing, and it is a toolbar's timing: a real pause before the FIRST flag, so crossing the
+// bundle on the way somewhere else does not throw labels up; then a warm period in which moving to
+// the next stub shows its flag at once, because by then you are plainly reading them.
+const FLAG_DWELL_MS = 400;
+const FLAG_WARM_MS = 1000;
+// The gap between the pointer's tip and the bottom of the chip: enough to leave a sliver of the cable
+// itself showing through, so the label is plainly attached to the line under the pointer.
+const FLAG_GAP = 6;
+// Output is built wide enough for the mixer's ten inputs from the start, so patching those never
+// changes the bar. It grows past that only if pan CV, sends or the like also cross to it.
+const TAB_CABLE_CAPACITY = { output: 10 };
+// Cables leave a tab (or a label's far end) by running STRAIGHT DOWN for a fixed distance before they
+// curve away. Without it a stub set off diagonally the instant it left the bar, which read as a line
+// pointing at the tab rather than a cable coming out of it. Fixed rather than proportional: the run
+// has to look the same whether the jack it goes to is just below the bar or right down the window.
+const STUB_DROP_PX = 26;
+// How far the swoop may reach before it turns, so a cable bound across the window departs the bar the
+// same way a cable bound just below it does.
+const STUB_SWOOP_PX = 90;
+// Slot one sits this far in from the tab's left edge. Slots are counted from the LEFT and never
+// recentred, so a cable's place on the bar does not shift when another cable is added or removed.
+const SLOT_INSET = 6;
+const CARRY_MORPH_MS = 2000;   // the held cord's anchor sliding from the tab you clicked to the one you left
 // The stretch of a cord that can be clicked to hold it bright, measured in JACK RADII from the jack's
 // own centre — so it scales with the terminal rather than being a number that happens to suit one panel.
 // It starts just past the rim and runs about one terminal's diameter. Short and close: close so it is
@@ -304,9 +340,15 @@ export class Rack {
     // `_swallowClick` blocks the trailing click.
     // A press anywhere that is not the cable's own grab stretch puts a held cable out: you have arrived
     // and started work, which is the end of needing it held.
+    //
+    // Three exemptions, and they are all the same exemption: pressing something whose whole purpose is
+    // FOLLOWING the held cable must not extinguish it. The cable's grab stretch, a stub's hover strip,
+    // and the tab bar — because a cable held on one page and then followed through its tab to the next
+    // is exactly the journey the hold exists for, and arriving to find it dark defeats the point.
     document.addEventListener('pointerdown', (e) => {
       if (!this._litEdgeId) return;
-      if (e.target && e.target.closest && e.target.closest('.cable-grab')) return;
+      if (e.target && e.target.closest && (e.target.closest('.cable-grab')
+        || e.target.closest('.stub-grab') || e.target.closest('.rack-tabbar'))) return;
       this._litEdgeId = null;
       this._drawCables();
     }, true);
@@ -453,12 +495,12 @@ export class Rack {
       // accessibility zoom is driven — any-key would extinguish the cable at the moment you magnified
       // to look at where it went.
       if (e.key === 'Escape' && this._litEdgeId) { this._litEdgeId = null; this._drawCables(); return; }
-      // DIGITS SELECT PAGES: 1-8 the audio pages in bar order, 9 Output, 0 Video — the two that
+      // DIGITS SELECT PAGES: 1-8 the audio pages in bar order, 9 Video, 0 Audio output — the two that
       // always exist take the two keys at the end of the row, in the order they sit in the bar.
       // Pressing the digit for the page you are on returns you to the previous one.
       if (/^[0-9]$/.test(e.key) && !e.metaKey && !e.ctrlKey && !e.altKey && !e.shiftKey) {
         const audio = this.pages.filter((p) => p.kind === 'audio');
-        const target = e.key === '9' ? 'output' : e.key === '0' ? 'video' : (audio[+e.key - 1] || {}).id;
+        const target = e.key === '9' ? 'video' : e.key === '0' ? 'output' : (audio[+e.key - 1] || {}).id;
         if (target) { e.preventDefault(); this.selectPage(target); return; }
       }
       if (this._ovActive) this._cancelOverview();   // Escape or any other key → close without moving
@@ -641,6 +683,20 @@ export class Rack {
     rackEl.parentNode.insertBefore(el, rackEl);
   }
 
+  // How many cables could ever hang off a page's tab: everything with exactly one end on that page.
+  // Counted across the whole patch rather than just the page you are viewing, so a tab's width does
+  // not change as you move about.
+  _tabCableCount(pageId) {
+    let n = 0;
+    for (const e of this.patchbay.list()) {
+      const a = this.records.get((e.link || e.src).key), b = this.records.get(e.dst.key);
+      if (!a || !b) continue;
+      const inA = this.pageOf(a) === pageId, inB = this.pageOf(b) === pageId;
+      if (inA !== inB) n++;
+    }
+    return n;
+  }
+
   _renderTabBar() {
     const el = this._tabBarEl;
     if (!el) return;
@@ -655,6 +711,10 @@ export class Rack {
       n.className = 'rack-tab-name';
       n.textContent = p.name;
       b.appendChild(n);
+      // Wide enough for the cables that can arrive here. The base width comes later, once the bar has
+      // been laid out and an audio tab can be measured.
+      const lanes = Math.max(TAB_CABLE_CAPACITY[p.id] || 0, this._tabCableCount(p.id));
+      b.dataset.lanes = String(lanes);
       b.addEventListener('click', () => { if (p.id !== this.page) this.selectPage(p.id); });
       // DOUBLE-CLICK TO RENAME, as a spreadsheet does. The name becomes an editable field in place,
       // so there is no dialog to dismiss and the tab never changes size under you.
@@ -670,6 +730,31 @@ export class Rack {
       add.textContent = '+';
       add.addEventListener('click', () => this.addPage());
       el.appendChild(add);
+    }
+    this._sizeTabs();
+  }
+
+  // ONE BASE WIDTH FOR THE WHOLE BAR, taken from the audio tabs. 'Video' is a shorter word than
+  // 'Audio 1' and so came out visibly narrower, which made it read as a lesser kind of tab rather
+  // than a peer. Measured rather than written down as a number: the base has to follow the font and
+  // the longest audio name, both of which can change (a page can be renamed).
+  //
+  // A tab still grows past the base when it has more cable slots than that fits — the audio output
+  // tab always does, holding ten.
+  _sizeTabs() {
+    const el = this._tabBarEl;
+    if (!el) return;
+    const tabs = [...el.querySelectorAll('.rack-tab[data-page]')];
+    if (!tabs.length) return;
+    for (const b of tabs) b.style.minWidth = '';
+    let base = 0;
+    for (const b of tabs) {
+      const p = this.pages.find((x) => x.id === b.dataset.page);
+      if (p && p.kind === 'audio') base = Math.max(base, Math.ceil(b.getBoundingClientRect().width));
+    }
+    for (const b of tabs) {
+      const lanes = +b.dataset.lanes || 0;
+      b.style.minWidth = Math.max(base, lanes ? SLOT_INSET * 2 + lanes * STUB_GAP_PX : 0) + 'px';
     }
   }
 
@@ -1589,11 +1674,26 @@ export class Rack {
     this._carryRaf = requestAnimationFrame(tick);
   }
 
+  // Where a cord IN HAND meets a tab: the next free slot — the one it will occupy once dropped —
+  // rather than the middle of the tab, which would have made every crossing cable jump left the
+  // moment it was let go.
   _tabAnchorClient(pageId) {
-    const el = this._tabBarEl && this._tabBarEl.querySelector(`[data-page="${pageId}"]`);
-    if (!el) return null;
-    const r = el.getBoundingClientRect();
-    return { x: r.left + r.width / 2, y: r.bottom - 1 };
+    return this._stubAnchor(pageId, this._crossingCount(pageId, this._dragEdgeId));
+  }
+
+  // How many cables already run between the page being shown and `pageId` — i.e. how many slots on
+  // that tab are taken. The cord being carried is left out: it is on its way to a slot, not in one.
+  _crossingCount(pageId, excludeId) {
+    let n = 0;
+    for (const e of this.patchbay.list()) {
+      if (excludeId && e.id === excludeId) continue;
+      const a = this.records.get((e.link || e.src).key), b = this.records.get(e.dst.key);
+      if (!a || !b) continue;
+      const onA = this._onPage(a), onB = this._onPage(b);
+      if (onA === onB) continue;
+      if (this.pageOf(onA ? b : a) === pageId) n++;
+    }
+    return n;
   }
 
   // Where the held cord is anchored right now, in window px — or null when its own jack is on this
@@ -1647,16 +1747,83 @@ export class Rack {
     return svg;
   }
 
-  // Where a stub meets a tab: along the tab's bottom edge, a couple of millimetres apart, in the
-  // order the cables were made. Stable between redraws is all the order has to be — which cable is
-  // which is answered by holding one bright, not by counting stubs.
-  _stubAnchor(pageId, index, total) {
+  // Where a stub meets a tab: along the tab's bottom edge, counted in FIXED slots from the left, so
+  // the first cable takes slot one and each new one lands to the right of the last. Counting from the
+  // left rather than centring the bundle is what makes a slot stable — centred, every cable slid
+  // sideways whenever another was patched or pulled, and the position stopped meaning anything.
+  _stubAnchor(pageId, index) {
     const el = this._tabBarEl && this._tabBarEl.querySelector(`[data-page="${pageId}"]`);
     if (!el) return null;
     const r = el.getBoundingClientRect();
-    const gap = Math.min(STUB_GAP_PX, (r.width - 10) / Math.max(1, total));
-    const span = gap * (total - 1);
-    return { x: r.left + r.width / 2 - span / 2 + index * gap, y: r.bottom - 1 };
+    return { x: r.left + SLOT_INSET + STUB_GAP_PX / 2 + index * STUB_GAP_PX, y: r.bottom - 1 };
+  }
+
+  // Where a cable's FAR end sits in its module's own list of ports — the module's natural order, which
+  // for the mixer is channel order.
+  _farPortOrder(e, nearIsSrc) {
+    const far = nearIsSrc ? e.dst : (e.link || e.src);
+    const rec = this.records.get(far.key);
+    const d = rec && this.host.registry.descriptor(rec.descriptorId);
+    if (!d) return 0;
+    const i = (d.ports || []).findIndex((p) => p.id === far.portId);
+    return i < 0 ? 0 : i;
+  }
+
+  // What a label says: the far end, named as the module's abbreviation and its port. The near end is
+  // not named — you can see which of your own jacks the stub leaves from — and there is no arrow,
+  // because the flow dashes already say which way the signal runs.
+  _stubLabel(e, nearIsSrc) {
+    const far = nearIsSrc ? e.dst : (e.link || e.src);
+    const rec = this.records.get(far.key);
+    if (!rec) return '';
+    const d = this.host.registry.descriptor(rec.descriptorId);
+    const port = d && (d.ports || []).find((p) => p.id === far.portId);
+    const mod = (d && d.abbreviation) || far.key;
+    return `${mod} ${(port && port.name) || far.portId}`;
+  }
+
+  // ONE FLAG AT A TIME, on the stub under the pointer — not a catalogue of every crossing cable. You
+  // almost always come to the bar already knowing which line you care about, so naming that one and
+  // letting you scan along the bundle beats a list you then have to match back to the lines. The chip
+  // is a plain absolutely-positioned element rather than SVG so it can lie OVER the tab bar, which is
+  // the point: it has to be readable while the pointer is still down on the stub near the bar.
+  _ensureFlag() {
+    if (this._flagEl && this._flagEl.isConnected) return this._flagEl;
+    const el = document.createElement('div');
+    el.className = 'stub-flag';
+    document.body.appendChild(el);
+    this._flagEl = el;
+    return el;
+  }
+
+  // Show (or move) the flag for one stub. CENTRED ON THE POINTER, not hung off the stub: a screen
+  // magnifier tracks the pointer exactly, so a label centred there lands in the middle of the
+  // magnified view, while one aligned to the line beside it sits off toward the edge — or outside it.
+  // It rides a few pixels clear of the tip so a sliver of the cable shows between the two.
+  _showFlag(text, color, px, py) {
+    const el = this._ensureFlag();
+    el.textContent = text;
+    el.style.background = color;
+    el.style.visibility = 'hidden';
+    el.style.display = 'block';
+    const w = el.offsetWidth, h = el.offsetHeight;
+    // Slid back inside the window at the edges rather than allowed to run off it. Centring loses at
+    // the very edge of the screen, which is the right trade: it is exact everywhere else.
+    const left = Math.min(px - w / 2, window.innerWidth - 4 - w);
+    el.style.left = Math.round(Math.max(4, left)) + 'px';
+    el.style.top = Math.round(Math.max(2, py - h - FLAG_GAP)) + 'px';
+    el.style.visibility = 'visible';
+    this._flagWarm = true;
+  }
+
+  _hideFlag() {
+    if (this._flagSticky) return;
+    clearTimeout(this._flagTimer);
+    if (this._flagEl) this._flagEl.style.display = 'none';
+    // The warm period runs from LEAVING a stub, so a sweep across the bundle stays warm the whole way
+    // and only a real departure cools it back to the full dwell.
+    clearTimeout(this._flagWarmTimer);
+    this._flagWarmTimer = setTimeout(() => { this._flagWarm = false; }, FLAG_WARM_MS);
   }
 
   _drawPageStubs() {
@@ -1680,13 +1847,23 @@ export class Rack {
       const near = nearIsSrc ? srcRef : e.dst;
       const farPage = this.pageOf(nearIsSrc ? b : a);
       if (!groups.has(farPage)) groups.set(farPage, []);
-      groups.get(farPage).push({ e, near, nearIsSrc });
+      const farRec = nearIsSrc ? b : a;
+      groups.get(farPage).push({ e, near, nearIsSrc, order: this._farPortOrder(e, nearIsSrc),
+        farMixer: farRec.descriptorId === 'mixer' });
+    }
+    // ORDER. Cables landing on the MIXER are sorted the way the mixer reads — channel 1 leftmost,
+    // RET 2 rightmost — because the panel has an order of its own and a bundle that contradicted it
+    // would be harder to read than no order at all. Packed, not slotted by channel: an unpatched
+    // channel leaves no gap. Everywhere else there is no such order to honour, so cables simply keep
+    // the order they were patched in and each new one appears to the right of the last.
+    for (const list of groups.values()) {
+      if (list.every((it) => it.farMixer)) list.sort((x, y) => x.order - y.order);
     }
     const rect = this.container.getBoundingClientRect();
     const s = (this.pxPerMm || 1) * this.zoom;
     for (const [farPage, list] of groups) {
       list.forEach((item, i) => {
-        let anchor = this._stubAnchor(farPage, i, list.length);
+        let anchor = this._stubAnchor(farPage, i);
         // Mid-switch: every crossing cable sweeps out from THIS page's own tab to the tab of the page
         // it runs to. That reads as the cable reaching out from where you are now to where it goes —
         // and it covers the case of arriving from somewhere uninvolved, where the cable was not drawn
@@ -1695,7 +1872,7 @@ export class Rack {
         const m = this._stubMorph;
         if (m && anchor) {
           const t = Math.min(1, (performance.now() - m.t0) / CARRY_MORPH_MS);
-          const was = this._stubAnchor(m.here, i, list.length);
+          const was = this._stubAnchor(m.here, i);
           if (was) {
             const k = 1 - Math.pow(1 - t, 3);
             anchor = { x: was.x + (anchor.x - was.x) * k, y: was.y + (anchor.y - was.y) * k };
@@ -1706,16 +1883,32 @@ export class Rack {
         const jx = rect.left + this._tx + jack.x * s, jy = rect.top + this._ty + jack.y * s;
         const color = STYLE_COLOR[item.e.style] || STYLE_COLOR.control;
         const held = item.e.id === this._litEdgeId;
-        // Bowed toward the bar rather than run straight, so several stubs to one tab stay separable
-        // and none of them cuts across a faceplate in a dead straight line.
+        // HOW A STUB LEAVES THE BAR. It drops STRAIGHT DOWN out of the tab for a fixed distance, and
+        // then swoops away toward its jack — TANGENT to that drop, which is the whole trick. Aiming
+        // the curve's first control point at the cable's belly instead put a corner exactly where the
+        // straight run ended: the eye reads that as two separate lines meeting, not one cable. Held
+        // vertical, the drop and the swoop are one stroke.
+        //
+        // The swoop's reach is capped. At a flat fraction of the distance to the jack, a cable bound
+        // for the far side of the window plunged most of the way down it before turning; the cap keeps
+        // the shape of the departure the same however far the cable ends up running.
+        //
         // Drawn from the SOURCE end toward the destination, whichever of the two is on this page, so
         // the flow dashes crawl the way the signal actually travels rather than always away from the jack.
-        const nearIsSource = item.nearIsSrc;
-        const p0 = nearIsSource ? { x: jx, y: jy } : anchor;
-        const p1 = nearIsSource ? anchor : { x: jx, y: jy };
-        const lift = Math.abs(p1.y - p0.y) * 0.45;
-        const d = `M${r2(p0.x)},${r2(p0.y)} C${r2(p0.x)},${r2(p0.y + (p1.y < p0.y ? -lift : lift))} `
-          + `${r2(p1.x)},${r2(p1.y + (p1.y < p0.y ? lift : -lift))} ${r2(p1.x)},${r2(p1.y)}`;
+        const z = this.zoom || 1;
+        const drop = STUB_DROP_PX * z;
+        const T = { x: anchor.x, y: anchor.y + drop };   // the foot of the straight run
+        const J = { x: jx, y: jy };
+        const chord = Math.hypot(J.x - T.x, J.y - T.y);
+        const belly = { x: (T.x + J.x) / 2, y: (T.y + J.y) / 2 + Math.max(drop, 0.14 * chord) };
+        const uJ = unit(belly.x - J.x, belly.y - J.y);
+        const L = Math.min(chord * 0.4, STUB_SWOOP_PX * z);
+        const cT = { x: T.x, y: T.y + L };                       // straight on down: tangent to the drop
+        const cJ = { x: J.x + uJ.x * chord * 0.4, y: J.y + uJ.y * chord * 0.4 };
+        const xy = (q) => `${r2(q.x)},${r2(q.y)}`;
+        const d = item.nearIsSrc
+          ? `M${xy(J)} C${xy(cJ)} ${xy(cT)} ${xy(T)} L${xy(anchor)}`
+          : `M${xy(anchor)} L${xy(T)} C${xy(cT)} ${xy(cJ)} ${xy(J)}`;
         const w = CABLE_PX * (this.zoom || 1) * 0.85;
         const op = String(held ? CABLE_BRIGHT : (this._litEdgeId ? 0.25 : 0.55));
         const p = document.createElementNS(SVG_NS, 'path');
@@ -1725,6 +1918,7 @@ export class Rack {
         p.setAttribute('stroke-width', r2(w));
         p.setAttribute('stroke-linecap', 'round');
         p.style.opacity = op;
+        p.dataset.edge = item.e.id;
         svg.appendChild(p);
         // The same crawling dashes every other cord wears — a stub is a cable, and it should say which
         // way the signal runs as plainly as the rest of it does. The path is built source-end first, so
@@ -1741,6 +1935,46 @@ export class Rack {
         fd.dataset.edge = item.e.id;
         fd.style.opacity = op;
         svg.appendChild(fd);
+        // THE HOVER STRIP: an invisible slot-wide target over the stub's straight run. Hovering names
+        // the cable; clicking holds it bright, which is where that gesture went when the lanes it used
+        // to live on were taken away.
+        const hit = document.createElementNS(SVG_NS, 'rect');
+        hit.setAttribute('x', r2(anchor.x - STUB_GAP_PX / 2));
+        hit.setAttribute('y', r2(anchor.y));
+        hit.setAttribute('width', STUB_GAP_PX);
+        hit.setAttribute('height', STRIP_H);
+        hit.setAttribute('fill', 'transparent');
+        hit.setAttribute('class', 'stub-grab');
+        hit.style.pointerEvents = 'auto';
+        hit.style.cursor = 'pointer';
+        const label = () => this._stubLabel(item.e, item.nearIsSrc);
+        const place = (ev) => this._showFlag(label(), color, ev.clientX, ev.clientY);
+        hit.addEventListener('pointerenter', (ev) => {
+          clearTimeout(this._flagTimer);
+          clearTimeout(this._flagWarmTimer);
+          // Warm, so straight away: you are reading the bundle, not passing through it.
+          if (this._flagWarm) { place(ev); return; }
+          const x = ev.clientX, y = ev.clientY;
+          this._flagTimer = setTimeout(() => this._showFlag(label(), color, x, y), FLAG_DWELL_MS);
+        });
+        // The chip rides the pointer along the stub, staying centred over the tip.
+        hit.addEventListener('pointermove', (ev) => {
+          if (this._flagEl && this._flagEl.style.display === 'block') place(ev);
+        });
+        hit.addEventListener('pointerleave', () => this._hideFlag());
+        hit.addEventListener('pointerdown', (ev) => {
+          if (ev.button !== 0) return;
+          ev.preventDefault(); ev.stopPropagation();
+          this._litEdgeId = this._litEdgeId === item.e.id ? null : item.e.id;
+          // Redrawing the cables rebuilds this very strip under the pointer, and a strip that vanishes
+          // fires pointerleave — which would snatch the flag away the instant you clicked the thing it
+          // was naming. Pin the flag across the redraw: the replacement strip lands in exactly the same
+          // place, and the next pointer move re-arms it normally.
+          this._flagSticky = true;
+          this._drawCables();
+          setTimeout(() => { this._flagSticky = false; }, 0);
+        });
+        svg.appendChild(hit);
       });
     }
   }

@@ -20,14 +20,18 @@
 // comes back with its own fader, pan, enable and sends, instead of being a lesser kind of strip.
 const CH = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J'];
 const SENDS = ['1', '2'];   // two shared effect buses
+// What each channel is CALLED — the same characters the faceplate prints. The ids stay lettered, but
+// anything a person reads (a port's name in a menu, a callout, a page label) has to say what is
+// written on the panel, or the two disagree in front of you.
+const CH_LABEL = { A: '1', B: '2', C: '3', D: '4', E: '5', F: '6', G: '7', H: '8', I: 'RET 1', J: 'RET 2' };
 
 const ports = [];
 const params = [];
 for (const L of CH) {
-  ports.push({ id: `chan${L}`, name: L, section: 'channel', domain: 'audio', dir: 'in' });
+  ports.push({ id: `chan${L}`, name: CH_LABEL[L], section: 'channel', domain: 'audio', dir: 'in' });
   // Gain (amp) CV: a control-voltage input that drives the channel level 0..1, the
   // same range the fader spans bottom-to-top.
-  ports.push({ id: `ampCv${L}`, name: `Gain ${L}`, section: 'ampCv', domain: 'control', dir: 'in', target: `level${L}` });
+  ports.push({ id: `ampCv${L}`, name: `Gain ${CH_LABEL[L]}`, section: 'ampCv', domain: 'control', dir: 'in', target: `level${L}` });
   params.push({ id: `level${L}`, name: `Level ${L}`, section: 'channel', curve: 'gainDb', min: 0, max: 1, default: 0.29, glideMs: 20 });   // ~-11 dB → ~70% up the throw
   params.push({ id: `pan${L}`, name: `Pan ${L}`, section: 'channel', curve: 'linear', min: -1, max: 1, default: 0, glideMs: 20 });
   // The pan knob is a knAck, so it carries a CV-depth param: the host keys on this to
@@ -48,7 +52,7 @@ for (const L of CH) {
   for (const N of SENDS) {
     params.push({ id: `send${N}${L}`, name: `Send ${N} ${L}`, section: 'channel', curve: 'gainDb', min: 0, max: 1, default: 0, glideMs: 20 });
     params.push({ id: `send${N}Depth${L}`, name: `Send ${N} depth ${L}`, section: 'channel', curve: 'linear', min: -1, max: 1, default: 1, glideMs: 0 });
-    ports.push({ id: `send${N}Cv${L}`, name: `Send ${N} ${L}`, section: 'channel', domain: 'control', dir: 'in', target: `send${N}${L}`, via: `send${N}Depth${L}` });
+    ports.push({ id: `send${N}Cv${L}`, name: `Send ${N} ${CH_LABEL[L]}`, section: 'channel', domain: 'control', dir: 'in', target: `send${N}${L}`, via: `send${N}Depth${L}` });
   }
 }
 // Each bus leaves by its own jack. These are the mixer's only outputs — everything else about this
@@ -68,7 +72,7 @@ for (const N of SENDS) ports.push({ id: `send${N}Out`, name: `Send ${N}`, sectio
 // The knAck is what makes this possible: before it, a channel had either a knob or a CV jack,
 // because there was only room on the panel for one of them. Every channel now has both.
 for (const L of CH) {
-  ports.push({ id: `panCv${L}`, name: `Pan ${L}`, section: 'panCv', domain: 'control', dir: 'in', target: `pan${L}`, via: `panDepth${L}` });
+  ports.push({ id: `panCv${L}`, name: `Pan ${CH_LABEL[L]}`, section: 'panCv', domain: 'control', dir: 'in', target: `pan${L}`, via: `panDepth${L}` });
 }
 params.push({ id: 'master', name: 'Master', section: 'master', curve: 'gainDb', min: 0, max: 1, default: 0.29, glideMs: 20 });   // ~-11 dB → ~70% up the throw
 // Monitor bus: its own fader (level) beside the master. Its enable is INDEPENDENT of the master's
