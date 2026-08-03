@@ -51,6 +51,16 @@ const domainStyle = (domain) => (domain === 'audio' ? 'audio'
   : domain === 'trigger' ? 'trigger'
   : (domain === 'luma' || domain === 'rgb') ? domain
   : 'control');
+// ---- PAGES ----
+// The rack is divided into pages, shown as tabs. A page is a VIEW idea and nothing more: the audio
+// graph, the patchbay and the patch file know only that a module records which page it sits on, the
+// way it records its row and its x. Nothing is routed through a page and no page owns a terminal —
+// which is the whole difference from the design this replaces, where tabs carried real ports and
+// every one of the hard bugs lived in that machinery.
+//
+// Audio pages are yours to add; Video and Output always exist and always come last, in that order.
+const PAGE_MAX_AUDIO = 8;
+const PAGE_FIXED = [{ id: 'video', kind: 'video', name: 'Video' }, { id: 'output', kind: 'output', name: 'Output' }];
 const CABLE_PX = 3.8;   // cord thickness in px at zoom 1 (scales up as you zoom in)
 // The stretch of a cord that can be clicked to hold it bright, measured in JACK RADII from the jack's
 // own centre — so it scales with the terminal rather than being a number that happens to suit one panel.
@@ -195,6 +205,8 @@ export class Rack {
     // not patch data: it belongs to the app the way dark mode does, and should survive a restart even
     // when the patch itself was never saved.
     this.onViewChange = opts.onViewChange || (() => {});
+    // Fired when the page changes, so the host can keep its own state (menus, autosave) in step.
+    this.onPageChange = opts.onPageChange || (() => {});
     this.onSelect = opts.onSelect || (() => {});   // module the pointer entered (deixis)
     // Panel-menu hooks into app-level actions the rack doesn't own (set by rack-app).
     this.onTutorial = null;   // set by the app to (re)open the in-app tutorial; Help omits the item without it
@@ -206,6 +218,10 @@ export class Rack {
     this._monitors = new Set();     // live ear monitors — solo-listen taps (transient, not saved)
     this.dark = !!opts.dark;                        // dark-mode faceplates
     this.rowCount = opts.rowCount || 2;
+    // The pages, in bar order: the audio ones you have made, then Video, then Output.
+    this.pages = [{ id: 'a1', kind: 'audio', name: 'Audio 1' }, ...PAGE_FIXED.map((p) => ({ ...p }))];
+    this.page = 'a1';
+    this._pageBack = null;   // where the last page switch came from, for press-again-to-return
     this.rows = [];
     for (let i = 0; i < this.rowCount; i++) this.rows.push([]);
     this.records = new Map();     // key -> record
@@ -429,17 +445,19 @@ export class Rack {
         this._updateNavClass();
         return;
       }
-      // NUMBER KEYS set how many whole rows fill the window. A view setting only — it never changes how
-      // many rows the RACK has, which is structure and belongs to the menu.
-      if (e.key >= '1' && e.key <= '9' && !e.metaKey && !e.ctrlKey && !e.altKey && !e.shiftKey) {
-        e.preventDefault();
-        this.setRowsVisible(+e.key);
-        return;
-      }
       // Escape puts out a held cable. Only Escape: Control is a key too, and Control is how the macOS
       // accessibility zoom is driven — any-key would extinguish the cable at the moment you magnified
       // to look at where it went.
       if (e.key === 'Escape' && this._litEdgeId) { this._litEdgeId = null; this._drawCables(); return; }
+      // DIGITS SELECT PAGES. 1-8 are the audio pages in bar order, 9 is Video and 0 is Output —
+      // the two that always exist get the two keys at the end of the row, so their position in the
+      // bar and their key agree. Pressing the digit for the page you are on returns you to the
+      // previous one.
+      if (/^[0-9]$/.test(e.key) && !e.metaKey && !e.ctrlKey && !e.altKey && !e.shiftKey) {
+        const audio = this.pages.filter((p) => p.kind === 'audio');
+        const target = e.key === '9' ? 'video' : e.key === '0' ? 'output' : (audio[+e.key - 1] || {}).id;
+        if (target) { e.preventDefault(); this.selectPage(target); return; }
+      }
       if (this._ovActive) this._cancelOverview();   // Escape or any other key → close without moving
     });
     const endNav = () => {
@@ -463,6 +481,112 @@ export class Rack {
     const rec = this.records.get(key);
     const port = rec && rec.panel.ports.get(portId);
     return port ? { key, portId, instance: rec.instance, descriptorId: rec.descriptorId, meta: port.meta, rec } : null;
+  }
+
+  // ---- pages -----------------------------------------------------------------
+  pageList() { return this.pages.map((p) => ({ ...p, count: this._pageCount(p.id) })); }
+  currentPage() { return this.page; }
+  pageOf(rec) { return (rec && rec.page) || 'a1'; }
+  _onPage(rec) { return this.pageOf(rec) === this.page; }
+  _pageCount(id) { let n = 0; for (const rec of this.records.values()) if (this.pageOf(rec) === id) n++; return n; }
+  _hasPage(id) { return this.pages.some((p) => p.id === id); }
+
+  // Rebuild the audio pages from a patch. Video and Output are NOT taken from the file — they are
+  // rebuilt from the code and appended, so a patch written before they existed, or one hand-edited
+  // into nonsense, still arrives with them present and in the right order.
+  restorePages(saved) {
+    const audio = (Array.isArray(saved) ? saved : [])
+      .filter((p) => p && typeof p.id === 'string' && p.id !== 'video' && p.id !== 'output')
+      .slice(0, PAGE_MAX_AUDIO)
+      .map((p, i) => ({ id: p.id, kind: 'audio', name: typeof p.name === 'string' && p.name ? p.name : `Audio ${i + 1}` }));
+    this.pages = [...(audio.length ? audio : [{ id: 'a1', kind: 'audio', name: 'Audio 1' }]), ...PAGE_FIXED.map((p) => ({ ...p }))];
+    if (!this._hasPage(this.page)) this.page = this.pages[0].id;
+    this._pageBack = null;
+    this._renderTabBar();
+  }
+
+  // Go to a page. Pressing the key for the page you are already on takes you BACK to the one before
+  // it, so a look at the mixer is a there-and-back rather than a one-way trip you have to undo.
+  selectPage(id) {
+    if (!this._hasPage(id)) return false;
+    if (id === this.page) {
+      if (!this._pageBack || this._pageBack === id) return false;
+      id = this._pageBack;
+    }
+    this._pageBack = this.page;
+    this.page = id;
+    // A page switch moves as much ground as a jump across the rack, so anything anchored to the page
+    // you are leaving has to let go — a hover highlight would otherwise outlive its own module.
+    this._hoverRec = null;
+    this._netOrigin = null;
+    if (this._isolateNet) this._exitIsolate();
+    this._syncPageVisibility();
+    this.relayout();
+    this._renderTabBar();
+    this.onPageChange(this.page);
+    return true;
+  }
+
+  // Modules on other pages stay in the DOM — they keep their audio, their params and their cables and
+  // only stop being drawn. Rebuilding them on every switch would be slower and would throw away the
+  // panel skin, the knAck handlers and every scope anchored to them.
+  _syncPageVisibility() {
+    // VISIBILITY, not display. Every panel SVG defines its own `softShadow` filter and its own
+    // gradients, and a url(#id) reference resolves to the FIRST match in the document — which may
+    // well sit inside a module on another page. Chrome will not resolve a filter or paint server out
+    // of a display:none subtree, so hiding that way silently strips the coloured band off every jack
+    // in the rack. visibility:hidden keeps the subtree in the render tree while taking the module off
+    // the screen and out of hit-testing.
+    for (const rec of this.records.values()) rec.el.style.visibility = this._onPage(rec) ? '' : 'hidden';
+    for (const v of [...this._scopes, ...this._monitors]) {
+      const rec = this.records.get(v.key);
+      if (v.el) v.el.style.visibility = (rec && !this._onPage(rec)) ? 'hidden' : '';
+    }
+  }
+
+  // ---- the tab bar -----------------------------------------------------------
+  // It rides in the docked menu bar when there is one, which is where the design puts it and costs
+  // no vertical space at all, since that row is already spent. With the bar undocked it stands alone
+  // above the rack, because the tabs must always be reachable.
+  ensureTabBar() {
+    if (this._tabBarEl) return this._tabBarEl;
+    const el = document.createElement('div');
+    el.className = 'rack-tabbar';
+    this._tabBarEl = el;
+    this._homeTabBar();
+    this._renderTabBar();
+    return el;
+  }
+
+  _homeTabBar() {
+    const el = this._tabBarEl;
+    if (!el) return;
+    if (this._dockedBar) { el.classList.add('in-bar'); this._dockedBar.appendChild(el); return; }
+    el.classList.remove('in-bar');
+    const rackEl = document.getElementById('rack') || this.container;
+    rackEl.parentNode.insertBefore(el, rackEl);
+  }
+
+  _renderTabBar() {
+    const el = this._tabBarEl;
+    if (!el) return;
+    el.textContent = '';
+    el.classList.toggle('theme-dark', this.dark);
+    for (const p of this.pages) {
+      const b = document.createElement('button');
+      b.className = 'rack-tab';
+      b.dataset.page = p.id;
+      b.classList.toggle('current', p.id === this.page);
+      // An EMPTY page fades its OUTLINE only, not its name. A page with nothing on it yet is still a
+      // real place with a real name, and dimming the name made it look disabled rather than empty.
+      b.classList.toggle('empty', this._pageCount(p.id) === 0);
+      const n = document.createElement('span');
+      n.className = 'rack-tab-name';
+      n.textContent = p.name;
+      b.appendChild(n);
+      b.addEventListener('click', () => { if (p.id !== this.page) this.selectPage(p.id); });
+      el.appendChild(b);
+    }
   }
 
   moduleCount() { return this.records.size; }
@@ -882,7 +1006,7 @@ export class Rack {
     const s = this.pxPerMm;
 
     let maxRightMm = 0;
-    for (const r of this.rows) for (const rec of r) maxRightMm = Math.max(maxRightMm, rec.x + rec.panelWmm);
+    for (const r of this.rows) for (const rec of r) if (this._onPage(rec)) maxRightMm = Math.max(maxRightMm, rec.x + rec.panelWmm);
     const contentWmm = Math.max(maxRightMm + GAP_MM, vpW / s);
     this._contentWmm = contentWmm;
     this._contentHmm = contentHmm;
@@ -1087,6 +1211,14 @@ export class Rack {
   // coloured band (a.ring), so the cord blends into the colour rather than running
   // into the black hole, and departs radially toward the belly P. uA/uB are those
   // departure directions — also used to pick which fan-out cord a drag grabs.
+  // Both ends of this cord on the page being shown? A mult hangs off the input it was chained onto,
+  // so that end is the one that has to be on the page, not the far source it secretly carries.
+  _edgeOnPage(e) {
+    const srcRef = e.link || e.src;
+    const a = this.records.get(srcRef.key), b = this.records.get(e.dst.key);
+    return !!a && !!b && this._onPage(a) && this._onPage(b);
+  }
+
   _cordGeom(e) {
     // A LINK cord (a "mult": input sharing another input's feed) hangs off the TARGET input it was
     // chained onto, not the far source it secretly carries — so it draws as the short cord you ran.
@@ -1175,6 +1307,10 @@ export class Rack {
     };
     for (const e of this.patchbay.list()) {
       if (e.id === this._dragEdgeId) continue; // hidden while its end is being dragged
+      // A cord with an end on ANOTHER PAGE is not drawn yet. Drawing it would run a cable to a module
+      // that is not on the screen, which is worse than not drawing it — it would look like a cable to
+      // nowhere. Showing these as a stub on the far page's tab is the next piece of work.
+      if (!this._edgeOnPage(e)) continue;
       const g = this._cordGeom(e);
       if (!g) continue;
       const color = STYLE_COLOR[e.style] || STYLE_COLOR.control;
@@ -5416,12 +5552,23 @@ export class Rack {
   // Sort by x; a module that overlaps its left neighbour is pushed flush against
   // it, but a module dropped in open space keeps its x — so you can leave gaps
   // and drop another module between two others.
+  // Modules only collide with others ON THEIR OWN PAGE: two pages are two places, so the same x on
+  // each is not an overlap. Each page's occupants are packed independently within the row.
   _resolveRow(row) {
-    row.sort((a, b) => a.x - b.x);
-    for (let i = 1; i < row.length; i++) {
-      const prevEnd = row[i - 1].x + row[i - 1].panelWmm;
-      if (row[i].x < prevEnd) row[i].x = prevEnd;
+    const byPage = new Map();
+    for (const rec of row) {
+      const p = this.pageOf(rec);
+      if (!byPage.has(p)) byPage.set(p, []);
+      byPage.get(p).push(rec);
     }
+    for (const list of byPage.values()) {
+      list.sort((a, b) => a.x - b.x);
+      for (let i = 1; i < list.length; i++) {
+        const prevEnd = list[i - 1].x + list[i - 1].panelWmm;
+        if (list[i].x < prevEnd) list[i].x = prevEnd;
+      }
+    }
+    row.sort((a, b) => a.x - b.x);
   }
 
   // The panel URL for the current mode: dark modules load the generated
@@ -5567,6 +5714,10 @@ export class Rack {
     el.className = 'rack-module';
     const rec = {
       key: opts.key || ('m' + (this._seq++)), descriptorId, name: type.name,
+      // The page it belongs to, alongside its row and x. A new module lands on the page you are
+      // LOOKING at — with no way yet to move one between pages, that is the only way a second audio
+      // page or the Video page ever gets anything on it.
+      page: this._hasPage(opts.page) ? opts.page : this.page,
       x: Math.max(0, xMm || 0), row: rowIndex, pinned: !!opts.pinned,
       instanceId, instance, panel: null, el, panelWmm: 0, values: new Map(),
     };
@@ -6355,10 +6506,10 @@ export class Rack {
   // A newly added module packs against the nearest module to the left of the
   // cursor (its right edge), or the row's left edge if there's none — no manual
   // sliding to close the gap.
-  _snapLeftX(rowIndex, cursorX) {
+  _snapLeftX(rowIndex, cursorX, pageId = this.page) {
     let x = 0;
     for (const rec of this.moduleRecords()) {
-      if (rec.row !== rowIndex) continue;
+      if (rec.row !== rowIndex || this.pageOf(rec) !== pageId) continue;   // another page is not in the way
       const right = rec.x + (rec.panelWmm || 0);
       if (right <= cursorX && right > x) x = right;
     }
@@ -6507,6 +6658,7 @@ export class Rack {
     this._dockedBar = built.bar;
     const rackEl = document.getElementById('rack') || this.container;
     rackEl.parentNode.insertBefore(built.bar, rackEl);
+    this._homeTabBar();   // the tabs ride at the right-hand end of the docked bar
     // Clicking away closes the DROP-DOWN only: a docked bar stays put, unlike the floating one
     // which is dismissed as a whole.
     this._dockAway = (e) => {
@@ -6526,6 +6678,7 @@ export class Rack {
   undockMenuBar() {
     if (this._dockAway) { document.removeEventListener('pointerdown', this._dockAway, true); this._dockAway = null; }
     if (this._dockedBar) { this._dockedBar.remove(); this._dockedBar = null; }
+    this._homeTabBar();   // ...and stand alone above the rack when there is no bar to ride in
   }
 
   menuBarDocked() { return !!this._dockedBar; }

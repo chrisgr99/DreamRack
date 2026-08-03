@@ -444,6 +444,39 @@
     .confirm-danger:hover { background: #a23a3a; border-color: #a23a3a; }
 
     /* ---- patch cables (SVG overlay; pointer-transparent) ---- */
+    /* ---- the tab bar: one page of the rack at a time ----
+       Outlined in the SAME bright rule that closes the menu bar, so the eye reads one continuous
+       line: it runs along under the bar, climbs up and around the current tab, and carries on. */
+    .rack-tabbar { --tab-edge: #141414; --tab-edge-empty: rgba(20,20,22,0.3);
+      display: flex; align-items: flex-end; gap: 1px;
+      font: 500 13px/1 -apple-system, system-ui, sans-serif; user-select: none; }
+    .rack-tabbar.theme-dark { --tab-edge: #d2d2d6; --tab-edge-empty: rgba(214,214,220,0.28); }
+    /* The negative bottom margin lets the strip hang past the bar's padding and its rule, which is
+       what allows the current tab to cover that rule and the others to stand on top of it. */
+    .rack-tabbar.in-bar { margin-left: 1.1em; margin-bottom: -3.5px; }
+    .rack-tabbar:not(.in-bar) { margin-bottom: -3.5px; padding: 0 6px; background: var(--panel);
+      border-bottom: 1.5px solid var(--tab-edge); }
+    /* An UNSELECTED tab: outlined on three sides, open at the bottom, and stopping short so the
+       bright rule passes UNDERNEATH it. That gap is the whole difference — it says this page is
+       shut, sitting on the line rather than joined to what is below it. */
+    .rack-tab { position: relative; min-width: 4.8em; margin: 3px 0 1.5px; padding: 4px 9px 1px 9px;
+      display: flex; align-items: baseline; justify-content: center;
+      border: 1.5px solid var(--tab-edge); border-bottom: none; border-radius: 7px 7px 0 0;
+      background: transparent; color: var(--ink-dim); font: inherit; cursor: pointer;
+      white-space: nowrap; overflow: hidden; }
+    .rack-tab:hover { background: rgba(128,128,128,0.18); color: var(--ink); }
+    /* The name is set LARGE and sits low in the tab: a page label is the thing you aim at and read
+       at a glance, and small type floating in the middle of a tab reads as a caption instead. */
+    .rack-tab-name { line-height: 1; font-size: 21px; }
+    /* An EMPTY page fades its BORDER only. A page with nothing on it yet is still a real place with
+       a real name — dimming the name as well made it look disabled rather than empty. */
+    .rack-tab.empty { border-color: var(--tab-edge-empty); }
+    /* The CURRENT tab stands taller, is filled with the rack's own background, and reaches down far
+       enough to paint over the rule. So there is no bright line between it and the window — the tab
+       and the page below it are one shape, and the line appears to detour up and around it. */
+    .rack-tab.current { margin: 0; padding: 7px 9px 2.5px 9px; background: var(--bg); color: var(--ink);
+      border-color: var(--tab-edge); opacity: 1; }
+
     .rack-cables { position: absolute; top: 0; left: 0; pointer-events: none; z-index: 12; overflow: visible; }
     /* The stand-in picture used while Option is held: same origin as the content it replaces. */
     .rack-frozen { position: absolute; top: 0; left: 0; display: none; pointer-events: none; z-index: 14; }

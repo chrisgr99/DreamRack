@@ -38,12 +38,15 @@ export function serialize(rack, mixer) {
   // the user left it (a fresh boot always places it at x=0).
   const mixRec = rack.records.get(mixer.key);
 
-  const modules = recs.map((rec) => ({
-    id: rec.key,
-    type: rec.descriptorId,
-    row: rec.row,
-    x: round2(rec.x),
-  }));
+  // `page` is a COORDINATE alongside row and x — which page of the rack the module is drawn on.
+  // Omitted when it is the first audio page, so a patch that uses one page reads exactly as it did
+  // before pages existed, and an older patch loads with everything on Audio 1.
+  const modules = recs.map((rec) => {
+    const m = { id: rec.key, type: rec.descriptorId, row: rec.row, x: round2(rec.x) };
+    const page = rack.pageOf ? rack.pageOf(rec) : null;
+    if (page && page !== 'a1') m.page = page;
+    return m;
+  });
 
   const params = {};
   // A param marked `transient` in its descriptor is state, not a setting: it belongs to this
@@ -79,6 +82,9 @@ export function serialize(rack, mixer) {
     app: APP_NAME,
     appVersion: APP_VERSION,
     rack: { rows: rack.rowCount },
+    // The pages themselves: their order and their names. The two fixed ones are rebuilt from the
+    // code rather than trusted from the file, so a patch can never arrive without them.
+    pages: rack.pageList ? rack.pageList().filter((p) => p.kind === 'audio').map((p) => ({ id: p.id, name: p.name })) : undefined,
     mixerPos: mixRec ? { row: mixRec.row, x: round2(mixRec.x) } : null,
     modules,
     wiring,
@@ -107,8 +113,9 @@ export async function restore(obj, rack, mixer) {
   // Recreate modules, mapping each saved id to the fresh session key. The mixer
   // is a fixed endpoint whose id maps to itself.
   const idToKey = new Map([[mixer.key, mixer.key]]);
+  if (rack.restorePages) rack.restorePages(obj.pages);
   for (const m of obj.modules || []) {
-    const rec = await rack.addModule(m.type, m.row, m.x);
+    const rec = await rack.addModule(m.type, m.row, m.x, { page: m.page || 'a1' });
     if (rec) idToKey.set(m.id, rec.key);
   }
   // Put the pinned mixer back where it was saved (it survives rack.clear() at its boot x=0 otherwise).

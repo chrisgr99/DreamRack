@@ -439,6 +439,9 @@ async function boot() {
     host, moduleTypes: MODULE_TYPES, rowCount: 2, dark: darkMode, onChange: () => onEdit(),
     // Remember where the view is between runs. Debounced hard: the view moves on every frame of a
     // pan, and this only needs to be right by the time the app closes.
+    // The tab bar re-homes itself when the menu bar docks or undocks, and the page is part of what
+    // the session remembers, so a switch is worth an autosave.
+    onPageChange: () => { pushMenuState(); onEdit(); },
     onViewChange: () => {
       clearTimeout(viewSaveTimer);
       viewSaveTimer = setTimeout(() => {
@@ -447,6 +450,7 @@ async function boot() {
     },
   });
   rack.relayout();
+  rack.ensureTabBar();   // the page tabs; they re-home themselves as the menu bar docks
 
   // Stamp the exact source revision into saved patches (serialize reads rack.buildInfo), so a bug
   // report carrying a patch traces to a checkout. Electron-from-source only; the browser build has
