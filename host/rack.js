@@ -452,13 +452,12 @@ export class Rack {
       // accessibility zoom is driven — any-key would extinguish the cable at the moment you magnified
       // to look at where it went.
       if (e.key === 'Escape' && this._litEdgeId) { this._litEdgeId = null; this._drawCables(); return; }
-      // DIGITS SELECT PAGES. 1-8 are the audio pages in bar order, 9 is Video and 0 is Output —
-      // the two that always exist get the two keys at the end of the row, so their position in the
-      // bar and their key agree. Pressing the digit for the page you are on returns you to the
-      // previous one.
+      // DIGITS SELECT PAGES: 1-8 the audio pages in bar order, 9 Output, 0 Video — the two that
+      // always exist take the two keys at the end of the row, in the order they sit in the bar.
+      // Pressing the digit for the page you are on returns you to the previous one.
       if (/^[0-9]$/.test(e.key) && !e.metaKey && !e.ctrlKey && !e.altKey && !e.shiftKey) {
         const audio = this.pages.filter((p) => p.kind === 'audio');
-        const target = e.key === '9' ? 'video' : e.key === '0' ? 'output' : (audio[+e.key - 1] || {}).id;
+        const target = e.key === '9' ? 'output' : e.key === '0' ? 'video' : (audio[+e.key - 1] || {}).id;
         if (target) { e.preventDefault(); this.selectPage(target); return; }
       }
       if (this._ovActive) this._cancelOverview();   // Escape or any other key → close without moving
@@ -1045,6 +1044,7 @@ export class Rack {
     // to a fraction of a px even across a wide rack. (translate at 3 decimals is likewise sub-pixel.)
     this.content.style.transform = `translate(${this._tx.toFixed(3)}px, ${this._ty.toFixed(3)}px) scale(${this.zoom.toFixed(5)})`;
     if (this._stubSvg) this._drawPageStubs();   // stubs are pinned to the window: the view moving moves them
+    this._syncHandLayer();                      // ...and so is a cable in hand
     this._reprojectViewers();   // scopes/monitors live outside the transform, so move+scale them to match
     if (this._viewMovedHook) this._viewMovedHook();   // a cable in hand re-anchors to the pointer (see _startLinkRegrab)
     this.onViewChange();
@@ -1422,7 +1422,7 @@ export class Rack {
     this._drawPageStubs();
     if (this._tempCable) {
       this._tempCable.setAttribute('stroke-width', r2(wmm));
-      this.cables.appendChild(this._tempCable);
+      this._ensureHandLayer().appendChild(this._tempCable);
     }
   }
 
@@ -1436,6 +1436,33 @@ export class Rack {
   // It spans two coordinate systems — the scrolling, zooming rack at one end and the fixed tab bar at
   // the other — so it is painted in its own layer pinned to the window rather than inside the rack's
   // cable overlay. Above the panels, below the menus, never in the way of a click.
+  // A cable IN HAND is drawn over the whole window, not inside the rack.
+  //
+  // The rack container clips its contents, so a cord drawn in the rack's own overlay is cut off at
+  // the top edge of the rack — which is exactly where the tab bar begins. Carry a cable up to a tab
+  // and it vanished, so it looked as though you had dropped it. Here it is drawn above everything,
+  // still in the rack's own millimetre coordinates: the group carries the same transform the rack
+  // does, so nothing about how the cord is built has to change.
+  _ensureHandLayer() {
+    if (this._handG) return this._handG;
+    const svg = document.createElementNS(SVG_NS, 'svg');
+    svg.setAttribute('class', 'hand-cable');
+    const g = document.createElementNS(SVG_NS, 'g');
+    svg.appendChild(g);
+    document.body.appendChild(svg);
+    this._handSvg = svg; this._handG = g;
+    this._syncHandLayer();
+    return g;
+  }
+
+  _syncHandLayer() {
+    if (!this._handG) return;
+    const rect = this.container.getBoundingClientRect();
+    const s = (this.pxPerMm || 1) * this.zoom;
+    this._handG.setAttribute('transform',
+      `translate(${r2(rect.left + this._tx)} ${r2(rect.top + this._ty)}) scale(${(s).toFixed(5)})`);
+  }
+
   _ensureStubLayer() {
     if (this._stubSvg) return this._stubSvg;
     const svg = document.createElementNS(SVG_NS, 'svg');
@@ -1723,7 +1750,7 @@ export class Rack {
     tmp.setAttribute('stroke', STYLE_COLOR[domainStyle(meta.domain)]);
     tmp.setAttribute('stroke-width', r2(wmm));
     this._tempCable = tmp;
-    this.cables.appendChild(tmp);
+    this._ensureHandLayer().appendChild(tmp);
     const originIsInput = meta.dir === 'in';   // an input origin can also MULT onto another fed input
     this._highlightCandidates(meta.dir === 'out' ? 'in' : 'out', null, originIsInput);
     document.body.classList.add('grabbing-cable');
@@ -1823,7 +1850,7 @@ export class Rack {
     tmp.setAttribute('stroke', STYLE_COLOR[domainStyle(fixedMeta.domain)]);
     tmp.setAttribute('stroke-width', r2(wmm));
     this._tempCable = tmp;
-    this.cables.appendChild(tmp);
+    this._ensureHandLayer().appendChild(tmp);
     this._highlightCandidates(wantDir);
     document.body.classList.add('grabbing-cable');
 
@@ -1928,7 +1955,7 @@ export class Rack {
     tmp.setAttribute('class', 'rack-cable rack-cable-temp');
     tmp.setAttribute('stroke', STYLE_COLOR[edge.style] || STYLE_COLOR.control);
     tmp.setAttribute('stroke-width', r2(wmm));
-    this._tempCable = tmp; this.cables.appendChild(tmp);
+    this._tempCable = tmp; this._ensureHandLayer().appendChild(tmp);
     // Re-tap targets a FED input (a new signal to share); re-share targets an EMPTY input.
     if (grabAnchor) this._highlightFedInputs(dstRef.key, dstRef.portId); else this._highlightCandidates('in');
     document.body.classList.add('grabbing-cable');
