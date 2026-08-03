@@ -1656,7 +1656,7 @@ export class Rack {
       const near = nearIsSrc ? srcRef : e.dst;
       const farPage = this.pageOf(nearIsSrc ? b : a);
       if (!groups.has(farPage)) groups.set(farPage, []);
-      groups.get(farPage).push({ e, near });
+      groups.get(farPage).push({ e, near, nearIsSrc });
     }
     const rect = this.container.getBoundingClientRect();
     const s = (this.pxPerMm || 1) * this.zoom;
@@ -1670,16 +1670,39 @@ export class Rack {
         const held = item.e.id === this._litEdgeId;
         // Bowed toward the bar rather than run straight, so several stubs to one tab stay separable
         // and none of them cuts across a faceplate in a dead straight line.
-        const d = `M${r2(jx)},${r2(jy)} C${r2(jx)},${r2(jy - Math.abs(jy - anchor.y) * 0.45)} `
-          + `${r2(anchor.x)},${r2(anchor.y + Math.abs(jy - anchor.y) * 0.45)} ${r2(anchor.x)},${r2(anchor.y)}`;
+        // Drawn from the SOURCE end toward the destination, whichever of the two is on this page, so
+        // the flow dashes crawl the way the signal actually travels rather than always away from the jack.
+        const nearIsSource = item.nearIsSrc;
+        const p0 = nearIsSource ? { x: jx, y: jy } : anchor;
+        const p1 = nearIsSource ? anchor : { x: jx, y: jy };
+        const lift = Math.abs(p1.y - p0.y) * 0.45;
+        const d = `M${r2(p0.x)},${r2(p0.y)} C${r2(p0.x)},${r2(p0.y + (p1.y < p0.y ? -lift : lift))} `
+          + `${r2(p1.x)},${r2(p1.y + (p1.y < p0.y ? lift : -lift))} ${r2(p1.x)},${r2(p1.y)}`;
+        const w = CABLE_PX * (this.zoom || 1) * 0.85;
+        const op = String(held ? CABLE_BRIGHT : (this._litEdgeId ? 0.25 : 0.55));
         const p = document.createElementNS(SVG_NS, 'path');
         p.setAttribute('d', d);
         p.setAttribute('fill', 'none');
         p.setAttribute('stroke', color);
-        p.setAttribute('stroke-width', r2(CABLE_PX * (this.zoom || 1) * 0.85));
+        p.setAttribute('stroke-width', r2(w));
         p.setAttribute('stroke-linecap', 'round');
-        p.style.opacity = String(held ? CABLE_BRIGHT : (this._litEdgeId ? 0.25 : 0.55));
+        p.style.opacity = op;
         svg.appendChild(p);
+        // The same crawling dashes every other cord wears — a stub is a cable, and it should say which
+        // way the signal runs as plainly as the rest of it does. The path is built source-end first, so
+        // the crawl goes the right way whichever end of the cable is on this page.
+        const fd = document.createElementNS(SVG_NS, 'path');
+        fd.setAttribute('d', d);
+        fd.setAttribute('fill', 'none');
+        fd.setAttribute('stroke', '#000');
+        fd.setAttribute('stroke-width', r2(w / 2));
+        fd.setAttribute('stroke-linecap', 'butt');
+        fd.setAttribute('stroke-dasharray', `${r2((FLOW_DASH[item.e.style] || FLOW_DASH.control) * w)} ${r2(FLOW_GAP * w)}`);
+        fd.setAttribute('stroke-dashoffset', r2(this._flowOffset() * (this.pxPerMm || 1) * (this.zoom || 1)));
+        fd.setAttribute('class', 'flow-dash-stub');
+        fd.dataset.edge = item.e.id;
+        fd.style.opacity = op;
+        svg.appendChild(fd);
       });
     }
   }
@@ -2124,7 +2147,7 @@ export class Rack {
     tmp.setAttribute('stroke', STYLE_COLOR[edge.style] || STYLE_COLOR.control);
     tmp.setAttribute('stroke-width', r2(wmm));
     this._tempCable = tmp;
-    this._carryOrigin = { key: fixed.key, portId: fixed.portId, page: this.pageOf(this.records.get(fixed.key)) };
+    this._carryOrigin = { key: fixedRef.key, portId: fixedRef.portId, page: this.pageOf(this.records.get(fixedRef.key)) };
     this._ensureHandLayer().appendChild(tmp);
     // Re-tap targets a FED input (a new signal to share); re-share targets an EMPTY input.
     if (grabAnchor) this._highlightFedInputs(dstRef.key, dstRef.portId); else this._highlightCandidates('in');
@@ -2949,6 +2972,12 @@ export class Rack {
         for (const p of this.cables.querySelectorAll('.flow-dash')) {
           p.setAttribute('stroke-dashoffset', off);
           const c = this._cableCur.get(p.dataset.edge); if (c) p.style.opacity = String(r2(c.dash));
+        }
+        // Stubs live in their own window-pinned layer and are drawn in window px, so their crawl is
+        // scaled to match — the same clock, expressed in the units that layer uses.
+        if (this._stubSvg) {
+          const offPx = r2(this._flowOffset() * (this.pxPerMm || 1) * (this.zoom || 1));
+          for (const p of this._stubSvg.querySelectorAll('.flow-dash-stub')) p.setAttribute('stroke-dashoffset', offPx);
         }
         for (const p of this.cables.querySelectorAll('.cable-body')) {
           const c = this._cableCur.get(p.dataset.edge); if (c) p.style.opacity = String(r2(c.body));
