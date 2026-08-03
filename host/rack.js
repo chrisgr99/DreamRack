@@ -58,10 +58,13 @@ const domainStyle = (domain) => (domain === 'audio' ? 'audio'
 // which is the whole difference from the design this replaces, where tabs carried real ports and
 // every one of the hard bugs lived in that machinery.
 //
-// Audio pages are yours to add; Video and Output always exist and always come last, in that order.
+// Audio pages are yours to add. Video and Output always exist and always come last — OUTPUT FIRST,
+// so that it follows the audio pages and reads as their output, rather than sitting past Video where
+// it would read as the output of the video side too.
 const PAGE_MAX_AUDIO = 8;
-const PAGE_FIXED = [{ id: 'video', kind: 'video', name: 'Video' }, { id: 'output', kind: 'output', name: 'Output' }];
+const PAGE_FIXED = [{ id: 'output', kind: 'output', name: 'Output' }, { id: 'video', kind: 'video', name: 'Video' }];
 const CABLE_PX = 3.8;   // cord thickness in px at zoom 1 (scales up as you zoom in)
+const STUB_GAP_PX = 7;  // spacing between the stubs of several cables bound for the same page
 // The stretch of a cord that can be clicked to hold it bright, measured in JACK RADII from the jack's
 // own centre — so it scales with the terminal rather than being a number that happens to suit one panel.
 // It starts just past the rim and runs about one terminal's diameter. Short and close: close so it is
@@ -577,9 +580,6 @@ export class Rack {
       b.className = 'rack-tab';
       b.dataset.page = p.id;
       b.classList.toggle('current', p.id === this.page);
-      // An EMPTY page fades its OUTLINE only, not its name. A page with nothing on it yet is still a
-      // real place with a real name, and dimming the name made it look disabled rather than empty.
-      b.classList.toggle('empty', this._pageCount(p.id) === 0);
       const n = document.createElement('span');
       n.className = 'rack-tab-name';
       n.textContent = p.name;
@@ -1044,6 +1044,7 @@ export class Rack {
     // the rendered zoom shifts far-out modules by many px each step — the "wobble". 5 decimals drops that
     // to a fraction of a px even across a wide rack. (translate at 3 decimals is likewise sub-pixel.)
     this.content.style.transform = `translate(${this._tx.toFixed(3)}px, ${this._ty.toFixed(3)}px) scale(${this.zoom.toFixed(5)})`;
+    if (this._stubSvg) this._drawPageStubs();   // stubs are pinned to the window: the view moving moves them
     this._reprojectViewers();   // scopes/monitors live outside the transform, so move+scale them to match
     if (this._viewMovedHook) this._viewMovedHook();   // a cable in hand re-anchors to the pointer (see _startLinkRegrab)
     this.onViewChange();
@@ -1307,9 +1308,8 @@ export class Rack {
     };
     for (const e of this.patchbay.list()) {
       if (e.id === this._dragEdgeId) continue; // hidden while its end is being dragged
-      // A cord with an end on ANOTHER PAGE is not drawn yet. Drawing it would run a cable to a module
-      // that is not on the screen, which is worse than not drawing it — it would look like a cable to
-      // nowhere. Showing these as a stub on the far page's tab is the next piece of work.
+      // A cord with an end on ANOTHER PAGE is not drawn here — it is drawn as a stub running to that
+      // page's tab, in its own window-pinned layer. See _drawPageStubs.
       if (!this._edgeOnPage(e)) continue;
       const g = this._cordGeom(e);
       if (!g) continue;
@@ -1419,9 +1419,86 @@ export class Rack {
       const live = new Set(this.patchbay.list().map((x) => x.id));
       for (const id of this._cableCur.keys()) if (!live.has(id)) { this._cableCur.delete(id); this._cableTgt.delete(id); }
     }
+    this._drawPageStubs();
     if (this._tempCable) {
       this._tempCable.setAttribute('stroke-width', r2(wmm));
       this.cables.appendChild(this._tempCable);
+    }
+  }
+
+  // ---- cables that cross pages ----------------------------------------------
+  // A cable whose far end is on another page is drawn as a STUB: it leaves its jack and runs to that
+  // page's tab. On the far page the same cable appears as a stub on THIS page's tab. So a cable
+  // touching a tab is going to that tab, at both ends, and the tab bar becomes a fixed index of where
+  // everything goes — which is the property a label floating along a cable could never have, because
+  // it was somewhere different every time.
+  //
+  // It spans two coordinate systems — the scrolling, zooming rack at one end and the fixed tab bar at
+  // the other — so it is painted in its own layer pinned to the window rather than inside the rack's
+  // cable overlay. Above the panels, below the menus, never in the way of a click.
+  _ensureStubLayer() {
+    if (this._stubSvg) return this._stubSvg;
+    const svg = document.createElementNS(SVG_NS, 'svg');
+    svg.setAttribute('class', 'page-stubs');
+    document.body.appendChild(svg);
+    this._stubSvg = svg;
+    return svg;
+  }
+
+  // Where a stub meets a tab: along the tab's bottom edge, a couple of millimetres apart, in the
+  // order the cables were made. Stable between redraws is all the order has to be — which cable is
+  // which is answered by holding one bright, not by counting stubs.
+  _stubAnchor(pageId, index, total) {
+    const el = this._tabBarEl && this._tabBarEl.querySelector(`[data-page="${pageId}"]`);
+    if (!el) return null;
+    const r = el.getBoundingClientRect();
+    const gap = Math.min(STUB_GAP_PX, (r.width - 10) / Math.max(1, total));
+    const span = gap * (total - 1);
+    return { x: r.left + r.width / 2 - span / 2 + index * gap, y: r.bottom - 1 };
+  }
+
+  _drawPageStubs() {
+    const svg = this._ensureStubLayer();
+    svg.textContent = '';
+    if (!this._tabBarEl) return;
+    // Group the crossing cables by the page they are bound for, so each tab's stubs can be spread
+    // evenly along it and each one knows its place in that group.
+    const groups = new Map();
+    for (const e of this.patchbay.list()) {
+      if (this._edgeOnPage(e)) continue;
+      const srcRef = e.link || e.src;
+      const a = this.records.get(srcRef.key), b = this.records.get(e.dst.key);
+      if (!a || !b) continue;
+      const nearIsSrc = this._onPage(a), nearIsDst = this._onPage(b);
+      if (nearIsSrc === nearIsDst) continue;   // both ends elsewhere: not this page's business
+      const near = nearIsSrc ? srcRef : e.dst;
+      const farPage = this.pageOf(nearIsSrc ? b : a);
+      if (!groups.has(farPage)) groups.set(farPage, []);
+      groups.get(farPage).push({ e, near });
+    }
+    const rect = this.container.getBoundingClientRect();
+    const s = (this.pxPerMm || 1) * this.zoom;
+    for (const [farPage, list] of groups) {
+      list.forEach((item, i) => {
+        const anchor = this._stubAnchor(farPage, i, list.length);
+        const jack = this._jackPosMm(item.near.key, item.near.portId);
+        if (!anchor || !jack) return;
+        const jx = rect.left + this._tx + jack.x * s, jy = rect.top + this._ty + jack.y * s;
+        const color = STYLE_COLOR[item.e.style] || STYLE_COLOR.control;
+        const held = item.e.id === this._litEdgeId;
+        // Bowed toward the bar rather than run straight, so several stubs to one tab stay separable
+        // and none of them cuts across a faceplate in a dead straight line.
+        const d = `M${r2(jx)},${r2(jy)} C${r2(jx)},${r2(jy - Math.abs(jy - anchor.y) * 0.45)} `
+          + `${r2(anchor.x)},${r2(anchor.y + Math.abs(jy - anchor.y) * 0.45)} ${r2(anchor.x)},${r2(anchor.y)}`;
+        const p = document.createElementNS(SVG_NS, 'path');
+        p.setAttribute('d', d);
+        p.setAttribute('fill', 'none');
+        p.setAttribute('stroke', color);
+        p.setAttribute('stroke-width', r2(CABLE_PX * (this.zoom || 1) * 0.85));
+        p.setAttribute('stroke-linecap', 'round');
+        p.style.opacity = String(held ? CABLE_BRIGHT : (this._litEdgeId ? 0.25 : 0.55));
+        svg.appendChild(p);
+      });
     }
   }
 
