@@ -2307,6 +2307,19 @@ export class Rack {
   _pickByDirection(key, portId, edges, dragDir) {
     let best = edges[0], bestDot = -Infinity;
     for (const edge of edges) {
+      // A CABLE CROSSING TO ANOTHER PAGE leaves toward that page's TAB — that is the stub you can see,
+      // and the direction you would naturally pull. Its cord geometry is no use here: it is computed
+      // against the far module's position in the OTHER page's layout, which has nothing to do with
+      // where the cable appears to go on this one. So the phantom departure pointed somewhere arbitrary
+      // and only a pull that happened to match it grabbed the cable; every other direction quietly
+      // started a new one instead.
+      if (!this._edgeOnPage(edge)) {
+        const dep = this._stubDeparture(edge, key, portId);
+        if (!dep) continue;
+        const d = dep.x * dragDir.x + dep.y * dragDir.y;
+        if (d > bestDot) { bestDot = d; best = edge; }
+        continue;
+      }
       const g = this._cordGeom(edge);
       if (!g) continue;
       // pA is the src side for a normal cord, the ANCHOR side for a link (see _cordGeom); pB is the dst.
@@ -2317,6 +2330,23 @@ export class Rack {
       if (d > bestDot) { bestDot = d; best = edge; }
     }
     return { edge: best, dot: bestDot };   // dot = cosine of the angle between the move and that cord's departure
+  }
+
+  // Which way a crossing cable sets off from the jack on THIS page, in screen terms: toward the tab of
+  // the page it is bound for. The same direction its stub is drawn in, so what you see and what you pull
+  // are the same thing.
+  _stubDeparture(edge, key, portId) {
+    const srcRef = edge.link || edge.src;
+    const a = this.records.get(srcRef.key), b = this.records.get(edge.dst.key);
+    if (!a || !b) return null;
+    const nearIsSrc = srcRef.key === key && srcRef.portId === portId;
+    const farPage = this.pageOf(nearIsSrc ? b : a);
+    const anchor = this._tabAnchorClient(farPage);
+    const jack = this._jackPosMm(key, portId);
+    if (!anchor || !jack) return null;
+    const rect = this.container.getBoundingClientRect();
+    const s = (this.pxPerMm || 1) * this.zoom;
+    return unit(anchor.x - (rect.left + this._tx + jack.x * s), anchor.y - (rect.top + this._ty + jack.y * s));
   }
 
   // Decide what a LEFT drag/move off a jack should do, given the move DIRECTION (a unit

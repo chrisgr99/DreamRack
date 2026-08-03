@@ -779,7 +779,10 @@ async function boot() {
     try { localStorage.setItem('wcoast.dark', d ? '1' : '0'); } catch (_e) { /* no storage */ }
     pushMenuState();
   };
-  const setRows = (n) => { rack.setRowCount(n); pushMenuState(); };
+  // The row count is PATCH DATA — it is serialised and restored — so changing it has to mark the
+  // patch edited. Without that nothing triggered an autosave, and a rack set to two rows and then
+  // quit came back at whatever the session had last recorded for some other reason.
+  const setRows = (n) => { rack.setRowCount(n); pushMenuState(); onEdit(); };
 
   // Keep the native menu's state honest: what's undoable, which mode, which patches. Debounced,
   // because this fires on every edit and the main process rebuilds the menu bar from it.
