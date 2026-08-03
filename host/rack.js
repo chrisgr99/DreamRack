@@ -571,6 +571,12 @@ export class Rack {
     }
     // A cord in hand crosses WITH you. Note where its anchor is now — the tab you just clicked — so
     // it can slide from there to the tab of the page you are leaving, instead of appearing there.
+    // The FINISHED cables that cross between these two pages swap ends as you go: on the page you are
+    // leaving they hang off the tab of the page you are going to, and on arrival they hang off the tab
+    // of the page you came from. Left alone they jump sideways across the bar. Slide them instead, the
+    // same way the cord in your hand slides — the crossing is one idea and it should look like one.
+    this._stubMorph = { fromPage: id, toPage: this.page, t0: performance.now() };
+    this._runStubMorph();
     const carrying = !!this._tempCable && this._carryOrigin;
     const from = carrying ? this._tabAnchorClient(id) : null;
     const leaving = this.page;
@@ -1557,6 +1563,20 @@ export class Rack {
   // The loose end never moves through any of this — it is in your hand the whole time.
   _onTabBar(el) { return !!(this._tabBarEl && el && el.closest && el.closest('.rack-tabbar')); }
 
+  // Keep the stub layer repainting while their tab ends slide.
+  _runStubMorph() {
+    if (this._stubRaf) return;
+    const tick = () => {
+      this._stubRaf = 0;
+      const m = this._stubMorph;
+      if (!m) return;
+      if (performance.now() - m.t0 >= CARRY_MORPH_MS) { this._stubMorph = null; this._drawPageStubs(); return; }
+      this._drawPageStubs();
+      this._stubRaf = requestAnimationFrame(tick);
+    };
+    this._stubRaf = requestAnimationFrame(tick);
+  }
+
   // Redraw the held cord while its anchor slides, even with the pointer perfectly still.
   _runCarryMorph() {
     if (this._carryRaf) return;
@@ -1640,6 +1660,10 @@ export class Rack {
   }
 
   _drawPageStubs() {
+    // Expire the slide here as well as in its own loop: that loop runs on animation frames, which a
+    // backgrounded window suspends, and a morph left flagged as running would still be flagged when
+    // the window came back.
+    if (this._stubMorph && performance.now() - this._stubMorph.t0 >= CARRY_MORPH_MS) this._stubMorph = null;
     const svg = this._ensureStubLayer();
     svg.textContent = '';
     if (!this._tabBarEl) return;
@@ -1662,7 +1686,18 @@ export class Rack {
     const s = (this.pxPerMm || 1) * this.zoom;
     for (const [farPage, list] of groups) {
       list.forEach((item, i) => {
-        const anchor = this._stubAnchor(farPage, i, list.length);
+        let anchor = this._stubAnchor(farPage, i, list.length);
+        // Mid-switch, and this cable crosses between the two pages involved: its tab end slides from
+        // where it hung a moment ago — the tab of the page you clicked — to where it belongs now.
+        const m = this._stubMorph;
+        if (m && anchor && farPage === m.toPage) {
+          const t = Math.min(1, (performance.now() - m.t0) / CARRY_MORPH_MS);
+          const was = this._stubAnchor(m.fromPage, i, list.length);
+          if (was) {
+            const k = 1 - Math.pow(1 - t, 3);
+            anchor = { x: was.x + (anchor.x - was.x) * k, y: was.y + (anchor.y - was.y) * k };
+          }
+        }
         const jack = this._jackPosMm(item.near.key, item.near.portId);
         if (!anchor || !jack) return;
         const jx = rect.left + this._tx + jack.x * s, jy = rect.top + this._ty + jack.y * s;
