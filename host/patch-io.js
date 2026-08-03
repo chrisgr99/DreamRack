@@ -28,6 +28,21 @@ export const APP_VERSION = '0.1';
 
 const round2 = (n) => Math.round(n * 100) / 100;
 
+// WHERE A MODULE BELONGS when the patch predates pages entirely. A video module goes to the video
+// page and everything else to the first audio page, so an old patch opens already sorted the way it
+// would have been built today rather than piled onto one page for you to sort by hand. Judged by the
+// SIGNALS a module carries rather than by a list of names: a module whose jacks are luma or rgb is a
+// video module, and a list would go stale the moment one was added.
+//
+// ONLY for a patch that predates pages — see `legacy` in restore(). A patch that knows about pages
+// has already said where everything goes, INCLUDING by saying nothing (an omitted page means the
+// first audio page). Sorting those would silently move a module you had deliberately put somewhere.
+function homePage(rack, type) {
+  const d = rack.host && rack.host.registry && rack.host.registry.descriptor(type);
+  const video = !!d && (d.ports || []).some((pt) => pt.domain === 'luma' || pt.domain === 'rgb');
+  return video ? 'video' : 'a1';
+}
+
 export function serialize(rack, mixer) {
   // Pinned records (the singleton mixer) aren't listed as modules — they're
   // recreated at boot, not per patch — so a restore won't duplicate them. The
@@ -114,8 +129,13 @@ export async function restore(obj, rack, mixer) {
   // is a fixed endpoint whose id maps to itself.
   const idToKey = new Map([[mixer.key, mixer.key]]);
   if (rack.restorePages) rack.restorePages(obj.pages);
+  // A patch written since pages existed always carries a `pages` list, even when it uses only one.
+  // Its absence is what marks a file as predating them — and only those get sorted onto pages, since
+  // only those never had the chance to say where anything belongs.
+  const legacy = !Array.isArray(obj.pages);
   for (const m of obj.modules || []) {
-    const rec = await rack.addModule(m.type, m.row, m.x, { page: m.page || 'a1' });
+    const page = m.page || (legacy ? homePage(rack, m.type) : 'a1');
+    const rec = await rack.addModule(m.type, m.row, m.x, { page });
     if (rec) idToKey.set(m.id, rec.key);
   }
   // Put the pinned mixer back where it was saved (it survives rack.clear() at its boot x=0 otherwise).

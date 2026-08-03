@@ -462,7 +462,12 @@ async function boot() {
   // The output mixer is now a pinned rack module — a terminal singleton placed
   // once at the bottom row (draggable, not deletable) that stays the stable
   // "mixer" patch endpoint. Its master bus defaults on (routing applied below).
-  const mixRec = await rack.addModule(mixerDescriptor.id, rack.rowCount - 1, 0, { pinned: true, key: 'mixer' });
+  // THE MIXER LIVES ON THE AUDIO OUTPUT PAGE, and only there. It is created on that page and nothing
+  // moves a module between pages, so it is pinned to the page as firmly as it is pinned against
+  // deletion — free to be dragged anywhere WITHIN the page, and never anywhere else. That is the whole
+  // point of the page having its name: it is where the sound leaves, so the thing it leaves through
+  // should not be sitting among the oscillators.
+  const mixRec = await rack.addModule(mixerDescriptor.id, rack.rowCount - 1, 0, { pinned: true, key: 'mixer', page: 'output' });
   mixer = { instanceId: mixRec.instanceId, instance: mixRec.instance };
   trace = createAudioTrace({ ctx: audioCtx, rack, mixer: mixer.instance });
 
@@ -637,14 +642,18 @@ async function boot() {
     // it sorts AHEAD of the modules that have since been pushed right — which is how the
     // Sequencer first landed in the middle of row 0 instead of at its end.
     const bottom = rack.rowCount - 1;
-    // The mixer is pinned and survives File > New, wherever the discarded patch left it.
+    // The mixer is pinned and survives File > New, wherever the discarded patch left it — but always
+    // on the audio output page, which is not a page this layout otherwise touches.
     rack.placeModule('mixer', bottom, 0);
     let x = 0;
     for (const d of [oscDescriptor, fnDescriptor, progDescriptor]) {
       const rec = await rack.addModule(d.id, 0, x);
       x = rec.x + rec.panelWmm;
     }
-    await rack.addModule(lpgDescriptor.id, bottom, mixRec.x + mixRec.panelWmm);
+    // The gate goes on the bottom row of the FIRST AUDIO PAGE, at its left edge. It used to sit beside
+    // the mixer, which is no longer on this page — following the mixer across would have put the one
+    // module a first patch needs most on a page you have to go and find.
+    await rack.addModule(lpgDescriptor.id, bottom, 0, { page: 'a1' });
   }
 
   async function newPatch() {

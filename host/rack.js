@@ -84,9 +84,15 @@ const STRIP_H = 60;
 // the next stub shows its flag at once, because by then you are plainly reading them.
 const FLAG_DWELL_MS = 400;
 const FLAG_WARM_MS = 1000;
-// The gap between the pointer's tip and the bottom of the chip: enough to leave a sliver of the cable
-// itself showing through, so the label is plainly attached to the line under the pointer.
-const FLAG_GAP = 6;
+// The chip sits ON the pointer's tip, not above it. Touching puts the fader and the meter — the parts
+// you came for — as near the tip as they can be, which is the centre of a magnified view. The pointer
+// arrow hangs down and right of its own tip, so it covers nothing.
+const FLAG_GAP = 0;
+// The meter floor and colours the mixer's own VU uses. Duplicated deliberately rather than reached
+// for across the app: the chip has to read as the SAME meter as the panel's, and two meters drawn to
+// two scales would be worse than no meter at all.
+const VU_FLOOR_DB = -48;
+const vuColour = (f) => (f > 0.85 ? '#ff5a4a' : f > 0.6 ? '#f4c430' : '#3ad16b');
 // Output is built wide enough for the mixer's ten inputs from the start, so patching those never
 // changes the bar. It grows past that only if pan CV, sends or the like also cross to it.
 const TAB_CABLE_CAPACITY = { output: 10 };
@@ -97,7 +103,7 @@ const TAB_CABLE_CAPACITY = { output: 10 };
 const STUB_DROP_PX = 26;
 // How far the swoop may reach before it turns, so a cable bound across the window departs the bar the
 // same way a cable bound just below it does.
-const STUB_SWOOP_PX = 90;
+const STUB_SWOOP_PX = 55;
 // Slot one sits this far in from the tab's left edge. Slots are counted from the LEFT and never
 // recentred, so a cable's place on the bar does not shift when another cable is added or removed.
 const SLOT_INSET = 6;
@@ -1782,6 +1788,38 @@ export class Rack {
     return `${mod} ${(port && port.name) || far.portId}`;
   }
 
+  // Does this stub end on a mixer CHANNEL — the one thing on the far end of a cable that has a level
+  // worth reaching from here? A cord into a gain or pan CV jack is a control input, not a channel
+  // feed, and has no fader of its own; neither has any cable to any other page. Those stubs stay as
+  // they were.
+  _stubFader(e, nearIsSrc) {
+    const far = nearIsSrc ? e.dst : (e.link || e.src);
+    const rec = this.records.get(far.key);
+    if (!rec || rec.descriptorId !== 'mixer') return null;
+    const m = /^chan([A-Z])$/.exec(far.portId || '');
+    if (!m) return null;
+    const id = `level${m[1]}`;
+    const d = this.host.registry.descriptor(rec.descriptorId);
+    const meta = d && (d.params || []).find((q) => q.id === id);
+    return meta ? { rec, id, meta, chan: m[1] } : null;
+  }
+
+  // The channel's LIVE reading, on the same decibel scale the mixer's own meters use — same floor,
+  // same colours — so the chip's meter and the panel's meter never disagree about how loud something
+  // is. Post-fader, which is the point: pull the level down and you watch it fall.
+  _chanMeter(f) {
+    const inst = f.rec.instance;
+    const lv = inst && typeof inst.levels === 'function' ? inst.levels() : null;
+    const rms = (lv && lv.channels && lv.channels[f.chan]) || 0;
+    if (rms <= 0) return 0;
+    const db = 20 * Math.log10(rms);
+    return Math.max(0, Math.min(1, (db - VU_FLOOR_DB) / -VU_FLOOR_DB));
+  }
+
+  // Where that channel's fader sits, 0 at the bottom of its throw and 1 at the top — the same
+  // position the panel's own slider is drawn at, so the two always agree.
+  _faderPos(f) { return Math.max(0, Math.min(1, valueToPosition(f.meta, f.rec.values.get(f.id)))); }
+
   // ONE FLAG AT A TIME, on the stub under the pointer — not a catalogue of every crossing cable. You
   // almost always come to the bar already knowing which line you care about, so naming that one and
   // letting you scan along the bundle beats a list you then have to match back to the lines. The chip
@@ -1800,10 +1838,43 @@ export class Rack {
   // magnifier tracks the pointer exactly, so a label centred there lands in the middle of the
   // magnified view, while one aligned to the line beside it sits off toward the edge — or outside it.
   // It rides a few pixels clear of the tip so a sliver of the cable shows between the two.
-  _showFlag(text, color, px, py) {
+  _showFlag(text, color, px, py, fader) {
     const el = this._ensureFlag();
-    el.textContent = text;
-    el.style.background = color;
+    // BLACK INSIDE, the colour on the border. Lettering on a coloured ground is hard to read whatever
+    // the letters are — we tried black on the colour and white on the colour — and white on black is
+    // the one pairing that is never in question. The colour survives as a one-pixel edge, which is
+    // enough: the cable under your pointer is already carrying it, so the chip only has to AGREE with
+    // that colour, not announce it.
+    el.style.borderColor = color;
+    // Rebuilt only when the CHIP ITSELF changes. Moving along a stub, or turning its fader, must not
+    // tear down and remeasure the thing you are reading — it would flicker exactly while you watched.
+    const key = text + (fader ? '|f' : '');
+    if (this._flagKey !== key) {
+      this._flagKey = key;
+      el.textContent = '';
+      el.classList.toggle('has-fader', !!fader);
+      const name = document.createElement('span');
+      name.textContent = text;
+      el.appendChild(name);
+      if (fader) {
+        // SEVEN PIXELS, ALL TOLD, in the band the chip already had — the chip does not grow. From the
+        // bottom: a solid white bar filled to the level, the grey rule beyond it showing the travel
+        // still to come, a pixel of air, and the live meter above. The white bar's right-hand end IS
+        // the handle. White against green-to-red is what keeps the two stacked bars apart — that, and
+        // the meter moving on its own while the fader moves only under your hand.
+        const track = document.createElement('span'); track.className = 'stub-flag-track';
+        const fill = document.createElement('span'); fill.className = 'stub-flag-fill';
+        track.appendChild(fill); el.appendChild(track);
+        // The meter keeps a faint groove even in silence. At two pixels, a bar that is simply absent
+        // when nothing is playing reads as broken rather than as quiet.
+        const meter = document.createElement('span'); meter.className = 'stub-flag-meter';
+        const mfill = document.createElement('span'); mfill.className = 'stub-flag-meter-fill';
+        meter.appendChild(mfill); el.appendChild(meter);
+        this._flagFill = fill; this._flagMeter = mfill;
+      } else { this._flagFill = this._flagMeter = null; }
+    }
+    if (fader) { this._setFlagLevel(this._faderPos(fader)); this._runFlagMeter(fader); }
+    else this._stopFlagMeter();
     el.style.visibility = 'hidden';
     el.style.display = 'block';
     const w = el.offsetWidth, h = el.offsetHeight;
@@ -1816,10 +1887,41 @@ export class Rack {
     this._flagWarm = true;
   }
 
+  // Move the fill and the cap only — no rebuild, no remeasure, so the chip holds still while the
+  // level moves inside it.
+  _setFlagLevel(pos) {
+    if (this._flagFill) this._flagFill.style.width = (Math.max(0, Math.min(1, pos)) * 100).toFixed(1) + '%';
+  }
+
+  // The meter is the one live thing on the chip, so it runs on frames — but only while a chip with a
+  // meter is actually up, and it stops dead when the chip goes.
+  _runFlagMeter(fader) {
+    this._flagMeterFader = fader;
+    if (this._flagMeterRaf) return;
+    const tick = () => {
+      const f = this._flagMeterFader;
+      if (!f || !this._flagMeter || !this._flagEl || this._flagEl.style.display !== 'block') {
+        this._flagMeterRaf = 0; return;
+      }
+      const v = this._chanMeter(f);
+      this._flagMeter.style.width = (v * 100).toFixed(1) + '%';
+      this._flagMeter.style.background = vuColour(v);
+      this._flagMeterRaf = requestAnimationFrame(tick);
+    };
+    this._flagMeterRaf = requestAnimationFrame(tick);
+  }
+
+  _stopFlagMeter() {
+    this._flagMeterFader = null;
+    if (this._flagMeterRaf) { cancelAnimationFrame(this._flagMeterRaf); this._flagMeterRaf = 0; }
+  }
+
   _hideFlag() {
     if (this._flagSticky) return;
     clearTimeout(this._flagTimer);
     if (this._flagEl) this._flagEl.style.display = 'none';
+    this._flagKey = null;
+    this._stopFlagMeter();
     // The warm period runs from LEAVING a stub, so a sweep across the bundle stays warm the whole way
     // and only a real departure cools it back to the full dwell.
     clearTimeout(this._flagWarmTimer);
@@ -1948,15 +2050,39 @@ export class Rack {
         hit.style.pointerEvents = 'auto';
         hit.style.cursor = 'pointer';
         const label = () => this._stubLabel(item.e, item.nearIsSrc);
-        const place = (ev) => this._showFlag(label(), color, ev.clientX, ev.clientY);
+        const fader = () => this._stubFader(item.e, item.nearIsSrc);
+        const place = (ev) => this._showFlag(label(), color, ev.clientX, ev.clientY, fader());
         hit.addEventListener('pointerenter', (ev) => {
           clearTimeout(this._flagTimer);
           clearTimeout(this._flagWarmTimer);
           // Warm, so straight away: you are reading the bundle, not passing through it.
           if (this._flagWarm) { place(ev); return; }
           const x = ev.clientX, y = ev.clientY;
-          this._flagTimer = setTimeout(() => this._showFlag(label(), color, x, y), FLAG_DWELL_MS);
+          this._flagTimer = setTimeout(() => this._showFlag(label(), color, x, y, fader()), FLAG_DWELL_MS);
         });
+        // SCROLL THE STUB, TURN THAT CHANNEL. The cable running off to the mixer is already the handle
+        // for the channel it lands in — it is on the page you are working on, it knows which channel it
+        // feeds, and hovering it names that channel. Turning it here is the same gesture every knob in
+        // the rack answers to, so it needs no new control and takes no space.
+        //
+        // It works at ONCE, without waiting out the dwell, and forces the chip up as it turns: the case
+        // this exists for is something suddenly too loud, and waiting four hundred milliseconds before
+        // you may start pulling it down would be precisely the wrong behaviour. The chip appearing on
+        // the first click of the wheel is what tells you which channel you caught.
+        hit.addEventListener('wheel', (ev) => {
+          if (ev.ctrlKey) return;   // ctrl+wheel is the rack's pinch-zoom
+          const f = fader();
+          if (!f) return;
+          ev.preventDefault(); ev.stopPropagation();
+          const raw = ev.deltaMode === 1 ? ev.deltaY * 16 : ev.deltaMode === 2 ? ev.deltaY * 400 : ev.deltaY;
+          const step = (-raw / 100) * 0.05;
+          const np = Math.max(0, Math.min(1, this._faderPos(f) + step));
+          // Through _setParam, the same road the panel's own slider takes — so the fader on the mixer
+          // moves too, and undo and the autosave see one kind of change, not two.
+          this._setParam(f.rec, f.id, positionToValue(f.meta, np));
+          clearTimeout(this._flagTimer);
+          this._showFlag(label(), color, ev.clientX, ev.clientY, f);
+        }, { passive: false });
         // The chip rides the pointer along the stub, staying centred over the tip.
         hit.addEventListener('pointermove', (ev) => {
           if (this._flagEl && this._flagEl.style.display === 'block') place(ev);
@@ -6362,6 +6488,11 @@ export class Rack {
     this.rows[rowIndex].push(rec);
     this._resolveRow(this.rows[rowIndex]);
     this._rowEls[rowIndex].appendChild(el);
+    // A module born on a page you are not looking at has to be hidden NOW. Page visibility was only
+    // ever applied when you switched pages, which was invisible while every module was created on the
+    // page in front of you — and stopped being true the moment the mixer started life on the audio
+    // output page and a loaded patch began sorting itself across pages.
+    if (!this._onPage(rec)) el.style.visibility = 'hidden';
     this.relayout();
     this.onChange();
     return rec;

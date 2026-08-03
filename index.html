@@ -499,9 +499,31 @@
        it has to stay readable while the pointer is still on the stub near the bar — and click-through,
        so it can never swallow a press on the tab it happens to be lying over. */
     .stub-flag { position: fixed; z-index: 1340; display: none; pointer-events: none;
-      color: #000; font: 600 11.5px system-ui, -apple-system, sans-serif;
-      padding: 2px 7px; border-radius: 3px; white-space: nowrap;
-      box-shadow: 0 1px 4px rgba(0,0,0,.45); }
+      background: #000; border: 1px solid currentColor; color: #fff;
+      /* An EXPLICIT line-height, which is what lets the lettering grow without the chip growing. Left
+         to itself a line box carries the font's own leading — three pixels of nothing above the capital
+         letters — so the box was tall while the text was small. Pinning the line box to the height the
+         caps actually need spends that space on the glyphs instead. */
+      font: 600 14px/11px system-ui, -apple-system, sans-serif;
+      padding: 1px 7px 2px; border-radius: 3px; white-space: nowrap;
+      box-shadow: 0 1px 4px rgba(0,0,0,.55); }
+    /* A channel stub carries its fader and its meter inside the chip, in the seven pixels below the
+       lettering — the chip does not grow to hold them. Bottom to top: a three-pixel white bar filled
+       to the level, the half-brightness rule beyond it showing the travel left to run, a pixel of air,
+       and a three-pixel live meter. */
+    /* Two pixels more than the bars need, so a descender — the g in 'Trig' — clears the meter. The
+       lettering now overflows its own line box by design, which is the price of spending the leading
+       on the glyphs. */
+    .stub-flag.has-fader { padding-bottom: 10px; }
+    .stub-flag-track { position: absolute; left: 7px; right: 7px; bottom: 1px; height: 1px;
+      background: rgba(255,255,255,.5); }
+    .stub-flag-fill { position: absolute; left: 0; bottom: -1px; height: 3px; width: 0;
+      background: #fff; }
+    /* The groove stays visible in silence: a bar that is simply absent when nothing plays reads as
+       broken rather than as quiet. */
+    .stub-flag-meter { position: absolute; left: 7px; right: 7px; bottom: 4px; height: 3px;
+      background: rgba(255,255,255,.16); border-radius: 1px; overflow: hidden; }
+    .stub-flag-meter-fill { position: absolute; left: 0; top: 0; bottom: 0; width: 0; }
     .rack-cables { position: absolute; top: 0; left: 0; pointer-events: none; z-index: 12; overflow: visible; }
     /* The stand-in picture used while Option is held: same origin as the content it replaces. */
     .rack-frozen { position: absolute; top: 0; left: 0; display: none; pointer-events: none; z-index: 14; }
