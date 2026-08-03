@@ -477,6 +477,14 @@
        and the page below it are one shape, and the line appears to detour up and around it. */
     .rack-tab.current { margin: 0; padding: 7px 9px 2.5px 9px; background: var(--bg); color: var(--ink);
       border-color: var(--tab-edge); opacity: 1; }
+    /* The + that adds a page, dressed as a tab so it belongs to the strip, but narrow: it is an
+       action rather than a place, and it should not read as one more page you can be on. */
+    .rack-tab-add { min-width: 0; padding-left: 12px; padding-right: 12px; }
+    .rack-tab-add .rack-tab-name, .rack-tab-add { font-size: 19px; line-height: 1; }
+    /* Renaming happens IN the tab: the field wears the tab's own type and colours so the tab does
+       not change size or appearance while you type into it. */
+    .rack-tab-edit { font: inherit; font-size: 21px; line-height: 1; width: 5.2em;
+      background: transparent; color: var(--ink); border: none; outline: none; padding: 0; margin: 0; }
 
     /* A cable crossing to another page spans two coordinate systems — the scrolling, zooming rack at
        one end and the fixed tab bar at the other — so it is painted in its own layer pinned to the

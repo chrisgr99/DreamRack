@@ -893,6 +893,18 @@ async function boot() {
       { label: 'Rows', submenu: [1, 2, 3, 4, 5].map((n) => ({
         label: String(n), checkFn: () => rack.rowCount === n, action: () => setRows(n),
       })) },
+      // Deleting a page lives here rather than on a right-click of the tab: it is the only thing you
+      // would ever want from such a menu, and one item is not a menu. Adding is the + in the bar and
+      // renaming is a double-click, both where your hand already is.
+      { label: 'Delete page', enabled: rack.canDeletePage(rack.currentPage()), action: () => {
+        const id = rack.currentPage();
+        const n = rack.pageModuleCount(id);
+        const name = (rack.pageList().find((p) => p.id === id) || {}).name || 'this page';
+        const msg = n
+          ? `Delete ${name}? Its ${n} module${n === 1 ? '' : 's'} will go with it.`
+          : `Delete ${name}?`;
+        rack.confirm(msg, 'Delete page', () => { rack.deletePage(id); pushMenuState(); onEdit(); });
+      } },
       // A SINGLETON type leaves the menu once one is in the rack — Video Output, where a second
       // one would be meaningless. Checked here rather than by hiding the entry permanently, so
       // it comes back the moment the module is deleted.

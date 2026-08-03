@@ -65,7 +65,7 @@ const PAGE_MAX_AUDIO = 8;
 const PAGE_FIXED = [{ id: 'output', kind: 'output', name: 'Output' }, { id: 'video', kind: 'video', name: 'Video' }];
 const CABLE_PX = 3.8;   // cord thickness in px at zoom 1 (scales up as you zoom in)
 const STUB_GAP_PX = 7;  // spacing between the stubs of several cables bound for the same page
-const CARRY_MORPH_MS = 220;   // the held cord's anchor sliding from the tab you clicked to the one you left
+const CARRY_MORPH_MS = 1000;   // the held cord's anchor sliding from the tab you clicked to the one you left
 // The stretch of a cord that can be clicked to hold it bright, measured in JACK RADII from the jack's
 // own centre — so it scales with the terminal rather than being a number that happens to suit one panel.
 // It starts just past the rim and runs about one terminal's diameter. Short and close: close so it is
@@ -494,6 +494,59 @@ export class Rack {
   _pageCount(id) { let n = 0; for (const rec of this.records.values()) if (this.pageOf(rec) === id) n++; return n; }
   _hasPage(id) { return this.pages.some((p) => p.id === id); }
 
+  // A new audio page, taking the lowest free number so a page deleted from the middle is reused
+  // rather than leaving a gap that grows forever.
+  addPage() {
+    const audio = this.pages.filter((p) => p.kind === 'audio');
+    if (audio.length >= PAGE_MAX_AUDIO) return null;
+    let n = 1;
+    while (audio.some((p) => p.id === 'a' + n)) n++;
+    const page = { id: 'a' + n, kind: 'audio', name: `Audio ${n}` };
+    // IN NUMBER ORDER, not appended at the end. The digit that selects a page is its POSITION in the
+    // bar, so a page re-made in a gap has to go back into that gap — otherwise Audio 4 could sit in
+    // the eighth slot and be reached by pressing 8, which no one would guess or remember.
+    this.pages = [...this._sortAudio([...audio, page]), ...PAGE_FIXED.map((p) => ({ ...p }))];
+    this._renderTabBar();
+    this.selectPage(page.id);   // as a spreadsheet does: you made it, you are taken to it
+    this.onChange();
+    return page.id;
+  }
+
+  _sortAudio(list) { return [...list].sort((x, y) => (parseInt(x.id.slice(1), 10) || 0) - (parseInt(y.id.slice(1), 10) || 0)); }
+
+  canAddPage() { return this.pages.filter((p) => p.kind === 'audio').length < PAGE_MAX_AUDIO; }
+  // Video and Output are structural — they are where the output section and the video chain live, and
+  // a patch without them makes no sense. Only the pages you made are yours to rename or remove.
+  canEditPage(id) { const p = this.pages.find((x) => x.id === id); return !!p && p.kind === 'audio'; }
+  canDeletePage(id) { return this.canEditPage(id) && this.pages.filter((p) => p.kind === 'audio').length > 1; }
+
+  renamePage(id, name) {
+    const p = this.pages.find((x) => x.id === id);
+    if (!p || p.kind !== 'audio') return false;
+    const clean = String(name || '').trim().slice(0, 24);
+    if (!clean || clean === p.name) { this._renderTabBar(); return false; }
+    p.name = clean;
+    this._renderTabBar();
+    this.onChange();
+    return true;
+  }
+
+  // Deleting a page takes its modules with it — there is nowhere else for them to go while modules
+  // cannot be moved between pages. The caller does the asking; this does the deed.
+  deletePage(id) {
+    if (!this.canDeletePage(id)) return false;
+    for (const rec of [...this.records.values()]) if (this.pageOf(rec) === id && !rec.pinned) this.deleteModule(rec);
+    this.pages = this.pages.filter((p) => p.id !== id);
+    if (this._pageBack === id) this._pageBack = null;
+    if (this.page === id) { this.page = this.pages[0].id; this._syncPageVisibility(); this.relayout(); }
+    this._renderTabBar();
+    this._drawCables();
+    this.onChange();
+    return true;
+  }
+
+  pageModuleCount(id) { return this._pageCount(id); }
+
   // Rebuild the audio pages from a patch. Video and Output are NOT taken from the file — they are
   // rebuilt from the code and appended, so a patch written before they existed, or one hand-edited
   // into nonsense, still arrives with them present and in the right order.
@@ -502,7 +555,7 @@ export class Rack {
       .filter((p) => p && typeof p.id === 'string' && p.id !== 'video' && p.id !== 'output')
       .slice(0, PAGE_MAX_AUDIO)
       .map((p, i) => ({ id: p.id, kind: 'audio', name: typeof p.name === 'string' && p.name ? p.name : `Audio ${i + 1}` }));
-    this.pages = [...(audio.length ? audio : [{ id: 'a1', kind: 'audio', name: 'Audio 1' }]), ...PAGE_FIXED.map((p) => ({ ...p }))];
+    this.pages = [...this._sortAudio(audio.length ? audio : [{ id: 'a1', kind: 'audio', name: 'Audio 1' }]), ...PAGE_FIXED.map((p) => ({ ...p }))];
     if (!this._hasPage(this.page)) this.page = this.pages[0].id;
     this._pageBack = null;
     this._renderTabBar();
@@ -597,8 +650,44 @@ export class Rack {
       n.textContent = p.name;
       b.appendChild(n);
       b.addEventListener('click', () => { if (p.id !== this.page) this.selectPage(p.id); });
+      // DOUBLE-CLICK TO RENAME, as a spreadsheet does. The name becomes an editable field in place,
+      // so there is no dialog to dismiss and the tab never changes size under you.
+      if (p.kind === 'audio') {
+        b.addEventListener('dblclick', (ev) => { ev.preventDefault(); ev.stopPropagation(); this._editTabName(b, p); });
+      }
       el.appendChild(b);
     }
+    if (this.canAddPage()) {
+      const add = document.createElement('button');
+      add.className = 'rack-tab rack-tab-add';
+      add.title = 'Add an audio page';
+      add.textContent = '+';
+      add.addEventListener('click', () => this.addPage());
+      el.appendChild(add);
+    }
+  }
+
+  _editTabName(btn, page) {
+    const span = btn.querySelector('.rack-tab-name');
+    if (!span) return;
+    const input = document.createElement('input');
+    input.className = 'rack-tab-edit';
+    input.value = page.name;
+    span.replaceWith(input);
+    input.focus(); input.select();
+    let done = false;
+    const finish = (commit) => {
+      if (done) return;
+      done = true;
+      if (commit) this.renamePage(page.id, input.value);
+      else this._renderTabBar();
+    };
+    input.addEventListener('keydown', (ev) => {
+      ev.stopPropagation();   // the digits are page shortcuts everywhere except in here
+      if (ev.key === 'Enter') { ev.preventDefault(); finish(true); }
+      else if (ev.key === 'Escape') { ev.preventDefault(); finish(false); }
+    });
+    input.addEventListener('blur', () => finish(true));
   }
 
   moduleCount() { return this.records.size; }
