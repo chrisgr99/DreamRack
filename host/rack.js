@@ -575,7 +575,7 @@ export class Rack {
     // leaving they hang off the tab of the page you are going to, and on arrival they hang off the tab
     // of the page you came from. Left alone they jump sideways across the bar. Slide them instead, the
     // same way the cord in your hand slides — the crossing is one idea and it should look like one.
-    this._stubMorph = { fromPage: id, toPage: this.page, t0: performance.now() };
+    this._stubMorph = { here: id, t0: performance.now() };   // `here` is the page being arrived at
     this._runStubMorph();
     const carrying = !!this._tempCable && this._carryOrigin;
     const from = carrying ? this._tabAnchorClient(id) : null;
@@ -1687,12 +1687,15 @@ export class Rack {
     for (const [farPage, list] of groups) {
       list.forEach((item, i) => {
         let anchor = this._stubAnchor(farPage, i, list.length);
-        // Mid-switch, and this cable crosses between the two pages involved: its tab end slides from
-        // where it hung a moment ago — the tab of the page you clicked — to where it belongs now.
+        // Mid-switch: every crossing cable sweeps out from THIS page's own tab to the tab of the page
+        // it runs to. That reads as the cable reaching out from where you are now to where it goes —
+        // and it covers the case of arriving from somewhere uninvolved, where the cable was not drawn
+        // at all a moment ago and so has no old position to slide from. Handling only the cables that
+        // swap ends left those ones popping into existence.
         const m = this._stubMorph;
-        if (m && anchor && farPage === m.toPage) {
+        if (m && anchor) {
           const t = Math.min(1, (performance.now() - m.t0) / CARRY_MORPH_MS);
-          const was = this._stubAnchor(m.fromPage, i, list.length);
+          const was = this._stubAnchor(m.here, i, list.length);
           if (was) {
             const k = 1 - Math.pow(1 - t, 3);
             anchor = { x: was.x + (anchor.x - was.x) * k, y: was.y + (anchor.y - was.y) * k };
