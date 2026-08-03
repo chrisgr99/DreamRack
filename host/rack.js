@@ -2038,7 +2038,7 @@ export class Rack {
     tmp.setAttribute('stroke', STYLE_COLOR[domainStyle(fixedMeta.domain)]);
     tmp.setAttribute('stroke-width', r2(wmm));
     this._tempCable = tmp;
-    this._carryOrigin = { key, portId, page: this.pageOf(this.records.get(key)) };
+    this._carryOrigin = { key: fixed.key, portId: fixed.portId, page: this.pageOf(this.records.get(fixed.key)) };
     this._ensureHandLayer().appendChild(tmp);
     this._highlightCandidates(wantDir);
     document.body.classList.add('grabbing-cable');
