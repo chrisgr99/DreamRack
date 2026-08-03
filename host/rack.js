@@ -65,6 +65,7 @@ const PAGE_MAX_AUDIO = 8;
 const PAGE_FIXED = [{ id: 'output', kind: 'output', name: 'Output' }, { id: 'video', kind: 'video', name: 'Video' }];
 const CABLE_PX = 3.8;   // cord thickness in px at zoom 1 (scales up as you zoom in)
 const STUB_GAP_PX = 7;  // spacing between the stubs of several cables bound for the same page
+const CARRY_MORPH_MS = 220;   // the held cord's anchor sliding from the tab you clicked to the one you left
 // The stretch of a cord that can be clicked to hold it bright, measured in JACK RADII from the jack's
 // own centre — so it scales with the terminal rather than being a number that happens to suit one panel.
 // It starts just past the rim and runs about one terminal's diameter. Short and close: close so it is
@@ -515,8 +516,20 @@ export class Rack {
       if (!this._pageBack || this._pageBack === id) return false;
       id = this._pageBack;
     }
+    // A cord in hand crosses WITH you. Note where its anchor is now — the tab you just clicked — so
+    // it can slide from there to the tab of the page you are leaving, instead of appearing there.
+    const carrying = !!this._tempCable && this._carryOrigin;
+    const from = carrying ? this._tabAnchorClient(id) : null;
+    const leaving = this.page;
     this._pageBack = this.page;
     this.page = id;
+    if (carrying && from && this._carryOrigin.page !== id) {
+      this._carryMorph = { from, t0: performance.now() };
+      this._runCarryMorph();
+    } else if (carrying) {
+      this._carryMorph = null;   // back on the cord's own page: its jack is the anchor again
+    }
+    void leaving;
     // A page switch moves as much ground as a jump across the rack, so anything anchored to the page
     // you are leaving has to let go — a hover highlight would otherwise outlive its own module.
     this._hoverRec = null;
@@ -1443,6 +1456,59 @@ export class Rack {
   // and it vanished, so it looked as though you had dropped it. Here it is drawn above everything,
   // still in the rack's own millimetre coordinates: the group carries the same transform the rack
   // does, so nothing about how the cord is built has to change.
+  // ---- carrying a cable across pages -----------------------------------------
+  // While a cord is in hand, its fixed end is a jack. Cross to another page and that jack is no
+  // longer on the screen, so the fixed end becomes the TAB OF THE PAGE YOU CAME FROM — which is the
+  // same rule every other crossing cable follows, and it means the cord you are holding says where
+  // it comes from as plainly as a finished one does.
+  //
+  // The anchor MORPHS rather than jumping: it slides along the bar from the tab you clicked to the
+  // tab you left. Both are neighbours in the same strip, so it is a short move right where you are
+  // already looking, and you watch the cord change allegiance instead of discovering that it has.
+  // The loose end never moves through any of this — it is in your hand the whole time.
+  _onTabBar(el) { return !!(this._tabBarEl && el && el.closest && el.closest('.rack-tabbar')); }
+
+  // Redraw the held cord while its anchor slides, even with the pointer perfectly still.
+  _runCarryMorph() {
+    if (this._carryRaf) return;
+    const tick = () => {
+      this._carryRaf = 0;
+      if (!this._tempCable || !this._carryMorph) return;
+      if (this._carryTrack) this._carryTrack(this._carryLastX, this._carryLastY);
+      if (this._carryMorph) this._carryRaf = requestAnimationFrame(tick);
+    };
+    this._carryRaf = requestAnimationFrame(tick);
+  }
+
+  _tabAnchorClient(pageId) {
+    const el = this._tabBarEl && this._tabBarEl.querySelector(`[data-page="${pageId}"]`);
+    if (!el) return null;
+    const r = el.getBoundingClientRect();
+    return { x: r.left + r.width / 2, y: r.bottom - 1 };
+  }
+
+  // Where the held cord is anchored right now, in window px — or null when its own jack is on this
+  // page and the ordinary anchor applies.
+  _handAnchorClient() {
+    const o = this._carryOrigin;
+    if (!o || o.page === this.page) return null;
+    const home = this._tabAnchorClient(o.page);
+    const m = this._carryMorph;
+    if (!m || !home) return home;
+    const t = Math.min(1, (performance.now() - m.t0) / CARRY_MORPH_MS);
+    if (t >= 1) { this._carryMorph = null; return home; }
+    const k = 1 - Math.pow(1 - t, 3);   // ease out: quick away from the tab you clicked, gentle into the other
+    return { x: m.from.x + (home.x - m.from.x) * k, y: m.from.y + (home.y - m.from.y) * k };
+  }
+
+  // The path for a cord in hand, from wherever it is anchored to the pointer. One place, so all
+  // three ways of picking a cord up cross pages the same way.
+  _handCordD(jackMm, clientX, clientY, wmm) {
+    const anchor = this._handAnchorClient();
+    const fixed = anchor ? { ...this._clientToMm(anchor.x, anchor.y), r: 0, ring: 0 } : jackMm;
+    return this._cordPath(fixed, fixed.r || 0, this._clientToMm(clientX, clientY), 0, wmm);
+  }
+
   _ensureHandLayer() {
     if (this._handG) return this._handG;
     const svg = document.createElementNS(SVG_NS, 'svg');
@@ -1648,6 +1714,9 @@ export class Rack {
     const m = this._clientToMm(clientX, clientY);
     let best = null, bestD = Infinity;
     for (const rec of this.records.values()) {
+      // Modules on other pages are hidden by VISIBILITY, which leaves them with a real position and
+      // a real bounding box — so without this a drop could land on a jack that is not on the screen.
+      if (!this._onPage(rec)) continue;
       for (const [portId, port] of rec.panel.ports) {
         const pos = this._jackPosMm(rec.key, portId);
         if (!pos) continue;
@@ -1750,6 +1819,7 @@ export class Rack {
     tmp.setAttribute('stroke', STYLE_COLOR[domainStyle(meta.domain)]);
     tmp.setAttribute('stroke-width', r2(wmm));
     this._tempCable = tmp;
+    this._carryOrigin = { key, portId, page: this.pageOf(this.records.get(key)) };
     this._ensureHandLayer().appendChild(tmp);
     const originIsInput = meta.dir === 'in';   // an input origin can also MULT onto another fed input
     this._highlightCandidates(meta.dir === 'out' ? 'in' : 'out', null, originIsInput);
@@ -1758,7 +1828,9 @@ export class Rack {
     let lastX = cx, lastY = cy;
     const track = (clientX, clientY) => {
       lastX = clientX; lastY = clientY;
-      tmp.setAttribute('d', this._cordPath(a, a.r, this._clientToMm(clientX, clientY), 0, wmm));
+      this._carryTrack = track;   // the morph redraws through this when the pointer is still
+      this._carryLastX = clientX; this._carryLastY = clientY;
+      tmp.setAttribute('d', this._handCordD(a, clientX, clientY, wmm));
       this._armTarget(this._jackNear(clientX, clientY), wantDir, null, { key, portId }, originIsInput);
     };
     track(cx, cy);
@@ -1783,7 +1855,7 @@ export class Rack {
       document.removeEventListener('pointerup', onUp, true);
       document.removeEventListener('contextmenu', onCtx, true);
       document.removeEventListener('keydown', onKey, true);
-      tmp.remove(); this._tempCable = null;
+      tmp.remove(); this._tempCable = null; this._carryOrigin = null; this._carryMorph = null;
       this._disarmTarget(); this._clearHighlights();
       document.body.classList.remove('grabbing-cable');
     };
@@ -1796,6 +1868,9 @@ export class Rack {
       if (j && !(j.key === key && j.portId === portId)) this._recordCableAdd(this._tryConnect({ key, portId }, j));
     };
     const onDown = (ev) => {
+      // A press on the TAB BAR is a page change, not a drop — the cord stays in hand and crosses with
+      // you. Without this the carry's own capture handler swallowed the press and the tab never saw it.
+      if (this._onTabBar(ev.target)) return;
       if (dragMode) return;   // in a held drag the button is already down; a stray press does nothing
       if (this._ovActive) { lastX = ev.clientX; lastY = ev.clientY; return; }   // the press aims the overview's frame
       if (ev.button !== 0) return;   // right-click is handled by onCtx; middle is ignored
@@ -1803,6 +1878,7 @@ export class Rack {
       pan = this._viewDragStart(ev);
     };
     const onUp = (ev) => {
+      if (this._onTabBar(ev.target)) return;   // crossing to another page, not dropping
       if (this._ovActive || ev.button !== 0) return;
       if (dragMode) { ev.preventDefault(); ev.stopPropagation(); drop(ev.clientX, ev.clientY); return; }   // held-drag: this release IS the drop
       if (!pan) return;
@@ -1850,6 +1926,7 @@ export class Rack {
     tmp.setAttribute('stroke', STYLE_COLOR[domainStyle(fixedMeta.domain)]);
     tmp.setAttribute('stroke-width', r2(wmm));
     this._tempCable = tmp;
+    this._carryOrigin = { key, portId, page: this.pageOf(this.records.get(key)) };
     this._ensureHandLayer().appendChild(tmp);
     this._highlightCandidates(wantDir);
     document.body.classList.add('grabbing-cable');
@@ -1857,7 +1934,8 @@ export class Rack {
     let lastX = cx, lastY = cy;
     const track = (clientX, clientY) => {
       lastX = clientX; lastY = clientY;
-      tmp.setAttribute('d', this._cordPath(fixedPos, fixedPos.r, this._clientToMm(clientX, clientY), 0, wmm));
+      this._carryTrack = track;   // the morph redraws through this when the pointer is still
+      tmp.setAttribute('d', this._handCordD(fixedPos, clientX, clientY, wmm));
       this._armTarget(this._jackNear(clientX, clientY), wantDir, null, null);   // origin null: the cord is already off, so its own port re-arms
     };
     track(cx, cy);
@@ -1882,7 +1960,7 @@ export class Rack {
       document.removeEventListener('pointerup', onUp, true);
       document.removeEventListener('contextmenu', onCtx, true);
       document.removeEventListener('keydown', onKey, true);
-      tmp.remove(); this._tempCable = null;
+      tmp.remove(); this._tempCable = null; this._carryOrigin = null; this._carryMorph = null;
       this._disarmTarget(); this._clearHighlights();
       document.body.classList.remove('grabbing-cable');
     };
@@ -1916,6 +1994,7 @@ export class Rack {
       pan = this._viewDragStart(ev);
     };
     const onUp = (ev) => {
+      if (this._onTabBar(ev.target)) return;   // crossing to another page, not dropping
       if (this._ovActive || ev.button !== 0) return;
       if (dragMode) { ev.preventDefault(); ev.stopPropagation(); const d = this._jackNear(ev.clientX, ev.clientY); finish(); resolve(d); return; }
       if (!pan) return;
@@ -1955,18 +2034,20 @@ export class Rack {
     tmp.setAttribute('class', 'rack-cable rack-cable-temp');
     tmp.setAttribute('stroke', STYLE_COLOR[edge.style] || STYLE_COLOR.control);
     tmp.setAttribute('stroke-width', r2(wmm));
-    this._tempCable = tmp; this._ensureHandLayer().appendChild(tmp);
+    this._tempCable = tmp;
+    this._carryOrigin = { key: fixed.key, portId: fixed.portId, page: this.pageOf(this.records.get(fixed.key)) };
+    this._ensureHandLayer().appendChild(tmp);
     // Re-tap targets a FED input (a new signal to share); re-share targets an EMPTY input.
     if (grabAnchor) this._highlightFedInputs(dstRef.key, dstRef.portId); else this._highlightCandidates('in');
     document.body.classList.add('grabbing-cable');
 
     const armAt = (clientX, clientY) => {
-    tmp.setAttribute('d', this._cordPath(fixedPos, fixedPos.r, this._clientToMm(clientX, clientY), 0, wmm));
+    tmp.setAttribute('d', this._handCordD(fixedPos, clientX, clientY, wmm));
     if (grabAnchor) this._armTarget(this._jackNear(clientX, clientY), 'out', null, dstRef, true);   // linkMode arms fed inputs
     else this._armTarget(this._jackNear(clientX, clientY), 'in', null, anchor);
     };
     const teardown = () => {
-    tmp.remove(); this._tempCable = null; this._disarmTarget(); this._clearHighlights();
+    tmp.remove(); this._tempCable = null; this._carryOrigin = null; this._carryMorph = null; this._disarmTarget(); this._clearHighlights();
     document.body.classList.remove('grabbing-cable');
     };
     const pushMove = (ne) => { const ns = this._edgeSnapshot(ne); this._pushUR({ undo: () => { this._removeCable(ns); this._restoreCable(origSnap); }, redo: () => { this._removeCable(origSnap); this._restoreCable(ns); } }); };
