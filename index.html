@@ -515,23 +515,18 @@
       padding: 1px 7px 2px; border-radius: 3px; white-space: nowrap;
       box-shadow: 0 1px 4px rgba(0,0,0,.55); }
     .stub-flag-name { color: #fff; }
-    /* A channel stub carries its fader and its meter inside the chip, in the seven pixels below the
-       lettering — the chip does not grow to hold them. Bottom to top: a three-pixel white bar filled
-       to the level, the half-brightness rule beyond it showing the travel left to run, a pixel of air,
-       and a three-pixel live meter. */
-    /* Two pixels more than the bars need, so a descender — the g in 'Trig' — clears the meter. The
-       lettering now overflows its own line box by design, which is the price of spending the leading
-       on the glyphs. */
-    .stub-flag.has-fader { padding-bottom: 10px; }
-    .stub-flag-track { position: absolute; left: 7px; right: 7px; bottom: 1px; height: 1px;
-      background: rgba(255,255,255,.5); }
-    .stub-flag-fill { position: absolute; left: 0; bottom: -1px; height: 3px; width: 0;
-      background: #fff; }
-    /* The groove stays visible in silence: a bar that is simply absent when nothing plays reads as
-       broken rather than as quiet. */
-    .stub-flag-meter { position: absolute; left: 7px; right: 7px; bottom: 4px; height: 3px;
-      background: rgba(255,255,255,.16); border-radius: 1px; overflow: hidden; }
-    .stub-flag-meter-fill { position: absolute; left: 0; top: 0; bottom: 0; width: 0; }
+    /* A channel stub's chip stands UPRIGHT: the channel number on top, the meter down the left and
+       the fader down the right — each the way its counterpart stands on the mixer. Fifteen screen
+       millimetres of travel, which is enough to read a level and to watch one move. */
+    .stub-flag.has-fader { padding: 1px 5px 4px; text-align: center; }
+    .stub-flag-bars { display: flex; gap: 4px; justify-content: center; align-items: flex-end;
+      height: 57px; margin-top: 3px; }
+    .stub-flag-meter { position: relative; width: 4px; height: 100%; border-radius: 2px;
+      background: rgba(255,255,255,.16); overflow: hidden; }
+    .stub-flag-meter-fill { position: absolute; left: 0; right: 0; bottom: 0; height: 0; }
+    .stub-flag-track { position: relative; width: 4px; height: 100%; border-radius: 2px;
+      background: rgba(255,255,255,.22); overflow: hidden; }
+    .stub-flag-fill { position: absolute; left: 0; right: 0; bottom: 0; height: 0; background: #fff; }
     .rack-cables { position: absolute; top: 0; left: 0; pointer-events: none; z-index: 12; overflow: visible; }
     /* The stand-in picture used while Option is held: same origin as the content it replaces. */
     .rack-frozen { position: absolute; top: 0; left: 0; display: none; pointer-events: none; z-index: 14; }

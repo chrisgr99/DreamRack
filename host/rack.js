@@ -101,6 +101,18 @@ const vuColour = (f) => (f > 0.85 ? '#ff5a4a' : f > 0.6 ? '#f4c430' : '#3ad16b')
 // Output is built wide enough for the mixer's ten inputs from the start, so patching those never
 // changes the bar. It grows past that only if pan CV, sends or the like also cross to it.
 const TAB_CABLE_CAPACITY = { output: 10 };
+// THE MIXER'S INPUTS, ON THE OUTPUT TAB. Four screen millimetres, straddling the tab's lower edge —
+// screen, not rack, millimetres: the bar is chrome, and a button that grew when you zoomed the rack
+// would be absurd. This is deliberately the one place a tab carries terminals: the mixer is where
+// every patch ends, and it is the single destination worth reaching without travelling to it.
+const MIXER_BTN_PX = Math.round(3 * 96 / 25.4);   // 3mm across, once something is patched to it
+// An input with nothing in it is drawn as a SMALL OFF BUTTON — a 2mm black disc with a white ring.
+// Unmistakably the same kind of object as its patched neighbours, and unmistakably not carrying
+// anything. Dropping a cord on one grows it to full size and turns it on.
+const MIXER_DOT_PX = Math.round(1.5 * 96 / 25.4);
+const MIXER_BTN_ON = '#ff3b2f';    // lit = channel enabled, as the panel's own lamps read
+const MIXER_BTN_OFF = '#151515';
+const STUB_DRAG_PX = 4;    // move this far on a stub and it is a pull, not a click
 // Cables leave a tab (or a label's far end) by running STRAIGHT DOWN for a fixed distance before they
 // curve away. Without it a stub set off diagonally the instant it left the bar, which read as a line
 // pointing at the tab rather than a cable coming out of it. Fixed rather than proportional: the run
@@ -118,12 +130,16 @@ const CARRY_MORPH_MS = 2000;   // the held cord's anchor sliding from the tab yo
 // It starts just past the rim and runs about one terminal's diameter. Short and close: close so it is
 // found where you are already looking, short so it rarely lies over a control you meant to click.
 const LIT_GRAB_FROM_R = 1.25;   // just outside the rim
-const LIT_GRAB_TO_R = 3.25;     // ...and a diameter beyond it
+// ...and far enough beyond it to be AIMED AT. At 3.25 radii the stretch was about nine pixels long,
+// which is not a target — it is a coincidence. Longer costs a little more panel face covered near the
+// terminal, which is the right trade for a control you are meant to be able to hit.
+const LIT_GRAB_TO_R = 6;
 const LIT_GRAB_W = 3.2;    // hit width, in cord widths
 const LIT_GRAB_SHOW = 2.2;   // ...and the width it is drawn at once you have dwelt on it
 const LIT_HOVER_MS = 300;    // dwell before the stretch reveals itself
 const CABLE_HOVER_FADE = 0.28;   // opacity a cable drops to while it obscures a control you're hovering
 const CABLE_FADE_TAU = 0.3;      // opacity easing time constant — cables brighten/dim over ~1s so quick sweeps don't flash
+const CABLE_DIM = 0.3;           // the others while ONE cable is held — far enough back that the held one is unmistakable
 const CABLE_BRIGHT = 0.9;        // opacity of a fully-highlighted cable — a touch under full so it reads bright without dazzling
 const SCOPE_FADE_TAU = 0.3;      // scopes/monitors fade IN over ~1s in the loop (OUT via a 1s CSS transition), so they don't pop
 // Scope calibrated scales (1-2-5). Vertical = signal amplitude per division; time = seconds
@@ -448,7 +464,7 @@ export class Rack {
       // DOM each time, which Zoom then re-tracks — a feedback loop that jerks the pointer rightward over a
       // module. Pausing the hover work while Control is down breaks the loop without touching the zoom.
       if (this._ovActive || this._optDown || e.ctrlKey) return;
-      this._updateCableHover(e); this._updateControlCableFade(e); this._updateNetOrigin(e);
+      this._updateCableHover(e);
     });
     this.container.addEventListener('pointerleave', () => {
       let redraw = false;
@@ -703,6 +719,22 @@ export class Rack {
     rackEl.parentNode.insertBefore(el, rackEl);
   }
 
+  // The mixer's page needs a slot for every channel button, plus one for each non-channel cord the
+  // mixer takes (a gain CV, a pan CV, a send) — those have no button and stack after the buttons.
+  _mixerLanes(pageId) {
+    const rec = [...this.records.values()].find((r) => r.descriptorId === 'mixer');
+    if (!rec || this.pageOf(rec) !== pageId) return 0;
+    const chans = this._mixerChannels();
+    const chanIds = new Set(chans.map((c) => c.portId));
+    let extra = 0;
+    for (const e of this.patchbay.list()) {
+      if (e.dst.key !== rec.key) continue;
+      const a = this.records.get((e.link || e.src).key);
+      if (a && this.pageOf(a) !== pageId && !chanIds.has(e.dst.portId)) extra++;
+    }
+    return chans.length + extra;
+  }
+
   // How many cables could ever hang off a page's tab: everything with exactly one end on that page.
   // Counted across the whole patch rather than just the page you are viewing, so a tab's width does
   // not change as you move about.
@@ -733,7 +765,7 @@ export class Rack {
       b.appendChild(n);
       // Wide enough for the cables that can arrive here. The base width comes later, once the bar has
       // been laid out and an audio tab can be measured.
-      const lanes = Math.max(TAB_CABLE_CAPACITY[p.id] || 0, this._tabCableCount(p.id));
+      const lanes = Math.max(TAB_CABLE_CAPACITY[p.id] || 0, this._tabCableCount(p.id), this._mixerLanes(p.id));
       b.dataset.lanes = String(lanes);
       b.addEventListener('click', () => { if (p.id !== this.page) this.selectPage(p.id); });
       // DOUBLE-CLICK TO RENAME, as a spreadsheet does. The name becomes an editable field in place,
@@ -990,6 +1022,11 @@ export class Rack {
   }
   // Apply one module param value (knob/switch), updating DSP and the panel.
   applyParam(rec, id, value) { this._setParam(rec, id, value); }
+
+  // The buttons and the panel's lamps are one control seen twice, so moving either moves the other.
+  _mirrorMixerEnable(rec, id) {
+    if (rec.descriptorId === 'mixer' && /^mute[A-Z]$/.test(id) && this._stubSvg) this._drawPageStubs();
+  }
   // Connect two jacks by { key, portId }; returns the edge (for restoring bow).
   connectPatch(from, to) { return this._tryConnect(from, to); }
   redrawCables() { this._drawCables(); }
@@ -1499,9 +1536,6 @@ export class Rack {
       const net = o.dir === 'down' ? this._downstreamOf(o.key, o.portId) : this._upstreamOf(o.key, o.portId);
       if (!this._sameSet(net.edges, this._isolateNet)) { this._isolateNet = net.edges; this._isolateSections = net.sections; this._buildIsolateSwells(); this._buildControlHalos(); }
     }
-    const cn = (!this._isolateNet && this._netOrigin) ? this._computeNet(this._netOrigin) : null;   // recompute so it tracks patch edits
-    this._netEdges = cn ? cn.edges : null;
-    this._netSections = cn ? cn.sections : null;
     const s = this.pxPerMm;
     this.cables.setAttribute('viewBox', `0 0 ${r2(this._contentWmm)} ${r2(this._contentHmm)}`);
     this.cables.style.width = (this._contentWmm * s) + 'px';
@@ -1581,25 +1615,49 @@ export class Rack {
           const ring = (fromA ? g.a.ring : g.b.ring) || 2.3;
           const seg = this._cordSegment(g, fromA, Math.max(0, ring * (LIT_GRAB_FROM_R - 1)), ring * (LIT_GRAB_TO_R - 1));
           if (!seg) continue;
+          const end = fromA ? 'a' : 'b';
           const hit = mk(seg, 'transparent', wmm * LIT_GRAB_W, null, 'stroke');
+          hit.setAttribute('stroke-linecap', 'round');   // a pill, not a block
           hit.setAttribute('class', 'cable-grab');
+          hit.dataset.edge = e.id; hit.dataset.end = end;
           hit.style.cursor = 'pointer';
-          // SHOW AND HIDE BY MUTATING THIS ELEMENT — never by redrawing. A redraw rebuilds the cable
-          // layer wholesale, which destroys the element the pointer is over; the replacement fires
-          // another enter, and the leave that should have hidden it never arrives on the corpse. That
-          // is why the thickened stretch stuck on screen whatever you did afterwards.
-          const show = () => { hit.setAttribute('stroke', color); hit.setAttribute('stroke-width', r2(wmm * LIT_GRAB_SHOW)); hit.style.opacity = '0.9'; };
-          const hide = () => { hit.setAttribute('stroke', 'transparent'); hit.setAttribute('stroke-width', r2(wmm * LIT_GRAB_W)); hit.style.opacity = ''; };
+          const paint = (el, on) => {
+            if (!el) return;
+            el.setAttribute('stroke', on ? color : 'transparent');
+            el.setAttribute('stroke-width', r2(wmm * (on ? LIT_GRAB_SHOW : LIT_GRAB_W)));
+            el.style.opacity = on ? '0.9' : '';
+          };
+          // THE DWELL AND THE SHOWN STATE LIVE ON THE RACK, NOT ON THIS ELEMENT — because this element
+          // does not survive. Every pointer move can redraw the cable layer (the nearest-cable hover
+          // and the control fade both do), which rebuilds these stretches wholesale. A dwell timer that
+          // closed over the element fired on a corpse, so no marker ever appeared; and the replacement
+          // gets no pointerenter, because the pointer has not moved. That is the whole reason this felt
+          // random — approaching a cable end is exactly what triggers the redraw that destroys it.
+          //
+          // So: the pointer's position is remembered as (edge, end), and a freshly-built stretch paints
+          // itself shown if it is the one being dwelt on.
+          if (this._grabShown && this._grabShown.id === e.id && this._grabShown.end === end) paint(hit, true);
+          const liveEl = () => this.cables.querySelector(`.cable-grab[data-edge="${e.id}"][data-end="${end}"]`);
           hit.addEventListener('pointerenter', () => {
             clearTimeout(this._litHoverTimer);
+            this._grabOver = { id: e.id, end };
             // A DWELL first. Without it the stretch flickers up every time the pointer crosses a cable
             // on its way somewhere else, which is most of the time.
-            this._litHoverTimer = setTimeout(() => { this._litHoverId = e.id; show(); }, LIT_HOVER_MS);
+            this._litHoverTimer = setTimeout(() => {
+              if (!this._grabOver || this._grabOver.id !== e.id || this._grabOver.end !== end) return;
+              this._litHoverId = e.id;
+              this._grabShown = { id: e.id, end };
+              paint(liveEl(), true);
+            }, LIT_HOVER_MS);
           });
           hit.addEventListener('pointerleave', () => {
+            // A redraw removes this element, and removal fires leave — which would wipe the very state
+            // that is meant to carry the handle across the redraw. Only a real departure counts.
+            if (!hit.isConnected) return;
             clearTimeout(this._litHoverTimer);
             if (this._litHoverId === e.id) this._litHoverId = null;
-            hide();
+            this._grabOver = null; this._grabShown = null;
+            paint(liveEl(), false);
           });
           hit.addEventListener('pointerdown', (ev) => {
             if (ev.button !== 0) return;
@@ -1608,11 +1666,12 @@ export class Rack {
             this._litEdgeId = this._litEdgeId === e.id ? null : e.id;
             this._drawCables();
           });
-          if (this._litHoverId === e.id) show();   // a redraw for some other reason keeps the state
         }
       }
-      // Middle reshape handle, shown only while this cable is hovered.
-      if (e.id === this._hoverCableEdgeId) {
+      // Middle reshape handle. Built for every cable and merely HIDDEN, so showing it is a mutation
+      // rather than a redraw of the whole layer — a redraw destroys the grab stretch the pointer is
+      // sitting on, which is what made clicking a cable end so unreliable.
+      {
         const mid = {
           x: 0.125 * g.pA.x + 0.375 * g.c1.x + 0.375 * g.c2.x + 0.125 * g.pB.x,
           y: 0.125 * g.pA.y + 0.375 * g.c1.y + 0.375 * g.c2.y + 0.125 * g.pB.y,
@@ -1624,6 +1683,9 @@ export class Rack {
         hd.style.pointerEvents = 'auto';
         hd.style.cursor = 'var(--grip)';
         hd.addEventListener('pointerdown', (ev) => this._startReshape(ev, e));
+        hd.setAttribute('class', 'cable-reshape');
+        hd.dataset.edge = e.id;
+        if (e.id !== this._hoverCableEdgeId) hd.style.display = 'none';
         this.cables.appendChild(hd);
       }
     }
@@ -1767,6 +1829,30 @@ export class Rack {
     return svg;
   }
 
+  // The mixer's channel inputs, in panel order, with the names the faceplate prints.
+  _mixerChannels() {
+    const rec = this.mixerRecord ? this.mixerRecord() : [...this.records.values()].find((r) => r.descriptorId === 'mixer');
+    if (!rec) return [];
+    const d = this.host.registry.descriptor(rec.descriptorId);
+    if (!d) return [];
+    const out = [];
+    for (const port of d.ports || []) {
+      const m = /^chan([A-Z])$/.exec(port.id);
+      if (m) out.push({ rec, L: m[1], portId: port.id, name: port.name, enableId: `mute${m[1]}` });
+    }
+    return out;
+  }
+
+  // Which slot a cable bound for the mixer lands in. A CHANNEL keeps its own slot whether or not
+  // anything is patched to it, because its button is always there — so gaps appear, and a cable's
+  // position on the bar means the channel it goes to. Anything else the mixer takes (a gain CV, a
+  // pan CV, a send) has no button and stacks after the ten.
+  _mixerSlot(portId, extraIndex) {
+    const chans = this._mixerChannels();
+    const i = chans.findIndex((c) => c.portId === portId);
+    return i >= 0 ? i : chans.length + extraIndex;
+  }
+
   // Where a stub meets a tab: along the tab's bottom edge, counted in FIXED slots from the left, so
   // the first cable takes slot one and each new one lands to the right of the last. Counting from the
   // left rather than centring the bundle is what makes a slot stable — centred, every cable slid
@@ -1798,8 +1884,12 @@ export class Rack {
     if (!rec) return '';
     const d = this.host.registry.descriptor(rec.descriptorId);
     const port = d && (d.ports || []).find((p) => p.id === far.portId);
+    const name = (port && port.name) || far.portId;
+    // A stub on the mixer's own tab names only the CHANNEL. Once the tab carries the mixer's inputs
+    // as buttons there is no question where the cable goes, and "Mix 1" spends half the chip saying so.
+    if (rec.descriptorId === 'mixer' && /^chan[A-Z]$/.test(far.portId)) return name;
     const mod = (d && d.abbreviation) || far.key;
-    return `${mod} ${(port && port.name) || far.portId}`;
+    return `${mod} ${name}`;
   }
 
   // Does this stub end on a mixer CHANNEL — the one thing on the far end of a cable that has a level
@@ -1872,19 +1962,19 @@ export class Rack {
       name.textContent = text;
       el.appendChild(name);
       if (fader) {
-        // SEVEN PIXELS, ALL TOLD, in the band the chip already had — the chip does not grow. From the
-        // bottom: a solid white bar filled to the level, the grey rule beyond it showing the travel
-        // still to come, a pixel of air, and the live meter above. The white bar's right-hand end IS
-        // the handle. White against green-to-red is what keeps the two stacked bars apart — that, and
-        // the meter moving on its own while the fader moves only under your hand.
-        const track = document.createElement('span'); track.className = 'stub-flag-track';
-        const fill = document.createElement('span'); fill.className = 'stub-flag-fill';
-        track.appendChild(fill); el.appendChild(track);
-        // The meter keeps a faint groove even in silence. At two pixels, a bar that is simply absent
-        // when nothing is playing reads as broken rather than as quiet.
+        // STOOD ON END. Lying flat, the fader was as long as a word and the meter was two pixels tall —
+        // enough to say "there is a level here" and not enough to read it. Upright, both get the chip's
+        // full height: the channel number on top, the meter down the left, the fader down the right,
+        // each the way its counterpart stands on the mixer itself.
+        const bars = document.createElement('span'); bars.className = 'stub-flag-bars';
         const meter = document.createElement('span'); meter.className = 'stub-flag-meter';
         const mfill = document.createElement('span'); mfill.className = 'stub-flag-meter-fill';
-        meter.appendChild(mfill); el.appendChild(meter);
+        meter.appendChild(mfill);
+        const track = document.createElement('span'); track.className = 'stub-flag-track';
+        const fill = document.createElement('span'); fill.className = 'stub-flag-fill';
+        track.appendChild(fill);
+        bars.appendChild(meter); bars.appendChild(track);
+        el.appendChild(bars);
         this._flagFill = fill; this._flagMeter = mfill;
       } else { this._flagFill = this._flagMeter = null; }
     }
@@ -1910,7 +2000,7 @@ export class Rack {
   // Move the fill and the cap only — no rebuild, no remeasure, so the chip holds still while the
   // level moves inside it.
   _setFlagLevel(pos) {
-    if (this._flagFill) this._flagFill.style.width = (Math.max(0, Math.min(1, pos)) * 100).toFixed(1) + '%';
+    if (this._flagFill) this._flagFill.style.height = (Math.max(0, Math.min(1, pos)) * 100).toFixed(1) + '%';
   }
 
   // The meter is the one live thing on the chip, so it runs on frames — but only while a chip with a
@@ -1924,7 +2014,7 @@ export class Rack {
         this._flagMeterRaf = 0; return;
       }
       const v = this._chanMeter(f);
-      this._flagMeter.style.width = (v * 100).toFixed(1) + '%';
+      this._flagMeter.style.height = (v * 100).toFixed(1) + '%';
       this._flagMeter.style.background = vuColour(v);
       this._flagMeterRaf = requestAnimationFrame(tick);
     };
@@ -1938,6 +2028,7 @@ export class Rack {
 
   _hideFlag() {
     if (this._flagSticky) return;
+    this._setStubMark(null);
     clearTimeout(this._flagTimer);
     if (this._flagEl) this._flagEl.style.display = 'none';
     if (this._flagStrip) { this._flagStrip.style.cursor = ''; this._flagStrip = null; }
@@ -1947,6 +2038,71 @@ export class Rack {
     // and only a real departure cools it back to the full dwell.
     clearTimeout(this._flagWarmTimer);
     this._flagWarmTimer = setTimeout(() => { this._flagWarm = false; }, FLAG_WARM_MS);
+  }
+
+  // Shown or hidden by MUTATION, never by redrawing — see the cable grab stretch for why.
+  _paintStubMark(el, on, color, w) {
+    if (!el) return;
+    el.setAttribute('stroke', on ? color : 'transparent');
+    el.setAttribute('stroke-width', r2(w * (on ? LIT_GRAB_SHOW : 1)));
+    el.style.opacity = on ? '0.9' : '0';
+  }
+
+  // The mark belongs to whichever stub is under the pointer, so it comes up and goes down with the
+  // chip: one dwell, one gesture, two things appearing together.
+  _setStubMark(id, end) {
+    this._stubMarkId = id; this._stubMarkEnd = end || null;
+    if (!this._stubSvg) return;
+    for (const el of this._stubSvg.querySelectorAll('.stub-mark')) {
+      const on = !!id && el.dataset.edge === id && (!end || el.dataset.end === end);
+      el.setAttribute('stroke', on ? el.dataset.color || '#fff' : 'transparent');
+      el.setAttribute('stroke-width', el.dataset.w ? r2(+el.dataset.w * (on ? LIT_GRAB_SHOW : 1)) : el.getAttribute('stroke-width'));
+      el.style.opacity = on ? '0.9' : '0';
+    }
+  }
+
+  // The ten buttons in window coordinates: one per mixer channel, on its own slot, centred ON the
+  // tab's lower edge so they straddle it.
+  _mixerButtonGeom() {
+    const rec = [...this.records.values()].find((r) => r.descriptorId === 'mixer');
+    if (!rec || !this._tabBarEl) return [];
+    const page = this.pageOf(rec);
+    const patched = new Set(this.patchbay.list()
+      .filter((e) => e.dst.key === rec.key).map((e) => e.dst.portId));
+    return this._mixerChannels().map((c, i) => {
+      const a = this._stubAnchor(page, i);
+      if (!a) return null;
+      const live = patched.has(c.portId);
+      // The HIT radius is the full button either way, so an empty input is no harder to drop on for
+      // being drawn small.
+      return { ...c, x: a.x, y: a.y, live, r: (live ? MIXER_BTN_PX : MIXER_DOT_PX) / 2, hitR: MIXER_BTN_PX / 2 };
+    }).filter(Boolean);
+  }
+
+  _drawMixerButtons(svg) {
+    const btns = this._mixerButtonGeom();
+    for (const b of btns) {
+      const on = b.rec.values.get(b.enableId) === 'on';
+      const c = document.createElementNS(SVG_NS, 'circle');
+      c.setAttribute('cx', r2(b.x)); c.setAttribute('cy', r2(b.y)); c.setAttribute('r', r2(b.r));
+      c.setAttribute('fill', b.live && on ? MIXER_BTN_ON : MIXER_BTN_OFF);
+      c.setAttribute('stroke', b.live && on ? '#ffb0a6' : '#fff');   // a placeholder is always a white ring
+      c.setAttribute('stroke-width', 1);
+      c.setAttribute('class', 'mixer-btn');
+      c.dataset.chan = b.L;
+      c.style.pointerEvents = 'auto';
+      c.style.cursor = 'pointer';
+      // A CLICK TOGGLES, and that is all a button ever does — a cable is never pulled OFF it, only
+      // off the stub hanging below it. That is what keeps the press unambiguous.
+      c.addEventListener('pointerdown', (ev) => {
+        if (ev.button !== 0) return;
+        if (this._tempCable) return;   // a cord in hand is dropping, not toggling — see _jackNear
+        ev.preventDefault(); ev.stopPropagation();
+        this._setParam(b.rec, b.enableId, on ? 'off' : 'on');
+        this._drawPageStubs();
+      });
+      svg.appendChild(c);
+    }
   }
 
   _drawPageStubs() {
@@ -1984,9 +2140,19 @@ export class Rack {
     }
     const rect = this.container.getBoundingClientRect();
     const s = (this.pxPerMm || 1) * this.zoom;
+    const mixPage = (() => { const r0 = [...this.records.values()].find((r) => r.descriptorId === 'mixer'); return r0 ? this.pageOf(r0) : null; })();
     for (const [farPage, list] of groups) {
+      let extra = 0;
+      const slotOf = (item, i) => {
+        if (farPage !== mixPage || !item.farMixer) return i;
+        const far = item.nearIsSrc ? item.e.dst : (item.e.link || item.e.src);
+        const chans = this._mixerChannels();
+        const ci = chans.findIndex((c) => c.portId === far.portId);
+        return ci >= 0 ? ci : chans.length + (extra++);
+      };
       list.forEach((item, i) => {
-        let anchor = this._stubAnchor(farPage, i);
+        const slot = slotOf(item, i);
+        let anchor = this._stubAnchor(farPage, slot);
         // Mid-switch: every crossing cable sweeps out from THIS page's own tab to the tab of the page
         // it runs to. That reads as the cable reaching out from where you are now to where it goes —
         // and it covers the case of arriving from somewhere uninvolved, where the cable was not drawn
@@ -1995,7 +2161,7 @@ export class Rack {
         const m = this._stubMorph;
         if (m && anchor) {
           const t = Math.min(1, (performance.now() - m.t0) / CARRY_MORPH_MS);
-          const was = this._stubAnchor(m.here, i);
+          const was = this._stubAnchor(m.here, slot);
           if (was) {
             const k = 1 - Math.pow(1 - t, 3);
             anchor = { x: was.x + (anchor.x - was.x) * k, y: was.y + (anchor.y - was.y) * k };
@@ -2003,6 +2169,11 @@ export class Rack {
         }
         const jack = this._jackPosMm(item.near.key, item.near.portId);
         if (!anchor || !jack) return;
+        // Butt the stub against the underside of its button instead of starting behind it.
+        if (item.farMixer) {
+          const far = item.nearIsSrc ? item.e.dst : (item.e.link || item.e.src);
+          if (/^chan[A-Z]$/.test(far.portId || '')) anchor = { x: anchor.x, y: anchor.y + MIXER_BTN_PX / 2 };
+        }
         const jx = rect.left + this._tx + jack.x * s, jy = rect.top + this._ty + jack.y * s;
         const color = STYLE_COLOR[item.e.style] || STYLE_COLOR.control;
         const held = item.e.id === this._litEdgeId;
@@ -2033,7 +2204,7 @@ export class Rack {
           ? `M${xy(J)} C${xy(cJ)} ${xy(cT)} ${xy(T)} L${xy(anchor)}`
           : `M${xy(anchor)} L${xy(T)} C${xy(cT)} ${xy(cJ)} ${xy(J)}`;
         const w = CABLE_PX * (this.zoom || 1) * 0.85;
-        const op = String(held ? CABLE_BRIGHT : (this._litEdgeId ? 0.25 : 0.55));
+        const op = String(!this._litEdgeId || held ? CABLE_BRIGHT : CABLE_DIM);
         const p = document.createElementNS(SVG_NS, 'path');
         p.setAttribute('d', d);
         p.setAttribute('fill', 'none');
@@ -2058,6 +2229,73 @@ export class Rack {
         fd.dataset.edge = item.e.id;
         fd.style.opacity = op;
         svg.appendChild(fd);
+        // THE GRAB MARK, the same idea a cable wears near its terminal: the straight drop out of the
+        // tab thickens and brightens while you are on it, so a crossing cable advertises that it can be
+        // held exactly as an ordinary one does. Drawn always and merely transparent, and painted from
+        // rack-level state, so a redraw cannot lose it — the trap that made the cable grabs unreliable.
+        const mark = document.createElementNS(SVG_NS, 'path');
+        mark.setAttribute('d', `M${xy(anchor)} L${xy(T)}`);
+        mark.setAttribute('fill', 'none');
+        mark.setAttribute('stroke-linecap', 'round');
+        mark.setAttribute('class', 'stub-mark');
+        mark.dataset.edge = item.e.id;
+        mark.dataset.color = color;
+        mark.dataset.w = String(w);
+        mark.style.pointerEvents = 'none';
+        mark.dataset.end = 'tab';
+        this._paintStubMark(mark, this._stubMarkId === item.e.id && this._stubMarkEnd === 'tab', color, w);
+        svg.appendChild(mark);
+        // AND THE SAME GRAB AT THE JACK END. A crossing cable leaves a terminal like any other, so it
+        // has to be holdable from that end too — without it the only place to catch one was up at the
+        // bar. Measured along the DRAWN path, which is the honest way to find "a little way out from
+        // the jack" on a curve.
+        const Lp = p.getTotalLength();
+        const ringPx = (jack.ring || 2.3) * s;
+        const d0 = Math.max(0, ringPx * (LIT_GRAB_FROM_R - 1)), d1 = ringPx * (LIT_GRAB_TO_R - 1);
+        if (Lp > d0 + 2) {
+          const jackAtStart = item.nearIsSrc;   // the path is built source-end first
+          const far = Math.min(d1, Lp);
+          const pts = [];
+          for (let i = 0; i <= 12; i++) {
+            const dd = d0 + (far - d0) * (i / 12);
+            const q = p.getPointAtLength(jackAtStart ? dd : Lp - dd);
+            pts.push(`${r2(q.x)},${r2(q.y)}`);
+          }
+          const segD = 'M' + pts.join(' L');
+          const jm = document.createElementNS(SVG_NS, 'path');
+          jm.setAttribute('d', segD); jm.setAttribute('fill', 'none');
+          jm.setAttribute('stroke-linecap', 'round');
+          jm.setAttribute('class', 'stub-mark');
+          jm.dataset.edge = item.e.id; jm.dataset.end = 'jack';
+          jm.dataset.color = color; jm.dataset.w = String(w);
+          jm.style.pointerEvents = 'none';
+          this._paintStubMark(jm, this._stubMarkId === item.e.id && this._stubMarkEnd === 'jack', color, w);
+          svg.appendChild(jm);
+          const jh = document.createElementNS(SVG_NS, 'path');
+          jh.setAttribute('d', segD); jh.setAttribute('fill', 'none');
+          jh.setAttribute('stroke', 'transparent');
+          jh.setAttribute('stroke-width', r2(w * LIT_GRAB_W));
+          jh.setAttribute('stroke-linecap', 'round');
+          jh.style.pointerEvents = 'stroke';
+          jh.style.cursor = 'pointer';
+          jh.addEventListener('pointerenter', () => {
+            clearTimeout(this._stubJackTimer);
+            this._stubJackTimer = setTimeout(() => this._setStubMark(item.e.id, 'jack'), LIT_HOVER_MS);
+          });
+          jh.addEventListener('pointerleave', () => {
+            if (!jh.isConnected) return;   // removed by a redraw, not left by the pointer
+            clearTimeout(this._stubJackTimer);
+            this._setStubMark(null);
+          });
+          jh.addEventListener('pointerdown', (ev) => {
+            if (ev.button !== 0) return;
+            ev.preventDefault(); ev.stopPropagation();
+            clearTimeout(this._stubJackTimer);
+            this._litEdgeId = this._litEdgeId === item.e.id ? null : item.e.id;
+            this._drawCables();
+          });
+          svg.appendChild(jh);
+        }
         // THE HOVER STRIP: an invisible slot-wide target over the stub's straight run. Hovering names
         // the cable; clicking holds it bright, which is where that gesture went when the lanes it used
         // to live on were taken away.
@@ -2071,7 +2309,7 @@ export class Rack {
         hit.style.pointerEvents = 'auto';
         const label = () => this._stubLabel(item.e, item.nearIsSrc);
         const fader = () => this._stubFader(item.e, item.nearIsSrc);
-        const place = (ev) => this._showFlag(label(), color, ev.clientX, ev.clientY, fader());
+        const place = (ev) => { this._showFlag(label(), color, ev.clientX, ev.clientY, fader()); this._setStubMark(item.e.id, 'tab'); };
         hit.addEventListener('pointerenter', (ev) => {
           this._flagStrip = hit;
           clearTimeout(this._flagTimer);
@@ -2079,7 +2317,7 @@ export class Rack {
           // Warm, so straight away: you are reading the bundle, not passing through it.
           if (this._flagWarm) { place(ev); return; }
           const x = ev.clientX, y = ev.clientY;
-          this._flagTimer = setTimeout(() => this._showFlag(label(), color, x, y, fader()), FLAG_DWELL_MS);
+          this._flagTimer = setTimeout(() => { this._showFlag(label(), color, x, y, fader()); this._setStubMark(item.e.id, 'tab'); }, FLAG_DWELL_MS);
         });
         // SCROLL THE STUB, TURN THAT CHANNEL. The cable running off to the mixer is already the handle
         // for the channel it lands in — it is on the page you are working on, it knows which channel it
@@ -2108,37 +2346,76 @@ export class Rack {
         hit.addEventListener('pointermove', (ev) => {
           if (this._flagEl && this._flagEl.style.display === 'block') place(ev);
         });
-        hit.addEventListener('pointerleave', () => this._hideFlag());
+        hit.addEventListener('pointerleave', () => {
+          if (!hit.isConnected) return;   // removed by a redraw, not left by the pointer
+          this._hideFlag();
+        });
+        // PRESS AND RELEASE HOLDS IT BRIGHT; PRESS AND MOVE PULLS IT OFF. A stub is not a terminal, so
+        // it does not have to behave like one — but the far end of a crossing cable has to be
+        // detachable from somewhere, and the stub is where that cable is reachable. The threshold is
+        // what keeps a slightly unsteady click from lifting a cable you only meant to trace.
         hit.addEventListener('pointerdown', (ev) => {
           if (ev.button !== 0) return;
           ev.preventDefault(); ev.stopPropagation();
-          this._litEdgeId = this._litEdgeId === item.e.id ? null : item.e.id;
-          // Redrawing the cables rebuilds this very strip under the pointer, and a strip that vanishes
-          // fires pointerleave — which would snatch the flag away the instant you clicked the thing it
-          // was naming. Pin the flag across the redraw: the replacement strip lands in exactly the same
-          // place, and the next pointer move re-arms it normally.
-          this._flagSticky = true;
-          this._drawCables();
-          setTimeout(() => { this._flagSticky = false; }, 0);
+          const x0 = ev.clientX, y0 = ev.clientY;
+          let lifted = false;
+          const onMove = (e2) => {
+            if (lifted || Math.hypot(e2.clientX - x0, e2.clientY - y0) < STUB_DRAG_PX) return;
+            lifted = true;
+            done();
+            // The strip is about to vanish with its cable. Its removal fires a leave that the redraw
+            // guard ignores — correctly, for a redraw — so the chip has to be dismissed here, or it
+            // hangs on screen naming a cable that no longer lands anywhere, with nothing left to
+            // hover off.
+            this._flagSticky = false; this._hideFlag();
+            // The FAR end is the one being taken off — the near end is the jack you can see.
+            this._startStickyRegrab(item.e, item.nearIsSrc ? 'dst' : 'src', e2.clientX, e2.clientY, true);
+          };
+          const onUp = () => {
+            done();
+            if (lifted) return;
+            this._litEdgeId = this._litEdgeId === item.e.id ? null : item.e.id;
+            // Redrawing rebuilds this very strip under the pointer, and a strip that vanishes fires
+            // pointerleave — which would snatch the chip away the instant you clicked the thing it was
+            // naming. Pin it across the redraw; the replacement lands in exactly the same place.
+            this._flagSticky = true;
+            this._drawCables();
+            setTimeout(() => { this._flagSticky = false; }, 0);
+          };
+          const done = () => {
+            document.removeEventListener('pointermove', onMove, true);
+            document.removeEventListener('pointerup', onUp, true);
+          };
+          document.addEventListener('pointermove', onMove, true);
+          document.addEventListener('pointerup', onUp, true);
         });
         svg.appendChild(hit);
       });
     }
+    // LAST, so they sit OVER the stubs. Drawn first, the lower half of every button was really the
+    // stub underneath it, and pressing there traced the cable instead of toggling the channel.
+    this._drawMixerButtons(svg);
   }
 
   // A cable is faint (one-third opaque) by default; the cables of the module
   // under the pointer go fully opaque so you can trace them. Purely visual — the
   // body stays click-through either way.
+  // EVERY CABLE IS BRIGHT. Dimming is now only ever something you ASKED for.
+  //
+  // The rack used to dim by default and light the chain under the pointer. It read well in a
+  // screenshot and badly in use: following one cable means moving the pointer along it, and the
+  // pointer keeps crossing modules that are not part of that chain, so the cable you were tracing
+  // dimmed exactly when you were looking at it. A cable is easier to see when it is simply bright.
+  //
+  // What remains dims on purpose and stays put: ONE HELD CABLE (click its grab stretch or its stub),
+  // and ISOLATE, which you ask for by name from the menu.
   _cableOpacity(e) {
-    // ONE CABLE HELD BRIGHT, so you can follow it across the rack by eye. Without it a cable dims the
-    // moment you leave its terminal — you look away to pan and lose which one you were tracing, which
-    // was the single thing that made following a cable hard. Same treatment isolate gives a subnet,
-    // scoped to one cord.
-    if (this._litEdgeId) return e.id === this._litEdgeId ? CABLE_BRIGHT : 0.25;
-    if (this._isolateNet) return this._isolateNet.has(e.id) ? CABLE_BRIGHT : 0.25;    // isolate: subnet bright, the rest dimmed (no dashes)
-    if (this._netEdges) return this._netEdges.has(e.id) ? CABLE_BRIGHT : 0.5;          // net highlight: members full, rest as normal
-    const h = this._hoverRec;
-    return (h && (e.src.key === h.key || e.dst.key === h.key)) ? CABLE_BRIGHT : 0.5;
+    // The dimmed level was chosen when cables RESTED at 0.5, so 0.25 was one step down. Against the
+    // new 0.9 resting brightness the same number reads as the others almost vanishing, which is more
+    // than tracing one cable asks for — you still want to see where the rest go.
+    if (this._litEdgeId) return e.id === this._litEdgeId ? CABLE_BRIGHT : CABLE_DIM;
+    if (this._isolateNet) return this._isolateNet.has(e.id) ? CABLE_BRIGHT : 0.25;    // isolate: a deliberate mode, and deeper on purpose
+    return CABLE_BRIGHT;
   }
 
   // While the pointer sits on a control (knob/button/switch), fade any OPAQUE cable drawn over it
@@ -2225,7 +2502,12 @@ export class Rack {
     if (this._tempCable || this._reshaping) return;
     const near = this._nearestCable(this._clientToMm(ev.clientX, ev.clientY));
     const id = near ? near.id : null;
-    if (id !== this._hoverCableEdgeId) { this._hoverCableEdgeId = id; this._drawCables(); }
+    if (id === this._hoverCableEdgeId) return;
+    this._hoverCableEdgeId = id;
+    // Mutate, never redraw — see the reshape handle in _drawCables.
+    for (const h of this.cables.querySelectorAll('.cable-reshape')) {
+      h.style.display = h.dataset.edge === id ? '' : 'none';
+    }
   }
 
   // ---- drag-to-patch ----
@@ -2242,6 +2524,12 @@ export class Rack {
   // terminal's radius plus JACK_DROP_MARGIN_MM. Nearest wins if a couple overlap.
   // Positions are pure arithmetic (no layout), so scanning every jack per move is cheap.
   _jackNear(clientX, clientY) {
+    // THE MIXER'S BUTTONS FIRST, in window coordinates — they live on the tab bar, not in the rack.
+    // Answering here means a cord dropped on one connects through the ordinary drop path, with no
+    // second way of making a connection to keep in step with this one.
+    for (const b of this._mixerButtonGeom()) {
+      if (Math.hypot(clientX - b.x, clientY - b.y) <= b.hitR + 3) return { key: b.rec.key, portId: b.portId };
+    }
     const m = this._clientToMm(clientX, clientY);
     let best = null, bestD = Infinity;
     for (const rec of this.records.values()) {
@@ -2966,15 +3254,9 @@ export class Rack {
     }
     return null;
   }
-  // Track the net-highlight origin from the pointer location alone (container-level, so it fires over
-  // controls and bare panel alike — module-level handlers miss pointer-events:none gaps). Always on
-  // now (no mode) — suspended only while a subnet is LATCHED (Upstream/Downstream), which owns the view.
-  _updateNetOrigin(e) {
-    if (this._isolateNet) return;
-    const rec = this._moduleAt(e.clientX, e.clientY);
-    const o = rec ? this._netOriginAt(rec, e.clientX, e.clientY) : null;
-    if (o !== this._netOrigin) { this._netOrigin = o; this._rebuildHoverFocus(); this._drawCables(); }
-  }
+  // The pointer no longer chooses a net origin — see _cableOpacity for why the always-on hover
+  // highlight went. `_netOrigin` therefore stays null, and _rebuildHoverFocus survives only to hand
+  // the controls back to full brightness when a LATCHED subnet (Upstream/Downstream) is dropped.
   // The set of cable ids in `origin`'s net: every cord downstream of it (to the
   // outputs) plus every cord upstream (its feeders/modulators), traced over the
   // section graph so a quad channel stays clean even where sections reconverge.
@@ -4554,7 +4836,23 @@ export class Rack {
   _updateCallout(sc) {
     // Click-shown (temporary) viewers show no connection loop or line — the callout
     // running behind the menu reads as clutter. Only dragged-out ones are "connected".
-    if (sc.showCallout === false) { sc.ring.setAttribute('r', '0'); sc.line.setAttribute('stroke', 'none'); if (sc.dot) sc.dot.style.display = 'none'; return; }
+    const hide = () => { sc.ring.setAttribute('r', '0'); sc.line.setAttribute('stroke', 'none'); if (sc.dot) sc.dot.style.display = 'none'; };
+    if (sc.showCallout === false) { hide(); return; }
+    // NOR ON A PAGE THAT IS NOT THE TERMINAL'S. The viewer itself is hidden by page visibility, but the
+    // loop, the line and the grab dot are not inside it — they are drawn in the window overlay, over
+    // whatever page you happen to be on. So a scope defined on an audio page drew its callout across
+    // the mixer and the video pages, ringing a terminal that was not there.
+    //
+    // It has to be checked HERE rather than only when the page changes, because the fade loop calls
+    // this every frame: anything hidden on the switch would be drawn again on the next tick.
+    //
+    // The VIEWER's own visibility is settled here too, not only on the page switch. Page visibility is
+    // applied when you change pages, so a probe restored with a patch — or created while you were
+    // looking elsewhere — sat visible on the wrong page until the first switch corrected it. Deciding
+    // it on the frame makes it self-correcting whatever route brought the probe into being.
+    const owner = this.records.get(sc.key);
+    if (owner) sc.el.style.visibility = this._onPage(owner) ? '' : 'hidden';
+    if (owner && !this._onPage(owner)) { hide(); return; }
     const jel = this._jackElement(sc.key, sc.portId);
     const col = this.dark ? CALLOUT_COLOR : CALLOUT_COLOR_LIGHT;   // border grey on dark panels; a darker grey on light ones for contrast
     const lw = 1.8;
@@ -5660,6 +5958,13 @@ export class Rack {
     // it afterwards, which is right: a shape you chose beats a shape we guessed.
     const fan = this._fanBow(res.edge);
     if (fan) res.edge.bow = fan;
+    // PATCHING A MIXER CHANNEL TURNS IT ON. You have just plugged something in; hearing nothing because
+    // that channel happened to be muted from some earlier session is a puzzle with no clue in it. The
+    // button grows to full size and lights, which is the same thing said visually.
+    if (dst.rec && dst.rec.descriptorId === 'mixer' && /^chan[A-Z]$/.test(dst.portId)
+        && dst.rec.values.get(`mute${dst.portId.slice(4)}`) !== 'on') {
+      this._setParam(dst.rec, `mute${dst.portId.slice(4)}`, 'on');
+    }
     return res.edge;
   }
 
@@ -6500,8 +6805,8 @@ export class Rack {
     // _hoverRec drives the plain (non-net-mode) highlight. The net-mode origin is tracked purely by
     // pointer location in _updateNetOrigin (container-level), so it never depends on which control or
     // panel gap the pointer happens to be over.
-    el.addEventListener('pointerenter', () => { this._hoverRec = rec; this.onSelect(rec); this._drawCables(); });
-    el.addEventListener('pointerleave', () => { el.style.cursor = ''; if (this._hoverRec === rec) { this._hoverRec = null; this._drawCables(); } });
+    el.addEventListener('pointerenter', () => { this._hoverRec = rec; this.onSelect(rec); });
+    el.addEventListener('pointerleave', () => { el.style.cursor = ''; if (this._hoverRec === rec) this._hoverRec = null; });
     // A grab (hand) cursor over the top title strip signals it's the drag handle; the rest of the
     // faceplate stays default, and a control keeps its own cursor (a child's overrides this one).
     el.addEventListener('pointermove', (e) => {
@@ -6548,6 +6853,7 @@ export class Rack {
     if (rec.instance.supports(id)) rec.instance.setParam(id, value);
     const b = rec.panel.controls.get(id);
     if (b) showValue(b, value);
+    this._mirrorMixerEnable(rec, id);   // the tab's buttons are the panel's lamps, seen twice
     this.patchbay.setDepth(rec.key, id, value);   // if this knob is a cord's depth control
     if (rec.pinned && id === 'monitorLevel') this._setMonMaster(value);              // the Monitor fader
     if (rec.pinned && (id === 'engine' || id === 'masterEnable' || id === 'monitorEnable')) {
