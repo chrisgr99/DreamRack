@@ -66,11 +66,11 @@ const PAGE_MAX_AUDIO = 8;
 // what LEAVES by them rather than for what sits on them: 'Audio output' says where the sound goes, and
 // the tab is wide enough to hold ten cable slots, so the longer name costs nothing.
 //
-// VIDEO SITS BETWEEN the audio pages and the audio output, which looks like it breaks up the audio
-// side of the bar and once did. What settles it is the name: while the tab read only 'Output' it had
-// to stay next to the audio pages to be understood as belonging to them, and now that it says so
-// itself it can take the far end of the bar — which is where the video page never wanted to be.
-const PAGE_FIXED = [{ id: 'video', kind: 'video', name: 'Video' }, { id: 'output', kind: 'output', name: 'Audio output' }];
+// Mixer/Output sits between the audio pages and Video, and Video takes the far end. The name is what
+// makes that work: while the tab read only 'Output' it had to sit next to the audio pages to be
+// understood as belonging to them, and naming the mixer outright frees the order to follow what the
+// pages ARE — the sound side of the rack together, the picture side last.
+const PAGE_FIXED = [{ id: 'output', kind: 'output', name: 'Mixer/Output' }, { id: 'video', kind: 'video', name: 'Video' }];
 const CABLE_PX = 3.8;   // cord thickness in px at zoom 1 (scales up as you zoom in)
 // A crossing cable arrives at its tab in its own LANE. The spacing is what a turned label needs, so a
 // label can hang under each stub without either moving when you hover.
@@ -78,7 +78,7 @@ const STUB_GAP_PX = 18;
 // A stub's HOVER STRIP: as wide as a slot, so the strips of one bundle sit shoulder to shoulder and
 // scanning along them never falls into a gap between two, and deep enough to hover well clear of the
 // bar. A stub is a four-pixel line — far too fine to aim at, especially under magnification.
-const STRIP_H = 60;
+const STRIP_H = 30;   // halved with the drop: it hung far enough down to sit over the panels below
 // Tooltip timing, and it is a toolbar's timing: a real pause before the FIRST flag, so crossing the
 // bundle on the way somewhere else does not throw labels up; then a warm period in which moving to
 // the next stub shows its flag at once, because by then you are plainly reading them.
@@ -117,7 +117,7 @@ const STUB_DRAG_PX = 4;    // move this far on a stub and it is a pull, not a cl
 // curve away. Without it a stub set off diagonally the instant it left the bar, which read as a line
 // pointing at the tab rather than a cable coming out of it. Fixed rather than proportional: the run
 // has to look the same whether the jack it goes to is just below the bar or right down the window.
-const STUB_DROP_PX = 26;
+const STUB_DROP_PX = 13;
 // How far the swoop may reach before it turns, so a cable bound across the window departs the bar the
 // same way a cable bound just below it does.
 const STUB_SWOOP_PX = 55;
@@ -133,12 +133,20 @@ const LIT_GRAB_FROM_R = 1.25;   // just outside the rim
 // ...and far enough beyond it to be AIMED AT. At 3.25 radii the stretch was about nine pixels long,
 // which is not a target — it is a coincidence. Longer costs a little more panel face covered near the
 // terminal, which is the right trade for a control you are meant to be able to hit.
-const LIT_GRAB_TO_R = 6;
-const LIT_GRAB_W = 3.2;    // hit width, in cord widths
+// HALF ITS OLD LENGTH. Long enough to aim at, short enough that it stops before the next control —
+// it was reaching over things that need pressing themselves.
+const LIT_GRAB_TO_R = 3.4;
+// ONE WIDTH FOR BOTH: what you can press is exactly what you can see. They used to differ — a hit
+// area half again as wide as the marker — which meant the marker appeared to stop short of the port
+// while the pressable region carried on over it, and over whatever control sat beyond.
+const LIT_GRAB_W = 2.2;      // hit width, in cord widths
 const LIT_GRAB_SHOW = 2.2;   // ...and the width it is drawn at once you have dwelt on it
 const LIT_HOVER_MS = 300;    // dwell before the stretch reveals itself
 const CABLE_HOVER_FADE = 0.28;   // opacity a cable drops to while it obscures a control you're hovering
 const CABLE_FADE_TAU = 0.3;      // opacity easing time constant — cables brighten/dim over ~1s so quick sweeps don't flash
+// How far a cord may set off from the straight line between its two jacks. Beyond this it would be
+// heading away from where it is going, and would have to loop back over the port to arrive.
+const CORD_DEPART_MAX_DEG = 72;
 const CABLE_DIM = 0.3;           // the others while ONE cable is held — far enough back that the held one is unmistakable
 const CABLE_BRIGHT = 0.9;        // opacity of a fully-highlighted cable — a touch under full so it reads bright without dazzling
 const SCOPE_FADE_TAU = 0.3;      // scopes/monitors fade IN over ~1s in the loop (OUT via a 1s CSS transition), so they don't pop
@@ -497,6 +505,22 @@ export class Rack {
     document.addEventListener('keydown', (e) => {
       const t = e.target;
       if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
+      // OPTION + LEFT/RIGHT STEPS ALONG THE BAR, wrapping at both ends — the way you move when you do
+      // not know which page a thing is on, as against the digits, which are for when you do. Holding
+      // Option has already begun a view gesture (freeze, snap-on-release); this is plainly not that,
+      // so end it before moving, or the page would arrive under a frozen picture of the last one.
+      if (e.altKey && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
+        e.preventDefault();
+        endNav();
+        const ids = this.pages.map((pg) => pg.id);
+        const i = ids.indexOf(this.page);
+        // STOPS AT BOTH ENDS. Wrapping saves a keypress and costs you your place: stepping off the end
+        // and landing at the far one reads as having lost track of where you are, and the bar is short
+        // enough that nobody needs the shortcut.
+        const j = i + (e.key === 'ArrowRight' ? 1 : -1);
+        if (i >= 0 && j >= 0 && j < ids.length) this.selectPage(ids[j]);
+        return;
+      }
       if (e.key === 'Control') this._ctrlDown = true;   // accessibility-zoom gesture held → pause the scope loop's layout reads
       if (e.key === 'Alt') {
         if (this._optDown) return;   // ignore auto-repeat while the key is held
@@ -522,12 +546,15 @@ export class Rack {
       // accessibility zoom is driven — any-key would extinguish the cable at the moment you magnified
       // to look at where it went.
       if (e.key === 'Escape' && this._litEdgeId) { this._litEdgeId = null; this._drawCables(); return; }
-      // DIGITS SELECT PAGES: 1-8 the audio pages in bar order, 9 Video, 0 Audio output — the two that
-      // always exist take the two keys at the end of the row, in the order they sit in the bar.
+      // DIGITS SELECT PAGES: 1-8 the audio pages in bar order, then 9 and 0 for the two that always
+      // exist — IN THE ORDER THEY SIT IN THE BAR, read from the page list rather than written down,
+      // so re-ordering the bar re-orders the keys and the two can never disagree.
       // Pressing the digit for the page you are on returns you to the previous one.
       if (/^[0-9]$/.test(e.key) && !e.metaKey && !e.ctrlKey && !e.altKey && !e.shiftKey) {
         const audio = this.pages.filter((p) => p.kind === 'audio');
-        const target = e.key === '9' ? 'video' : e.key === '0' ? 'output' : (audio[+e.key - 1] || {}).id;
+        const fixed = this.pages.filter((p) => p.kind !== 'audio');
+        const target = e.key === '9' ? (fixed[0] || {}).id
+          : e.key === '0' ? (fixed[1] || {}).id : (audio[+e.key - 1] || {}).id;
         if (target) { e.preventDefault(); this.selectPage(target); return; }
       }
       if (this._ovActive) this._cancelOverview();   // Escape or any other key → close without moving
@@ -1423,8 +1450,10 @@ export class Rack {
       x: rec.x + (port.anchor.x - FACE_LEFT_MM),
       y: rec.row * (PANEL_H_MM + ROW_GAP_MM) + (port.anchor.y - FACE_TOP_MM + TITLE_STRIP_MM),
       r: hole,
-      // Mid-ring radius: where a stub-less cord ends (middle of the coloured band).
+      // Mid-ring radius: the middle of the coloured band. Kept because other things measure by it;
+      // the cord itself now ends by the HOLE's rim — see _cordGeom.
       ring: port.outerR ? (hole + port.outerR) / 2 : hole,
+      outerR: port.outerR || hole,
     };
   }
 
@@ -1445,6 +1474,18 @@ export class Rack {
     if (!bow) return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 + Math.max(5, 0.14 * len) };
     const nx = -aby / len, ny = abx / len;   // unit normal to the chord
     return { x: a.x + bow.along * abx + bow.perp * nx, y: a.y + bow.along * aby + bow.perp * ny };
+  }
+
+  // Swing a departure direction back until it is no more than CORD_DEPART_MAX_DEG off `toward`. Shared
+  // by ordinary cords and by the stubs that run to a tab, which build their own geometry and so had
+  // none of this — which is why the mixer's own cables still looped after the cords were fixed.
+  _clampDeparture(u, toward) {
+    const dot = u.x * toward.x + u.y * toward.y;
+    const cosMax = Math.cos(CORD_DEPART_MAX_DEG * Math.PI / 180);
+    if (dot >= cosMax) return u;
+    const side = (toward.x * u.y - toward.y * u.x) >= 0 ? 1 : -1;
+    const ang = Math.atan2(toward.y, toward.x) + side * CORD_DEPART_MAX_DEG * Math.PI / 180;
+    return { x: Math.cos(ang), y: Math.sin(ang) };
   }
 
   // Turn a dragged point into a stored bow {along,perp}: project onto the chord
@@ -1479,14 +1520,35 @@ export class Rack {
     if (!a || !b) return null;
     const w = CABLE_PX / (this._fit || 1);
     const P = this._bellyPoint(a, b, e.bow);
-    const uA = unit(P.x - a.x, P.y - a.y);
-    const uB = unit(P.x - b.x, P.y - b.y);
-    const pA = { x: a.x + uA.x * a.ring, y: a.y + uA.y * a.ring };
-    const pB = { x: b.x + uB.x * b.ring, y: b.y + uB.y * b.ring };
+    let uA = unit(P.x - a.x, P.y - a.y);
+    let uB = unit(P.x - b.x, P.y - b.y);
+    // A CORD MUST LEAVE ITS JACK HEADING FOR THE OTHER ONE. The departure aims at the belly, and a
+    // belly that ends up BEHIND a jack — a short cord with a deep sag, or a bow dragged round past the
+    // terminal — aims it away from where the cable is going. The cord then sets off backwards, passes
+    // over the hole and hooks round into it, which is both untidy and the thing that made a cable sit
+    // across a port it was not even connected to.
+    //
+    // So the departure may swing wide, but never past a right angle-ish of the straight line between
+    // the two ends. Ordinary bowing is nowhere near that limit, so nothing that looked right changes.
+    const toB = unit(b.x - a.x, b.y - a.y), toA = unit(a.x - b.x, a.y - b.y);
+    uA = this._clampDeparture(uA, toB);
+    uB = this._clampDeparture(uB, toA);
+    // WHERE A CORD ENDS: half a cable width out from the hole's rim, so its ROUND CAP just touches
+    // that rim and goes no further in. Ending at the middle of the coloured band looked right until
+    // you noticed the cap — half a width reaches back past the band and sits over the hole itself,
+    // which is untidy and is why a press meant for the jack sometimes caught the cord instead.
+    //
+    // NOT clamped to the band's outer edge. A cord fatter than the band would then be pushed back onto
+    // the hole, which is the very thing this avoids; letting it cross the coloured ring instead costs
+    // nothing — a cord over its own port's colour simply disappears into it — and leaves no gap.
+    const endR = (j) => (j.r || 0) + w / 2;
+    const aR = endR(a), bR = endR(b);
+    const pA = { x: a.x + uA.x * aR, y: a.y + uA.y * aR };
+    const pB = { x: b.x + uB.x * bR, y: b.y + uB.y * bR };
     const L = Math.hypot(pB.x - pA.x, pB.y - pA.y) * 0.4;
     const c1 = { x: pA.x + uA.x * L, y: pA.y + uA.y * L };
     const c2 = { x: pB.x + uB.x * L, y: pB.y + uB.y * L };
-    return { a, b, w, uA, uB, pA, pB, c1, c2 };
+    return { a, b, w, uA, uB, pA, pB, c1, c2, aR, bR };
   }
 
   // The path of a slice of a cord, between two distances from one end — used for the grab stretch.
@@ -1613,7 +1675,16 @@ export class Rack {
           // The cord's geometry starts at the rim, not the centre, so the distances are measured from
           // there — hence the ring subtracted off.
           const ring = (fromA ? g.a.ring : g.b.ring) || 2.3;
-          const seg = this._cordSegment(g, fromA, Math.max(0, ring * (LIT_GRAB_FROM_R - 1)), ring * (LIT_GRAB_TO_R - 1));
+          // START CLEAR OF THE PORT. This stretch is the only part of a cable that takes a press, and
+          // it is drawn thick — half its width reaching back over the jack is exactly how a press
+          // meant for the terminal ended up catching the cord. Begin where its own edge clears the
+          // coloured disc, not at a fixed fraction of the jack.
+          const outer = (fromA ? g.a.outerR : g.b.outerR) || ring;
+          const startR = (fromA ? g.aR : g.bR) || ring;
+          // Its round cap reaches half a width back along the cord, so starting the segment half a
+          // width beyond the disc puts the cap's edge exactly ON the disc's edge: touching, not over.
+          const from = Math.max(0, outer + (wmm * LIT_GRAB_W) / 2 - startR);
+          const seg = this._cordSegment(g, fromA, from, from + ring * (LIT_GRAB_TO_R - LIT_GRAB_FROM_R));
           if (!seg) continue;
           const end = fromA ? 'a' : 'b';
           const hit = mk(seg, 'transparent', wmm * LIT_GRAB_W, null, 'stroke');
@@ -1827,6 +1898,14 @@ export class Rack {
     document.body.appendChild(svg);
     this._stubSvg = svg;
     return svg;
+  }
+
+  // Does this scope or monitor belong to the page being shown? A probe watches a TERMINAL, so it
+  // lives wherever that terminal's module lives — and like a module it must not appear on a page it
+  // has nothing to do with.
+  _probeOnPage(v) {
+    const rec = this.records.get(v.key);
+    return !rec || this._onPage(rec);
   }
 
   // The mixer's channel inputs, in panel order, with the names the faceplate prints.
@@ -2067,6 +2146,11 @@ export class Rack {
     const rec = [...this.records.values()].find((r) => r.descriptorId === 'mixer');
     if (!rec || !this._tabBarEl) return [];
     const page = this.pageOf(rec);
+    // NOT WHEN YOU ARE STANDING ON THE MIXER'S OWN PAGE. The buttons are a way of reaching the mixer's
+    // inputs from somewhere else; with the mixer itself in front of you they are a second, smaller copy
+    // of controls you can already see, and the placeholders are markers for nothing. Returning nothing
+    // here also takes them out of the drop test, so a cord dropped near the bar lands on a real jack.
+    if (page === this.page) return [];
     const patched = new Set(this.patchbay.list()
       .filter((e) => e.dst.key === rec.key).map((e) => e.dst.portId));
     return this._mixerChannels().map((c, i) => {
@@ -2195,15 +2279,21 @@ export class Rack {
         const J = { x: jx, y: jy };
         const chord = Math.hypot(J.x - T.x, J.y - T.y);
         const belly = { x: (T.x + J.x) / 2, y: (T.y + J.y) / 2 + Math.max(drop, 0.14 * chord) };
-        const uJ = unit(belly.x - J.x, belly.y - J.y);
+        // Aimed at the belly, but never so far round that it sets off away from the bar and has to
+        // hook back over its own port to arrive.
+        const uJ = this._clampDeparture(unit(belly.x - J.x, belly.y - J.y), unit(T.x - J.x, T.y - J.y));
         const L = Math.min(chord * 0.4, STUB_SWOOP_PX * z);
         const cT = { x: T.x, y: T.y + L };                       // straight on down: tangent to the drop
         const cJ = { x: J.x + uJ.x * chord * 0.4, y: J.y + uJ.y * chord * 0.4 };
+        const w = CABLE_PX * (this.zoom || 1) * 0.85;
+        // A crossing cable stops at the hole's rim like any other — it was running to the jack's
+        // CENTRE, straight over the plug.
+        const endPx = (jack.r || 0) * s + w / 2;
+        const Je = { x: J.x + uJ.x * endPx, y: J.y + uJ.y * endPx };
         const xy = (q) => `${r2(q.x)},${r2(q.y)}`;
         const d = item.nearIsSrc
-          ? `M${xy(J)} C${xy(cJ)} ${xy(cT)} ${xy(T)} L${xy(anchor)}`
-          : `M${xy(anchor)} L${xy(T)} C${xy(cT)} ${xy(cJ)} ${xy(J)}`;
-        const w = CABLE_PX * (this.zoom || 1) * 0.85;
+          ? `M${xy(Je)} C${xy(cJ)} ${xy(cT)} ${xy(T)} L${xy(anchor)}`
+          : `M${xy(anchor)} L${xy(T)} C${xy(cT)} ${xy(cJ)} ${xy(Je)}`;
         const op = String(!this._litEdgeId || held ? CABLE_BRIGHT : CABLE_DIM);
         const p = document.createElementNS(SVG_NS, 'path');
         p.setAttribute('d', d);
@@ -2251,7 +2341,11 @@ export class Rack {
         // the jack" on a curve.
         const Lp = p.getTotalLength();
         const ringPx = (jack.ring || 2.3) * s;
-        const d0 = Math.max(0, ringPx * (LIT_GRAB_FROM_R - 1)), d1 = ringPx * (LIT_GRAB_TO_R - 1);
+        // Clear of the port, for the same reason as an ordinary cable's grab: this is the part that
+        // takes a press, and it is drawn thick.
+        const outerPx = (jack.outerR || jack.ring || 2.3) * s;
+        const d0 = Math.max(0, outerPx + (w * LIT_GRAB_W) / 2 - endPx);
+        const d1 = d0 + ringPx * (LIT_GRAB_TO_R - LIT_GRAB_FROM_R);
         if (Lp > d0 + 2) {
           const jackAtStart = item.nearIsSrc;   // the path is built source-end first
           const far = Math.min(d1, Lp);
@@ -6130,6 +6224,38 @@ export class Rack {
       try {
         const clone = svg.cloneNode(true);
         clone.setAttribute('width', wPx); clone.setAttribute('height', hPx);
+        // MAKE THE PICTURE RESOLVE ITS PAINT THE WAY THE DOCUMENT DOES.
+        //
+        // Every panel SVG defines its own gradients and filters, and they all use the SAME names —
+        // knobCap, blueDial, softShadow, and so on, seven copies of each in a loaded rack. A url(#id)
+        // reference resolves to the FIRST element with that id in the whole document, so on screen
+        // every panel is painted with the FIRST panel's definitions, whatever its own say. Take one
+        // panel out of the document to rasterise it and the same reference now finds its own copy
+        // instead — so a knob whose local definition differs comes out looking nothing like it does on
+        // screen, which is why a couple of faces went pure white the instant Option froze the view.
+        //
+        // So: for every id this panel references, put the DOCUMENT'S first match into the clone,
+        // replacing the panel's own where it has one. The picture then reproduces the screen instead of
+        // rendering a version of the panel nobody has ever seen.
+        const wanted = new Set();
+        const scan = (el) => {
+          for (const a of (el.attributes || [])) {
+            for (const m of String(a.value || '').matchAll(/url\(#([^)"']+)\)/g)) wanted.add(m[1]);
+          }
+        };
+        scan(clone);
+        clone.querySelectorAll('*').forEach(scan);
+        let defs = null;
+        for (const id of wanted) {
+          const src = document.getElementById(id);   // exactly what the live renderer resolved to
+          if (!src) continue;
+          let here = null;
+          try { here = clone.querySelector(`[id="${id}"]`); } catch (_e) { here = null; }
+          const copy = src.cloneNode(true);
+          if (here) { here.replaceWith(copy); continue; }
+          if (!defs) { defs = document.createElementNS(SVG_NS, 'defs'); clone.insertBefore(defs, clone.firstChild); }
+          defs.appendChild(copy);
+        }
         const xml = new XMLSerializer().serializeToString(clone);
         const img = new Image();
         img.onload = () => resolve(img);
@@ -6147,8 +6273,14 @@ export class Rack {
     // Extent in base px — modules AND any scope/monitor that sticks out past the last panel, so the picture
     // (and the viewport's right/bottom limits) include them and they can be zoomed into.
     let rackRightPx = 0, rackBottomPx = 0;
-    for (const rec of this.records.values()) rackRightPx = Math.max(rackRightPx, (rec.x + (rec.panelWmm || 0)) * pxmm);
-    const probeExtent = (v) => { if (v.ax != null && v.el) { rackRightPx = Math.max(rackRightPx, v.ax + (v.el.offsetWidth || 0)); rackBottomPx = Math.max(rackBottomPx, v.ay + (v.el.offsetHeight || 0)); } };
+    // THE PAGE YOU ARE ON, AND ONLY THAT. This picture stands in for the live rack while Option is
+    // held, so it has to show what the live rack shows. Built from every record regardless of page, it
+    // put the video modules on top of an audio page the moment you reached for the zoom.
+    for (const rec of this.records.values()) {
+      if (!this._onPage(rec)) continue;
+      rackRightPx = Math.max(rackRightPx, (rec.x + (rec.panelWmm || 0)) * pxmm);
+    }
+    const probeExtent = (v) => { if (v.ax != null && v.el && this._probeOnPage(v)) { rackRightPx = Math.max(rackRightPx, v.ax + (v.el.offsetWidth || 0)); rackBottomPx = Math.max(rackBottomPx, v.ay + (v.el.offsetHeight || 0)); } };
     this._scopes.forEach(probeExtent); this._monitors.forEach(probeExtent);
     const W0 = Math.max((this._contentWmm || 0) * pxmm, rackRightPx);   // widen to include stuck-out probes
     const H0 = Math.max((this._contentHmm || 0) * pxmm, rackBottomPx);
@@ -6173,6 +6305,7 @@ export class Rack {
     // modules
     const jobs = [];
     for (const rec of this.records.values()) {
+      if (!this._onPage(rec)) continue;
       const svg = rec.el.querySelector('svg'); if (!svg) continue;
       const dx = rec.x * mmC, dy = rec.row * (PANEL_H_MM + ROW_GAP_MM) * mmC;
       const dw = (rec.panelWmm || 0) * mmC, dh = PANEL_H_MM * mmC;
@@ -6183,6 +6316,7 @@ export class Rack {
     // cables (thin coloured beziers, in mm space)
     if (this.patchbay) {
       for (const e of this.patchbay.list()) {
+        if (!this._edgeOnPage(e)) continue;   // a crossing cable is a stub on the bar, not a cord in here
         const g = this._cordGeom(e); if (!g) continue;
         // A HELD cable is drawn as it looks live — full weight, the rest pulled back — so freezing the
         // picture to move around does not lose the one thing you were following.
@@ -6203,14 +6337,14 @@ export class Rack {
     }
     // scopes (trace canvas + frame) and monitors (rings), at their scene anchors (base px)
     for (const sc of this._scopes) {
-      if (sc.ax == null || !sc.el) continue;
+      if (sc.ax == null || !sc.el || !this._probeOnPage(sc)) continue;   // a probe belongs to its terminal's page
       const x = sc.ax * cS, y = sc.ay * cS, w = (sc.el.offsetWidth || 0) * cS, h = (sc.el.offsetHeight || 0) * cS;
       cx.fillStyle = '#0d0f0c'; cx.fillRect(x, y, w, h);
       if (sc.canvas) { try { cx.drawImage(sc.canvas, x, y, w, h); } catch (_e) { /* not ready */ } }
       cx.strokeStyle = '#8a8d92'; cx.lineWidth = 1; cx.strokeRect(x, y, w, h);
     }
     for (const m of this._monitors) {
-      if (m.ax == null || !m.el) continue;
+      if (m.ax == null || !m.el || !this._probeOnPage(m)) continue;
       const r = ((m.el.offsetWidth || 0) * cS) / 2;
       cx.beginPath(); cx.arc(m.ax * cS + r, m.ay * cS + r, Math.max(1, r), 0, Math.PI * 2);
       cx.fillStyle = '#0d0f0c'; cx.fill(); cx.strokeStyle = '#8a8d92'; cx.lineWidth = 1; cx.stroke();
@@ -6238,11 +6372,11 @@ export class Rack {
   // probe positions. If it's unchanged we DON'T rebuild on open (rebuilding rasterises every panel and
   // would hog the main thread just as you start moving, making the rectangle catch up in steps).
   _ovSignature() {
-    let sig = (this.container.clientWidth || 0) + 'x' + (this.container.clientHeight || 0) + '|';
+    let sig = this.page + '|' + (this.container.clientWidth || 0) + 'x' + (this.container.clientHeight || 0) + '|';
     for (const rec of this.records.values()) sig += rec.key + ':' + rec.x + ',' + rec.row + ',' + (rec.panelWmm || 0) + ';';
     sig += 'c' + (this.patchbay ? this.patchbay.list().length : 0) + '|L' + (this._litEdgeId || '-') + '|';
-    for (const sc of this._scopes) sig += 's' + Math.round(sc.ax || 0) + ',' + Math.round(sc.ay || 0) + ',' + (sc.el ? sc.el.offsetWidth : 0) + ';';
-    for (const m of this._monitors) sig += 'm' + Math.round(m.ax || 0) + ',' + Math.round(m.ay || 0) + ';';
+    for (const sc of this._scopes) if (this._probeOnPage(sc)) sig += 's' + Math.round(sc.ax || 0) + ',' + Math.round(sc.ay || 0) + ',' + (sc.el ? sc.el.offsetWidth : 0) + ';';
+    for (const m of this._monitors) if (this._probeOnPage(m)) sig += 'm' + Math.round(m.ax || 0) + ',' + Math.round(m.ay || 0) + ';';
     return sig;
   }
 
@@ -7095,17 +7229,23 @@ export class Rack {
     // A radial fade (dark near the jack → light at the rim) so the band reads as a domed knob top
     // rather than flat silver. Injected once per panel.
     const svgRoot = el.ownerSVGElement;
-    if (svgRoot && !svgRoot.querySelector('#knackBand')) {
+    // ONE PER PANEL, NAMED PER PANEL. This gradient used to be called 'knackBand' in every module that
+    // had a knАck, so the document carried several elements with one id and EVERY panel's knob bands
+    // resolved to whichever came first — one module's gradient painting all the others. It looks
+    // correct on screen, because the borrowed def is right there; it stops being correct the moment a
+    // panel is taken out of the document on its own, which is what the frozen Option picture does.
+    const bandId = `knackBand-${rec.key}`;
+    if (svgRoot && !svgRoot.querySelector(`[id="${bandId}"]`)) {
       let defs = svgRoot.querySelector('defs');
       if (!defs) { defs = doc.createElementNS(SVG_NS, 'defs'); svgRoot.insertBefore(defs, svgRoot.firstChild); }
-      const grad = doc.createElementNS(SVG_NS, 'radialGradient'); grad.setAttribute('id', 'knackBand');
+      const grad = doc.createElementNS(SVG_NS, 'radialGradient'); grad.setAttribute('id', bandId);
       const s1 = doc.createElementNS(SVG_NS, 'stop'); s1.setAttribute('offset', '0.45'); s1.setAttribute('stop-color', '#4c4f50');   // dark inner (both ends 20% darker)
       const s2 = doc.createElementNS(SVG_NS, 'stop'); s2.setAttribute('offset', '1'); s2.setAttribute('stop-color', '#85898a');       // lighter outer (both ends 20% darker)
       grad.appendChild(s1); grad.appendChild(s2); defs.appendChild(grad);
     }
     const metal = doc.createElementNS(SVG_NS, 'circle'); metal.setAttribute('class', 'knack-metal');
     metal.setAttribute('cx', r2(cx)); metal.setAttribute('cy', r2(cy)); metal.setAttribute('r', r2(gOut));
-    metal.setAttribute('fill', 'url(#knackBand)');
+    metal.setAttribute('fill', `url(#${bandId})`);
     // thin white edge — outlines the whole knob-top when unpatched, and (clipped) the AV band's
     // outer arc when patched
     metal.setAttribute('stroke', '#ffffff'); metal.setAttribute('stroke-width', 0.15);

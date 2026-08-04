@@ -480,7 +480,9 @@
     /* The CURRENT tab stands taller, is filled with the rack's own background, and reaches down far
        enough to paint over the rule. So there is no bright line between it and the window — the tab
        and the page below it are one shape, and the line appears to detour up and around it. */
-    .rack-tab.current { margin: 0; padding: 7px 9px 2.5px 9px; background: var(--bg); color: var(--ink);
+    /* The current tab is lifted off black rather than sunk into it: a 75% grey ground, which is
+       enough to find at a glance without turning the tab into a button. */
+    .rack-tab.current { margin: 0; padding: 7px 9px 2.5px 9px; background: #6e6e6e; color: #fff;
       border-color: var(--tab-edge); opacity: 1; }
     /* The + that adds a page, dressed as a tab so it belongs to the strip, but narrow: it is an
        action rather than a place, and it should not read as one more page you can be on. */
