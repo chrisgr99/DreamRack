@@ -19,12 +19,84 @@
 'use strict';
 
 export const FORMAT = 'wcoast-patch';   // INTERNAL format id — never rename (identifies the file shape)
-export const VERSION = 1;               // format version (bump only when the shape changes)
+
+// ── TWO VERSIONS, TWO QUESTIONS, AND ONE RULE ────────────────────────────────────────────────────
+//
+// FORMAT_VERSION answers: can this loader read this file? It is machine-facing, never shown to
+// anyone, and moves ONLY when the JSON shape changes. It drives the migration chain below.
+//
+// APP_VERSION answers: what made this, and how old is it? It is human-facing, moves when a release
+// has something worth telling people about, and has no say in whether a file loads.
+//
+// THE RULE: the format version must never decide whether a FEATURE exists, and the app version must
+// never decide whether a FILE can be read. The moment one answers the other's question you have two
+// numbers that must agree, and eventually they will not. Ten releases can share one format version —
+// every one of those files stays readable — and the format can change without pretending to be a
+// release.
+//
+// A STRING, not a number. Two reasons, and both are load-bearing. Old files carry the integer 1 from
+// before any of this was thought about; a string can never be confused with that integer, so the old
+// number is retired by TYPE rather than by anyone remembering to skip it. And JSON numbers are
+// floating point, where 0.1 plus 0.02 is not 0.12 — version arithmetic would eventually compare
+// wrong. Parsed into parts and compared as integers, it cannot.
+export const FORMAT_VERSION = '0.1';
 
 // User-facing product identity, stamped into every saved patch for traceability.
 // APP_VERSION is deliberately pinned; do not increment it without an explicit request.
 export const APP_NAME = 'DreamRack';
 export const APP_VERSION = '0.1';
+
+// ── version arithmetic ───────────────────────────────────────────────────────────────────────────
+// The pre-versioning shape — files stamped with the bare integer 1 — is read as 0.0, below every
+// format version there will ever be, so the migration chain simply starts from the beginning for it.
+const LEGACY_INT = [0, 0];
+function parseVersion(v) {
+  if (typeof v === 'number') return v === 1 ? LEGACY_INT : null;   // 1 is the ONLY legal legacy number
+  if (typeof v !== 'string') return null;
+  const m = /^(\d+)\.(\d+)$/.exec(v.trim());
+  return m ? [+m[1], +m[2]] : null;
+}
+const cmpVersion = (a, b) => (a[0] - b[0]) || (a[1] - b[1]);
+const showVersion = (a) => `${a[0]}.${a[1]}`;
+
+// ── migrations ───────────────────────────────────────────────────────────────────────────────────
+// Each step names the format version it PRODUCES and brings a file up to it. Loading runs every step
+// newer than the file's own version, in order. Each stays small because it only has to describe the
+// one change that happened at that moment — which is what makes bumping the format cheap enough to
+// do honestly, rather than avoiding it and guessing at a file's shape from its contents.
+const MIGRATIONS = [
+  {
+    to: [0, 1],
+    note: 'pages',
+    apply(obj) {
+      // Before pages, everything lived on one rack. Such a file is sorted onto pages as it loads —
+      // video modules to the video page, the rest to the first audio page — and that is done in
+      // restore(), which has the registry to tell one from the other. Flag it rather than guess
+      // later: a file written AFTER pages arrived but still stamped 1 (this branch's own working
+      // saves) already says where everything goes, and must be left exactly as it is.
+      obj.__sortOntoPages = !Array.isArray(obj.pages);
+    },
+  },
+];
+
+// Bring `obj` up to the current format, or explain why it cannot be. Returns the file's own version
+// so a caller can say what it did.
+function migrate(obj) {
+  const from = parseVersion(obj.version);
+  if (!from) throw new Error(`Unrecognised patch format version ${JSON.stringify(obj.version)}.`);
+  const current = parseVersion(FORMAT_VERSION);
+  // NEWER THAN WE UNDERSTAND is the one case that must be refused rather than guessed at — it is what
+  // happens when a file comes back from a machine or a branch that has moved on.
+  if (cmpVersion(from, current) > 0) {
+    throw new Error(`This patch was saved by a later version of DreamRack `
+      + `(patch format ${showVersion(from)}; this build reads up to ${FORMAT_VERSION}).`);
+  }
+  const ran = [];
+  for (const m of MIGRATIONS) {
+    if (cmpVersion(from, m.to) < 0) { m.apply(obj); ran.push(m.note); }
+  }
+  return { from, ran };
+}
 
 const round2 = (n) => Math.round(n * 100) / 100;
 
@@ -93,9 +165,13 @@ export function serialize(rack, mixer) {
 
   const out = {
     format: FORMAT,
-    version: VERSION,
+    version: FORMAT_VERSION,
     app: APP_NAME,
     appVersion: APP_VERSION,
+    // WHEN, which is the question people actually ask of an old file. The build stamp carries the
+    // commit's date, but that is when the CODE was written, not when this patch was saved — close
+    // enough to mislead.
+    savedAt: new Date().toISOString(),
     rack: { rows: rack.rowCount },
     // The pages themselves: their order and their names. The two fixed ones are rebuilt from the
     // code rather than trusted from the file, so a patch can never arrive without them.
@@ -118,7 +194,12 @@ export function serialize(rack, mixer) {
 
 export async function restore(obj, rack, mixer) {
   if (!obj || obj.format !== FORMAT) throw new Error('Not a Wcoast patch file.');
-  if (obj.version !== VERSION) throw new Error(`Unsupported patch version ${obj.version}.`);
+  const migration = migrate(obj);   // throws if unreadable or newer than this build
+  // Say so when a file was CHANGED on the way in — it will be re-saved in a different shape than it
+  // arrived in, which is worth knowing and is not worth mentioning at any other time. Left on the
+  // rack for the app to surface if it wants; routine version chatter on every open is noise.
+  rack.patchFormat = { from: showVersion(migration.from), to: FORMAT_VERSION, migrated: migration.ran };
+  if (migration.ran.length) console.info(`[wcoast] patch upgraded from format ${showVersion(migration.from)} to ${FORMAT_VERSION} (${migration.ran.join(', ')})`);
 
   rack.clear();
   rack.patchNotes = typeof obj.notes === 'string' ? obj.notes : '';   // the patch's own note (plain text) + whether it greets on load
@@ -129,10 +210,7 @@ export async function restore(obj, rack, mixer) {
   // is a fixed endpoint whose id maps to itself.
   const idToKey = new Map([[mixer.key, mixer.key]]);
   if (rack.restorePages) rack.restorePages(obj.pages);
-  // A patch written since pages existed always carries a `pages` list, even when it uses only one.
-  // Its absence is what marks a file as predating them — and only those get sorted onto pages, since
-  // only those never had the chance to say where anything belongs.
-  const legacy = !Array.isArray(obj.pages);
+  const legacy = !!obj.__sortOntoPages;   // set by the 'pages' migration; see MIGRATIONS
   for (const m of obj.modules || []) {
     const page = m.page || (legacy ? homePage(rack, m.type) : 'a1');
     const rec = await rack.addModule(m.type, m.row, m.x, { page });
@@ -209,7 +287,11 @@ export function validate(obj, registry) {
   const warnings = [];
   const bad = (m) => ({ ok: false, error: m });
   if (!obj || obj.format !== FORMAT) return bad('not a wcoast-patch file');
-  if (obj.version !== VERSION) return bad(`unsupported version ${obj.version}`);
+  const fv = parseVersion(obj.version);
+  if (!fv) return bad(`unrecognised format version ${JSON.stringify(obj.version)}`);
+  if (cmpVersion(fv, parseVersion(FORMAT_VERSION)) > 0) {
+    return bad(`saved by a later version of DreamRack (format ${showVersion(fv)}; this build reads up to ${FORMAT_VERSION})`);
+  }
 
   // module id -> descriptor (the mixer is a fixed endpoint, always present).
   const descOf = new Map([['mixer', registry.descriptor('mixer')]]);

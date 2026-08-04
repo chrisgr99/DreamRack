@@ -359,10 +359,14 @@
     body.panning, body.panning * { cursor: grabbing !important; }
     /* Own GPU layer so the eased zoom/pan is a smooth composite of one raster, not a full re-paint. */
     .rack-content { position: relative; will-change: transform; }
+    /* The dark rail edge is an INSET SHADOW, not a border. A border pushes the row's padding box in
+       by a pixel, and modules are absolutely positioned inside the row while the cable layer is a
+       sibling of it — so every module sat one pixel right and down of where its cables believed it
+       was. Shadows do not affect layout, so the edge looks the same and the two agree again. */
     .rack-row {
       position: absolute; left: 0;
-      background: var(--rail); border: 1px solid #0b0906; overflow: visible;
-      box-shadow: inset 0 0 12px rgba(0,0,0,0.5);
+      background: var(--rail); overflow: visible;
+      box-shadow: inset 0 0 0 1px #0b0906, inset 0 0 12px rgba(0,0,0,0.5);
     }
     /* A module on another page takes no pointer input at all — itself OR any descendant. The
        descendants matter: a knob hit circle uses pointer-events:all, which per the SVG spec is a
