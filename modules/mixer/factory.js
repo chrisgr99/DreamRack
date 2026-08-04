@@ -71,8 +71,13 @@ export function create(ctx, services) {
   // splices this chain into the bus when it builds it (see monitorChain).
   const monLevel = ctx.createGain();
   monLevel.gain.value = paramDefault('monitorLevel');
+  // HARD CENTRE, and no control for it. The monitor bus is what you are listening on: panning it
+  // moves the sound in your ears without moving anything that leaves the rack, so it can only mislead
+  // you about the mix you are judging. The panner stays as a fixed stage because it is what makes this
+  // bus stereo whatever it is fed — removing the node would change the channel count, not just the
+  // control.
   const monPan = ctx.createStereoPanner();
-  monPan.pan.value = paramDefault('panMonitor');
+  monPan.pan.value = 0;
   monLevel.connect(monPan);
 
   // The shared effect buses. Every channel taps into each after its fader and before its pan, and
@@ -137,7 +142,6 @@ export function create(ctx, services) {
     if (paramId === 'master') return master.gain;
     if (paramId === 'monitorLevel') return monLevel.gain;
     if (paramId === 'panMaster') return masterPan.pan;
-    if (paramId === 'panMonitor') return monPan.pan;
     if (paramId.startsWith('level')) { const c = byLetter.get(paramId.slice(5)); return c ? c.level.gain : null; }
     { const m = /^send([12])([A-J])$/.exec(paramId); if (m) { const c = byLetter.get(m[2]); return c ? c.sends.get(m[1]).gain : null; } }
     if (/^pan[A-J]$/.test(paramId)) { const c = byLetter.get(paramId.slice(3)); return c ? c.pan.pan : null; }

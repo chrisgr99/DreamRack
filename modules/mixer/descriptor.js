@@ -92,12 +92,15 @@ params.push({ id: 'engine', name: 'Engine', section: 'master', curve: 'stepped',
 params.push({ id: 'masterEnable', name: 'Master enable', section: 'master', curve: 'stepped', steps: [{ value: 'off' }, { value: 'on' }], default: 'on' });
 params.push({ id: 'monitorEnable', name: 'Monitor enable', section: 'master', curve: 'stepped', steps: [{ value: 'off' }, { value: 'on' }], default: 'off' });
 
-// The two buses get the same pair of rows every channel has: a gain CV jack and a pan
-// knAck. There is nothing special about a bus in this respect — a master fade is the most
-// ordinary thing you would want an envelope to drive, and a bus that cannot be panned is
-// the odd one out on a panel where every channel can.
+// THE MASTER IS A BUS YOU MIX; THE MONITOR IS A BUS YOU LISTEN ON. That difference is the whole
+// reason their rows differ. The master gets a gain CV and a pan, because a master fade is the most
+// ordinary thing you would want an envelope to drive and where the mix sits is part of the mix. The
+// monitor gets neither: panning or modulating what you are LISTENING on changes what reaches your
+// ears without changing anything that leaves the rack, which can only mislead you about the very mix
+// you are trying to judge. Its level is yours to set by hand, and nothing else's to move.
 for (const [B, N] of [['Master', 'Master'], ['Monitor', 'Monitor']]) {
-  const lvl = B === 'Master' ? 'master' : 'monitorLevel';
+  if (B !== 'Master') continue;
+  const lvl = 'master';
   ports.push({ id: `ampCv${B}`, name: `Gain ${N}`, section: 'ampCv', domain: 'control', dir: 'in', target: lvl });
   params.push({ id: `pan${B}`, name: `Pan ${N}`, section: 'master', curve: 'linear', min: -1, max: 1, default: 0, glideMs: 20 });
   params.push({ id: `panDepth${B}`, name: `Pan depth ${N}`, section: 'master', curve: 'linear', min: -1, max: 1, default: 1, glideMs: 0 });

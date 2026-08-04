@@ -50,10 +50,23 @@ const Y_ENGINE_LABEL = 6.4, Y_ENGINE = 11.6;
 // The faders gave up 19 mm to make room for the two SEND rows. They are the most-used control on
 // the panel and the last thing that should shrink — but a pair of shared effect buses is worth more
 // than the top third of a throw, and 35 mm is still a longer fader than any knob here is wide.
-const SLIDER_TOP = 29, SLIDER_BOT = 64;
-const Y_LINE_SF = 66.5, Y_SEND1 = 72, Y_SEND2 = 80.5;
-const Y_LINE_FC = 86, Y_AMPCV = 91, Y_LINE_CP = 96, Y_PAN = 104.5;
+// The fader gives up 2mm of its travel — 35 down to 33 — so the sends band below can hold two
+// FULL-SIZED knАcks. A send knob at the old 3.2 radius was too small to take hold of, and two of the
+// new ones will not fit the old band: they need 9.4mm each in a band that was 19.5mm tall. Crowded is
+// fine; overlapping is not, and 0.7mm of clearance would have read as an accident rather than a
+// decision. The VU beside each fader is drawn to the fader's length, so it follows.
+// The sends band is 23.5mm tall, a millimetre taken from each side rather than two from the fader —
+// the fader has given up enough. Its two knАcks sit 11.5mm apart, CENTRED in the band: 1.3mm clear of
+// each rule and 2.1mm between them. The widened band is what buys that; at the old height the same
+// spacing left only 0.3mm at the rules, which read as a control that barely fitted.
+const SLIDER_TOP = 29, SLIDER_BOT = 61;
+const Y_LINE_SF = 63.5, Y_SEND1 = 69.5, Y_SEND2 = 81;
+const Y_LINE_FC = 87, Y_AMPCV = 91, Y_LINE_CP = 96, Y_PAN = 104.5;
 const MUTE_R = 2.3;        // 1 mm wider than it was: a small lamp is a small target
+// ONE knАck SIZE ON THIS PANEL, and no hand-set cap: the metal face is a proportion of the control,
+// which the canonical knАck already knows. Three different sizes with three hand-picked caps was
+// three chances to disagree with the control and with each other.
+const KNACK_R = 4.7;
 
 const items = [];
 const ink = (x, y, text, opts = {}) => items.push({ t: 'label', x, y, text, opts });
@@ -75,7 +88,7 @@ ink(ENGINE_X, Y_ENGINE_LABEL, 'ENGINE', { size: 2.1 });
 // be given an attenuverter from its right-click menu if it ever needs scaling.
 for (const L of CH) {
   items.push({ t: 'knack', id: `pan${L}`, x: MID_X(L), y: Y_PAN,
-    opts: { radius: 4.2, cap: 3.3, port: `panCv${L}`, depth: `panDepth${L}`, av: 'off' } });
+    opts: { radius: KNACK_R, port: `panCv${L}`, depth: `panDepth${L}`, av: 'off' } });
 }
 
 // left-margin row labels, right-aligned. x is overridable so each label can hug its own
@@ -120,9 +133,9 @@ for (const L of CH) {
   // knAcks like the pan below them: a send amount is exactly the sort of thing you want an envelope
   // on, and giving each a jack of its own would have cost two more rows the panel does not have.
   items.push({ t: 'knack', id: `send1${L}`, x: MID_X(L), y: Y_SEND1,
-    opts: { radius: 3.2, cap: 2.6, port: `send1Cv${L}`, depth: `send1Depth${L}`, av: 'off' } });
+    opts: { radius: KNACK_R, port: `send1Cv${L}`, depth: `send1Depth${L}`, av: 'off' } });
   items.push({ t: 'knack', id: `send2${L}`, x: MID_X(L), y: Y_SEND2,
-    opts: { radius: 3.2, cap: 2.6, port: `send2Cv${L}`, depth: `send2Depth${L}`, av: 'off' } });
+    opts: { radius: KNACK_R, port: `send2Cv${L}`, depth: `send2Depth${L}`, av: 'off' } });
   vu('vu', CH_X[L], L);
 }
 
@@ -136,17 +149,22 @@ items.push({ t: 'slider', id: 'master', x: MSTR_X, opts: { top: SLIDER_TOP, bot:
 items.push({ t: 'button', id: 'engine', x: ENGINE_X, y: Y_ENGINE, opts: { r: MUTE_R, kind: 'red' } });
 items.push({ t: 'button', id: 'monitorEnable', x: MON_X, y: Y_MUTE, opts: { r: MUTE_R, kind: 'red' } });
 items.push({ t: 'button', id: 'masterEnable', x: MSTR_X, y: Y_MUTE, opts: { r: MUTE_R, kind: 'red' } });
-// The buses get the channels' two bottom rows: a gain CV jack and a pan knAck each.
-for (const [B, X] of [['Monitor', MON_X], ['Master', MSTR_X]]) {
+// The MASTER keeps the channels' two bottom rows — a gain CV jack and a pan knАck. The MONITOR has
+// neither: it is the bus you listen on, so panning or modulating it changes what reaches your ears
+// without changing anything that leaves the rack. Its column ends at its fader and its lamp.
+for (const [B, X] of [['Master', MSTR_X]]) {
   items.push({ t: 'jack', id: `ampCv${B}`, x: X, y: Y_AMPCV });
   items.push({ t: 'knack', id: `pan${B}`, x: X, y: Y_PAN,
-    opts: { radius: 4.2, cap: 3.3, port: `panCv${B}`, depth: `panDepth${B}`, av: 'off' } });
+    opts: { radius: KNACK_R, port: `panCv${B}`, depth: `panDepth${B}`, av: 'off' } });
 }
 // Where each bus leaves: its own column at the right end, behind its own divider, each jack level
 // with the row of taps that feeds it. So a send row reads as one thing across the whole panel — ten
 // taps and, past the master, the jack they add up to.
 items.push({ t: 'line', x1: SEND_SEP_X, y1: SEP_TOP, x2: SEND_SEP_X, y2: SEP_BOT, w: 0.25 });
-ink(SEND_OUT_X, Y_CHAN_LABEL, 'SENDS', { size: 2.1 });
+// EFFECT SENDS, on two lines, as close to the jacks as two lines can get. There is no room for them
+// BETWEEN the rule and the upper jack — 3.5mm of gap against a two-line block of about five — so the
+// label sits just above the rule instead. That column has no fader, so the space is free.
+ink(SEND_OUT_X, Y_LINE_SF - 5.4, 'EFFECT\nSENDS', { size: 2.1 });
 items.push({ t: 'jack', id: 'send1Out', x: SEND_OUT_X, y: Y_SEND1 });
 items.push({ t: 'jack', id: 'send2Out', x: SEND_OUT_X, y: Y_SEND2 });
 vu('vuMonitor', MON_X, 'MON');
