@@ -18,13 +18,13 @@
     <circle cx="22" cy="48" r="4.6" fill="url(#blueRing)" stroke="#6fa8d6" stroke-width="0.355" filter="url(#softShadow)"/>
     <circle cx="22" cy="48" r="3.31" fill="url(#knobCap)" stroke="#b8b8bc" stroke-width="0.2366"/>
     <g data-wcoast-role="indicator">
-    <line x1="20.20" y1="51.12" x2="19.45" y2="52.42" stroke="#ffffff" stroke-width="0.4"/>
-    <line x1="18.45" y1="48.63" x2="16.98" y2="48.89" stroke="#ffffff" stroke-width="0.4"/>
-    <line x1="19.24" y1="45.69" x2="18.09" y2="44.72" stroke="#ffffff" stroke-width="0.4"/>
-    <line x1="22.00" y1="44.40" x2="22.00" y2="42.90" stroke="#ffffff" stroke-width="0.4"/>
-    <line x1="24.76" y1="45.69" x2="25.91" y2="44.72" stroke="#ffffff" stroke-width="0.4"/>
-    <line x1="25.55" y1="48.63" x2="27.02" y2="48.89" stroke="#ffffff" stroke-width="0.4"/>
-    <line x1="23.80" y1="51.12" x2="24.55" y2="52.42" stroke="#ffffff" stroke-width="0.4"/>
+    <line x1="19.99" y1="51.49" x2="19.56" y2="52.23" stroke="#ffffff" stroke-width="0.2286"/>
+    <line x1="18.03" y1="48.70" x2="17.19" y2="48.85" stroke="#ffffff" stroke-width="0.2286"/>
+    <line x1="18.91" y1="45.41" x2="18.26" y2="44.86" stroke="#ffffff" stroke-width="0.2286"/>
+    <line x1="22.00" y1="43.97" x2="22.00" y2="43.11" stroke="#ffffff" stroke-width="0.2286"/>
+    <line x1="25.09" y1="45.41" x2="25.74" y2="44.86" stroke="#ffffff" stroke-width="0.2286"/>
+    <line x1="25.97" y1="48.70" x2="26.81" y2="48.85" stroke="#ffffff" stroke-width="0.2286"/>
+    <line x1="24.01" y1="51.49" x2="24.44" y2="52.23" stroke="#ffffff" stroke-width="0.2286"/>
       <line x1="22" y1="48" x2="22" y2="44.69" stroke="#b8b8bc" stroke-width="0.55"/>
     </g>
   </g>

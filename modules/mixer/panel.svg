@@ -26,163 +26,163 @@
   <text x="176" y="16.5" font-size="2.806" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">MSTR</text>
   <text x="168.75" y="6.4" font-size="2.806" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">ENGINE</text>
   <g data-wcoast-param="panA" data-wcoast-cx="14" data-wcoast-cy="104.5" data-wcoast-angle-min="-150" data-wcoast-angle-max="150" data-wcoast-port="panCvA" data-wcoast-depth="panDepthA" data-wcoast-av="off">
-    <circle cx="14" cy="104.5" r="4.2" fill="url(#blueRing)" stroke="#004b7a" stroke-width="0.355" filter="url(#softShadow)"/>
-    <circle cx="14" cy="104.5" r="3.3" fill="url(#knobCap)" stroke="#666666" stroke-width="0.2366"/>
+    <circle cx="14" cy="104.5" r="4.2" fill="url(#blueRing)" stroke="#004b7a" stroke-width="0.1852" filter="url(#softShadow)"/>
+    <circle cx="14" cy="104.5" r="3.3" fill="url(#knobCap)" stroke="#666666" stroke-width="0.1234"/>
     <circle cx="14" cy="104.5" r="2.1" fill="#ff7300"/>
     <circle cx="14" cy="104.5" r="1.1" fill="#000000" data-wcoast-role="jackhole"/>
     <g data-wcoast-role="indicator">
-      <line x1="14.00" y1="99.80" x2="14.00" y2="101.30" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="17.67" y1="101.57" x2="16.50" y2="102.50" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="18.58" y1="105.55" x2="17.12" y2="105.21" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="16.04" y1="108.73" x2="15.39" y2="107.38" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="11.96" y1="108.73" x2="12.61" y2="107.38" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="9.42" y1="105.55" x2="10.88" y2="105.21" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="10.33" y1="101.57" x2="11.50" y2="102.50" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="14" y1="102.40" x2="14" y2="100.30" stroke="#ffffff" stroke-width="0.5"/>
+      <line x1="14.00" y1="100.04" x2="14.00" y2="100.82" stroke="#ffffff" stroke-width="0.2087"/>
+      <line x1="17.49" y1="101.72" x2="16.88" y2="102.21" stroke="#ffffff" stroke-width="0.2087"/>
+      <line x1="18.35" y1="105.49" x2="17.59" y2="105.32" stroke="#ffffff" stroke-width="0.2087"/>
+      <line x1="15.94" y1="108.52" x2="15.60" y2="107.81" stroke="#ffffff" stroke-width="0.2087"/>
+      <line x1="12.06" y1="108.52" x2="12.40" y2="107.81" stroke="#ffffff" stroke-width="0.2087"/>
+      <line x1="9.65" y1="105.49" x2="10.41" y2="105.32" stroke="#ffffff" stroke-width="0.2087"/>
+      <line x1="10.51" y1="101.72" x2="11.12" y2="102.21" stroke="#ffffff" stroke-width="0.2087"/>
+      <line x1="14" y1="102.40" x2="14" y2="100.30" stroke="#ffffff" stroke-width="0.2609"/>
     </g>
   </g>
   <g data-wcoast-param="panB" data-wcoast-cx="27" data-wcoast-cy="104.5" data-wcoast-angle-min="-150" data-wcoast-angle-max="150" data-wcoast-port="panCvB" data-wcoast-depth="panDepthB" data-wcoast-av="off">
-    <circle cx="27" cy="104.5" r="4.2" fill="url(#blueRing)" stroke="#004b7a" stroke-width="0.355" filter="url(#softShadow)"/>
-    <circle cx="27" cy="104.5" r="3.3" fill="url(#knobCap)" stroke="#666666" stroke-width="0.2366"/>
+    <circle cx="27" cy="104.5" r="4.2" fill="url(#blueRing)" stroke="#004b7a" stroke-width="0.1852" filter="url(#softShadow)"/>
+    <circle cx="27" cy="104.5" r="3.3" fill="url(#knobCap)" stroke="#666666" stroke-width="0.1234"/>
     <circle cx="27" cy="104.5" r="2.1" fill="#ff7300"/>
     <circle cx="27" cy="104.5" r="1.1" fill="#000000" data-wcoast-role="jackhole"/>
     <g data-wcoast-role="indicator">
-      <line x1="27.00" y1="99.80" x2="27.00" y2="101.30" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="30.67" y1="101.57" x2="29.50" y2="102.50" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="31.58" y1="105.55" x2="30.12" y2="105.21" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="29.04" y1="108.73" x2="28.39" y2="107.38" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="24.96" y1="108.73" x2="25.61" y2="107.38" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="22.42" y1="105.55" x2="23.88" y2="105.21" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="23.33" y1="101.57" x2="24.50" y2="102.50" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="27" y1="102.40" x2="27" y2="100.30" stroke="#ffffff" stroke-width="0.5"/>
+      <line x1="27.00" y1="100.04" x2="27.00" y2="100.82" stroke="#ffffff" stroke-width="0.2087"/>
+      <line x1="30.49" y1="101.72" x2="29.88" y2="102.21" stroke="#ffffff" stroke-width="0.2087"/>
+      <line x1="31.35" y1="105.49" x2="30.59" y2="105.32" stroke="#ffffff" stroke-width="0.2087"/>
+      <line x1="28.94" y1="108.52" x2="28.60" y2="107.81" stroke="#ffffff" stroke-width="0.2087"/>
+      <line x1="25.06" y1="108.52" x2="25.40" y2="107.81" stroke="#ffffff" stroke-width="0.2087"/>
+      <line x1="22.65" y1="105.49" x2="23.41" y2="105.32" stroke="#ffffff" stroke-width="0.2087"/>
+      <line x1="23.51" y1="101.72" x2="24.12" y2="102.21" stroke="#ffffff" stroke-width="0.2087"/>
+      <line x1="27" y1="102.40" x2="27" y2="100.30" stroke="#ffffff" stroke-width="0.2609"/>
     </g>
   </g>
   <g data-wcoast-param="panC" data-wcoast-cx="40" data-wcoast-cy="104.5" data-wcoast-angle-min="-150" data-wcoast-angle-max="150" data-wcoast-port="panCvC" data-wcoast-depth="panDepthC" data-wcoast-av="off">
-    <circle cx="40" cy="104.5" r="4.2" fill="url(#blueRing)" stroke="#004b7a" stroke-width="0.355" filter="url(#softShadow)"/>
-    <circle cx="40" cy="104.5" r="3.3" fill="url(#knobCap)" stroke="#666666" stroke-width="0.2366"/>
+    <circle cx="40" cy="104.5" r="4.2" fill="url(#blueRing)" stroke="#004b7a" stroke-width="0.1852" filter="url(#softShadow)"/>
+    <circle cx="40" cy="104.5" r="3.3" fill="url(#knobCap)" stroke="#666666" stroke-width="0.1234"/>
     <circle cx="40" cy="104.5" r="2.1" fill="#ff7300"/>
     <circle cx="40" cy="104.5" r="1.1" fill="#000000" data-wcoast-role="jackhole"/>
     <g data-wcoast-role="indicator">
-      <line x1="40.00" y1="99.80" x2="40.00" y2="101.30" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="43.67" y1="101.57" x2="42.50" y2="102.50" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="44.58" y1="105.55" x2="43.12" y2="105.21" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="42.04" y1="108.73" x2="41.39" y2="107.38" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="37.96" y1="108.73" x2="38.61" y2="107.38" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="35.42" y1="105.55" x2="36.88" y2="105.21" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="36.33" y1="101.57" x2="37.50" y2="102.50" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="40" y1="102.40" x2="40" y2="100.30" stroke="#ffffff" stroke-width="0.5"/>
+      <line x1="40.00" y1="100.04" x2="40.00" y2="100.82" stroke="#ffffff" stroke-width="0.2087"/>
+      <line x1="43.49" y1="101.72" x2="42.88" y2="102.21" stroke="#ffffff" stroke-width="0.2087"/>
+      <line x1="44.35" y1="105.49" x2="43.59" y2="105.32" stroke="#ffffff" stroke-width="0.2087"/>
+      <line x1="41.94" y1="108.52" x2="41.60" y2="107.81" stroke="#ffffff" stroke-width="0.2087"/>
+      <line x1="38.06" y1="108.52" x2="38.40" y2="107.81" stroke="#ffffff" stroke-width="0.2087"/>
+      <line x1="35.65" y1="105.49" x2="36.41" y2="105.32" stroke="#ffffff" stroke-width="0.2087"/>
+      <line x1="36.51" y1="101.72" x2="37.12" y2="102.21" stroke="#ffffff" stroke-width="0.2087"/>
+      <line x1="40" y1="102.40" x2="40" y2="100.30" stroke="#ffffff" stroke-width="0.2609"/>
     </g>
   </g>
   <g data-wcoast-param="panD" data-wcoast-cx="53" data-wcoast-cy="104.5" data-wcoast-angle-min="-150" data-wcoast-angle-max="150" data-wcoast-port="panCvD" data-wcoast-depth="panDepthD" data-wcoast-av="off">
-    <circle cx="53" cy="104.5" r="4.2" fill="url(#blueRing)" stroke="#004b7a" stroke-width="0.355" filter="url(#softShadow)"/>
-    <circle cx="53" cy="104.5" r="3.3" fill="url(#knobCap)" stroke="#666666" stroke-width="0.2366"/>
+    <circle cx="53" cy="104.5" r="4.2" fill="url(#blueRing)" stroke="#004b7a" stroke-width="0.1852" filter="url(#softShadow)"/>
+    <circle cx="53" cy="104.5" r="3.3" fill="url(#knobCap)" stroke="#666666" stroke-width="0.1234"/>
     <circle cx="53" cy="104.5" r="2.1" fill="#ff7300"/>
     <circle cx="53" cy="104.5" r="1.1" fill="#000000" data-wcoast-role="jackhole"/>
     <g data-wcoast-role="indicator">
-      <line x1="53.00" y1="99.80" x2="53.00" y2="101.30" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="56.67" y1="101.57" x2="55.50" y2="102.50" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="57.58" y1="105.55" x2="56.12" y2="105.21" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="55.04" y1="108.73" x2="54.39" y2="107.38" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="50.96" y1="108.73" x2="51.61" y2="107.38" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="48.42" y1="105.55" x2="49.88" y2="105.21" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="49.33" y1="101.57" x2="50.50" y2="102.50" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="53" y1="102.40" x2="53" y2="100.30" stroke="#ffffff" stroke-width="0.5"/>
+      <line x1="53.00" y1="100.04" x2="53.00" y2="100.82" stroke="#ffffff" stroke-width="0.2087"/>
+      <line x1="56.49" y1="101.72" x2="55.88" y2="102.21" stroke="#ffffff" stroke-width="0.2087"/>
+      <line x1="57.35" y1="105.49" x2="56.59" y2="105.32" stroke="#ffffff" stroke-width="0.2087"/>
+      <line x1="54.94" y1="108.52" x2="54.60" y2="107.81" stroke="#ffffff" stroke-width="0.2087"/>
+      <line x1="51.06" y1="108.52" x2="51.40" y2="107.81" stroke="#ffffff" stroke-width="0.2087"/>
+      <line x1="48.65" y1="105.49" x2="49.41" y2="105.32" stroke="#ffffff" stroke-width="0.2087"/>
+      <line x1="49.51" y1="101.72" x2="50.12" y2="102.21" stroke="#ffffff" stroke-width="0.2087"/>
+      <line x1="53" y1="102.40" x2="53" y2="100.30" stroke="#ffffff" stroke-width="0.2609"/>
     </g>
   </g>
   <g data-wcoast-param="panE" data-wcoast-cx="66" data-wcoast-cy="104.5" data-wcoast-angle-min="-150" data-wcoast-angle-max="150" data-wcoast-port="panCvE" data-wcoast-depth="panDepthE" data-wcoast-av="off">
-    <circle cx="66" cy="104.5" r="4.2" fill="url(#blueRing)" stroke="#004b7a" stroke-width="0.355" filter="url(#softShadow)"/>
-    <circle cx="66" cy="104.5" r="3.3" fill="url(#knobCap)" stroke="#666666" stroke-width="0.2366"/>
+    <circle cx="66" cy="104.5" r="4.2" fill="url(#blueRing)" stroke="#004b7a" stroke-width="0.1852" filter="url(#softShadow)"/>
+    <circle cx="66" cy="104.5" r="3.3" fill="url(#knobCap)" stroke="#666666" stroke-width="0.1234"/>
     <circle cx="66" cy="104.5" r="2.1" fill="#ff7300"/>
     <circle cx="66" cy="104.5" r="1.1" fill="#000000" data-wcoast-role="jackhole"/>
     <g data-wcoast-role="indicator">
-      <line x1="66.00" y1="99.80" x2="66.00" y2="101.30" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="69.67" y1="101.57" x2="68.50" y2="102.50" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="70.58" y1="105.55" x2="69.12" y2="105.21" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="68.04" y1="108.73" x2="67.39" y2="107.38" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="63.96" y1="108.73" x2="64.61" y2="107.38" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="61.42" y1="105.55" x2="62.88" y2="105.21" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="62.33" y1="101.57" x2="63.50" y2="102.50" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="66" y1="102.40" x2="66" y2="100.30" stroke="#ffffff" stroke-width="0.5"/>
+      <line x1="66.00" y1="100.04" x2="66.00" y2="100.82" stroke="#ffffff" stroke-width="0.2087"/>
+      <line x1="69.49" y1="101.72" x2="68.88" y2="102.21" stroke="#ffffff" stroke-width="0.2087"/>
+      <line x1="70.35" y1="105.49" x2="69.59" y2="105.32" stroke="#ffffff" stroke-width="0.2087"/>
+      <line x1="67.94" y1="108.52" x2="67.60" y2="107.81" stroke="#ffffff" stroke-width="0.2087"/>
+      <line x1="64.06" y1="108.52" x2="64.40" y2="107.81" stroke="#ffffff" stroke-width="0.2087"/>
+      <line x1="61.65" y1="105.49" x2="62.41" y2="105.32" stroke="#ffffff" stroke-width="0.2087"/>
+      <line x1="62.51" y1="101.72" x2="63.12" y2="102.21" stroke="#ffffff" stroke-width="0.2087"/>
+      <line x1="66" y1="102.40" x2="66" y2="100.30" stroke="#ffffff" stroke-width="0.2609"/>
     </g>
   </g>
   <g data-wcoast-param="panF" data-wcoast-cx="79" data-wcoast-cy="104.5" data-wcoast-angle-min="-150" data-wcoast-angle-max="150" data-wcoast-port="panCvF" data-wcoast-depth="panDepthF" data-wcoast-av="off">
-    <circle cx="79" cy="104.5" r="4.2" fill="url(#blueRing)" stroke="#004b7a" stroke-width="0.355" filter="url(#softShadow)"/>
-    <circle cx="79" cy="104.5" r="3.3" fill="url(#knobCap)" stroke="#666666" stroke-width="0.2366"/>
+    <circle cx="79" cy="104.5" r="4.2" fill="url(#blueRing)" stroke="#004b7a" stroke-width="0.1852" filter="url(#softShadow)"/>
+    <circle cx="79" cy="104.5" r="3.3" fill="url(#knobCap)" stroke="#666666" stroke-width="0.1234"/>
     <circle cx="79" cy="104.5" r="2.1" fill="#ff7300"/>
     <circle cx="79" cy="104.5" r="1.1" fill="#000000" data-wcoast-role="jackhole"/>
     <g data-wcoast-role="indicator">
-      <line x1="79.00" y1="99.80" x2="79.00" y2="101.30" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="82.67" y1="101.57" x2="81.50" y2="102.50" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="83.58" y1="105.55" x2="82.12" y2="105.21" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="81.04" y1="108.73" x2="80.39" y2="107.38" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="76.96" y1="108.73" x2="77.61" y2="107.38" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="74.42" y1="105.55" x2="75.88" y2="105.21" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="75.33" y1="101.57" x2="76.50" y2="102.50" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="79" y1="102.40" x2="79" y2="100.30" stroke="#ffffff" stroke-width="0.5"/>
+      <line x1="79.00" y1="100.04" x2="79.00" y2="100.82" stroke="#ffffff" stroke-width="0.2087"/>
+      <line x1="82.49" y1="101.72" x2="81.88" y2="102.21" stroke="#ffffff" stroke-width="0.2087"/>
+      <line x1="83.35" y1="105.49" x2="82.59" y2="105.32" stroke="#ffffff" stroke-width="0.2087"/>
+      <line x1="80.94" y1="108.52" x2="80.60" y2="107.81" stroke="#ffffff" stroke-width="0.2087"/>
+      <line x1="77.06" y1="108.52" x2="77.40" y2="107.81" stroke="#ffffff" stroke-width="0.2087"/>
+      <line x1="74.65" y1="105.49" x2="75.41" y2="105.32" stroke="#ffffff" stroke-width="0.2087"/>
+      <line x1="75.51" y1="101.72" x2="76.12" y2="102.21" stroke="#ffffff" stroke-width="0.2087"/>
+      <line x1="79" y1="102.40" x2="79" y2="100.30" stroke="#ffffff" stroke-width="0.2609"/>
     </g>
   </g>
   <g data-wcoast-param="panG" data-wcoast-cx="92" data-wcoast-cy="104.5" data-wcoast-angle-min="-150" data-wcoast-angle-max="150" data-wcoast-port="panCvG" data-wcoast-depth="panDepthG" data-wcoast-av="off">
-    <circle cx="92" cy="104.5" r="4.2" fill="url(#blueRing)" stroke="#004b7a" stroke-width="0.355" filter="url(#softShadow)"/>
-    <circle cx="92" cy="104.5" r="3.3" fill="url(#knobCap)" stroke="#666666" stroke-width="0.2366"/>
+    <circle cx="92" cy="104.5" r="4.2" fill="url(#blueRing)" stroke="#004b7a" stroke-width="0.1852" filter="url(#softShadow)"/>
+    <circle cx="92" cy="104.5" r="3.3" fill="url(#knobCap)" stroke="#666666" stroke-width="0.1234"/>
     <circle cx="92" cy="104.5" r="2.1" fill="#ff7300"/>
     <circle cx="92" cy="104.5" r="1.1" fill="#000000" data-wcoast-role="jackhole"/>
     <g data-wcoast-role="indicator">
-      <line x1="92.00" y1="99.80" x2="92.00" y2="101.30" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="95.67" y1="101.57" x2="94.50" y2="102.50" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="96.58" y1="105.55" x2="95.12" y2="105.21" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="94.04" y1="108.73" x2="93.39" y2="107.38" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="89.96" y1="108.73" x2="90.61" y2="107.38" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="87.42" y1="105.55" x2="88.88" y2="105.21" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="88.33" y1="101.57" x2="89.50" y2="102.50" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="92" y1="102.40" x2="92" y2="100.30" stroke="#ffffff" stroke-width="0.5"/>
+      <line x1="92.00" y1="100.04" x2="92.00" y2="100.82" stroke="#ffffff" stroke-width="0.2087"/>
+      <line x1="95.49" y1="101.72" x2="94.88" y2="102.21" stroke="#ffffff" stroke-width="0.2087"/>
+      <line x1="96.35" y1="105.49" x2="95.59" y2="105.32" stroke="#ffffff" stroke-width="0.2087"/>
+      <line x1="93.94" y1="108.52" x2="93.60" y2="107.81" stroke="#ffffff" stroke-width="0.2087"/>
+      <line x1="90.06" y1="108.52" x2="90.40" y2="107.81" stroke="#ffffff" stroke-width="0.2087"/>
+      <line x1="87.65" y1="105.49" x2="88.41" y2="105.32" stroke="#ffffff" stroke-width="0.2087"/>
+      <line x1="88.51" y1="101.72" x2="89.12" y2="102.21" stroke="#ffffff" stroke-width="0.2087"/>
+      <line x1="92" y1="102.40" x2="92" y2="100.30" stroke="#ffffff" stroke-width="0.2609"/>
     </g>
   </g>
   <g data-wcoast-param="panH" data-wcoast-cx="105" data-wcoast-cy="104.5" data-wcoast-angle-min="-150" data-wcoast-angle-max="150" data-wcoast-port="panCvH" data-wcoast-depth="panDepthH" data-wcoast-av="off">
-    <circle cx="105" cy="104.5" r="4.2" fill="url(#blueRing)" stroke="#004b7a" stroke-width="0.355" filter="url(#softShadow)"/>
-    <circle cx="105" cy="104.5" r="3.3" fill="url(#knobCap)" stroke="#666666" stroke-width="0.2366"/>
+    <circle cx="105" cy="104.5" r="4.2" fill="url(#blueRing)" stroke="#004b7a" stroke-width="0.1852" filter="url(#softShadow)"/>
+    <circle cx="105" cy="104.5" r="3.3" fill="url(#knobCap)" stroke="#666666" stroke-width="0.1234"/>
     <circle cx="105" cy="104.5" r="2.1" fill="#ff7300"/>
     <circle cx="105" cy="104.5" r="1.1" fill="#000000" data-wcoast-role="jackhole"/>
     <g data-wcoast-role="indicator">
-      <line x1="105.00" y1="99.80" x2="105.00" y2="101.30" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="108.67" y1="101.57" x2="107.50" y2="102.50" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="109.58" y1="105.55" x2="108.12" y2="105.21" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="107.04" y1="108.73" x2="106.39" y2="107.38" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="102.96" y1="108.73" x2="103.61" y2="107.38" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="100.42" y1="105.55" x2="101.88" y2="105.21" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="101.33" y1="101.57" x2="102.50" y2="102.50" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="105" y1="102.40" x2="105" y2="100.30" stroke="#ffffff" stroke-width="0.5"/>
+      <line x1="105.00" y1="100.04" x2="105.00" y2="100.82" stroke="#ffffff" stroke-width="0.2087"/>
+      <line x1="108.49" y1="101.72" x2="107.88" y2="102.21" stroke="#ffffff" stroke-width="0.2087"/>
+      <line x1="109.35" y1="105.49" x2="108.59" y2="105.32" stroke="#ffffff" stroke-width="0.2087"/>
+      <line x1="106.94" y1="108.52" x2="106.60" y2="107.81" stroke="#ffffff" stroke-width="0.2087"/>
+      <line x1="103.06" y1="108.52" x2="103.40" y2="107.81" stroke="#ffffff" stroke-width="0.2087"/>
+      <line x1="100.65" y1="105.49" x2="101.41" y2="105.32" stroke="#ffffff" stroke-width="0.2087"/>
+      <line x1="101.51" y1="101.72" x2="102.12" y2="102.21" stroke="#ffffff" stroke-width="0.2087"/>
+      <line x1="105" y1="102.40" x2="105" y2="100.30" stroke="#ffffff" stroke-width="0.2609"/>
     </g>
   </g>
   <g data-wcoast-param="panI" data-wcoast-cx="133" data-wcoast-cy="104.5" data-wcoast-angle-min="-150" data-wcoast-angle-max="150" data-wcoast-port="panCvI" data-wcoast-depth="panDepthI" data-wcoast-av="off">
-    <circle cx="133" cy="104.5" r="4.2" fill="url(#blueRing)" stroke="#004b7a" stroke-width="0.355" filter="url(#softShadow)"/>
-    <circle cx="133" cy="104.5" r="3.3" fill="url(#knobCap)" stroke="#666666" stroke-width="0.2366"/>
+    <circle cx="133" cy="104.5" r="4.2" fill="url(#blueRing)" stroke="#004b7a" stroke-width="0.1852" filter="url(#softShadow)"/>
+    <circle cx="133" cy="104.5" r="3.3" fill="url(#knobCap)" stroke="#666666" stroke-width="0.1234"/>
     <circle cx="133" cy="104.5" r="2.1" fill="#ff7300"/>
     <circle cx="133" cy="104.5" r="1.1" fill="#000000" data-wcoast-role="jackhole"/>
     <g data-wcoast-role="indicator">
-      <line x1="133.00" y1="99.80" x2="133.00" y2="101.30" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="136.67" y1="101.57" x2="135.50" y2="102.50" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="137.58" y1="105.55" x2="136.12" y2="105.21" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="135.04" y1="108.73" x2="134.39" y2="107.38" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="130.96" y1="108.73" x2="131.61" y2="107.38" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="128.42" y1="105.55" x2="129.88" y2="105.21" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="129.33" y1="101.57" x2="130.50" y2="102.50" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="133" y1="102.40" x2="133" y2="100.30" stroke="#ffffff" stroke-width="0.5"/>
+      <line x1="133.00" y1="100.04" x2="133.00" y2="100.82" stroke="#ffffff" stroke-width="0.2087"/>
+      <line x1="136.49" y1="101.72" x2="135.88" y2="102.21" stroke="#ffffff" stroke-width="0.2087"/>
+      <line x1="137.35" y1="105.49" x2="136.59" y2="105.32" stroke="#ffffff" stroke-width="0.2087"/>
+      <line x1="134.94" y1="108.52" x2="134.60" y2="107.81" stroke="#ffffff" stroke-width="0.2087"/>
+      <line x1="131.06" y1="108.52" x2="131.40" y2="107.81" stroke="#ffffff" stroke-width="0.2087"/>
+      <line x1="128.65" y1="105.49" x2="129.41" y2="105.32" stroke="#ffffff" stroke-width="0.2087"/>
+      <line x1="129.51" y1="101.72" x2="130.12" y2="102.21" stroke="#ffffff" stroke-width="0.2087"/>
+      <line x1="133" y1="102.40" x2="133" y2="100.30" stroke="#ffffff" stroke-width="0.2609"/>
     </g>
   </g>
   <g data-wcoast-param="panJ" data-wcoast-cx="146" data-wcoast-cy="104.5" data-wcoast-angle-min="-150" data-wcoast-angle-max="150" data-wcoast-port="panCvJ" data-wcoast-depth="panDepthJ" data-wcoast-av="off">
-    <circle cx="146" cy="104.5" r="4.2" fill="url(#blueRing)" stroke="#004b7a" stroke-width="0.355" filter="url(#softShadow)"/>
-    <circle cx="146" cy="104.5" r="3.3" fill="url(#knobCap)" stroke="#666666" stroke-width="0.2366"/>
+    <circle cx="146" cy="104.5" r="4.2" fill="url(#blueRing)" stroke="#004b7a" stroke-width="0.1852" filter="url(#softShadow)"/>
+    <circle cx="146" cy="104.5" r="3.3" fill="url(#knobCap)" stroke="#666666" stroke-width="0.1234"/>
     <circle cx="146" cy="104.5" r="2.1" fill="#ff7300"/>
     <circle cx="146" cy="104.5" r="1.1" fill="#000000" data-wcoast-role="jackhole"/>
     <g data-wcoast-role="indicator">
-      <line x1="146.00" y1="99.80" x2="146.00" y2="101.30" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="149.67" y1="101.57" x2="148.50" y2="102.50" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="150.58" y1="105.55" x2="149.12" y2="105.21" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="148.04" y1="108.73" x2="147.39" y2="107.38" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="143.96" y1="108.73" x2="144.61" y2="107.38" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="141.42" y1="105.55" x2="142.88" y2="105.21" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="142.33" y1="101.57" x2="143.50" y2="102.50" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="146" y1="102.40" x2="146" y2="100.30" stroke="#ffffff" stroke-width="0.5"/>
+      <line x1="146.00" y1="100.04" x2="146.00" y2="100.82" stroke="#ffffff" stroke-width="0.2087"/>
+      <line x1="149.49" y1="101.72" x2="148.88" y2="102.21" stroke="#ffffff" stroke-width="0.2087"/>
+      <line x1="150.35" y1="105.49" x2="149.59" y2="105.32" stroke="#ffffff" stroke-width="0.2087"/>
+      <line x1="147.94" y1="108.52" x2="147.60" y2="107.81" stroke="#ffffff" stroke-width="0.2087"/>
+      <line x1="144.06" y1="108.52" x2="144.40" y2="107.81" stroke="#ffffff" stroke-width="0.2087"/>
+      <line x1="141.65" y1="105.49" x2="142.41" y2="105.32" stroke="#ffffff" stroke-width="0.2087"/>
+      <line x1="142.51" y1="101.72" x2="143.12" y2="102.21" stroke="#ffffff" stroke-width="0.2087"/>
+      <line x1="146" y1="102.40" x2="146" y2="100.30" stroke="#ffffff" stroke-width="0.2609"/>
     </g>
   </g>
   <text x="8.4" y="16.5" font-size="3.206" font-weight="700" font-style="italic" fill="#163a69" text-anchor="end" font-family="Arial Narrow, Helvetica, Arial, sans-serif">IN</text>
@@ -222,35 +222,35 @@
   </g>
   <g data-wcoast-param="muteA"><circle cx="14" cy="21.9" r="2.3" fill="url(#redLed)" stroke="#7c0000" stroke-width="0.2366" filter="url(#softShadow)" data-wcoast-role="step-indicator" data-wcoast-step="on"/><circle cx="13.36" cy="21.26" r="0.69" fill="#ffb4b4" opacity="0.85" data-wcoast-role="led-gloss" pointer-events="none"/></g>
   <g data-wcoast-param="send1A" data-wcoast-cx="14" data-wcoast-cy="72" data-wcoast-angle-min="-150" data-wcoast-angle-max="150" data-wcoast-port="send1CvA" data-wcoast-depth="send1DepthA" data-wcoast-av="off">
-    <circle cx="14" cy="72" r="3.2" fill="url(#blueRing)" stroke="#004b7a" stroke-width="0.355" filter="url(#softShadow)"/>
-    <circle cx="14" cy="72" r="2.6" fill="url(#knobCap)" stroke="#666666" stroke-width="0.2366"/>
+    <circle cx="14" cy="72" r="3.2" fill="url(#blueRing)" stroke="#004b7a" stroke-width="0.1411" filter="url(#softShadow)"/>
+    <circle cx="14" cy="72" r="2.6" fill="url(#knobCap)" stroke="#666666" stroke-width="0.0941"/>
     <circle cx="14" cy="72" r="2.1" fill="#ff7300"/>
     <circle cx="14" cy="72" r="1.1" fill="#000000" data-wcoast-role="jackhole"/>
     <g data-wcoast-role="indicator">
-      <line x1="14.00" y1="68.30" x2="14.00" y2="69.80" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="16.89" y1="69.69" x2="15.72" y2="70.63" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="17.61" y1="72.82" x2="16.14" y2="72.49" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="15.61" y1="75.33" x2="14.95" y2="73.98" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="12.39" y1="75.33" x2="13.05" y2="73.98" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="10.39" y1="72.82" x2="11.86" y2="72.49" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="11.11" y1="69.69" x2="12.28" y2="70.63" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="14" y1="69.90" x2="14" y2="68.80" stroke="#ffffff" stroke-width="0.5"/>
+      <line x1="14.00" y1="68.60" x2="14.00" y2="69.20" stroke="#ffffff" stroke-width="0.159"/>
+      <line x1="16.66" y1="69.88" x2="16.19" y2="70.25" stroke="#ffffff" stroke-width="0.159"/>
+      <line x1="17.31" y1="72.76" x2="16.73" y2="72.62" stroke="#ffffff" stroke-width="0.159"/>
+      <line x1="15.47" y1="75.06" x2="15.22" y2="74.52" stroke="#ffffff" stroke-width="0.159"/>
+      <line x1="12.53" y1="75.06" x2="12.78" y2="74.52" stroke="#ffffff" stroke-width="0.159"/>
+      <line x1="10.69" y1="72.76" x2="11.27" y2="72.62" stroke="#ffffff" stroke-width="0.159"/>
+      <line x1="11.34" y1="69.88" x2="11.81" y2="70.25" stroke="#ffffff" stroke-width="0.159"/>
+      <line x1="14" y1="69.90" x2="14" y2="68.80" stroke="#ffffff" stroke-width="0.1988"/>
     </g>
   </g>
   <g data-wcoast-param="send2A" data-wcoast-cx="14" data-wcoast-cy="80.5" data-wcoast-angle-min="-150" data-wcoast-angle-max="150" data-wcoast-port="send2CvA" data-wcoast-depth="send2DepthA" data-wcoast-av="off">
-    <circle cx="14" cy="80.5" r="3.2" fill="url(#blueRing)" stroke="#004b7a" stroke-width="0.355" filter="url(#softShadow)"/>
-    <circle cx="14" cy="80.5" r="2.6" fill="url(#knobCap)" stroke="#666666" stroke-width="0.2366"/>
+    <circle cx="14" cy="80.5" r="3.2" fill="url(#blueRing)" stroke="#004b7a" stroke-width="0.1411" filter="url(#softShadow)"/>
+    <circle cx="14" cy="80.5" r="2.6" fill="url(#knobCap)" stroke="#666666" stroke-width="0.0941"/>
     <circle cx="14" cy="80.5" r="2.1" fill="#ff7300"/>
     <circle cx="14" cy="80.5" r="1.1" fill="#000000" data-wcoast-role="jackhole"/>
     <g data-wcoast-role="indicator">
-      <line x1="14.00" y1="76.80" x2="14.00" y2="78.30" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="16.89" y1="78.19" x2="15.72" y2="79.13" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="17.61" y1="81.32" x2="16.14" y2="80.99" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="15.61" y1="83.83" x2="14.95" y2="82.48" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="12.39" y1="83.83" x2="13.05" y2="82.48" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="10.39" y1="81.32" x2="11.86" y2="80.99" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="11.11" y1="78.19" x2="12.28" y2="79.13" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="14" y1="78.40" x2="14" y2="77.30" stroke="#ffffff" stroke-width="0.5"/>
+      <line x1="14.00" y1="77.10" x2="14.00" y2="77.70" stroke="#ffffff" stroke-width="0.159"/>
+      <line x1="16.66" y1="78.38" x2="16.19" y2="78.75" stroke="#ffffff" stroke-width="0.159"/>
+      <line x1="17.31" y1="81.26" x2="16.73" y2="81.12" stroke="#ffffff" stroke-width="0.159"/>
+      <line x1="15.47" y1="83.56" x2="15.22" y2="83.02" stroke="#ffffff" stroke-width="0.159"/>
+      <line x1="12.53" y1="83.56" x2="12.78" y2="83.02" stroke="#ffffff" stroke-width="0.159"/>
+      <line x1="10.69" y1="81.26" x2="11.27" y2="81.12" stroke="#ffffff" stroke-width="0.159"/>
+      <line x1="11.34" y1="78.38" x2="11.81" y2="78.75" stroke="#ffffff" stroke-width="0.159"/>
+      <line x1="14" y1="78.40" x2="14" y2="77.30" stroke="#ffffff" stroke-width="0.1988"/>
     </g>
   </g>
   <g data-wcoast-role="vu" data-wcoast-chan="A">
@@ -284,35 +284,35 @@
   </g>
   <g data-wcoast-param="muteB"><circle cx="27" cy="21.9" r="2.3" fill="url(#redLed)" stroke="#7c0000" stroke-width="0.2366" filter="url(#softShadow)" data-wcoast-role="step-indicator" data-wcoast-step="on"/><circle cx="26.36" cy="21.26" r="0.69" fill="#ffb4b4" opacity="0.85" data-wcoast-role="led-gloss" pointer-events="none"/></g>
   <g data-wcoast-param="send1B" data-wcoast-cx="27" data-wcoast-cy="72" data-wcoast-angle-min="-150" data-wcoast-angle-max="150" data-wcoast-port="send1CvB" data-wcoast-depth="send1DepthB" data-wcoast-av="off">
-    <circle cx="27" cy="72" r="3.2" fill="url(#blueRing)" stroke="#004b7a" stroke-width="0.355" filter="url(#softShadow)"/>
-    <circle cx="27" cy="72" r="2.6" fill="url(#knobCap)" stroke="#666666" stroke-width="0.2366"/>
+    <circle cx="27" cy="72" r="3.2" fill="url(#blueRing)" stroke="#004b7a" stroke-width="0.1411" filter="url(#softShadow)"/>
+    <circle cx="27" cy="72" r="2.6" fill="url(#knobCap)" stroke="#666666" stroke-width="0.0941"/>
     <circle cx="27" cy="72" r="2.1" fill="#ff7300"/>
     <circle cx="27" cy="72" r="1.1" fill="#000000" data-wcoast-role="jackhole"/>
     <g data-wcoast-role="indicator">
-      <line x1="27.00" y1="68.30" x2="27.00" y2="69.80" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="29.89" y1="69.69" x2="28.72" y2="70.63" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="30.61" y1="72.82" x2="29.14" y2="72.49" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="28.61" y1="75.33" x2="27.95" y2="73.98" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="25.39" y1="75.33" x2="26.05" y2="73.98" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="23.39" y1="72.82" x2="24.86" y2="72.49" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="24.11" y1="69.69" x2="25.28" y2="70.63" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="27" y1="69.90" x2="27" y2="68.80" stroke="#ffffff" stroke-width="0.5"/>
+      <line x1="27.00" y1="68.60" x2="27.00" y2="69.20" stroke="#ffffff" stroke-width="0.159"/>
+      <line x1="29.66" y1="69.88" x2="29.19" y2="70.25" stroke="#ffffff" stroke-width="0.159"/>
+      <line x1="30.31" y1="72.76" x2="29.73" y2="72.62" stroke="#ffffff" stroke-width="0.159"/>
+      <line x1="28.47" y1="75.06" x2="28.22" y2="74.52" stroke="#ffffff" stroke-width="0.159"/>
+      <line x1="25.53" y1="75.06" x2="25.78" y2="74.52" stroke="#ffffff" stroke-width="0.159"/>
+      <line x1="23.69" y1="72.76" x2="24.27" y2="72.62" stroke="#ffffff" stroke-width="0.159"/>
+      <line x1="24.34" y1="69.88" x2="24.81" y2="70.25" stroke="#ffffff" stroke-width="0.159"/>
+      <line x1="27" y1="69.90" x2="27" y2="68.80" stroke="#ffffff" stroke-width="0.1988"/>
     </g>
   </g>
   <g data-wcoast-param="send2B" data-wcoast-cx="27" data-wcoast-cy="80.5" data-wcoast-angle-min="-150" data-wcoast-angle-max="150" data-wcoast-port="send2CvB" data-wcoast-depth="send2DepthB" data-wcoast-av="off">
-    <circle cx="27" cy="80.5" r="3.2" fill="url(#blueRing)" stroke="#004b7a" stroke-width="0.355" filter="url(#softShadow)"/>
-    <circle cx="27" cy="80.5" r="2.6" fill="url(#knobCap)" stroke="#666666" stroke-width="0.2366"/>
+    <circle cx="27" cy="80.5" r="3.2" fill="url(#blueRing)" stroke="#004b7a" stroke-width="0.1411" filter="url(#softShadow)"/>
+    <circle cx="27" cy="80.5" r="2.6" fill="url(#knobCap)" stroke="#666666" stroke-width="0.0941"/>
     <circle cx="27" cy="80.5" r="2.1" fill="#ff7300"/>
     <circle cx="27" cy="80.5" r="1.1" fill="#000000" data-wcoast-role="jackhole"/>
     <g data-wcoast-role="indicator">
-      <line x1="27.00" y1="76.80" x2="27.00" y2="78.30" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="29.89" y1="78.19" x2="28.72" y2="79.13" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="30.61" y1="81.32" x2="29.14" y2="80.99" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="28.61" y1="83.83" x2="27.95" y2="82.48" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="25.39" y1="83.83" x2="26.05" y2="82.48" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="23.39" y1="81.32" x2="24.86" y2="80.99" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="24.11" y1="78.19" x2="25.28" y2="79.13" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="27" y1="78.40" x2="27" y2="77.30" stroke="#ffffff" stroke-width="0.5"/>
+      <line x1="27.00" y1="77.10" x2="27.00" y2="77.70" stroke="#ffffff" stroke-width="0.159"/>
+      <line x1="29.66" y1="78.38" x2="29.19" y2="78.75" stroke="#ffffff" stroke-width="0.159"/>
+      <line x1="30.31" y1="81.26" x2="29.73" y2="81.12" stroke="#ffffff" stroke-width="0.159"/>
+      <line x1="28.47" y1="83.56" x2="28.22" y2="83.02" stroke="#ffffff" stroke-width="0.159"/>
+      <line x1="25.53" y1="83.56" x2="25.78" y2="83.02" stroke="#ffffff" stroke-width="0.159"/>
+      <line x1="23.69" y1="81.26" x2="24.27" y2="81.12" stroke="#ffffff" stroke-width="0.159"/>
+      <line x1="24.34" y1="78.38" x2="24.81" y2="78.75" stroke="#ffffff" stroke-width="0.159"/>
+      <line x1="27" y1="78.40" x2="27" y2="77.30" stroke="#ffffff" stroke-width="0.1988"/>
     </g>
   </g>
   <g data-wcoast-role="vu" data-wcoast-chan="B">
@@ -346,35 +346,35 @@
   </g>
   <g data-wcoast-param="muteC"><circle cx="40" cy="21.9" r="2.3" fill="url(#redLed)" stroke="#7c0000" stroke-width="0.2366" filter="url(#softShadow)" data-wcoast-role="step-indicator" data-wcoast-step="on"/><circle cx="39.36" cy="21.26" r="0.69" fill="#ffb4b4" opacity="0.85" data-wcoast-role="led-gloss" pointer-events="none"/></g>
   <g data-wcoast-param="send1C" data-wcoast-cx="40" data-wcoast-cy="72" data-wcoast-angle-min="-150" data-wcoast-angle-max="150" data-wcoast-port="send1CvC" data-wcoast-depth="send1DepthC" data-wcoast-av="off">
-    <circle cx="40" cy="72" r="3.2" fill="url(#blueRing)" stroke="#004b7a" stroke-width="0.355" filter="url(#softShadow)"/>
-    <circle cx="40" cy="72" r="2.6" fill="url(#knobCap)" stroke="#666666" stroke-width="0.2366"/>
+    <circle cx="40" cy="72" r="3.2" fill="url(#blueRing)" stroke="#004b7a" stroke-width="0.1411" filter="url(#softShadow)"/>
+    <circle cx="40" cy="72" r="2.6" fill="url(#knobCap)" stroke="#666666" stroke-width="0.0941"/>
     <circle cx="40" cy="72" r="2.1" fill="#ff7300"/>
     <circle cx="40" cy="72" r="1.1" fill="#000000" data-wcoast-role="jackhole"/>
     <g data-wcoast-role="indicator">
-      <line x1="40.00" y1="68.30" x2="40.00" y2="69.80" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="42.89" y1="69.69" x2="41.72" y2="70.63" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="43.61" y1="72.82" x2="42.14" y2="72.49" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="41.61" y1="75.33" x2="40.95" y2="73.98" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="38.39" y1="75.33" x2="39.05" y2="73.98" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="36.39" y1="72.82" x2="37.86" y2="72.49" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="37.11" y1="69.69" x2="38.28" y2="70.63" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="40" y1="69.90" x2="40" y2="68.80" stroke="#ffffff" stroke-width="0.5"/>
+      <line x1="40.00" y1="68.60" x2="40.00" y2="69.20" stroke="#ffffff" stroke-width="0.159"/>
+      <line x1="42.66" y1="69.88" x2="42.19" y2="70.25" stroke="#ffffff" stroke-width="0.159"/>
+      <line x1="43.31" y1="72.76" x2="42.73" y2="72.62" stroke="#ffffff" stroke-width="0.159"/>
+      <line x1="41.47" y1="75.06" x2="41.22" y2="74.52" stroke="#ffffff" stroke-width="0.159"/>
+      <line x1="38.53" y1="75.06" x2="38.78" y2="74.52" stroke="#ffffff" stroke-width="0.159"/>
+      <line x1="36.69" y1="72.76" x2="37.27" y2="72.62" stroke="#ffffff" stroke-width="0.159"/>
+      <line x1="37.34" y1="69.88" x2="37.81" y2="70.25" stroke="#ffffff" stroke-width="0.159"/>
+      <line x1="40" y1="69.90" x2="40" y2="68.80" stroke="#ffffff" stroke-width="0.1988"/>
     </g>
   </g>
   <g data-wcoast-param="send2C" data-wcoast-cx="40" data-wcoast-cy="80.5" data-wcoast-angle-min="-150" data-wcoast-angle-max="150" data-wcoast-port="send2CvC" data-wcoast-depth="send2DepthC" data-wcoast-av="off">
-    <circle cx="40" cy="80.5" r="3.2" fill="url(#blueRing)" stroke="#004b7a" stroke-width="0.355" filter="url(#softShadow)"/>
-    <circle cx="40" cy="80.5" r="2.6" fill="url(#knobCap)" stroke="#666666" stroke-width="0.2366"/>
+    <circle cx="40" cy="80.5" r="3.2" fill="url(#blueRing)" stroke="#004b7a" stroke-width="0.1411" filter="url(#softShadow)"/>
+    <circle cx="40" cy="80.5" r="2.6" fill="url(#knobCap)" stroke="#666666" stroke-width="0.0941"/>
     <circle cx="40" cy="80.5" r="2.1" fill="#ff7300"/>
     <circle cx="40" cy="80.5" r="1.1" fill="#000000" data-wcoast-role="jackhole"/>
     <g data-wcoast-role="indicator">
-      <line x1="40.00" y1="76.80" x2="40.00" y2="78.30" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="42.89" y1="78.19" x2="41.72" y2="79.13" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="43.61" y1="81.32" x2="42.14" y2="80.99" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="41.61" y1="83.83" x2="40.95" y2="82.48" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="38.39" y1="83.83" x2="39.05" y2="82.48" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="36.39" y1="81.32" x2="37.86" y2="80.99" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="37.11" y1="78.19" x2="38.28" y2="79.13" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="40" y1="78.40" x2="40" y2="77.30" stroke="#ffffff" stroke-width="0.5"/>
+      <line x1="40.00" y1="77.10" x2="40.00" y2="77.70" stroke="#ffffff" stroke-width="0.159"/>
+      <line x1="42.66" y1="78.38" x2="42.19" y2="78.75" stroke="#ffffff" stroke-width="0.159"/>
+      <line x1="43.31" y1="81.26" x2="42.73" y2="81.12" stroke="#ffffff" stroke-width="0.159"/>
+      <line x1="41.47" y1="83.56" x2="41.22" y2="83.02" stroke="#ffffff" stroke-width="0.159"/>
+      <line x1="38.53" y1="83.56" x2="38.78" y2="83.02" stroke="#ffffff" stroke-width="0.159"/>
+      <line x1="36.69" y1="81.26" x2="37.27" y2="81.12" stroke="#ffffff" stroke-width="0.159"/>
+      <line x1="37.34" y1="78.38" x2="37.81" y2="78.75" stroke="#ffffff" stroke-width="0.159"/>
+      <line x1="40" y1="78.40" x2="40" y2="77.30" stroke="#ffffff" stroke-width="0.1988"/>
     </g>
   </g>
   <g data-wcoast-role="vu" data-wcoast-chan="C">
@@ -408,35 +408,35 @@
   </g>
   <g data-wcoast-param="muteD"><circle cx="53" cy="21.9" r="2.3" fill="url(#redLed)" stroke="#7c0000" stroke-width="0.2366" filter="url(#softShadow)" data-wcoast-role="step-indicator" data-wcoast-step="on"/><circle cx="52.36" cy="21.26" r="0.69" fill="#ffb4b4" opacity="0.85" data-wcoast-role="led-gloss" pointer-events="none"/></g>
   <g data-wcoast-param="send1D" data-wcoast-cx="53" data-wcoast-cy="72" data-wcoast-angle-min="-150" data-wcoast-angle-max="150" data-wcoast-port="send1CvD" data-wcoast-depth="send1DepthD" data-wcoast-av="off">
-    <circle cx="53" cy="72" r="3.2" fill="url(#blueRing)" stroke="#004b7a" stroke-width="0.355" filter="url(#softShadow)"/>
-    <circle cx="53" cy="72" r="2.6" fill="url(#knobCap)" stroke="#666666" stroke-width="0.2366"/>
+    <circle cx="53" cy="72" r="3.2" fill="url(#blueRing)" stroke="#004b7a" stroke-width="0.1411" filter="url(#softShadow)"/>
+    <circle cx="53" cy="72" r="2.6" fill="url(#knobCap)" stroke="#666666" stroke-width="0.0941"/>
     <circle cx="53" cy="72" r="2.1" fill="#ff7300"/>
     <circle cx="53" cy="72" r="1.1" fill="#000000" data-wcoast-role="jackhole"/>
     <g data-wcoast-role="indicator">
-      <line x1="53.00" y1="68.30" x2="53.00" y2="69.80" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="55.89" y1="69.69" x2="54.72" y2="70.63" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="56.61" y1="72.82" x2="55.14" y2="72.49" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="54.61" y1="75.33" x2="53.95" y2="73.98" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="51.39" y1="75.33" x2="52.05" y2="73.98" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="49.39" y1="72.82" x2="50.86" y2="72.49" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="50.11" y1="69.69" x2="51.28" y2="70.63" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="53" y1="69.90" x2="53" y2="68.80" stroke="#ffffff" stroke-width="0.5"/>
+      <line x1="53.00" y1="68.60" x2="53.00" y2="69.20" stroke="#ffffff" stroke-width="0.159"/>
+      <line x1="55.66" y1="69.88" x2="55.19" y2="70.25" stroke="#ffffff" stroke-width="0.159"/>
+      <line x1="56.31" y1="72.76" x2="55.73" y2="72.62" stroke="#ffffff" stroke-width="0.159"/>
+      <line x1="54.47" y1="75.06" x2="54.22" y2="74.52" stroke="#ffffff" stroke-width="0.159"/>
+      <line x1="51.53" y1="75.06" x2="51.78" y2="74.52" stroke="#ffffff" stroke-width="0.159"/>
+      <line x1="49.69" y1="72.76" x2="50.27" y2="72.62" stroke="#ffffff" stroke-width="0.159"/>
+      <line x1="50.34" y1="69.88" x2="50.81" y2="70.25" stroke="#ffffff" stroke-width="0.159"/>
+      <line x1="53" y1="69.90" x2="53" y2="68.80" stroke="#ffffff" stroke-width="0.1988"/>
     </g>
   </g>
   <g data-wcoast-param="send2D" data-wcoast-cx="53" data-wcoast-cy="80.5" data-wcoast-angle-min="-150" data-wcoast-angle-max="150" data-wcoast-port="send2CvD" data-wcoast-depth="send2DepthD" data-wcoast-av="off">
-    <circle cx="53" cy="80.5" r="3.2" fill="url(#blueRing)" stroke="#004b7a" stroke-width="0.355" filter="url(#softShadow)"/>
-    <circle cx="53" cy="80.5" r="2.6" fill="url(#knobCap)" stroke="#666666" stroke-width="0.2366"/>
+    <circle cx="53" cy="80.5" r="3.2" fill="url(#blueRing)" stroke="#004b7a" stroke-width="0.1411" filter="url(#softShadow)"/>
+    <circle cx="53" cy="80.5" r="2.6" fill="url(#knobCap)" stroke="#666666" stroke-width="0.0941"/>
     <circle cx="53" cy="80.5" r="2.1" fill="#ff7300"/>
     <circle cx="53" cy="80.5" r="1.1" fill="#000000" data-wcoast-role="jackhole"/>
     <g data-wcoast-role="indicator">
-      <line x1="53.00" y1="76.80" x2="53.00" y2="78.30" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="55.89" y1="78.19" x2="54.72" y2="79.13" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="56.61" y1="81.32" x2="55.14" y2="80.99" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="54.61" y1="83.83" x2="53.95" y2="82.48" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="51.39" y1="83.83" x2="52.05" y2="82.48" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="49.39" y1="81.32" x2="50.86" y2="80.99" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="50.11" y1="78.19" x2="51.28" y2="79.13" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="53" y1="78.40" x2="53" y2="77.30" stroke="#ffffff" stroke-width="0.5"/>
+      <line x1="53.00" y1="77.10" x2="53.00" y2="77.70" stroke="#ffffff" stroke-width="0.159"/>
+      <line x1="55.66" y1="78.38" x2="55.19" y2="78.75" stroke="#ffffff" stroke-width="0.159"/>
+      <line x1="56.31" y1="81.26" x2="55.73" y2="81.12" stroke="#ffffff" stroke-width="0.159"/>
+      <line x1="54.47" y1="83.56" x2="54.22" y2="83.02" stroke="#ffffff" stroke-width="0.159"/>
+      <line x1="51.53" y1="83.56" x2="51.78" y2="83.02" stroke="#ffffff" stroke-width="0.159"/>
+      <line x1="49.69" y1="81.26" x2="50.27" y2="81.12" stroke="#ffffff" stroke-width="0.159"/>
+      <line x1="50.34" y1="78.38" x2="50.81" y2="78.75" stroke="#ffffff" stroke-width="0.159"/>
+      <line x1="53" y1="78.40" x2="53" y2="77.30" stroke="#ffffff" stroke-width="0.1988"/>
     </g>
   </g>
   <g data-wcoast-role="vu" data-wcoast-chan="D">
@@ -470,35 +470,35 @@
   </g>
   <g data-wcoast-param="muteE"><circle cx="66" cy="21.9" r="2.3" fill="url(#redLed)" stroke="#7c0000" stroke-width="0.2366" filter="url(#softShadow)" data-wcoast-role="step-indicator" data-wcoast-step="on"/><circle cx="65.36" cy="21.26" r="0.69" fill="#ffb4b4" opacity="0.85" data-wcoast-role="led-gloss" pointer-events="none"/></g>
   <g data-wcoast-param="send1E" data-wcoast-cx="66" data-wcoast-cy="72" data-wcoast-angle-min="-150" data-wcoast-angle-max="150" data-wcoast-port="send1CvE" data-wcoast-depth="send1DepthE" data-wcoast-av="off">
-    <circle cx="66" cy="72" r="3.2" fill="url(#blueRing)" stroke="#004b7a" stroke-width="0.355" filter="url(#softShadow)"/>
-    <circle cx="66" cy="72" r="2.6" fill="url(#knobCap)" stroke="#666666" stroke-width="0.2366"/>
+    <circle cx="66" cy="72" r="3.2" fill="url(#blueRing)" stroke="#004b7a" stroke-width="0.1411" filter="url(#softShadow)"/>
+    <circle cx="66" cy="72" r="2.6" fill="url(#knobCap)" stroke="#666666" stroke-width="0.0941"/>
     <circle cx="66" cy="72" r="2.1" fill="#ff7300"/>
     <circle cx="66" cy="72" r="1.1" fill="#000000" data-wcoast-role="jackhole"/>
     <g data-wcoast-role="indicator">
-      <line x1="66.00" y1="68.30" x2="66.00" y2="69.80" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="68.89" y1="69.69" x2="67.72" y2="70.63" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="69.61" y1="72.82" x2="68.14" y2="72.49" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="67.61" y1="75.33" x2="66.95" y2="73.98" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="64.39" y1="75.33" x2="65.05" y2="73.98" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="62.39" y1="72.82" x2="63.86" y2="72.49" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="63.11" y1="69.69" x2="64.28" y2="70.63" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="66" y1="69.90" x2="66" y2="68.80" stroke="#ffffff" stroke-width="0.5"/>
+      <line x1="66.00" y1="68.60" x2="66.00" y2="69.20" stroke="#ffffff" stroke-width="0.159"/>
+      <line x1="68.66" y1="69.88" x2="68.19" y2="70.25" stroke="#ffffff" stroke-width="0.159"/>
+      <line x1="69.31" y1="72.76" x2="68.73" y2="72.62" stroke="#ffffff" stroke-width="0.159"/>
+      <line x1="67.47" y1="75.06" x2="67.22" y2="74.52" stroke="#ffffff" stroke-width="0.159"/>
+      <line x1="64.53" y1="75.06" x2="64.78" y2="74.52" stroke="#ffffff" stroke-width="0.159"/>
+      <line x1="62.69" y1="72.76" x2="63.27" y2="72.62" stroke="#ffffff" stroke-width="0.159"/>
+      <line x1="63.34" y1="69.88" x2="63.81" y2="70.25" stroke="#ffffff" stroke-width="0.159"/>
+      <line x1="66" y1="69.90" x2="66" y2="68.80" stroke="#ffffff" stroke-width="0.1988"/>
     </g>
   </g>
   <g data-wcoast-param="send2E" data-wcoast-cx="66" data-wcoast-cy="80.5" data-wcoast-angle-min="-150" data-wcoast-angle-max="150" data-wcoast-port="send2CvE" data-wcoast-depth="send2DepthE" data-wcoast-av="off">
-    <circle cx="66" cy="80.5" r="3.2" fill="url(#blueRing)" stroke="#004b7a" stroke-width="0.355" filter="url(#softShadow)"/>
-    <circle cx="66" cy="80.5" r="2.6" fill="url(#knobCap)" stroke="#666666" stroke-width="0.2366"/>
+    <circle cx="66" cy="80.5" r="3.2" fill="url(#blueRing)" stroke="#004b7a" stroke-width="0.1411" filter="url(#softShadow)"/>
+    <circle cx="66" cy="80.5" r="2.6" fill="url(#knobCap)" stroke="#666666" stroke-width="0.0941"/>
     <circle cx="66" cy="80.5" r="2.1" fill="#ff7300"/>
     <circle cx="66" cy="80.5" r="1.1" fill="#000000" data-wcoast-role="jackhole"/>
     <g data-wcoast-role="indicator">
-      <line x1="66.00" y1="76.80" x2="66.00" y2="78.30" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="68.89" y1="78.19" x2="67.72" y2="79.13" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="69.61" y1="81.32" x2="68.14" y2="80.99" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="67.61" y1="83.83" x2="66.95" y2="82.48" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="64.39" y1="83.83" x2="65.05" y2="82.48" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="62.39" y1="81.32" x2="63.86" y2="80.99" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="63.11" y1="78.19" x2="64.28" y2="79.13" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="66" y1="78.40" x2="66" y2="77.30" stroke="#ffffff" stroke-width="0.5"/>
+      <line x1="66.00" y1="77.10" x2="66.00" y2="77.70" stroke="#ffffff" stroke-width="0.159"/>
+      <line x1="68.66" y1="78.38" x2="68.19" y2="78.75" stroke="#ffffff" stroke-width="0.159"/>
+      <line x1="69.31" y1="81.26" x2="68.73" y2="81.12" stroke="#ffffff" stroke-width="0.159"/>
+      <line x1="67.47" y1="83.56" x2="67.22" y2="83.02" stroke="#ffffff" stroke-width="0.159"/>
+      <line x1="64.53" y1="83.56" x2="64.78" y2="83.02" stroke="#ffffff" stroke-width="0.159"/>
+      <line x1="62.69" y1="81.26" x2="63.27" y2="81.12" stroke="#ffffff" stroke-width="0.159"/>
+      <line x1="63.34" y1="78.38" x2="63.81" y2="78.75" stroke="#ffffff" stroke-width="0.159"/>
+      <line x1="66" y1="78.40" x2="66" y2="77.30" stroke="#ffffff" stroke-width="0.1988"/>
     </g>
   </g>
   <g data-wcoast-role="vu" data-wcoast-chan="E">
@@ -532,35 +532,35 @@
   </g>
   <g data-wcoast-param="muteF"><circle cx="79" cy="21.9" r="2.3" fill="url(#redLed)" stroke="#7c0000" stroke-width="0.2366" filter="url(#softShadow)" data-wcoast-role="step-indicator" data-wcoast-step="on"/><circle cx="78.36" cy="21.26" r="0.69" fill="#ffb4b4" opacity="0.85" data-wcoast-role="led-gloss" pointer-events="none"/></g>
   <g data-wcoast-param="send1F" data-wcoast-cx="79" data-wcoast-cy="72" data-wcoast-angle-min="-150" data-wcoast-angle-max="150" data-wcoast-port="send1CvF" data-wcoast-depth="send1DepthF" data-wcoast-av="off">
-    <circle cx="79" cy="72" r="3.2" fill="url(#blueRing)" stroke="#004b7a" stroke-width="0.355" filter="url(#softShadow)"/>
-    <circle cx="79" cy="72" r="2.6" fill="url(#knobCap)" stroke="#666666" stroke-width="0.2366"/>
+    <circle cx="79" cy="72" r="3.2" fill="url(#blueRing)" stroke="#004b7a" stroke-width="0.1411" filter="url(#softShadow)"/>
+    <circle cx="79" cy="72" r="2.6" fill="url(#knobCap)" stroke="#666666" stroke-width="0.0941"/>
     <circle cx="79" cy="72" r="2.1" fill="#ff7300"/>
     <circle cx="79" cy="72" r="1.1" fill="#000000" data-wcoast-role="jackhole"/>
     <g data-wcoast-role="indicator">
-      <line x1="79.00" y1="68.30" x2="79.00" y2="69.80" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="81.89" y1="69.69" x2="80.72" y2="70.63" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="82.61" y1="72.82" x2="81.14" y2="72.49" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="80.61" y1="75.33" x2="79.95" y2="73.98" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="77.39" y1="75.33" x2="78.05" y2="73.98" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="75.39" y1="72.82" x2="76.86" y2="72.49" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="76.11" y1="69.69" x2="77.28" y2="70.63" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="79" y1="69.90" x2="79" y2="68.80" stroke="#ffffff" stroke-width="0.5"/>
+      <line x1="79.00" y1="68.60" x2="79.00" y2="69.20" stroke="#ffffff" stroke-width="0.159"/>
+      <line x1="81.66" y1="69.88" x2="81.19" y2="70.25" stroke="#ffffff" stroke-width="0.159"/>
+      <line x1="82.31" y1="72.76" x2="81.73" y2="72.62" stroke="#ffffff" stroke-width="0.159"/>
+      <line x1="80.47" y1="75.06" x2="80.22" y2="74.52" stroke="#ffffff" stroke-width="0.159"/>
+      <line x1="77.53" y1="75.06" x2="77.78" y2="74.52" stroke="#ffffff" stroke-width="0.159"/>
+      <line x1="75.69" y1="72.76" x2="76.27" y2="72.62" stroke="#ffffff" stroke-width="0.159"/>
+      <line x1="76.34" y1="69.88" x2="76.81" y2="70.25" stroke="#ffffff" stroke-width="0.159"/>
+      <line x1="79" y1="69.90" x2="79" y2="68.80" stroke="#ffffff" stroke-width="0.1988"/>
     </g>
   </g>
   <g data-wcoast-param="send2F" data-wcoast-cx="79" data-wcoast-cy="80.5" data-wcoast-angle-min="-150" data-wcoast-angle-max="150" data-wcoast-port="send2CvF" data-wcoast-depth="send2DepthF" data-wcoast-av="off">
-    <circle cx="79" cy="80.5" r="3.2" fill="url(#blueRing)" stroke="#004b7a" stroke-width="0.355" filter="url(#softShadow)"/>
-    <circle cx="79" cy="80.5" r="2.6" fill="url(#knobCap)" stroke="#666666" stroke-width="0.2366"/>
+    <circle cx="79" cy="80.5" r="3.2" fill="url(#blueRing)" stroke="#004b7a" stroke-width="0.1411" filter="url(#softShadow)"/>
+    <circle cx="79" cy="80.5" r="2.6" fill="url(#knobCap)" stroke="#666666" stroke-width="0.0941"/>
     <circle cx="79" cy="80.5" r="2.1" fill="#ff7300"/>
     <circle cx="79" cy="80.5" r="1.1" fill="#000000" data-wcoast-role="jackhole"/>
     <g data-wcoast-role="indicator">
-      <line x1="79.00" y1="76.80" x2="79.00" y2="78.30" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="81.89" y1="78.19" x2="80.72" y2="79.13" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="82.61" y1="81.32" x2="81.14" y2="80.99" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="80.61" y1="83.83" x2="79.95" y2="82.48" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="77.39" y1="83.83" x2="78.05" y2="82.48" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="75.39" y1="81.32" x2="76.86" y2="80.99" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="76.11" y1="78.19" x2="77.28" y2="79.13" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="79" y1="78.40" x2="79" y2="77.30" stroke="#ffffff" stroke-width="0.5"/>
+      <line x1="79.00" y1="77.10" x2="79.00" y2="77.70" stroke="#ffffff" stroke-width="0.159"/>
+      <line x1="81.66" y1="78.38" x2="81.19" y2="78.75" stroke="#ffffff" stroke-width="0.159"/>
+      <line x1="82.31" y1="81.26" x2="81.73" y2="81.12" stroke="#ffffff" stroke-width="0.159"/>
+      <line x1="80.47" y1="83.56" x2="80.22" y2="83.02" stroke="#ffffff" stroke-width="0.159"/>
+      <line x1="77.53" y1="83.56" x2="77.78" y2="83.02" stroke="#ffffff" stroke-width="0.159"/>
+      <line x1="75.69" y1="81.26" x2="76.27" y2="81.12" stroke="#ffffff" stroke-width="0.159"/>
+      <line x1="76.34" y1="78.38" x2="76.81" y2="78.75" stroke="#ffffff" stroke-width="0.159"/>
+      <line x1="79" y1="78.40" x2="79" y2="77.30" stroke="#ffffff" stroke-width="0.1988"/>
     </g>
   </g>
   <g data-wcoast-role="vu" data-wcoast-chan="F">
@@ -594,35 +594,35 @@
   </g>
   <g data-wcoast-param="muteG"><circle cx="92" cy="21.9" r="2.3" fill="url(#redLed)" stroke="#7c0000" stroke-width="0.2366" filter="url(#softShadow)" data-wcoast-role="step-indicator" data-wcoast-step="on"/><circle cx="91.36" cy="21.26" r="0.69" fill="#ffb4b4" opacity="0.85" data-wcoast-role="led-gloss" pointer-events="none"/></g>
   <g data-wcoast-param="send1G" data-wcoast-cx="92" data-wcoast-cy="72" data-wcoast-angle-min="-150" data-wcoast-angle-max="150" data-wcoast-port="send1CvG" data-wcoast-depth="send1DepthG" data-wcoast-av="off">
-    <circle cx="92" cy="72" r="3.2" fill="url(#blueRing)" stroke="#004b7a" stroke-width="0.355" filter="url(#softShadow)"/>
-    <circle cx="92" cy="72" r="2.6" fill="url(#knobCap)" stroke="#666666" stroke-width="0.2366"/>
+    <circle cx="92" cy="72" r="3.2" fill="url(#blueRing)" stroke="#004b7a" stroke-width="0.1411" filter="url(#softShadow)"/>
+    <circle cx="92" cy="72" r="2.6" fill="url(#knobCap)" stroke="#666666" stroke-width="0.0941"/>
     <circle cx="92" cy="72" r="2.1" fill="#ff7300"/>
     <circle cx="92" cy="72" r="1.1" fill="#000000" data-wcoast-role="jackhole"/>
     <g data-wcoast-role="indicator">
-      <line x1="92.00" y1="68.30" x2="92.00" y2="69.80" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="94.89" y1="69.69" x2="93.72" y2="70.63" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="95.61" y1="72.82" x2="94.14" y2="72.49" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="93.61" y1="75.33" x2="92.95" y2="73.98" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="90.39" y1="75.33" x2="91.05" y2="73.98" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="88.39" y1="72.82" x2="89.86" y2="72.49" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="89.11" y1="69.69" x2="90.28" y2="70.63" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="92" y1="69.90" x2="92" y2="68.80" stroke="#ffffff" stroke-width="0.5"/>
+      <line x1="92.00" y1="68.60" x2="92.00" y2="69.20" stroke="#ffffff" stroke-width="0.159"/>
+      <line x1="94.66" y1="69.88" x2="94.19" y2="70.25" stroke="#ffffff" stroke-width="0.159"/>
+      <line x1="95.31" y1="72.76" x2="94.73" y2="72.62" stroke="#ffffff" stroke-width="0.159"/>
+      <line x1="93.47" y1="75.06" x2="93.22" y2="74.52" stroke="#ffffff" stroke-width="0.159"/>
+      <line x1="90.53" y1="75.06" x2="90.78" y2="74.52" stroke="#ffffff" stroke-width="0.159"/>
+      <line x1="88.69" y1="72.76" x2="89.27" y2="72.62" stroke="#ffffff" stroke-width="0.159"/>
+      <line x1="89.34" y1="69.88" x2="89.81" y2="70.25" stroke="#ffffff" stroke-width="0.159"/>
+      <line x1="92" y1="69.90" x2="92" y2="68.80" stroke="#ffffff" stroke-width="0.1988"/>
     </g>
   </g>
   <g data-wcoast-param="send2G" data-wcoast-cx="92" data-wcoast-cy="80.5" data-wcoast-angle-min="-150" data-wcoast-angle-max="150" data-wcoast-port="send2CvG" data-wcoast-depth="send2DepthG" data-wcoast-av="off">
-    <circle cx="92" cy="80.5" r="3.2" fill="url(#blueRing)" stroke="#004b7a" stroke-width="0.355" filter="url(#softShadow)"/>
-    <circle cx="92" cy="80.5" r="2.6" fill="url(#knobCap)" stroke="#666666" stroke-width="0.2366"/>
+    <circle cx="92" cy="80.5" r="3.2" fill="url(#blueRing)" stroke="#004b7a" stroke-width="0.1411" filter="url(#softShadow)"/>
+    <circle cx="92" cy="80.5" r="2.6" fill="url(#knobCap)" stroke="#666666" stroke-width="0.0941"/>
     <circle cx="92" cy="80.5" r="2.1" fill="#ff7300"/>
     <circle cx="92" cy="80.5" r="1.1" fill="#000000" data-wcoast-role="jackhole"/>
     <g data-wcoast-role="indicator">
-      <line x1="92.00" y1="76.80" x2="92.00" y2="78.30" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="94.89" y1="78.19" x2="93.72" y2="79.13" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="95.61" y1="81.32" x2="94.14" y2="80.99" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="93.61" y1="83.83" x2="92.95" y2="82.48" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="90.39" y1="83.83" x2="91.05" y2="82.48" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="88.39" y1="81.32" x2="89.86" y2="80.99" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="89.11" y1="78.19" x2="90.28" y2="79.13" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="92" y1="78.40" x2="92" y2="77.30" stroke="#ffffff" stroke-width="0.5"/>
+      <line x1="92.00" y1="77.10" x2="92.00" y2="77.70" stroke="#ffffff" stroke-width="0.159"/>
+      <line x1="94.66" y1="78.38" x2="94.19" y2="78.75" stroke="#ffffff" stroke-width="0.159"/>
+      <line x1="95.31" y1="81.26" x2="94.73" y2="81.12" stroke="#ffffff" stroke-width="0.159"/>
+      <line x1="93.47" y1="83.56" x2="93.22" y2="83.02" stroke="#ffffff" stroke-width="0.159"/>
+      <line x1="90.53" y1="83.56" x2="90.78" y2="83.02" stroke="#ffffff" stroke-width="0.159"/>
+      <line x1="88.69" y1="81.26" x2="89.27" y2="81.12" stroke="#ffffff" stroke-width="0.159"/>
+      <line x1="89.34" y1="78.38" x2="89.81" y2="78.75" stroke="#ffffff" stroke-width="0.159"/>
+      <line x1="92" y1="78.40" x2="92" y2="77.30" stroke="#ffffff" stroke-width="0.1988"/>
     </g>
   </g>
   <g data-wcoast-role="vu" data-wcoast-chan="G">
@@ -656,35 +656,35 @@
   </g>
   <g data-wcoast-param="muteH"><circle cx="105" cy="21.9" r="2.3" fill="url(#redLed)" stroke="#7c0000" stroke-width="0.2366" filter="url(#softShadow)" data-wcoast-role="step-indicator" data-wcoast-step="on"/><circle cx="104.36" cy="21.26" r="0.69" fill="#ffb4b4" opacity="0.85" data-wcoast-role="led-gloss" pointer-events="none"/></g>
   <g data-wcoast-param="send1H" data-wcoast-cx="105" data-wcoast-cy="72" data-wcoast-angle-min="-150" data-wcoast-angle-max="150" data-wcoast-port="send1CvH" data-wcoast-depth="send1DepthH" data-wcoast-av="off">
-    <circle cx="105" cy="72" r="3.2" fill="url(#blueRing)" stroke="#004b7a" stroke-width="0.355" filter="url(#softShadow)"/>
-    <circle cx="105" cy="72" r="2.6" fill="url(#knobCap)" stroke="#666666" stroke-width="0.2366"/>
+    <circle cx="105" cy="72" r="3.2" fill="url(#blueRing)" stroke="#004b7a" stroke-width="0.1411" filter="url(#softShadow)"/>
+    <circle cx="105" cy="72" r="2.6" fill="url(#knobCap)" stroke="#666666" stroke-width="0.0941"/>
     <circle cx="105" cy="72" r="2.1" fill="#ff7300"/>
     <circle cx="105" cy="72" r="1.1" fill="#000000" data-wcoast-role="jackhole"/>
     <g data-wcoast-role="indicator">
-      <line x1="105.00" y1="68.30" x2="105.00" y2="69.80" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="107.89" y1="69.69" x2="106.72" y2="70.63" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="108.61" y1="72.82" x2="107.14" y2="72.49" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="106.61" y1="75.33" x2="105.95" y2="73.98" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="103.39" y1="75.33" x2="104.05" y2="73.98" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="101.39" y1="72.82" x2="102.86" y2="72.49" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="102.11" y1="69.69" x2="103.28" y2="70.63" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="105" y1="69.90" x2="105" y2="68.80" stroke="#ffffff" stroke-width="0.5"/>
+      <line x1="105.00" y1="68.60" x2="105.00" y2="69.20" stroke="#ffffff" stroke-width="0.159"/>
+      <line x1="107.66" y1="69.88" x2="107.19" y2="70.25" stroke="#ffffff" stroke-width="0.159"/>
+      <line x1="108.31" y1="72.76" x2="107.73" y2="72.62" stroke="#ffffff" stroke-width="0.159"/>
+      <line x1="106.47" y1="75.06" x2="106.22" y2="74.52" stroke="#ffffff" stroke-width="0.159"/>
+      <line x1="103.53" y1="75.06" x2="103.78" y2="74.52" stroke="#ffffff" stroke-width="0.159"/>
+      <line x1="101.69" y1="72.76" x2="102.27" y2="72.62" stroke="#ffffff" stroke-width="0.159"/>
+      <line x1="102.34" y1="69.88" x2="102.81" y2="70.25" stroke="#ffffff" stroke-width="0.159"/>
+      <line x1="105" y1="69.90" x2="105" y2="68.80" stroke="#ffffff" stroke-width="0.1988"/>
     </g>
   </g>
   <g data-wcoast-param="send2H" data-wcoast-cx="105" data-wcoast-cy="80.5" data-wcoast-angle-min="-150" data-wcoast-angle-max="150" data-wcoast-port="send2CvH" data-wcoast-depth="send2DepthH" data-wcoast-av="off">
-    <circle cx="105" cy="80.5" r="3.2" fill="url(#blueRing)" stroke="#004b7a" stroke-width="0.355" filter="url(#softShadow)"/>
-    <circle cx="105" cy="80.5" r="2.6" fill="url(#knobCap)" stroke="#666666" stroke-width="0.2366"/>
+    <circle cx="105" cy="80.5" r="3.2" fill="url(#blueRing)" stroke="#004b7a" stroke-width="0.1411" filter="url(#softShadow)"/>
+    <circle cx="105" cy="80.5" r="2.6" fill="url(#knobCap)" stroke="#666666" stroke-width="0.0941"/>
     <circle cx="105" cy="80.5" r="2.1" fill="#ff7300"/>
     <circle cx="105" cy="80.5" r="1.1" fill="#000000" data-wcoast-role="jackhole"/>
     <g data-wcoast-role="indicator">
-      <line x1="105.00" y1="76.80" x2="105.00" y2="78.30" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="107.89" y1="78.19" x2="106.72" y2="79.13" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="108.61" y1="81.32" x2="107.14" y2="80.99" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="106.61" y1="83.83" x2="105.95" y2="82.48" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="103.39" y1="83.83" x2="104.05" y2="82.48" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="101.39" y1="81.32" x2="102.86" y2="80.99" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="102.11" y1="78.19" x2="103.28" y2="79.13" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="105" y1="78.40" x2="105" y2="77.30" stroke="#ffffff" stroke-width="0.5"/>
+      <line x1="105.00" y1="77.10" x2="105.00" y2="77.70" stroke="#ffffff" stroke-width="0.159"/>
+      <line x1="107.66" y1="78.38" x2="107.19" y2="78.75" stroke="#ffffff" stroke-width="0.159"/>
+      <line x1="108.31" y1="81.26" x2="107.73" y2="81.12" stroke="#ffffff" stroke-width="0.159"/>
+      <line x1="106.47" y1="83.56" x2="106.22" y2="83.02" stroke="#ffffff" stroke-width="0.159"/>
+      <line x1="103.53" y1="83.56" x2="103.78" y2="83.02" stroke="#ffffff" stroke-width="0.159"/>
+      <line x1="101.69" y1="81.26" x2="102.27" y2="81.12" stroke="#ffffff" stroke-width="0.159"/>
+      <line x1="102.34" y1="78.38" x2="102.81" y2="78.75" stroke="#ffffff" stroke-width="0.159"/>
+      <line x1="105" y1="78.40" x2="105" y2="77.30" stroke="#ffffff" stroke-width="0.1988"/>
     </g>
   </g>
   <g data-wcoast-role="vu" data-wcoast-chan="H">
@@ -718,35 +718,35 @@
   </g>
   <g data-wcoast-param="muteI"><circle cx="133" cy="21.9" r="2.3" fill="url(#redLed)" stroke="#7c0000" stroke-width="0.2366" filter="url(#softShadow)" data-wcoast-role="step-indicator" data-wcoast-step="on"/><circle cx="132.36" cy="21.26" r="0.69" fill="#ffb4b4" opacity="0.85" data-wcoast-role="led-gloss" pointer-events="none"/></g>
   <g data-wcoast-param="send1I" data-wcoast-cx="133" data-wcoast-cy="72" data-wcoast-angle-min="-150" data-wcoast-angle-max="150" data-wcoast-port="send1CvI" data-wcoast-depth="send1DepthI" data-wcoast-av="off">
-    <circle cx="133" cy="72" r="3.2" fill="url(#blueRing)" stroke="#004b7a" stroke-width="0.355" filter="url(#softShadow)"/>
-    <circle cx="133" cy="72" r="2.6" fill="url(#knobCap)" stroke="#666666" stroke-width="0.2366"/>
+    <circle cx="133" cy="72" r="3.2" fill="url(#blueRing)" stroke="#004b7a" stroke-width="0.1411" filter="url(#softShadow)"/>
+    <circle cx="133" cy="72" r="2.6" fill="url(#knobCap)" stroke="#666666" stroke-width="0.0941"/>
     <circle cx="133" cy="72" r="2.1" fill="#ff7300"/>
     <circle cx="133" cy="72" r="1.1" fill="#000000" data-wcoast-role="jackhole"/>
     <g data-wcoast-role="indicator">
-      <line x1="133.00" y1="68.30" x2="133.00" y2="69.80" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="135.89" y1="69.69" x2="134.72" y2="70.63" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="136.61" y1="72.82" x2="135.14" y2="72.49" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="134.61" y1="75.33" x2="133.95" y2="73.98" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="131.39" y1="75.33" x2="132.05" y2="73.98" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="129.39" y1="72.82" x2="130.86" y2="72.49" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="130.11" y1="69.69" x2="131.28" y2="70.63" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="133" y1="69.90" x2="133" y2="68.80" stroke="#ffffff" stroke-width="0.5"/>
+      <line x1="133.00" y1="68.60" x2="133.00" y2="69.20" stroke="#ffffff" stroke-width="0.159"/>
+      <line x1="135.66" y1="69.88" x2="135.19" y2="70.25" stroke="#ffffff" stroke-width="0.159"/>
+      <line x1="136.31" y1="72.76" x2="135.73" y2="72.62" stroke="#ffffff" stroke-width="0.159"/>
+      <line x1="134.47" y1="75.06" x2="134.22" y2="74.52" stroke="#ffffff" stroke-width="0.159"/>
+      <line x1="131.53" y1="75.06" x2="131.78" y2="74.52" stroke="#ffffff" stroke-width="0.159"/>
+      <line x1="129.69" y1="72.76" x2="130.27" y2="72.62" stroke="#ffffff" stroke-width="0.159"/>
+      <line x1="130.34" y1="69.88" x2="130.81" y2="70.25" stroke="#ffffff" stroke-width="0.159"/>
+      <line x1="133" y1="69.90" x2="133" y2="68.80" stroke="#ffffff" stroke-width="0.1988"/>
     </g>
   </g>
   <g data-wcoast-param="send2I" data-wcoast-cx="133" data-wcoast-cy="80.5" data-wcoast-angle-min="-150" data-wcoast-angle-max="150" data-wcoast-port="send2CvI" data-wcoast-depth="send2DepthI" data-wcoast-av="off">
-    <circle cx="133" cy="80.5" r="3.2" fill="url(#blueRing)" stroke="#004b7a" stroke-width="0.355" filter="url(#softShadow)"/>
-    <circle cx="133" cy="80.5" r="2.6" fill="url(#knobCap)" stroke="#666666" stroke-width="0.2366"/>
+    <circle cx="133" cy="80.5" r="3.2" fill="url(#blueRing)" stroke="#004b7a" stroke-width="0.1411" filter="url(#softShadow)"/>
+    <circle cx="133" cy="80.5" r="2.6" fill="url(#knobCap)" stroke="#666666" stroke-width="0.0941"/>
     <circle cx="133" cy="80.5" r="2.1" fill="#ff7300"/>
     <circle cx="133" cy="80.5" r="1.1" fill="#000000" data-wcoast-role="jackhole"/>
     <g data-wcoast-role="indicator">
-      <line x1="133.00" y1="76.80" x2="133.00" y2="78.30" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="135.89" y1="78.19" x2="134.72" y2="79.13" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="136.61" y1="81.32" x2="135.14" y2="80.99" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="134.61" y1="83.83" x2="133.95" y2="82.48" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="131.39" y1="83.83" x2="132.05" y2="82.48" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="129.39" y1="81.32" x2="130.86" y2="80.99" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="130.11" y1="78.19" x2="131.28" y2="79.13" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="133" y1="78.40" x2="133" y2="77.30" stroke="#ffffff" stroke-width="0.5"/>
+      <line x1="133.00" y1="77.10" x2="133.00" y2="77.70" stroke="#ffffff" stroke-width="0.159"/>
+      <line x1="135.66" y1="78.38" x2="135.19" y2="78.75" stroke="#ffffff" stroke-width="0.159"/>
+      <line x1="136.31" y1="81.26" x2="135.73" y2="81.12" stroke="#ffffff" stroke-width="0.159"/>
+      <line x1="134.47" y1="83.56" x2="134.22" y2="83.02" stroke="#ffffff" stroke-width="0.159"/>
+      <line x1="131.53" y1="83.56" x2="131.78" y2="83.02" stroke="#ffffff" stroke-width="0.159"/>
+      <line x1="129.69" y1="81.26" x2="130.27" y2="81.12" stroke="#ffffff" stroke-width="0.159"/>
+      <line x1="130.34" y1="78.38" x2="130.81" y2="78.75" stroke="#ffffff" stroke-width="0.159"/>
+      <line x1="133" y1="78.40" x2="133" y2="77.30" stroke="#ffffff" stroke-width="0.1988"/>
     </g>
   </g>
   <g data-wcoast-role="vu" data-wcoast-chan="I">
@@ -780,35 +780,35 @@
   </g>
   <g data-wcoast-param="muteJ"><circle cx="146" cy="21.9" r="2.3" fill="url(#redLed)" stroke="#7c0000" stroke-width="0.2366" filter="url(#softShadow)" data-wcoast-role="step-indicator" data-wcoast-step="on"/><circle cx="145.36" cy="21.26" r="0.69" fill="#ffb4b4" opacity="0.85" data-wcoast-role="led-gloss" pointer-events="none"/></g>
   <g data-wcoast-param="send1J" data-wcoast-cx="146" data-wcoast-cy="72" data-wcoast-angle-min="-150" data-wcoast-angle-max="150" data-wcoast-port="send1CvJ" data-wcoast-depth="send1DepthJ" data-wcoast-av="off">
-    <circle cx="146" cy="72" r="3.2" fill="url(#blueRing)" stroke="#004b7a" stroke-width="0.355" filter="url(#softShadow)"/>
-    <circle cx="146" cy="72" r="2.6" fill="url(#knobCap)" stroke="#666666" stroke-width="0.2366"/>
+    <circle cx="146" cy="72" r="3.2" fill="url(#blueRing)" stroke="#004b7a" stroke-width="0.1411" filter="url(#softShadow)"/>
+    <circle cx="146" cy="72" r="2.6" fill="url(#knobCap)" stroke="#666666" stroke-width="0.0941"/>
     <circle cx="146" cy="72" r="2.1" fill="#ff7300"/>
     <circle cx="146" cy="72" r="1.1" fill="#000000" data-wcoast-role="jackhole"/>
     <g data-wcoast-role="indicator">
-      <line x1="146.00" y1="68.30" x2="146.00" y2="69.80" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="148.89" y1="69.69" x2="147.72" y2="70.63" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="149.61" y1="72.82" x2="148.14" y2="72.49" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="147.61" y1="75.33" x2="146.95" y2="73.98" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="144.39" y1="75.33" x2="145.05" y2="73.98" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="142.39" y1="72.82" x2="143.86" y2="72.49" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="143.11" y1="69.69" x2="144.28" y2="70.63" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="146" y1="69.90" x2="146" y2="68.80" stroke="#ffffff" stroke-width="0.5"/>
+      <line x1="146.00" y1="68.60" x2="146.00" y2="69.20" stroke="#ffffff" stroke-width="0.159"/>
+      <line x1="148.66" y1="69.88" x2="148.19" y2="70.25" stroke="#ffffff" stroke-width="0.159"/>
+      <line x1="149.31" y1="72.76" x2="148.73" y2="72.62" stroke="#ffffff" stroke-width="0.159"/>
+      <line x1="147.47" y1="75.06" x2="147.22" y2="74.52" stroke="#ffffff" stroke-width="0.159"/>
+      <line x1="144.53" y1="75.06" x2="144.78" y2="74.52" stroke="#ffffff" stroke-width="0.159"/>
+      <line x1="142.69" y1="72.76" x2="143.27" y2="72.62" stroke="#ffffff" stroke-width="0.159"/>
+      <line x1="143.34" y1="69.88" x2="143.81" y2="70.25" stroke="#ffffff" stroke-width="0.159"/>
+      <line x1="146" y1="69.90" x2="146" y2="68.80" stroke="#ffffff" stroke-width="0.1988"/>
     </g>
   </g>
   <g data-wcoast-param="send2J" data-wcoast-cx="146" data-wcoast-cy="80.5" data-wcoast-angle-min="-150" data-wcoast-angle-max="150" data-wcoast-port="send2CvJ" data-wcoast-depth="send2DepthJ" data-wcoast-av="off">
-    <circle cx="146" cy="80.5" r="3.2" fill="url(#blueRing)" stroke="#004b7a" stroke-width="0.355" filter="url(#softShadow)"/>
-    <circle cx="146" cy="80.5" r="2.6" fill="url(#knobCap)" stroke="#666666" stroke-width="0.2366"/>
+    <circle cx="146" cy="80.5" r="3.2" fill="url(#blueRing)" stroke="#004b7a" stroke-width="0.1411" filter="url(#softShadow)"/>
+    <circle cx="146" cy="80.5" r="2.6" fill="url(#knobCap)" stroke="#666666" stroke-width="0.0941"/>
     <circle cx="146" cy="80.5" r="2.1" fill="#ff7300"/>
     <circle cx="146" cy="80.5" r="1.1" fill="#000000" data-wcoast-role="jackhole"/>
     <g data-wcoast-role="indicator">
-      <line x1="146.00" y1="76.80" x2="146.00" y2="78.30" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="148.89" y1="78.19" x2="147.72" y2="79.13" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="149.61" y1="81.32" x2="148.14" y2="80.99" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="147.61" y1="83.83" x2="146.95" y2="82.48" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="144.39" y1="83.83" x2="145.05" y2="82.48" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="142.39" y1="81.32" x2="143.86" y2="80.99" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="143.11" y1="78.19" x2="144.28" y2="79.13" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="146" y1="78.40" x2="146" y2="77.30" stroke="#ffffff" stroke-width="0.5"/>
+      <line x1="146.00" y1="77.10" x2="146.00" y2="77.70" stroke="#ffffff" stroke-width="0.159"/>
+      <line x1="148.66" y1="78.38" x2="148.19" y2="78.75" stroke="#ffffff" stroke-width="0.159"/>
+      <line x1="149.31" y1="81.26" x2="148.73" y2="81.12" stroke="#ffffff" stroke-width="0.159"/>
+      <line x1="147.47" y1="83.56" x2="147.22" y2="83.02" stroke="#ffffff" stroke-width="0.159"/>
+      <line x1="144.53" y1="83.56" x2="144.78" y2="83.02" stroke="#ffffff" stroke-width="0.159"/>
+      <line x1="142.69" y1="81.26" x2="143.27" y2="81.12" stroke="#ffffff" stroke-width="0.159"/>
+      <line x1="143.34" y1="78.38" x2="143.81" y2="78.75" stroke="#ffffff" stroke-width="0.159"/>
+      <line x1="146" y1="78.40" x2="146" y2="77.30" stroke="#ffffff" stroke-width="0.1988"/>
     </g>
   </g>
   <g data-wcoast-role="vu" data-wcoast-chan="J">
@@ -847,19 +847,19 @@
     <circle cx="161.5" cy="91" r="1.6" fill="#000000"/>
   </g>
   <g data-wcoast-param="panMonitor" data-wcoast-cx="161.5" data-wcoast-cy="104.5" data-wcoast-angle-min="-150" data-wcoast-angle-max="150" data-wcoast-port="panCvMonitor" data-wcoast-depth="panDepthMonitor" data-wcoast-av="off">
-    <circle cx="161.5" cy="104.5" r="4.2" fill="url(#blueRing)" stroke="#004b7a" stroke-width="0.355" filter="url(#softShadow)"/>
-    <circle cx="161.5" cy="104.5" r="3.3" fill="url(#knobCap)" stroke="#666666" stroke-width="0.2366"/>
+    <circle cx="161.5" cy="104.5" r="4.2" fill="url(#blueRing)" stroke="#004b7a" stroke-width="0.1852" filter="url(#softShadow)"/>
+    <circle cx="161.5" cy="104.5" r="3.3" fill="url(#knobCap)" stroke="#666666" stroke-width="0.1234"/>
     <circle cx="161.5" cy="104.5" r="2.1" fill="#ff7300"/>
     <circle cx="161.5" cy="104.5" r="1.1" fill="#000000" data-wcoast-role="jackhole"/>
     <g data-wcoast-role="indicator">
-      <line x1="161.50" y1="99.80" x2="161.50" y2="101.30" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="165.17" y1="101.57" x2="164.00" y2="102.50" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="166.08" y1="105.55" x2="164.62" y2="105.21" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="163.54" y1="108.73" x2="162.89" y2="107.38" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="159.46" y1="108.73" x2="160.11" y2="107.38" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="156.92" y1="105.55" x2="158.38" y2="105.21" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="157.83" y1="101.57" x2="159.00" y2="102.50" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="161.5" y1="102.40" x2="161.5" y2="100.30" stroke="#ffffff" stroke-width="0.5"/>
+      <line x1="161.50" y1="100.04" x2="161.50" y2="100.82" stroke="#ffffff" stroke-width="0.2087"/>
+      <line x1="164.99" y1="101.72" x2="164.38" y2="102.21" stroke="#ffffff" stroke-width="0.2087"/>
+      <line x1="165.85" y1="105.49" x2="165.09" y2="105.32" stroke="#ffffff" stroke-width="0.2087"/>
+      <line x1="163.44" y1="108.52" x2="163.10" y2="107.81" stroke="#ffffff" stroke-width="0.2087"/>
+      <line x1="159.56" y1="108.52" x2="159.90" y2="107.81" stroke="#ffffff" stroke-width="0.2087"/>
+      <line x1="157.15" y1="105.49" x2="157.91" y2="105.32" stroke="#ffffff" stroke-width="0.2087"/>
+      <line x1="158.01" y1="101.72" x2="158.62" y2="102.21" stroke="#ffffff" stroke-width="0.2087"/>
+      <line x1="161.5" y1="102.40" x2="161.5" y2="100.30" stroke="#ffffff" stroke-width="0.2609"/>
     </g>
   </g>
   <g data-wcoast-port="ampCvMaster" data-wcoast-cx="176" data-wcoast-cy="91">
@@ -867,19 +867,19 @@
     <circle cx="176" cy="91" r="1.6" fill="#000000"/>
   </g>
   <g data-wcoast-param="panMaster" data-wcoast-cx="176" data-wcoast-cy="104.5" data-wcoast-angle-min="-150" data-wcoast-angle-max="150" data-wcoast-port="panCvMaster" data-wcoast-depth="panDepthMaster" data-wcoast-av="off">
-    <circle cx="176" cy="104.5" r="4.2" fill="url(#blueRing)" stroke="#004b7a" stroke-width="0.355" filter="url(#softShadow)"/>
-    <circle cx="176" cy="104.5" r="3.3" fill="url(#knobCap)" stroke="#666666" stroke-width="0.2366"/>
+    <circle cx="176" cy="104.5" r="4.2" fill="url(#blueRing)" stroke="#004b7a" stroke-width="0.1852" filter="url(#softShadow)"/>
+    <circle cx="176" cy="104.5" r="3.3" fill="url(#knobCap)" stroke="#666666" stroke-width="0.1234"/>
     <circle cx="176" cy="104.5" r="2.1" fill="#ff7300"/>
     <circle cx="176" cy="104.5" r="1.1" fill="#000000" data-wcoast-role="jackhole"/>
     <g data-wcoast-role="indicator">
-      <line x1="176.00" y1="99.80" x2="176.00" y2="101.30" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="179.67" y1="101.57" x2="178.50" y2="102.50" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="180.58" y1="105.55" x2="179.12" y2="105.21" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="178.04" y1="108.73" x2="177.39" y2="107.38" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="173.96" y1="108.73" x2="174.61" y2="107.38" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="171.42" y1="105.55" x2="172.88" y2="105.21" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="172.33" y1="101.57" x2="173.50" y2="102.50" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="176" y1="102.40" x2="176" y2="100.30" stroke="#ffffff" stroke-width="0.5"/>
+      <line x1="176.00" y1="100.04" x2="176.00" y2="100.82" stroke="#ffffff" stroke-width="0.2087"/>
+      <line x1="179.49" y1="101.72" x2="178.88" y2="102.21" stroke="#ffffff" stroke-width="0.2087"/>
+      <line x1="180.35" y1="105.49" x2="179.59" y2="105.32" stroke="#ffffff" stroke-width="0.2087"/>
+      <line x1="177.94" y1="108.52" x2="177.60" y2="107.81" stroke="#ffffff" stroke-width="0.2087"/>
+      <line x1="174.06" y1="108.52" x2="174.40" y2="107.81" stroke="#ffffff" stroke-width="0.2087"/>
+      <line x1="171.65" y1="105.49" x2="172.41" y2="105.32" stroke="#ffffff" stroke-width="0.2087"/>
+      <line x1="172.51" y1="101.72" x2="173.12" y2="102.21" stroke="#ffffff" stroke-width="0.2087"/>
+      <line x1="176" y1="102.40" x2="176" y2="100.30" stroke="#ffffff" stroke-width="0.2609"/>
     </g>
   </g>
   <line x1="126.5" y1="2" x2="126.5" y2="111.5912" stroke="#7d7d7d" stroke-width="0.25"/>

@@ -19,6 +19,9 @@
 //     pointer is over one). Modules are placed and sized by their real panel
 //     width in mm (no HP grid); neighbours butt together edge to edge.
 
+// The knАck's proportions come from the CANONICAL control, not from a copy of its numbers: the same
+// fractions that draw the faceplate drive the runtime dress, so changing the control changes both.
+import { KNACK_GRIP_LEN, KNACK_GRIP_OUT, KNACK_GRIP_W } from '../panel/primitives.js';
 import { loadPanel, showValue, attachControlInteraction, knobRadiusPx, valueToPosition, positionToValue, FACE_H_MM, FACE_TOP_MM, FACE_LEFT_MM, TITLE_STRIP_MM, TITLE_BAR_MM } from './panel-loader.js';
 import { Patchbay } from './patchbay.js';
 import { VideoEngine } from './video-engine.js';
@@ -7184,25 +7187,25 @@ export class Rack {
 
     // Draw a fresh set of SEVEN grip dashes evenly around the circle for EVERY dual knАck — the
     // clock-ratio knob was authored with a number scale instead of grip dashes, so it lacked them
-    // (its 1..8 label is untouched). Grips poke 0.5mm past the rim, keep the authored dash length
-    // where there is one, and live in the indicator group so they turn with the knob.
+    // (its 1..8 label is untouched). They live in the indicator group so they turn with the knob.
+    //
+    // EVERY MEASUREMENT COMES FROM THE RADIUS, exactly as the knАck primitive draws them, so a knob
+    // half the size gets grips half the size. This used to MEASURE THE AUTHORED DASH and keep its
+    // length, which meant a panel whose faceplate was drawn by hand — with full-sized grips on a small
+    // knob — had that mistake faithfully reproduced at runtime, and no amount of fixing the canonical
+    // control could reach it. Reading the drawing to decide how to redraw it is how a hand-drawn
+    // control quietly becomes the standard.
     if (b.indicator) {
-      let len = 1.5;
-      const authored = [...b.indicator.querySelectorAll('line')].filter((l) => (l.getAttribute('stroke') || '').toLowerCase() === '#ffffff');
-      if (authored.length) {
-        const g0 = authored[0];
-        len = Math.abs(Math.hypot(parseFloat(g0.getAttribute('x1')) - cx, parseFloat(g0.getAttribute('y1')) - cy)
-          - Math.hypot(parseFloat(g0.getAttribute('x2')) - cx, parseFloat(g0.getAttribute('y2')) - cy)) || 1.5;
-      }
+      const len = R * KNACK_GRIP_LEN, outR = R * (1 + KNACK_GRIP_OUT), inR = outR - len;
       for (const ln of b.indicator.querySelectorAll('line')) ln.style.display = 'none';   // retire authored grips + the dark pointer
-      const outR = R + 0.5, inR = outR - len;
       for (let i = 0; i < 7; i++) {
         const t = i * (2 * Math.PI / 7) - Math.PI / 2;   // evenly round the circle, starting straight up
         const ux = Math.cos(t), uy = Math.sin(t);
         const ln = doc.createElementNS(SVG_NS, 'line');
         ln.setAttribute('x1', r2(cx + outR * ux)); ln.setAttribute('y1', r2(cy + outR * uy));
         ln.setAttribute('x2', r2(cx + inR * ux)); ln.setAttribute('y2', r2(cy + inR * uy));
-        ln.setAttribute('stroke', '#ffffff'); ln.setAttribute('stroke-width', 0.4); ln.setAttribute('stroke-linecap', 'round');
+        ln.setAttribute('stroke', '#ffffff'); ln.setAttribute('stroke-width', r2(R * KNACK_GRIP_W));
+        ln.setAttribute('stroke-linecap', 'round');
         b.indicator.appendChild(ln);
       }
     }

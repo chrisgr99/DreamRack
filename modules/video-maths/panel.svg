@@ -25,42 +25,42 @@
   <text x="6.925000000000001" y="38.84567147554496" font-size="2.106" font-weight="700" font-style="italic" fill="#163a69" text-anchor="end" font-family="Arial Narrow, Helvetica, Arial, sans-serif">0</text>
   <text x="17.075" y="38.84567147554496" font-size="2.106" font-weight="700" font-style="italic" fill="#163a69" text-anchor="start" font-family="Arial Narrow, Helvetica, Arial, sans-serif">2</text>
   <g data-wcoast-param="gainA" data-wcoast-cx="12" data-wcoast-cy="33" data-wcoast-angle-min="-150" data-wcoast-angle-max="150" data-wcoast-port="gainACv" data-wcoast-depth="gainADepth" data-wcoast-av="off">
-    <circle cx="12" cy="33" r="5.6" fill="url(#blueRing)" stroke="#004b7a" stroke-width="0.355" filter="url(#softShadow)"/>
-    <circle cx="12" cy="33" r="4.2" fill="url(#knobCap)" stroke="#666666" stroke-width="0.2366"/>
+    <circle cx="12" cy="33" r="5.6" fill="url(#blueRing)" stroke="#004b7a" stroke-width="0.247" filter="url(#softShadow)"/>
+    <circle cx="12" cy="33" r="4.2" fill="url(#knobCap)" stroke="#666666" stroke-width="0.1646"/>
     <line x1="8.98" y1="38.24" x2="8.63" y2="38.85" stroke="#163a69" stroke-width="0.355"/>
     <line x1="15.02" y1="38.24" x2="15.38" y2="38.85" stroke="#163a69" stroke-width="0.355"/>
     <circle cx="12" cy="33" r="2.36" fill="#ff7300"/>
     <circle cx="12" cy="33" r="1.36" fill="#000000" data-wcoast-role="jackhole"/>
     <g data-wcoast-role="indicator">
-      <line x1="12.00" y1="26.90" x2="12.00" y2="28.40" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="16.77" y1="29.20" x2="15.60" y2="30.13" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="17.95" y1="34.36" x2="16.48" y2="34.02" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="14.65" y1="38.50" x2="14.00" y2="37.14" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="9.35" y1="38.50" x2="10.00" y2="37.14" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="6.05" y1="34.36" x2="7.52" y2="34.02" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="7.23" y1="29.20" x2="8.40" y2="30.13" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="12" y1="30.64" x2="12" y2="27.40" stroke="#ffffff" stroke-width="0.5"/>
+      <line x1="12.00" y1="27.05" x2="12.00" y2="28.10" stroke="#ffffff" stroke-width="0.2783"/>
+      <line x1="16.65" y1="29.29" x2="15.83" y2="29.94" stroke="#ffffff" stroke-width="0.2783"/>
+      <line x1="17.80" y1="34.32" x2="16.78" y2="34.09" stroke="#ffffff" stroke-width="0.2783"/>
+      <line x1="14.58" y1="38.36" x2="14.13" y2="37.42" stroke="#ffffff" stroke-width="0.2783"/>
+      <line x1="9.42" y1="38.36" x2="9.87" y2="37.42" stroke="#ffffff" stroke-width="0.2783"/>
+      <line x1="6.20" y1="34.32" x2="7.22" y2="34.09" stroke="#ffffff" stroke-width="0.2783"/>
+      <line x1="7.35" y1="29.29" x2="8.17" y2="29.94" stroke="#ffffff" stroke-width="0.2783"/>
+      <line x1="12" y1="30.64" x2="12" y2="27.40" stroke="#ffffff" stroke-width="0.3478"/>
     </g>
   </g>
   <text x="12" y="42.4" font-size="2.606" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">GAIN</text>
   <text x="24.925" y="38.84567147554496" font-size="2.106" font-weight="700" font-style="italic" fill="#163a69" text-anchor="end" font-family="Arial Narrow, Helvetica, Arial, sans-serif">0</text>
   <text x="35.075" y="38.84567147554496" font-size="2.106" font-weight="700" font-style="italic" fill="#163a69" text-anchor="start" font-family="Arial Narrow, Helvetica, Arial, sans-serif">2</text>
   <g data-wcoast-param="gainB" data-wcoast-cx="30" data-wcoast-cy="33" data-wcoast-angle-min="-150" data-wcoast-angle-max="150" data-wcoast-port="gainBCv" data-wcoast-depth="gainBDepth" data-wcoast-av="off">
-    <circle cx="30" cy="33" r="5.6" fill="url(#blueRing)" stroke="#004b7a" stroke-width="0.355" filter="url(#softShadow)"/>
-    <circle cx="30" cy="33" r="4.2" fill="url(#knobCap)" stroke="#666666" stroke-width="0.2366"/>
+    <circle cx="30" cy="33" r="5.6" fill="url(#blueRing)" stroke="#004b7a" stroke-width="0.247" filter="url(#softShadow)"/>
+    <circle cx="30" cy="33" r="4.2" fill="url(#knobCap)" stroke="#666666" stroke-width="0.1646"/>
     <line x1="26.98" y1="38.24" x2="26.63" y2="38.85" stroke="#163a69" stroke-width="0.355"/>
     <line x1="33.02" y1="38.24" x2="33.38" y2="38.85" stroke="#163a69" stroke-width="0.355"/>
     <circle cx="30" cy="33" r="2.36" fill="#ff7300"/>
     <circle cx="30" cy="33" r="1.36" fill="#000000" data-wcoast-role="jackhole"/>
     <g data-wcoast-role="indicator">
-      <line x1="30.00" y1="26.90" x2="30.00" y2="28.40" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="34.77" y1="29.20" x2="33.60" y2="30.13" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="35.95" y1="34.36" x2="34.48" y2="34.02" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="32.65" y1="38.50" x2="32.00" y2="37.14" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="27.35" y1="38.50" x2="28.00" y2="37.14" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="24.05" y1="34.36" x2="25.52" y2="34.02" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="25.23" y1="29.20" x2="26.40" y2="30.13" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="30" y1="30.64" x2="30" y2="27.40" stroke="#ffffff" stroke-width="0.5"/>
+      <line x1="30.00" y1="27.05" x2="30.00" y2="28.10" stroke="#ffffff" stroke-width="0.2783"/>
+      <line x1="34.65" y1="29.29" x2="33.83" y2="29.94" stroke="#ffffff" stroke-width="0.2783"/>
+      <line x1="35.80" y1="34.32" x2="34.78" y2="34.09" stroke="#ffffff" stroke-width="0.2783"/>
+      <line x1="32.58" y1="38.36" x2="32.13" y2="37.42" stroke="#ffffff" stroke-width="0.2783"/>
+      <line x1="27.42" y1="38.36" x2="27.87" y2="37.42" stroke="#ffffff" stroke-width="0.2783"/>
+      <line x1="24.20" y1="34.32" x2="25.22" y2="34.09" stroke="#ffffff" stroke-width="0.2783"/>
+      <line x1="25.35" y1="29.29" x2="26.17" y2="29.94" stroke="#ffffff" stroke-width="0.2783"/>
+      <line x1="30" y1="30.64" x2="30" y2="27.40" stroke="#ffffff" stroke-width="0.3478"/>
     </g>
   </g>
   <text x="30" y="42.4" font-size="2.606" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">GAIN</text>
@@ -82,21 +82,21 @@
   <text x="24.925" y="75.84567147554496" font-size="2.106" font-weight="700" font-style="italic" fill="#163a69" text-anchor="end" font-family="Arial Narrow, Helvetica, Arial, sans-serif">A</text>
   <text x="35.075" y="75.84567147554496" font-size="2.106" font-weight="700" font-style="italic" fill="#163a69" text-anchor="start" font-family="Arial Narrow, Helvetica, Arial, sans-serif">full</text>
   <g data-wcoast-param="amount" data-wcoast-cx="30" data-wcoast-cy="70" data-wcoast-angle-min="-150" data-wcoast-angle-max="150" data-wcoast-port="amountCv" data-wcoast-depth="amountDepth" data-wcoast-av="off">
-    <circle cx="30" cy="70" r="5.6" fill="url(#blueRing)" stroke="#004b7a" stroke-width="0.355" filter="url(#softShadow)"/>
-    <circle cx="30" cy="70" r="4.2" fill="url(#knobCap)" stroke="#666666" stroke-width="0.2366"/>
+    <circle cx="30" cy="70" r="5.6" fill="url(#blueRing)" stroke="#004b7a" stroke-width="0.247" filter="url(#softShadow)"/>
+    <circle cx="30" cy="70" r="4.2" fill="url(#knobCap)" stroke="#666666" stroke-width="0.1646"/>
     <line x1="26.98" y1="75.24" x2="26.63" y2="75.85" stroke="#163a69" stroke-width="0.355"/>
     <line x1="33.02" y1="75.24" x2="33.38" y2="75.85" stroke="#163a69" stroke-width="0.355"/>
     <circle cx="30" cy="70" r="2.36" fill="#ff7300"/>
     <circle cx="30" cy="70" r="1.36" fill="#000000" data-wcoast-role="jackhole"/>
     <g data-wcoast-role="indicator">
-      <line x1="30.00" y1="63.90" x2="30.00" y2="65.40" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="34.77" y1="66.20" x2="33.60" y2="67.13" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="35.95" y1="71.36" x2="34.48" y2="71.02" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="32.65" y1="75.50" x2="32.00" y2="74.14" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="27.35" y1="75.50" x2="28.00" y2="74.14" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="24.05" y1="71.36" x2="25.52" y2="71.02" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="25.23" y1="66.20" x2="26.40" y2="67.13" stroke="#ffffff" stroke-width="0.4"/>
-      <line x1="30" y1="67.64" x2="30" y2="64.40" stroke="#ffffff" stroke-width="0.5"/>
+      <line x1="30.00" y1="64.05" x2="30.00" y2="65.10" stroke="#ffffff" stroke-width="0.2783"/>
+      <line x1="34.65" y1="66.29" x2="33.83" y2="66.94" stroke="#ffffff" stroke-width="0.2783"/>
+      <line x1="35.80" y1="71.32" x2="34.78" y2="71.09" stroke="#ffffff" stroke-width="0.2783"/>
+      <line x1="32.58" y1="75.36" x2="32.13" y2="74.42" stroke="#ffffff" stroke-width="0.2783"/>
+      <line x1="27.42" y1="75.36" x2="27.87" y2="74.42" stroke="#ffffff" stroke-width="0.2783"/>
+      <line x1="24.20" y1="71.32" x2="25.22" y2="71.09" stroke="#ffffff" stroke-width="0.2783"/>
+      <line x1="25.35" y1="66.29" x2="26.17" y2="66.94" stroke="#ffffff" stroke-width="0.2783"/>
+      <line x1="30" y1="67.64" x2="30" y2="64.40" stroke="#ffffff" stroke-width="0.3478"/>
     </g>
   </g>
   <text x="30" y="79.39999999999999" font-size="2.606" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">AMT</text>

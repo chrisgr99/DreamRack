@@ -77,7 +77,11 @@ function dialScale(cx, cy, outerR, scale, angleMin, angleMax, ink) {
   let scaleSvg = '';
   const gap = scale.tickGap ?? 0.6, tlen = scale.tickLen ?? 1.1, lgap = scale.labelGap ?? 1.8;
   const scCol = scale.color || ink, scSize = scale.size ?? 2.0, bSc = scSize + LABEL_BUMP, lh = bSc * 1.1;
-  const r0 = outerR + gap, r1 = r0 + tlen, rl = r1 + lgap;
+  // `r` moves the whole scale in or out from the knob's rim. Panels whose knobs sit close together
+  // need their calibration inside the rim or the two knobs' scales collide — which is the sort of
+  // thing that used to be solved by hand-drawing the panel and thereby leaving the system.
+  const base = scale.r ?? outerR;
+  const r0 = base + gap, r1 = r0 + tlen, rl = r1 + lgap;
   for (const m of (scale.marks || [])) {
     const deg = m.angle != null ? m.angle : angleMin + (m.at ?? 0) * (angleMax - angleMin);
     const rad = deg * Math.PI / 180, sn = Math.sin(rad), cs = Math.cos(rad);
@@ -91,7 +95,7 @@ function dialScale(cx, cy, outerR, scale, angleMin, angleMax, ink) {
     }
   }
   if (scale.index) {
-    const bR = outerR + gap, tR = bR + tlen + 1.4;
+    const bR = base + gap, tR = bR + tlen + 1.4;
     scaleSvg += `\n    <path d="M ${(cx - 1.3).toFixed(2)} ${(cy - bR).toFixed(2)} L ${cx} ${(cy - tR).toFixed(2)} L ${(cx + 1.3).toFixed(2)} ${(cy - bR).toFixed(2)} Z" fill="#f0f0f0" stroke="${ink}" stroke-width="0.24" stroke-linejoin="round"/>`;
   }
   return scaleSvg;
@@ -104,13 +108,13 @@ function knob(id, cx, cy, opts = {}) {
   const a0 = angleMin * Math.PI / 180, a1 = angleMax * Math.PI / 180;
   // White ticks around the rim — mostly ON the blue ring (so they read white in
   // both themes) with a very slight protrusion past the outer circumference.
-  const tIn = radius - 1.0, tOut = radius + 0.5;
+  const tIn = radius * (1 - TICK_IN), tOut = radius * (1 + TICK_OUT);
   let tickSvg = '';
   for (let k = 0; k < ticks; k++) {
     const a = ticks === 1 ? (a0 + a1) / 2 : a0 + (k / (ticks - 1)) * (a1 - a0);
     const x1 = cx + Math.sin(a) * tIn, y1 = cy - Math.cos(a) * tIn;
     const x2 = cx + Math.sin(a) * tOut, y2 = cy - Math.cos(a) * tOut;
-    tickSvg += `\n    <line x1="${x1.toFixed(2)}" y1="${y1.toFixed(2)}" x2="${x2.toFixed(2)}" y2="${y2.toFixed(2)}" stroke="${tickColor}" stroke-width="0.4"/>`;
+    tickSvg += `\n    <line x1="${x1.toFixed(2)}" y1="${y1.toFixed(2)}" x2="${x2.toFixed(2)}" y2="${y2.toFixed(2)}" stroke="${tickColor}" stroke-width="${+(radius * KNACK_GRIP_W).toFixed(4)}"/>`;
   }
   // Optional outer skirt (the large "259t" two-tier knob): a wider dark-blue disc
   // beneath the inner ring. Static, like the ring — only the face rotates.
@@ -151,13 +155,40 @@ function knob(id, cx, cy, opts = {}) {
 //   quantize a detented knАck's quantize-toggle param id
 //   av       'on' | 'off' — the DESIGNER'S default for whether the AV shows when a
 //            cable is patched (the user can flip it from the knob's right-click menu)
+// A KNOB'S FURNITURE IS A FRACTION OF ITS RADIUS — the same fractions for an ordinary knob and for a
+// knАck, because they are the same control with a jack in the middle of one of them.
+//
+// Every one of these was a fixed millimetre, so a 1.5mm tick was a quiet detail on a big knob and most
+// of the radius on a small one. The fractions are calibrated against the HARMONICS knob on the complex
+// oscillator, radius 8.05 — the one whose proportions are right — so that knob is unchanged and every
+// other size is that same knob, scaled. No floors: a control drawn too small to read is a control that
+// should not have been drawn that small.
+const KNOB_REF_R = 8.05;
+const kf = (mm) => mm / KNOB_REF_R;
+const TICK_IN = kf(1.0);                      // how far a tick reaches INSIDE the rim
+const TICK_OUT = kf(0.5);                     // ...and how far it pokes past it
+const KNACK_GRIP_LEN = TICK_IN + TICK_OUT;    // a grip is the same mark, described end to end
+const KNACK_GRIP_OUT = TICK_OUT;
+const KNACK_GRIP_W = kf(0.4);                 // tick thickness
+const KNACK_POINTER_W = kf(0.5);              // the indicator line
+const KNACK_RING_W = kf(0.355);               // the blue ring's stroke
+const KNACK_CAP_W = kf(0.2366);               // the metal cap's stroke
+
 function knack(id, cx, cy, opts = {}) {
   const { radius = 4.6, cap = +(radius * 0.72).toFixed(2), angleMin = -150, angleMax = 150,
     port = null, depth = null, quantize = null, av = null,
     scale = null, theme = {}, label: lab = null } = opts;
   const ink = theme.ink || '#163a69', ringStroke = theme.ringStroke || '#004b7a', capStroke = theme.capStroke || '#666666';
+  // The hole keeps its clamp: it is a JACK, and a plug has a real size no matter how small the knob
+  // around it is drawn.
   const hole = Math.max(1.1, Math.min(1.8, +(radius * 0.242).toFixed(2)));
+  // The band stays tied to the HOLE, not the radius: it is part of the jack, and a jack has to stay a
+  // real jack — the same reason the hole itself is clamped.
   const band = +(hole + 1).toFixed(2);
+  const gripW = +(radius * KNACK_GRIP_W).toFixed(4);
+  const pointerW = +(radius * KNACK_POINTER_W).toFixed(4);
+  const ringW = +(radius * KNACK_RING_W).toFixed(4);
+  const capW = +(radius * KNACK_CAP_W).toFixed(4);
   const scaleSvg = dialScale(cx, cy, radius, scale, angleMin, angleMax, ink);
   // Static preview of the live dress: 7 grip dashes evenly around the rim (the app
   // re-draws these, reading the FIRST white line's length as the dash length — so the
@@ -166,8 +197,8 @@ function knack(id, cx, cy, opts = {}) {
   for (let k = 0; k < 7; k++) {
     const a = k * (2 * Math.PI / 7);
     const sn = Math.sin(a), cs = Math.cos(a);
-    const oR = radius + 0.5, iR = oR - 1.5;
-    tickSvg += `\n      <line x1="${(cx + sn * oR).toFixed(2)}" y1="${(cy - cs * oR).toFixed(2)}" x2="${(cx + sn * iR).toFixed(2)}" y2="${(cy - cs * iR).toFixed(2)}" stroke="#ffffff" stroke-width="0.4"/>`;
+    const oR = radius * (1 + KNACK_GRIP_OUT), iR = oR - radius * KNACK_GRIP_LEN;
+    tickSvg += `\n      <line x1="${(cx + sn * oR).toFixed(2)}" y1="${(cy - cs * oR).toFixed(2)}" x2="${(cx + sn * iR).toFixed(2)}" y2="${(cy - cs * iR).toFixed(2)}" stroke="#ffffff" stroke-width="${gripW}"/>`;
   }
   const attrs =
     ` data-wcoast-param="${id}" data-wcoast-cx="${cx}" data-wcoast-cy="${cy}"` +
@@ -177,12 +208,12 @@ function knack(id, cx, cy, opts = {}) {
     (quantize ? ` data-wcoast-quantize="${quantize}"` : '') +
     (av ? ` data-wcoast-av="${av}"` : '');
   let out = `  <g${attrs}>
-    <circle cx="${cx}" cy="${cy}" r="${radius}" fill="url(#blueRing)" stroke="${ringStroke}" stroke-width="0.355" filter="url(#softShadow)"/>
-    <circle cx="${cx}" cy="${cy}" r="${cap}" fill="url(#knobCap)" stroke="${capStroke}" stroke-width="0.2366"/>${scaleSvg}
+    <circle cx="${cx}" cy="${cy}" r="${radius}" fill="url(#blueRing)" stroke="${ringStroke}" stroke-width="${ringW}" filter="url(#softShadow)"/>
+    <circle cx="${cx}" cy="${cy}" r="${cap}" fill="url(#knobCap)" stroke="${capStroke}" stroke-width="${capW}"/>${scaleSvg}
     <circle cx="${cx}" cy="${cy}" r="${band}" fill="#ff7300"/>
     <circle cx="${cx}" cy="${cy}" r="${hole}" fill="#000000" data-wcoast-role="jackhole"/>
     <g data-wcoast-role="indicator">${tickSvg}
-      <line x1="${cx}" y1="${(cy - band).toFixed(2)}" x2="${cx}" y2="${(cy - radius).toFixed(2)}" stroke="#ffffff" stroke-width="0.5"/>
+      <line x1="${cx}" y1="${(cy - band).toFixed(2)}" x2="${cx}" y2="${(cy - radius).toFixed(2)}" stroke="#ffffff" stroke-width="${pointerW}"/>
     </g>
   </g>`;
   if (lab) out += '\n' + attachedLabel(cx, cy, radius, radius, lab);
@@ -459,4 +490,5 @@ function bipolarMark(kx, ky, kr, { gap = 2.0, spanDeg = 23, r = 1.27, color = '#
   return `  <g>\n    ${parts.join('\n    ')}\n  </g>`;
 }
 
+export { KNACK_GRIP_LEN, KNACK_GRIP_OUT, KNACK_GRIP_W, KNACK_POINTER_W };
 export { defs, jack, vjack, knob, knack, label, attachedLabel, evenScale, bipolarMark, ledLamp, waveGlyph, button, radioGroup, stepButton, slider, vuMeter, textWidth, wrapLines };
