@@ -84,10 +84,15 @@ const STRIP_H = 60;
 // the next stub shows its flag at once, because by then you are plainly reading them.
 const FLAG_DWELL_MS = 400;
 const FLAG_WARM_MS = 1000;
-// The chip sits ON the pointer's tip, not above it. Touching puts the fader and the meter — the parts
-// you came for — as near the tip as they can be, which is the centre of a magnified view. The pointer
-// arrow hangs down and right of its own tip, so it covers nothing.
-const FLAG_GAP = 0;
+// The chip hangs BELOW the pointer. Above it, the chip ran off the top of the screen: the stubs live
+// on the tab bar, the tab bar lives at the very top, and magnifying only makes the ceiling closer.
+// Below, there is always room.
+//
+// THE CHIP IS THE POINTER while it is up: the system cursor is hidden and the chip's TOP EDGE sits on
+// the pointer's position. A cursor drawn by the system — arrow or crosshair — is a shape you cannot
+// choose, sized for a screen you may not be looking at, and it covers the very thing it points at.
+// The top-centre of the frame is near enough to read the pointer's position by, and needs nothing
+// drawn to say so.
 // The meter floor and colours the mixer's own VU uses. Duplicated deliberately rather than reached
 // for across the app: the chip has to read as the SAME meter as the panel's, and two meters drawn to
 // two scales would be worse than no meter at all.
@@ -659,7 +664,16 @@ export class Rack {
     // of a display:none subtree, so hiding that way silently strips the coloured band off every jack
     // in the rack. visibility:hidden keeps the subtree in the render tree while taking the module off
     // the screen and out of hit-testing.
-    for (const rec of this.records.values()) rec.el.style.visibility = this._onPage(rec) ? '' : 'hidden';
+    // ...and the class, which is what actually stops the pointer. `visibility: hidden` is NOT enough:
+    // an SVG element with `pointer-events: all` — which is what every knob's hit circle uses — is a
+    // pointer target REGARDLESS of visibility, by the spec. So an off-page module's knobs were still
+    // turnable through the page in front of them, and its jacks still reachable. The class blocks the
+    // whole subtree explicitly, whatever any descendant asks for.
+    for (const rec of this.records.values()) {
+      const on = this._onPage(rec);
+      rec.el.style.visibility = on ? '' : 'hidden';
+      rec.el.classList.toggle('off-page', !on);
+    }
     for (const v of [...this._scopes, ...this._monitors]) {
       const rec = this.records.get(v.key);
       if (v.el) v.el.style.visibility = (rec && !this._onPage(rec)) ? 'hidden' : '';
@@ -1845,7 +1859,7 @@ export class Rack {
     // the one pairing that is never in question. The colour survives as a one-pixel edge, which is
     // enough: the cable under your pointer is already carrying it, so the chip only has to AGREE with
     // that colour, not announce it.
-    el.style.borderColor = color;
+    el.style.color = color;
     // Rebuilt only when the CHIP ITSELF changes. Moving along a stub, or turning its fader, must not
     // tear down and remeasure the thing you are reading — it would flicker exactly while you watched.
     const key = text + (fader ? '|f' : '');
@@ -1854,6 +1868,7 @@ export class Rack {
       el.textContent = '';
       el.classList.toggle('has-fader', !!fader);
       const name = document.createElement('span');
+      name.className = 'stub-flag-name';
       name.textContent = text;
       el.appendChild(name);
       if (fader) {
@@ -1882,8 +1897,13 @@ export class Rack {
     // the very edge of the screen, which is the right trade: it is exact everywhere else.
     const left = Math.min(px - w / 2, window.innerWidth - 4 - w);
     el.style.left = Math.round(Math.max(4, left)) + 'px';
-    el.style.top = Math.round(Math.max(2, py - h - FLAG_GAP)) + 'px';
+    // Top edge ON the pointer. Clamped at the bottom for symmetry, though it is the top edge that was
+    // ever the problem — the stubs live on the tab bar and the tab bar lives at the very top.
+    el.style.top = Math.round(Math.max(2, Math.min(py, window.innerHeight - 4 - h))) + 'px';
     el.style.visibility = 'visible';
+    // The chip is the pointer now, so take the system one away. Only while the chip is actually up —
+    // hiding it during the dwell would leave you with no pointer at all for half a second.
+    if (this._flagStrip) this._flagStrip.style.cursor = 'none';
     this._flagWarm = true;
   }
 
@@ -1920,6 +1940,7 @@ export class Rack {
     if (this._flagSticky) return;
     clearTimeout(this._flagTimer);
     if (this._flagEl) this._flagEl.style.display = 'none';
+    if (this._flagStrip) { this._flagStrip.style.cursor = ''; this._flagStrip = null; }
     this._flagKey = null;
     this._stopFlagMeter();
     // The warm period runs from LEAVING a stub, so a sweep across the bundle stays warm the whole way
@@ -2048,11 +2069,11 @@ export class Rack {
         hit.setAttribute('fill', 'transparent');
         hit.setAttribute('class', 'stub-grab');
         hit.style.pointerEvents = 'auto';
-        hit.style.cursor = 'pointer';
         const label = () => this._stubLabel(item.e, item.nearIsSrc);
         const fader = () => this._stubFader(item.e, item.nearIsSrc);
         const place = (ev) => this._showFlag(label(), color, ev.clientX, ev.clientY, fader());
         hit.addEventListener('pointerenter', (ev) => {
+          this._flagStrip = hit;
           clearTimeout(this._flagTimer);
           clearTimeout(this._flagWarmTimer);
           // Warm, so straight away: you are reading the bundle, not passing through it.
@@ -2644,6 +2665,7 @@ export class Rack {
     this._highlights = [];
     const delta = 2 / ((this.pxPerMm || 1) * this.zoom);
     for (const rec of this.records.values()) {
+      if (!this._onPage(rec)) continue;
       for (const [portId, port] of rec.panel.ports) {
         if (port.meta.dir !== 'in' || !this._incomingEdge(rec.key, portId)) continue;
         if (rec.key === exceptKey && portId === exceptPort) continue;
@@ -2659,6 +2681,7 @@ export class Rack {
     const delta = 2 / ((this.pxPerMm || 1) * this.zoom);   // 2 screen px expressed in panel mm
     const swell = (rec, portId, port) => this._addCandidateHighlight(port, delta);
     for (const rec of this.records.values()) {
+      if (!this._onPage(rec)) continue;
       for (const [portId, port] of rec.panel.ports) {
         if (port.meta.dir === wantDir) {
           if (wantDir === 'in' && this.patchbay.inputOccupied(rec.key, portId, exceptEdge)) continue;
@@ -2934,6 +2957,10 @@ export class Rack {
   // point happens to sit on a control or on bare panel. Modules don't overlap, so first hit wins.
   _moduleAt(clientX, clientY) {
     for (const rec of this.records.values()) {
+      // Pure geometry, so no amount of hiding keeps an off-page module out of it: a hidden module has
+      // a real bounding box sitting under the page you ARE looking at, and without this the pointer
+      // lit up the chain of a module on another page while crossing empty rail.
+      if (!this._onPage(rec)) continue;
       const r = rec.el.getBoundingClientRect();
       if (clientX >= r.left && clientX <= r.right && clientY >= r.top && clientY <= r.bottom) return rec;
     }
@@ -6492,7 +6519,7 @@ export class Rack {
     // ever applied when you switched pages, which was invisible while every module was created on the
     // page in front of you — and stopped being true the moment the mixer started life on the audio
     // output page and a loaded patch began sorting itself across pages.
-    if (!this._onPage(rec)) el.style.visibility = 'hidden';
+    if (!this._onPage(rec)) { el.style.visibility = 'hidden'; el.classList.add('off-page'); }
     this.relayout();
     this.onChange();
     return rec;

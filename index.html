@@ -364,6 +364,11 @@
       background: var(--rail); border: 1px solid #0b0906; overflow: visible;
       box-shadow: inset 0 0 12px rgba(0,0,0,0.5);
     }
+    /* A module on another page takes no pointer input at all — itself OR any descendant. The
+       descendants matter: a knob hit circle uses pointer-events:all, which per the SVG spec is a
+       pointer target whatever its visibility, so hiding the module alone left its knobs turnable
+       through the page in front of them. */
+    .rack-module.off-page, .rack-module.off-page * { pointer-events: none !important; }
     .rack-module {
       position: absolute; top: 0; cursor: default;
       user-select: none; -webkit-user-select: none; touch-action: none;
@@ -499,7 +504,9 @@
        it has to stay readable while the pointer is still on the stub near the bar — and click-through,
        so it can never swallow a press on the tab it happens to be lying over. */
     .stub-flag { position: fixed; z-index: 1340; display: none; pointer-events: none;
-      background: #000; border: 1px solid currentColor; color: #fff;
+      /* `color` is the CABLE's colour: the frame and the stem both take it from here, so the two can
+         never drift apart. The lettering sets its own white. */
+      background: #000; border: 1px solid currentColor;
       /* An EXPLICIT line-height, which is what lets the lettering grow without the chip growing. Left
          to itself a line box carries the font's own leading — three pixels of nothing above the capital
          letters — so the box was tall while the text was small. Pinning the line box to the height the
@@ -507,6 +514,7 @@
       font: 600 14px/11px system-ui, -apple-system, sans-serif;
       padding: 1px 7px 2px; border-radius: 3px; white-space: nowrap;
       box-shadow: 0 1px 4px rgba(0,0,0,.55); }
+    .stub-flag-name { color: #fff; }
     /* A channel stub carries its fader and its meter inside the chip, in the seven pixels below the
        lettering — the chip does not grow to hold them. Bottom to top: a three-pixel white bar filled
        to the level, the half-brightness rule beyond it showing the travel left to run, a pixel of air,
