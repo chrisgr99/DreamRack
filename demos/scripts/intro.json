@@ -1,0 +1,79 @@
+{
+  "id": "intro",
+  "title": "Intro — Oscillator into Gate into Mixer",
+  "rate": 1,
+  "stage": "default",
+  "intro": "DreamRack — a quick patch",
+  "outro": "Built and playing — all from a script",
+  "defaults": {
+    "perform": 1.0,
+    "arrive": 2.0,
+    "beat": 0.7,
+    "settle": 0.8,
+    "hold": 3.0
+  },
+  "steps": [
+    {
+      "do": "page",
+      "to": "a1",
+      "note": "This is the rack you start with."
+    },
+    {
+      "do": "say",
+      "note": "The Complex Oscillator, top left, is where sound begins. On its own it just drones.",
+      "about": "osc"
+    },
+    {
+      "do": "say",
+      "note": "A low pass gate is what turns that drone into plucks or drum beats.",
+      "about": "lpg"
+    },
+    {
+      "do": "say",
+      "note": "It is a volume control and a tone control at once: struck, it opens briefly and shuts again, and the sound darkens as it closes — the way a real instrument does.",
+      "about": "lpg"
+    },
+    {
+      "do": "patch",
+      "from": "osc:prinFinalOut",
+      "to": "lpg:inA",
+      "note": "So take the oscillator's principal output into the gate's A input."
+    },
+    {
+      "do": "patch",
+      "from": "lpg:outA",
+      "to": "mixer:chanA",
+      "note": "Then the gate's A output to the mixer. The mixer lives on its own page, so its inputs appear as buttons under the tab."
+    },
+    {
+      "do": "set",
+      "target": "lpg:run",
+      "to": "on",
+      "note": "The gate has a clock of its own, which will strike it for us."
+    },
+    {
+      "do": "set",
+      "target": "lpg:clkOnA",
+      "to": "on"
+    },
+    {
+      "do": "pause",
+      "for": 2.5
+    },
+    {
+      "do": "say",
+      "note": "That is a patch: a source, something to shape it, and a way out to the speakers."
+    },
+    {
+      "do": "set",
+      "target": "osc:timbre",
+      "to": 0.85,
+      "perform": 6.0,
+      "note": "Now open the timbre. That is the wave folder — more harmonics the further it goes."
+    },
+    {
+      "do": "pause",
+      "for": 3.0
+    }
+  ]
+}

@@ -42,6 +42,9 @@ import { serialize, restore, validate, APP_NAME, APP_VERSION } from '../host/pat
 import { createStorage } from '../host/storage.js';
 import { buildCatalogue, createMirror } from '../host/mirror.js';
 import { createAudioTrace } from '../host/audio-trace.js';
+import { DEFAULT_RACK, placeRack } from '../host/default-rack.js';
+import { createDemoRunner } from '../host/demo/runner.js';
+import { createDemoPanel } from '../host/demo/panel.js';
 import { createTour, tourSeen } from '../host/tour.js';
 import { createPatchNotes } from '../host/patch-notes.js';
 import { createComposer } from '../host/feedback.js';
@@ -434,6 +437,7 @@ async function boot() {
   // `menuStateTimer` is here for exactly the same reason: onEdit/markClean also push the native
   // menu's state, and pushMenuState is hoisted while a `let` beside it would not be.
   let dirty = false, patchName = null, mirror = null, booted = false, menuStateTimer = null, notes = null, examples = [];
+  let selectedEntry = null, demoActive = false, demoStop = false, demoPromise = null, demoPanel = null;   // scripted demos (design/scripted-demo.md)
   let viewSaveTimer = null;
   rack = new Rack(document.getElementById('rack'), {
     host, moduleTypes: MODULE_TYPES, rowCount: 2, dark: darkMode, onChange: () => onEdit(),
@@ -575,7 +579,7 @@ async function boot() {
       patch: { name: patchName, dirty },
       state: { sound: soundOn() ? 'on' : 'off', master: masterValue },
       sync: { lastSyncAt: new Date().toISOString() },
-      files: { roundTrip: ['inbox.json'], observationOnly: ['patch.json', 'active.json', 'catalogue.json', 'last-apply-result.json', 'selection.json', 'runtime.json', 'audio-trace.json', 'AGENTS.md', 'README.md'] },
+      files: { roundTrip: ['inbox.json'], observationOnly: ['patch.json', 'active.json', 'catalogue.json', 'last-apply-result.json', 'selection.json', 'runtime.json', 'audio-trace.json', 'demo.json', 'AGENTS.md', 'README.md'] },
     }),
     catalogue: buildCatalogue([oscDescriptor, lpgDescriptor], mixerDescriptor),
     applyEdit,
@@ -629,31 +633,22 @@ async function boot() {
   let sessTimer = null;
   // Guarded by `booted`: the many addModule edits DURING boot must not overwrite the
   // session with a half-built (e.g. mixer-only) rack — only genuine post-boot edits save.
-  function autosaveSession() { if (!booted) return; clearTimeout(sessTimer); sessTimer = setTimeout(() => { try { localStorage.setItem(SESSION_KEY, patchText()); } catch (_e) { /* no storage */ } }, 400); }
-  function flushSession() { if (!booted) return; clearTimeout(sessTimer); try { localStorage.setItem(SESSION_KEY, patchText()); } catch (_e) { /* no storage */ } }
+  // `demoActive` freezes autosave: a running demo rebuilds the rack, which must never overwrite
+  // the user's saved session (it's snapshotted and restored around the run).
+  function autosaveSession() { if (!booted || demoActive) return; clearTimeout(sessTimer); sessTimer = setTimeout(() => { try { localStorage.setItem(SESSION_KEY, patchText()); } catch (_e) { /* no storage */ } }, 400); }
+  function flushSession() { if (!booted || demoActive) return; clearTimeout(sessTimer); try { localStorage.setItem(SESSION_KEY, patchText()); } catch (_e) { /* no storage */ } }
   // Guard the destructive actions (New / Open / Reopen) when there's unsaved work.
   const okToDiscard = () => !dirty || window.confirm('You have unsaved changes. Discard them?');
 
   // The rack a brand-new user gets on a first run, and exactly what File > New rebuilds.
   // Shared between the two so they can never drift apart.
+  // The arrangement itself lives in host/default-rack.js, so that a tutorial demo can open on the
+  // SAME rack a first-run user meets rather than conjuring its modules as it goes.
   async function placeDefaultModules() {
-    // Each module is placed at the RUNNING END of its row, not at x = 0. A module added at
-    // zero ties with whatever is already there, and the tie breaks on insertion order, so
-    // it sorts AHEAD of the modules that have since been pushed right — which is how the
-    // Sequencer first landed in the middle of row 0 instead of at its end.
-    const bottom = rack.rowCount - 1;
     // The mixer is pinned and survives File > New, wherever the discarded patch left it — but always
     // on the audio output page, which is not a page this layout otherwise touches.
-    rack.placeModule('mixer', bottom, 0);
-    let x = 0;
-    for (const d of [oscDescriptor, fnDescriptor, progDescriptor]) {
-      const rec = await rack.addModule(d.id, 0, x);
-      x = rec.x + rec.panelWmm;
-    }
-    // The gate goes on the bottom row of the FIRST AUDIO PAGE, at its left edge. It used to sit beside
-    // the mixer, which is no longer on this page — following the mixer across would have put the one
-    // module a first patch needs most on a page you have to go and find.
-    await rack.addModule(lpgDescriptor.id, bottom, 0, { page: 'a1' });
+    rack.placeModule('mixer', rack.rowCount - 1, 0);
+    await placeRack(rack, DEFAULT_RACK);
   }
 
   async function newPatch() {
@@ -1148,6 +1143,171 @@ async function boot() {
   // The AI mirror is Electron-only and always on: no toggle UI, no folder-reveal — just
   // ensure it's enabled so the running patch is always mirrored.
   if (mirror.available() && !mirror.isEnabled()) { try { await mirror.setEnabled(true); } catch (_e) { /* ignore */ } updateTrace(); }
+
+  // --- Scripted demos (design/scripted-demo.md): library, floating transport, triggers ---
+  // Reels are a named manifest; the floating "Demo" window (DEV ▸ Demos…) chooses one from its
+  // drop-down and Runs / Stops / Restarts it, showing the running reel's name. Ctrl-Shift-D starts
+  // the selected reel, Escape stops. A demo rebuilds the rack, so the user's whole working state —
+  // patch, probes, page and view — is snapshotted and put back around every run.
+  let demoList = [];
+  try { const res = await fetch('demos/scripts/index.json'); if (res.ok) demoList = (await res.json()).demos || []; }
+  catch (_e) { /* no demo library */ }
+
+  const loadDemo = async (entry) => {
+    // Cache-busted: the whole point of Reload is to pick up an edit made a moment ago, and a cached
+    // script would quietly serve the words you just changed.
+    const res = await fetch(`demos/scripts/${entry.file}?t=${Date.now()}`);
+    if (!res.ok) throw new Error(`demo ${entry.file}: ${res.status}`);
+    const obj = await res.json();
+    obj.__file = 'demos/scripts/' + entry.file;
+    return obj;
+  };
+
+  // Project where the demo has got to, so an editing conversation needs no preamble: which script,
+  // which step, its exact note and pacing, and the steps either side of it. Written on every step,
+  // so "make that shorter" always refers to something readable from outside the app.
+  const pushDemoState = () => {
+    if (!mirror || !rack.demo) return;
+    mirror.pushFiles({ 'demo.json': demoStepping || rack.demo.running ? rack.demo.state() : null });
+  };
+
+  // The runner takes the whole app state as one opaque snapshot, captured before every step. That
+  // is what makes stepping BACKWARDS as cheap as stepping forwards — for the author checking a
+  // script, and for the reader who wants to see a step again.
+  rack.demo = createDemoRunner(rack, {
+    registerAudio: (node) => rack.addAudioTap(node),   // narration goes into a recording, not just the speakers
+    onAvoid: (region) => { if (demoPanel) demoPanel.avoid(region); },   // the transport window steps out of the work
+    panelRect: () => (demoPanel ? demoPanel.rect() : null),             // ...and the card then keeps off the window
+    snapshot: () => ({ patch: patchText(), page: rack.page, view: rack.viewState() }),
+    restoreSnapshot: async (s) => {
+      if (!s) return;
+      await restore(JSON.parse(s.patch), rack, mixerIO, { keepKeys: true });
+      syncMaster();
+      if (rack._hasPage(s.page)) rack.selectPage(s.page);
+      rack.setViewState(s.view);
+    },
+  });
+
+  // The transport switches are NOT part of a saved patch (see TRANSPORT above), so they're caught
+  // and put back by hand — a demo turns the engine on, and leaving it on afterwards would break the
+  // rule that sound only ever starts because you asked for it.
+  const grabTransport = () => ({ engine: mixRec.values.get('engine'), masterEnable: mixRec.values.get('masterEnable'), monitorEnable: mixRec.values.get('monitorEnable') });
+  const putTransport = (t) => { rack.applyParam(mixRec, 'masterEnable', t.masterEnable); rack.applyParam(mixRec, 'monitorEnable', t.monitorEnable); rack.applyParam(mixRec, 'engine', t.engine); };
+
+  // The user's own state, held for the length of a demo however it was started — a plain Run or a
+  // step-through — so whichever one ends can put it back. Held in one place because Stop hands a
+  // running demo OVER to stepping rather than tearing it down.
+  let demoHeld = null;
+  const holdUserState = () => { demoHeld = { snap: patchText(), view: rack.viewState(), page: rack.page, transport: grabTransport() }; };
+  async function releaseUserState() {
+    const h = demoHeld; demoHeld = null;
+    if (!h) return;
+    try {
+      await restore(JSON.parse(h.snap), rack, mixerIO);
+      syncMaster();
+      if (rack._hasPage(h.page)) rack.selectPage(h.page);
+      rack.setViewState(h.view);
+    } catch (e) { log(`demo restore failed: ${e.message}`); }
+    putTransport(h.transport);
+    markClean();
+  }
+
+  async function runDemo(obj, name, { restoreAfter = true, loop = false } = {}) {
+    if (!obj || rack.demo.running) return;
+    if (restoreAfter && !demoHeld) holdUserState();
+    if (tour && tour.isOpen()) tour.close();   // the first-run tutorial card sits over the rack
+    demoActive = true; demoStop = false;
+    if (demoPanel) demoPanel.setRunning(name || obj.id || 'demo');
+    try { do { await rack.demo.run(obj); } while (loop && !demoStop); }
+    finally {
+      if (demoPanel) demoPanel.setRunning(null);
+      // A demo STOPPED mid-way leaves you standing on the step it reached — that is what stopping is
+      // for while authoring. Only a demo that ran to its end puts your patch back on its own.
+      if (demoStop) { demoStepping = demoStepping || true; showPos(); }
+      else { demoActive = false; await releaseUserState(); }
+    }
+  }
+
+  let overrideRate = 1, loopWanted = false;   // window controls: pace vs legibility, attract loop
+
+  async function runSelected() {
+    if (!selectedEntry || rack.demo.running || demoActive) return;
+    let obj; try { obj = await loadDemo(selectedEntry); } catch (e) { log(`demo load failed: ${e.message}`); return; }
+    const base = Number(obj.rate) > 0 ? Number(obj.rate) : 1;
+    const eff = { ...obj, rate: base * overrideRate };   // global rate override on top of the reel's own
+    demoPromise = runDemo(eff, selectedEntry.title || selectedEntry.id, { loop: loopWanted });
+    return demoPromise;
+  }
+  async function stopDemo() { if (rack.demo.running) { demoStop = true; rack.demo.stop(); } if (demoPromise) { try { await demoPromise; } catch (_e) { /* ignore */ } } }
+  async function restartDemo() { await stopDemo(); runSelected(); }
+
+  // Step-through. The first press stands the demo up the way Run does — the user's work put aside,
+  // the rack cleared, sound on — and then performs one step. Leaving step-through is what puts the
+  // patch back, so `demoStepping` holds the snapshot until then.
+  let demoStepping = null;
+  async function enterStepping() {
+    if (demoStepping || !selectedEntry) return false;
+    let obj; try { obj = await loadDemo(selectedEntry); } catch (e) { log(`demo load failed: ${e.message}`); return false; }
+    if (!demoHeld) holdUserState();
+    demoStepping = true;
+    if (tour && tour.isOpen()) tour.close();
+    demoActive = true;
+    rack.demo.load(obj);
+    await rack.demo.reset();
+    return true;
+  }
+  async function exitStepping() {
+    if (!demoStepping) return;
+    demoStepping = null;
+    rack.demo.stop();
+    await releaseUserState();
+    demoActive = false;
+    demoPanel.setPosition(0, 0);
+    pushDemoState();
+  }
+  const showPos = () => { demoPanel.setPosition(rack.demo.index, rack.demo.count, (rack.demo.stepAt(rack.demo.index) || {}).do); pushDemoState(); };
+  async function stepDemo() { if (!demoStepping && !(await enterStepping())) return; await rack.demo.step(); showPos(); }
+  async function backDemo() { if (!demoStepping) return; await rack.demo.back(); showPos(); }
+  // Perform the current step properly — full pacing and narration — then stop on the next one.
+  async function playStepDemo() { if (!demoStepping && !(await enterStepping())) return; await rack.demo.playStep(); showPos(); }
+  // Re-read the script from disk and return to the step we were standing on, so an edit can be heard
+  // without losing your place. Steps are replayed with their waits collapsed to get back there.
+  async function reloadDemo() {
+    if (!selectedEntry) return;
+    const at = demoStepping ? rack.demo.index : 0;
+    let obj; try { obj = await loadDemo(selectedEntry); } catch (e) { log(`demo reload failed: ${e.message}`); return; }
+    if (!demoStepping && !(await enterStepping())) return;
+    rack.demo.load(obj);
+    await rack.demo.reset();
+    await rack.demo.seek(Math.min(at, rack.demo.count));
+    showPos();
+    log(`demo reloaded at step ${rack.demo.index + 1}`);
+  }
+
+  selectedEntry = demoList[0] || null;
+  demoPanel = createDemoPanel({
+    demos: demoList,
+    onSelect: (e) => { selectedEntry = e; if (demoStepping) exitStepping(); },
+    onRun: async () => { await exitStepping(); runSelected(); },
+    // TWO-STAGE STOP. Stopping a playback leaves you STANDING ON the step it reached, with the rack as
+    // the demo built it — which is the whole point of stopping while authoring: you stop because you
+    // want to look at that step, go back a step, or change its words. Pressing Stop again (when
+    // nothing is playing) is what puts your own patch back.
+    onStop: async () => {
+      if (rack.demo.running) { await stopDemo(); showPos(); return; }
+      await stopDemo(); await exitStepping();
+    },
+    onRestart: restartDemo,
+    onRate: (v) => { if (v > 0) overrideRate = v; },
+    onCaptions: (v) => rack.demo.setCaptions(!!v),
+    onStep: stepDemo, onBack: backDemo, onPlay: playStepDemo, onReload: reloadDemo,
+  });
+  rack.openDemoPanel = () => demoPanel.open();
+
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && rack.demo.running) { stopDemo(); return; }
+    if (e.ctrlKey && e.shiftKey && e.code === 'KeyD') { e.preventDefault(); runSelected(); }
+  }, true);
 
   // Re-fit once the layout has settled. In Electron the ready-to-show gate means this is
   // already correct; a bare browser settles its flex layout a beat later, so the boot-time

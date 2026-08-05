@@ -30,6 +30,11 @@ const PANEL_H_MM = FACE_H_MM + TITLE_STRIP_MM;   // the cropped functional face 
 const ROW_GAP_MM = 0;           // vertical gap between rows (0 = flush, faceplates touch)
 const GAP_MM = 4;               // horizontal margin at the right of the case, in mm
 const SVG_NS = 'http://www.w3.org/2000/svg';
+
+// A press on the DEMO TRANSPORT is that window's, not the rack's. A cord in hand listens on the
+// document in the CAPTURE phase and swallows every left click, so while a scripted demo was carrying
+// a cable its own Stop button could not be pressed — the click never reached it.
+const onChrome = (t) => !!(t && t.closest && t.closest('.demo-panel'));
 // Terminal-menu icons (shown left of the Scope / Listen / Upstream labels).
 const SCOPE_ICON = '<svg viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="5" width="19" height="14" rx="2.2" stroke-width="1.7"/><path d="M5 12 Q7 8 9 12 T13 12 T17 12 L19 12" stroke-width="1.9"/></g></svg>';
 const NET_ICON = '<svg viewBox="0 0 24 24"><g stroke="currentColor" stroke-linecap="round"><line x1="12" y1="12" x2="20" y2="4.5" stroke-width="2.1"/><line x1="12" y1="12" x2="18.5" y2="21" stroke-width="2.1"/><circle cx="20" cy="4.5" r="3.2" fill="currentColor" stroke="none"/><circle cx="18.5" cy="21" r="3.2" fill="currentColor" stroke="none"/><line x1="3.5" y1="6" x2="12" y2="12" stroke-width="2.9"/><circle cx="3.5" cy="6" r="3.7" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="3.7" fill="currentColor" stroke="none"/></g></svg>';
@@ -2755,6 +2760,10 @@ export class Rack {
     // but DO keep following the pointer, so the dive re-arms the cable where the pointer actually ended up.
     let pan = null, edgeRAF = 0;   // pan: press state (click-carry); edgeRAF: drag-mode edge auto-scroll loop
     const onMove = (ev) => {
+      // A SCRIPTED carry belongs to the demo, not to your hand. The cord follows the synthetic pointer
+      // through _carryTrack; without this the real mouse drifting across the window snatched the free
+      // end away from the pointer the viewer is watching.
+      if (this._demoCarry) return;
       if (this._ovActive) { lastX = ev.clientX; lastY = ev.clientY; return; }
       if (!dragMode && pan) this._viewDragPan(pan, ev);   // click-carry: a held press pans the view; the cord stays in hand
       track(ev.clientX, ev.clientY);
@@ -2772,6 +2781,7 @@ export class Rack {
       document.removeEventListener('contextmenu', onCtx, true);
       document.removeEventListener('keydown', onKey, true);
       tmp.remove(); this._tempCable = null; this._carryOrigin = null; this._carryMorph = null;
+      this._carryTrack = null; this._carryDrop = null;
       this._disarmTarget(); this._clearHighlights();
       document.body.classList.remove('grabbing-cable');
     };
@@ -2783,10 +2793,14 @@ export class Rack {
       finish();
       if (j && !(j.key === key && j.portId === portId)) this._recordCableAdd(this._tryConnect({ key, portId }, j));
     };
+    // A scripted demo carries a cord for real rather than miming one: it calls these instead of
+    // faking pointer events, so the cable in hand, the armed target and the drop are the same code
+    // your own hand goes through. Cleared by finish(), so a stale carry can never be driven.
+    this._carryDrop = drop;
     const onDown = (ev) => {
       // A press on the TAB BAR is a page change, not a drop — the cord stays in hand and crosses with
       // you. Without this the carry's own capture handler swallowed the press and the tab never saw it.
-      if (this._onTabBar(ev.target)) return;
+      if (this._demoCarry || this._onTabBar(ev.target) || onChrome(ev.target)) return;
       if (dragMode) return;   // in a held drag the button is already down; a stray press does nothing
       if (this._ovActive) { lastX = ev.clientX; lastY = ev.clientY; return; }   // the press aims the overview's frame
       if (ev.button !== 0) return;   // right-click is handled by onCtx; middle is ignored
@@ -2794,7 +2808,7 @@ export class Rack {
       pan = this._viewDragStart(ev);
     };
     const onUp = (ev) => {
-      if (this._onTabBar(ev.target)) return;   // crossing to another page, not dropping
+      if (this._demoCarry || this._onTabBar(ev.target) || onChrome(ev.target)) return;   // crossing pages, or pressing the transport
       if (this._ovActive || ev.button !== 0) return;
       if (dragMode) { ev.preventDefault(); ev.stopPropagation(); drop(ev.clientX, ev.clientY); return; }   // held-drag: this release IS the drop
       if (!pan) return;
@@ -2803,7 +2817,7 @@ export class Rack {
       if (dragged) return;   // it was a pan of the view → keep the cord in hand
       drop(ev.clientX, ev.clientY);
     };
-    const onCtx = (ev) => { if (this._ovActive) return; ev.preventDefault(); ev.stopPropagation(); finish(); };   // right click cancels (no menu)
+    const onCtx = (ev) => { if (this._demoCarry || this._ovActive || onChrome(ev.target)) return; ev.preventDefault(); ev.stopPropagation(); finish(); };   // right click cancels (no menu)
     const onKey = (ev) => { if (this._ovActive) return; if (ev.key === 'Escape') { ev.preventDefault(); finish(); } };
     document.addEventListener('pointermove', onMove, true);
     document.addEventListener('pointerdown', onDown, true);
@@ -2860,6 +2874,10 @@ export class Rack {
     // but DO keep following the pointer, so the dive re-arms it where the pointer actually ended up.
     let pan = null, edgeRAF = 0;   // pan: press state (click-carry); edgeRAF: drag-mode edge auto-scroll loop
     const onMove = (ev) => {
+      // A SCRIPTED carry belongs to the demo, not to your hand. The cord follows the synthetic pointer
+      // through _carryTrack; without this the real mouse drifting across the window snatched the free
+      // end away from the pointer the viewer is watching.
+      if (this._demoCarry) return;
       if (this._ovActive) { lastX = ev.clientX; lastY = ev.clientY; return; }
       if (!dragMode && pan) this._viewDragPan(pan, ev);   // click-carry: a held press pans the view; the cord stays in hand
       track(ev.clientX, ev.clientY);
@@ -2910,7 +2928,7 @@ export class Rack {
       pan = this._viewDragStart(ev);
     };
     const onUp = (ev) => {
-      if (this._onTabBar(ev.target)) return;   // crossing to another page, not dropping
+      if (this._demoCarry || this._onTabBar(ev.target) || onChrome(ev.target)) return;   // crossing pages, or pressing the transport
       if (this._ovActive || ev.button !== 0) return;
       if (dragMode) { ev.preventDefault(); ev.stopPropagation(); const d = this._jackNear(ev.clientX, ev.clientY); finish(); resolve(d); return; }
       if (!pan) return;
@@ -2995,6 +3013,10 @@ export class Rack {
     // FOLLOWING the pointer though, so the dive re-arms the cable where the pointer actually ended up.
     let pan = null, edgeRAF = 0;   // pan: press state (click-carry); edgeRAF: drag-mode edge auto-scroll loop
     const onMove = (ev) => {
+      // A SCRIPTED carry belongs to the demo, not to your hand. The cord follows the synthetic pointer
+      // through _carryTrack; without this the real mouse drifting across the window snatched the free
+      // end away from the pointer the viewer is watching.
+      if (this._demoCarry) return;
       if (this._ovActive) { lastX = ev.clientX; lastY = ev.clientY; return; }
       if (!dragMode && pan) this._viewDragPan(pan, ev);   // click-carry: a held press pans the view; the cord stays in hand
       track(ev.clientX, ev.clientY);
@@ -5574,7 +5596,16 @@ export class Rack {
     if (mx && typeof mx.instance.outputTap === 'function') taps.push(mx.instance.outputTap());
     this._monitorBus();
     if (this._monLimiter) taps.push(this._monLimiter);
+    if (this._extraTaps) for (const n of this._extraTaps) taps.push(n);
     return taps;
+  }
+
+  // Sound that is NOT the patch but still belongs in a recording — demo narration is the case this
+  // exists for. It reaches the speakers on its own; this is only what puts it in the take.
+  addAudioTap(node) {
+    if (!node) return;
+    if (!this._extraTaps) this._extraTaps = new Set();
+    this._extraTaps.add(node);
   }
 
   // ---- the Sound menu (panel menu): hover auditions, click toggles ----
@@ -6897,6 +6928,14 @@ export class Rack {
       title.style.cursor = 'var(--grip)';   // the title is the drag handle now (right-click still opens its menu)
       title.addEventListener('contextmenu', (e) => this._onTitleContextMenu(e, rec));
     }
+  }
+
+  // Take a forced key out of circulation, so the next auto-minted key cannot collide with it. Only
+  // matters when a caller supplies keys of the same shape this mints (a snapshot restored with
+  // keepKeys); an arbitrary name like "osc" is no threat and simply passes through.
+  reserveKey(key) {
+    const m = /^m(\d+)$/.exec(String(key || ''));
+    if (m) this._seq = Math.max(this._seq, Number(m[1]) + 1);
   }
 
   // opts.pinned marks a singleton the user can drag but not delete (the mixer),
@@ -8253,6 +8292,8 @@ export class Rack {
         items.push({ label: 'Edit this panel…', action: () => window.wcoast.openPanelEditor({ moduleId: rec.descriptorId, scale }) });
       }
     }
+    // The scripted-demo transport: an author tool for now, so it lives here rather than in Help.
+    if (this.openDemoPanel) items.push({ label: 'Demos…', action: () => this.openDemoPanel() });
     return items;
   }
   // The Engine menu item's glyph: the same reddish push-button as the mixer's master lamp

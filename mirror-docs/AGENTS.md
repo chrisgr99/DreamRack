@@ -78,6 +78,13 @@ is closed and the user isn't at the keyboard.
 - `runtime.json` — small live signals: whether sound is running, the master
   level, and the master VU. Present while the app runs.
 - `audio-trace.json` — the live sound as measurements (see its section below).
+- `demo.json` — where a scripted demo has got to, while one is being stepped through or
+  played: the script and its file, the step index and count, and the current step in full
+  along with the ones either side. Present only during a demo; `null` otherwise. This is
+  what lets "make that shorter" or "say it the other way round" be acted on without the
+  user having to say which step they mean or repeat what it currently says — read the
+  current step's `note`, edit that step in the script file it names, and tell them to press
+  Reload script and then Play.
   Present only while sound plays.
 - `AGENTS.md` — this file.
 - `README.md` — a "do not edit" note for the human user; you can ignore it.
@@ -96,7 +103,7 @@ file is which; trust those over this prose if they ever disagree.
   "sync": { "lastSyncAt": "2026-07-04T21:00:00.000Z" },
   "files": {
     "roundTrip": ["inbox.json"],
-    "observationOnly": ["patch.json", "active.json", "catalogue.json", "last-apply-result.json", "selection.json", "runtime.json", "audio-trace.json", "AGENTS.md"]
+    "observationOnly": ["patch.json", "active.json", "catalogue.json", "last-apply-result.json", "selection.json", "runtime.json", "audio-trace.json", "demo.json", "AGENTS.md"]
   }
 }
 ```

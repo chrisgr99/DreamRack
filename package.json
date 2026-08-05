@@ -7,7 +7,8 @@
     "start": "electron .",
     "panels": "node modules/function-gen-281t/gen-panel.js && node modules/mixer/gen-panel.js && node modules/complex-oscillator-259t/gen-panel.js && node modules/lpg-292/gen-panel.js && node modules/gallery/gen-panel.js && node modules/sine-source/gen-panel.js && node modules/programmer-8/gen-panel.js",
     "test": "node --test",
-    "panels:check": "node tools/panels-check.mjs"
+    "panels:check": "node tools/panels-check.mjs",
+    "speech": "node tools/render-speech.mjs"
   },
   "devDependencies": {
     "electron": "^42.1.0"

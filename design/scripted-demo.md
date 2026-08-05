@@ -1,262 +1,315 @@
-# wCoast Scripted Demo (Attract Mode) — Design
+# Scripted demos — design
 
-A self-contained subsystem inside wCoast that plays back an authored sequence of
-patching and performance actions — instantiating modules, drawing patch cables,
-turning knobs, firing gates — while a synthetic on-screen pointer moves around the
-panel so it reads as a hand-operated session. It runs entirely inside the app,
-with no AI or external driver in the loop at playback time. You run it on command
-(menu item, keyboard, or a URL) and capture it with an external screen recorder
-that grabs system audio; the recording itself is out of scope.
+A subsystem inside DreamRack that plays back an authored sequence of real app actions —
+adding modules, drawing cables, turning knobs — while a synthetic pointer moves around the
+rack, a badge beside it names each gesture, and a floating card narrates what is happening.
 
-The output is a screen-plus-audio recording of a generative modular synth, so the
-aim is repeatability: on the same machine and output device, every replay should
-look and sound the same, so takes are interchangeable and re-recording is free.
+It serves two audiences from one mechanism:
+
+- **The deck** — the in-app replacement for the written tutorial. Cards explain a concept; where
+  a card would have said "now you try it", a demo shows it instead.
+- **Reels** — standalone pieces for video, typically the building of an interesting patch. Authored
+  separately from the deck, but made of the same steps and carrying cards of their own.
+
+Recording is internal (`host/recorder.js` captures the window plus audio tapped off the graph), so
+there is no external-recorder assumption anywhere in this design.
 
 ## Non-goals
 
-- Not a test or automation framework, and not driven by synthetic DOM input
-  events — it never fakes pointer/drag events to trigger handlers.
-- Does not record the screen; capture is an external tool's job.
-- Does not target cross-machine audio identity (see Determinism).
-- No control-message layer. The runner calls wCoast's own methods directly; the
-  GXW control-rate link is a separate, unrelated interface and is not involved.
-- Does not rename module descriptor ids or folders — they keep their legacy numbers
-  (a separate refactor, out of scope). This subsystem only uses module names in its
-  human-facing text (captions, menus, docs).
+- Not a test framework, and never driven by synthetic DOM input events — it does not fake pointer
+  events to trigger handlers.
+- No control-message layer. The runner calls the rack's own methods directly.
+- Not cross-machine audio identity (see Determinism).
 
 ## Principle: theatre separate from behaviour
 
-The synthetic cursor is pure theatre. Each step positions the cursor over the
-relevant control and plays a click/grab/turn animation; the actual effect —
-instantiate, patch, set a parameter, fire a gate — is produced by calling the
-rack's own imperative methods directly. The cursor is choreographed to sit over
-the right knob or jack just before each call, so it looks like the pointer did the
-work while the work goes through the same entry points the live UI uses. The demo
-therefore cannot desynchronise from real app state, and it degrades gracefully: if
-the animation is skipped, the patch still builds correctly.
+The synthetic cursor is pure theatre. Each step puts the cursor over the relevant control and plays
+a gesture animation; the actual effect — add, patch, set a parameter — comes from calling the rack's
+own imperative methods, the same ones the live UI uses. The demo therefore cannot desynchronise from
+real app state, and it degrades gracefully: skip the animation and the patch still builds correctly.
 
-## The action surface
+## Announce, then do
 
-The runner drives a thin adapter over methods the `Rack` already exposes (the same
-ones the live UI and save/load use), so the timeline never reaches into rack
-internals:
+The pacing rule the whole thing is built around. Each step reads its note, the pointer travels, it
+**waits at the destination**, the badge names the gesture, and only then does the gesture happen.
 
-- **instantiate** — `rack.addModule(descriptorId, row, xMm, { key })`. The demo
-  passes a stable `key` (e.g. `"osc"`) so later steps can reference the instance.
-- **patch** — `rack.connectPatch({ key, portId }, { key, portId })` (renders a real
-  cable) and its inverse for unpatch.
-- **set / ramp** — `rack.applyParam(rec, paramId, value)`. A ramp is the adapter
-  stepping `applyParam` across sub-values on the demo clock so the knob visibly
-  rotates and the audio sweeps.
-- **trigger** — there is no separate trigger call; firing a gate is `applyParam`
-  on a momentary param (e.g. `strikeA` → `"on"`), exactly as the panel's strike
-  buttons do.
+A fast movement you were told about beats a slow one that surprises you. This ordering — not a
+slower rate multiplier — is what makes a demo followable.
 
-`rack.records` is the `key → rec` map the adapter resolves instance keys through.
+## The gesture badge
 
-## Synthetic cursor layer
+A small black chip with a hairline border, sitting beside the pointer — the same clothes a cable's
+hover flag wears, so it reads as native. It names the gesture in the app's own terms, and the
+vocabulary is closed at seven:
 
-A single DOM element above everything — an SVG pointer or styled div, `position:
-fixed`, high z-index, `pointer-events: none` so it never intercepts anything.
-During playback the real OS cursor is hidden (`cursor: none` on the app root) so
-only the synthetic pointer appears in the capture. The layer supports move-to
-(each leg follows an ease-in-out curve — accelerating away and settling as it
-arrives, with travel time scaled to distance — so the pointer reads as a human hand
-rather than a linear glide), dwell, a **prominent
-click animation** — an expanding ring/ripple at the point of contact, plus a brief
-highlight of the control being acted on — so each interaction plainly lands on
-camera rather than being a silent state change, and a grab/drag affordance for
-drawing cables (the cable visibly follows the pointer from jack to jack). Movement
-is frame-driven but slaved to the clock below, so the pointer stays locked to the
-audio rather than free-running.
+    move pointer   left click   right click   button down   drag   button up   scroll-wheel
 
-## Caption layer
+The badge is **generated from the step, never authored**. An author writes "patch this to that"; the
+runner expands it into move pointer / left click / move pointer / left click and the badge names them
+one at a time. An eighth word needs a discussion, not a new string.
 
-Alongside the cursor, a caption box narrates what is happening — a legible message
-box (large, high-contrast text, fixed to a screen edge such as lower-centre) that
-holds a short line per action: "Add a Complex Oscillator", "Patch its output into
-the Low Pass Gate", "Start the gate's internal clock". A step carries an optional
-`caption`; when present the box crossfades to that text and holds it until the next
-caption. Captions are sized for video legibility (and for low-vision viewing),
-theme-aware, and timed on the same demo clock so the narration stays in step with
-the pointer and the audio. The box is part of the theatre layer, drawn above the
-app, and is suppressed outside playback.
+Two of these are worth noting. There is no "turn": every continuous control in the app is
+wheel-driven, so moving a value is always **scroll-wheel**, shown as a run of small pulses so the
+wheel is seen turning rather than seen to have jumped. And patching is **click, move, click** — not a
+held drag — because that is how a cable is really made here. `drag` exists for moving a module by its
+title bar.
 
-## Control resolution
+The badge takes the side of the pointer away from where it is about to travel, so it never covers
+what you are being shown next, and flips to stay on screen.
 
-The timeline addresses controls logically — by instance key plus control id —
-never by pixel coordinates, and only resolves to screen space at the last moment.
-The binding already exists: `parsePanel` (host/panel-loader.js) stores, on each
-record's `rec.panel`, a `controls` map (paramId → binding) and a `ports` map
-(portId → binding), each pointing at the live SVG element (`data-wcoast-param` /
-`data-wcoast-port`). Jacks are additionally tagged in the DOM with `dataset.jackKey`
-/ `dataset.jackPort`, and `rack._jackElement(key, portId)` returns a jack element
-directly.
+## The card
 
-So a step's target resolves as: look up `rec = rack.records.get(key)`, then the
-control's element via `rec.panel.controls.get(paramId)` (a knob) or
-`rec.panel.ports.get(portId)` (a jack), then read `getBoundingClientRect()` and
-take its centre in screen space right then. This survives accessibility zoom and
-wherever the articulating-arm monitor has the layout, because the authored sequence
-is geometry-independent. If a referenced control is absent (its module was never
-instantiated), the step fails loudly in an authoring/preview mode rather than
-silently mis-placing the cursor.
+One text place, floating **over** the rack rather than docked beside it. Docking would take space
+from the thing being demonstrated; a separate window would not appear in a recording. So it is a
+layer inside the app window, above the rack, taking no layout space and no pointer events.
 
-## Timeline and runner
+**It is placed, not dragged.** The script knows every step's target in advance, so the runner works
+out the region a note's steps are going to touch and the card takes a berth clear of it. Six berths
+in preference order, bottom-centre first. The berth is chosen once per note and does not move while
+that note is up — a card that shuffles about while you read it is worse than one that briefly
+overlaps something. An author can pin a note to a named berth when the computed one reads badly.
 
-An authored demo is a declarative, ordered list of steps loaded from disk, sitting
-naturally alongside the module descriptors. The runner walks the timeline, driving
-the cursor layer and invoking the action adapter at each step's scheduled time. The
-step vocabulary is small and stable:
+A note stays until the next note replaces it, so one note covers however many steps follow it. A step
+with no note is a silent step that still gets its pause.
 
-- `instantiate` — add a module at a panel position, under a stable key
-- `patch` / `unpatch` — connect or remove a cable between two jacks
-- `set` — set a parameter, optionally as a timed ramp
-- `move` / `dwell` / `click` — pure cursor choreography, no side effect
-- `wait` — advance the clock and let the patch play
+## The step model
 
-Any step may also carry a `caption` — a line of narration shown in the caption box
-(above) — and `cursor: true` to give it the full pointer-and-click treatment.
+A script is an ordered list of steps. A step performs one action and may carry a note.
 
-Setup steps (instantiate, initial patching) may run with the cursor hidden or
-moving quickly; the "performance" steps get the full cursor treatment. A demo
-begins from a rack cleared of user modules (the pinned Mixer aside) and builds the
-whole patch itself, so it is self-contained and never depends on prior app state.
+Authored steps are **semantic**, which is the grain an author dictates in — "patch the oscillator's
+principal output into the gate's A input" — and the runner expands each into explicit gestures.
 
-## Determinism
+    page    switch to a page (the tab itself is clicked, so the switch is seen to happen)
+    add     add a module under a stable key
+    patch   connect two terminals
+    set     move a parameter — a click for a switch, a wheel for a value
+    say     nothing happens; the note is the whole step
+    pause   let the patch play
 
-Two things make replays match on one machine:
+`say` is how a demo explains a thing before doing anything with it — what a low pass gate IS, before
+being told to patch into one — or names what has just been built. Like any note, its card stays up
+until another note replaces it, so an explanation can carry through however many silent steps follow
+it.
 
-1. **Schedule against the audio clock.** Parameter ramps and gate fires are placed
-   relative to `AudioContext.currentTime`, not wall-clock or `requestAnimationFrame`,
-   so the DSP renders the same each time. The cursor animation reads elapsed time
-   from the same audio clock each frame and interpolates position from it, so the
-   visuals stay welded to the audio even if frame timing jitters.
-2. **Fixed starting conditions.** A known initial rack (empty), the descriptors'
-   default param states, and a fixed order of operations.
+Every step carries its own pacing, and the demo's `defaults` supply whatever a step leaves out:
 
-The current modules (oscillators, gates, envelopes) carry no randomness, so this is
-enough for matching takes today. When a stochastic module lands (a noise / source-
-of-uncertainty style random-voltage module), it must expose a seedable PRNG whose
-seed the demo pins at start — otherwise its audio drifts run to run. Full
-cross-machine byte-identity (rendering the audio through an `OfflineAudioContext`
-and muxing it with the captured video) is an optional future extension, not the
-default.
+    perform   how long the pointer takes to travel, or a value takes to move
+    arrive    the pause after the pointer lands, before it does anything there
+    beat      how long the gesture badge is up before the gesture fires
+    settle    the pause after the action, before the next step
+    hold      how long a new note stays up before the demo acts on it
 
-## Demo library and triggers
+A single global multiplier scales all of it, for re-timing a finished demo — a slower pass for the
+tutorial, a tighter one for video. It is the last resort, not the thing you author with: the numbers
+above are what a person can actually judge while watching.
 
-Demos are a named library — one file per reel, kept together in a `demos/` folder
-in the app (JSON, discovered by name, the way modules are registered). A build can
-carry several reels, each addressed by its `id`.
+Control references are `instanceKey:controlId` — `osc:timbre`, `lpg:inA`, `mixer:chanA`. An `add`
+step's `as` becomes the key. The pinned mixer is already on the rack as `mixer`.
 
-Choosing and starting are two separate acts, because the author needs the start
-timed to when the screen recorder begins:
+Values may be authored positionally where that is how you would say it — a knob at two o'clock, fully
+open, centred — and resolved against the control's own range.
 
-- **Choose** — an unused item of the panel ("main") menu carries a demo launcher
-  (a clapperboard/film icon). Clicking it opens a list of the named demos; picking
-  one **arms** it as the current demo (it does not start yet). This launcher wedge
-  and its list are **hidden whenever a demo is running**, so they never appear in
-  the recording.
-- **Start** — a **keyboard shortcut** starts the armed demo. This is the
-  record-timing trigger: the author hits record, then presses the key, so the reel
-  begins exactly when they choose. The same shortcut re-runs the armed demo.
-- **URL / auto-run** — a hash on the `app://` scheme
-  (`app://wcoast/index.html#demo=intro`) auto-starts a named demo on load, and an
-  auto-run/loop flag drives kiosk/attract use. (No URL is read at boot today; this
-  is new.) A "Run Demo" item in the Electron native menu is an optional convenience.
-
-## Playback rate
-
-A single global rate multiplier scales the whole demo clock — cursor travel,
-dwells, parameter ramps, and waits all stretch or compress together, so pacing
-stays proportional and the audio ramps still land musically. This is the knob for
-trading legibility against running time: slower for a clear teaching pass, faster
-for a tight highlight reel. A demo may declare a default rate; a global override
-(settable near the launcher) wins, so one authored reel can be re-recorded at
-several speeds without editing it.
-
-## Authored demo format
-
-A demo is data, loadable from disk — a compact JSON shape; a thin JS builder over
-the same shape is optional authoring sugar. Control references use the descriptor-
-declared ids. The first reel wires the **Complex Oscillator** into the **Quad Low
-Pass Gate** into the **Mixer**, lets the gate strike itself from its own internal
-clock, and sweeps the oscillator's timbre. The Mixer is the pinned singleton
-already on the rack (key `mixer`), so the demo patches into it rather than
-instantiating it, and the runner turns the transport on at reel start so the patch
-is audible.
+### Example
 
 ```json
 {
   "id": "intro",
+  "title": "Intro — Oscillator into Gate into Mixer",
+  "stage": "default",
+  "intro": "DreamRack — a quick patch",
+  "defaults": { "perform": 1.0, "arrive": 2.0, "beat": 0.7, "settle": 0.8, "hold": 3.0 },
   "steps": [
-    { "type": "instantiate", "module": "wcoast.complexOsc259t", "row": 0, "x": 0, "as": "osc", "caption": "Add a Complex Oscillator" },
-    { "type": "instantiate", "module": "lpg-292", "row": 1, "x": 0, "as": "lpg", "caption": "Add a Quad Low Pass Gate" },
-    { "type": "move",  "to": "osc:prinFinalOut", "dur": 0.6 },
-    { "type": "patch", "from": "osc:prinFinalOut", "to": "lpg:inA", "cursor": true, "caption": "Patch the oscillator into the gate" },
-    { "type": "move",  "to": "lpg:outA", "dur": 0.5 },
-    { "type": "patch", "from": "lpg:outA", "to": "mixer:chanA", "cursor": true, "caption": "Patch the gate into the mixer" },
-    { "type": "set",   "target": "lpg:run",    "to": "on", "cursor": true, "caption": "Start the gate's internal clock" },
-    { "type": "set",   "target": "lpg:clkOnA", "to": "on", "cursor": true },
-    { "type": "set",   "target": "osc:timbre", "to": 0.85, "ramp": 3.0, "cursor": true, "caption": "Open the timbre" },
-    { "type": "wait",  "dur": 6.0 }
+    { "do": "page", "to": "a1",
+      "note": "This is the rack you start with." },
+    { "do": "patch", "from": "osc:prinFinalOut", "to": "lpg:inA",
+      "note": "Patch the oscillator's principal output into the gate's A input." },
+    { "do": "set", "target": "osc:timbre", "to": 0.85, "perform": 6.0,
+      "note": "Now open the timbre. That is the wave folder." }
   ]
 }
 ```
 
-Times are seconds on the demo clock; `cursor: true` marks steps that get full
-pointer choreography versus instant setup. Targets like `osc:timbre`, `lpg:outA`,
-and `mixer:chanA` resolve through the descriptor ids and the panel binding. The
-JSON `module` value is the internal descriptor id (which still carries a legacy
-number); everywhere in prose a module is named, not numbered.
+## Narration
 
-## Recording mode
+Speech is **pre-rendered and shipped with the app**. `npm run speech` walks every script and the
+gesture phrase table, renders each distinct line once with the Mac's `say` in **Jamie Premium**,
+compresses it to AAC and writes `demos/speech/index.json`. Fragments are keyed by a hash of the text,
+so re-wording one note re-renders one file; lines that no longer appear anywhere are swept.
 
-A clean playback mode hides the OS cursor, optionally suppresses development chrome,
-and can bracket the reel with brief title/outro states. Capture is external, so the
-only contract with the recorder is visual and audible: hide the real pointer, keep
-the synthetic one crisp, and let audio leave through the normal output path so a
-system-audio recorder catches it. The click ripples and the caption box are what
-make the reel legible on camera — a viewer sees each pointer action land and reads,
-in the message box, what it accomplished. Attract-loop mode restarts the reel after
-the outro.
+Pre-rendering is not just a speed optimisation. It removes a macOS-only dependency from playback, so
+everyone hears the same voice and the browser build gets narration at all. Measured cost is about
+5 kB per second of speech — the whole intro reel plus the full phrase table is well under a megabyte.
 
-## Where it rides / build order
+**Nothing is ever time-stretched.** Fragments play at their natural speed and the timeline waits for
+them: the speech sets the floor and the rate multiplier squeezes only the silences around it. That is
+why narration is cut into small pieces — one per note, plus the gesture phrases — each placed on cue
+rather than one long track everything must stay in sync with. A note's hold therefore stretches to
+however long its own sentence takes.
 
-The subsystem needs the registry to instantiate modules, the descriptors to
-enumerate addressable controls, and the rack's imperative methods to act — all of
-which exist. It lives in a small `host/demo/` module (runner, action adapter,
-cursor, captions), a `demos/` folder for the reels, and thin wiring in the rack,
-the app, `index.html`, and the Electron main.
+The voice plays through the audio graph, not straight to the speakers, so it registers as one of the
+rack's recording taps and a recorded reel contains it.
 
-Staged so each stage stands alone and is verifiable:
+### What a gesture sounds like
 
-1. **Runner core + action adapter** — the adapter over `rack.addModule` /
-   `connectPatch` / `applyParam`, the logical-id resolver (`instance:control` →
-   record → element/centre), and a runner that walks steps on a demo clock scaled
-   by a rate multiplier, scheduling ramps/waits on `AudioContext.currentTime`. No
-   theatre yet; proves a script builds the patch and makes sound.
-2. **Synthetic cursor + click theatre** — the eased pointer, click ripple, control
-   highlight, and cable-drag, choreographed just before each action; OS cursor
-   hidden in playback.
-3. **Caption box** — per-step narration in a legible, theme-aware box.
-4. **Demo library + loader** — the `demos/` folder, JSON loaded by name, the first
-   reel authored as `demos/intro.json`.
-5. **Triggers and launcher** — the panel-menu launcher item (arm a reel) and the
-   keyboard shortcut (start it, for record timing), the launcher hidden during
-   playback, plus the `#demo=` URL and auto-run/loop.
-6. **Recording mode and polish** — global rate override, sound-on at reel start,
-   title/outro brackets, attract-loop, and an easing/timing tuning pass against the
-   live panel.
+The badge word and the spoken phrase are different things. The badge stays the terse fixed seven —
+read at a glance, and shortening it later would only make it inconsistent. The spoken form is as full
+as clarity needs early on ("turn the scroll wheel over the knob", "left click the button") and shrinks
+to the badge word later, once the reader knows the vocabulary.
 
-Determinism is folded into Stage 1 (audio-clock scheduling); PRNG seeding stays
-deferred until a random module exists, and the offline-render path is an optional
-future extension only if cross-machine identity is ever needed.
+So a phrase is looked up on three keys: the gesture, the **kind** of control it lands on (jack, knob,
+switch, tab), and a verbosity the demo or a section of it sets. The runner knows the first two from
+the step, so none of it is authored — though a step may carry its own `say` where a stock phrase reads
+badly, and `voice: "off"` silences the gesture phrases while leaving the badges.
 
-## Open decisions
+**The wording lives in `demos/phrases.md`**, a plain markdown table edited directly. Both the app and
+the render tool parse that file, so there is no generated copy to drift from the words you typed. The
+voice and its speed are declared in the same file, beside the words they will speak. Most of the
+full-verbosity forms are still placeholders, to be written properly against the real tutorial copy.
 
-- Authored format: hand-edited JSON, a JS builder, or a record-and-refine authoring
-  aid. Start with JSON plus the descriptor-declared ids — lowest friction.
-- The exact easing/timing feel of the cursor — travel speed, dwell lengths, how a
-  knob-turn animates against its parameter ramp — is a tuning pass best done against
-  the live panel once the runner renders.
+A connection point is a **terminal**, which is what the app calls one everywhere else. The narration
+has to use the tutorial's vocabulary or the reader is learning two.
+
+**Referring back.** Where the move just before a gesture already named the thing, the gesture says
+"it" — the pointer moves to the enable button, and the click that follows is "click it" rather than
+naming the button all over again. That is a third list per action, used only at Long verbosity, since
+that is the only one where the move named anything to refer back to.
+
+Stepping through a script is silent. An author walking it a step at a time is reading, not listening,
+and a sentence per press would make stepping unusable.
+
+### The opening rack
+
+A script declares the rack it opens on, built in one go before the pointer appears — modules
+materialising one at a time while a script runs is a conjuring trick a new reader has to make sense of
+before they can follow anything else.
+
+    "stage": "default"    the rack a first-run user meets
+    "stage": [ ... ]      rows, for a demo needing a different set
+    omitted               an empty rack, for a demo whose subject IS adding modules
+
+A stage is a list of rows and nothing else — no coordinates, no descriptor ids:
+
+    R1: osc func prog     row 1 of the first audio tab
+    R2: lpg               row 2 of the same
+    T2R1: shapes          second audio tab
+    MR1: mixer            the Mixer/Output tab (M, not O — an O beside digits reads as a zero)
+    VR1: videoOut         the video tab
+
+A bare `Rn` means the first audio tab, which is where nearly everything lives. Modules are named by
+short aliases, and the alias is also the name a script addresses the module by (`osc:timbre`); a
+second module of the same type takes the alias with a 2 after it.
+
+`"default"` and the app's own first-run arrangement are **the same list**, in `host/default-rack.js`,
+read by both. Authoring a stage that merely resembles the default would drift from it; sharing one
+definition cannot.
+
+## Control resolution
+
+Steps address controls logically and resolve to screen space at the last moment, so the script is
+geometry-independent and survives magnification and any window size. A jack resolves through
+`rack._jackElement`; a knob or switch through `rec.panel.controls`.
+
+Two cases the resolver has to get right:
+
+- **A module on another page** has no on-screen position worth pointing at. Its panel is present but
+  hidden, so its bounding box is a lie. Off-page targets resolve to nothing rather than to a false
+  position.
+- **The mixer is the exception.** Its inputs are mirrored onto every other page as the buttons under
+  the tab bar, and those genuinely *are* the on-page way to reach a mixer input — so `mixer:chanA`
+  named from an audio page points at the button.
+
+## Stepping, and going back
+
+Every step is preceded by a snapshot of the whole app state — patch, probes, page and view. That is
+what makes stepping **backwards** as cheap as stepping forwards, which matters twice: the author
+checking a script walks it a step at a time in both directions, and a reader who missed something
+steps back to see it again.
+
+Snapshots restore with `keepKeys`, so a module keeps the name the script calls it by. Without that, a
+step-back would rename every module and break every step after it.
+
+Stepping runs with every wait collapsed. The author stepping one step at a time is not watching the
+choreography — and neither is a test, which is why the same path is how a script is verified without
+watching it in real time.
+
+## Session guard
+
+A demo rebuilds the rack, so the user's whole working state is snapshotted before it and put back
+after: patch, probes, page, view, **and** the three transport switches. The transport is not part of a
+saved patch, so it is caught and restored by hand — a demo turns the engine on, and leaving it on
+afterwards would break the rule that sound only ever starts because you asked for it. Autosave is
+frozen for the duration so the demo's rack never overwrites the saved session. The first-run tutorial
+card is closed before a demo starts.
+
+## Determinism
+
+Timing is read off `AudioContext.currentTime`, so ramps and waits land the same on replays. Every
+loop is driven by a **timer as well as** by animation frames: a hidden or occluded window stops
+delivering frames, and a demo that silently parks itself mid-step is worse than one that finishes
+without its in-between positions drawn. Frames are used when they arrive; the timer carries the
+timeline when they don't.
+
+Starting conditions are fixed: the rack cleared of user modules (the pinned mixer aside), descriptor
+defaults, a fixed order of operations. The current modules carry no randomness. When a stochastic
+module lands it must expose a seedable PRNG whose seed the demo pins at start.
+
+## Authoring
+
+One tool, which is the player itself with author mode switched on — the text and the steps cannot be
+maintained in two places.
+
+Scripts are written **by Claude from spoken objectives**, at whatever grain suits: an objective for a
+whole section, or a step at a time ("move to the oscillator's principal output, click, move to the
+gate's A input, click"). Claude runs the draft and reads app state to confirm it built what it
+claims, and says so when a step does not make sense.
+
+The author then steps through and corrects. Author mode adds, below the player controls:
+
+- **A step strip** — one block per step, the current one lit, notes marked differently from silent
+  steps. Click any block to jump there.
+- **Previous step**, pairing with Step.
+- **Edit** — the text becomes an editable field in place, focused for dictation. Same field for a
+  card's text and for a step's note.
+- **No card here** — strips the note off a step, leaving a silent pause.
+- **Two number fields** for the current step: how long to perform it over, how long to hold its note.
+  Blank means inherit.
+- **Card starts here** — marks a section boundary, which is the same thing as a card boundary.
+- **Delete step** and **move step**. Adding a step stays a conversation.
+- **Defaults**, **Validate**, **Save**, **Revert**.
+
+A saved script reopens for further editing, because the words will need several passes.
+
+## The player
+
+Five controls and a counter, on the card:
+
+- **Back** and **Next** through the deck.
+- **Demo** — one button in one place, reading Demo, then Stop while running, then Replay.
+- **Step** — one step per press, for going at your own pace.
+- **Exit** — leaves the tutorial and gives you your patch back.
+- A quiet "card two of nine".
+
+Nothing pauses in flight; a stopped demo is simply replayed. The same shell opens a reel, without the
+deck navigation.
+
+## Build order
+
+Each phase stands alone and is verifiable before the next.
+
+0. **Rebase and repair** — the branch onto current code: the transport is now the engine over two
+   buses, `addModule` takes a page, the first-run card must be closed, the snapshot must cover view
+   and probes, and the mixer lives on its own page. *Done.*
+1. **The step model and the runner** — steps with their own pacing, notes in the floating card,
+   gesture badges, snapshots and step-back. *Done.*
+2. **The validator** — static checks that every module, control and port a script names exists and
+   that the sequence is legal, plus the run-and-inspect pass that confirms a draft did what it says.
+   Early, because it is what stops bad scripts reaching the author.
+3. **The deck and the mode** — cards, Demo button, next and previous, replay, and the tutorial mode
+   that sets the user's patch aside and restores it on exit.
+4. **The editor** — author mode as described above.
+5. **The content** — author the deck that replaces the tutorial, then delete the old one.
+6. **Reels and recording** — standalone pieces, and the runner driving the recorder so a take is one
+   action.
+
+Capturing steps by performing them is deliberately absent: describing a step and having Claude write
+it is easier, so it stays out until a case appears where it isn't.

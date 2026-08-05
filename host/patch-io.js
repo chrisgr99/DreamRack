@@ -192,7 +192,12 @@ export function serialize(rack, mixer) {
   return out;
 }
 
-export async function restore(obj, rack, mixer) {
+// `opts.keepKeys` restores every module under the SAME key it was saved with, instead of minting a
+// fresh session key. A patch file must not do this — two patches opened in a session would fight
+// over ids — but a snapshot restored back into the session it came from must: a scripted demo
+// addresses its modules by name ("osc:timbre"), and a step-back that renamed them would break every
+// step after it.
+export async function restore(obj, rack, mixer, opts = {}) {
   if (!obj || obj.format !== FORMAT) throw new Error('Not a Wcoast patch file.');
   const migration = migrate(obj);   // throws if unreadable or newer than this build
   // Say so when a file was CHANGED on the way in — it will be re-saved in a different shape than it
@@ -213,8 +218,8 @@ export async function restore(obj, rack, mixer) {
   const legacy = !!obj.__sortOntoPages;   // set by the 'pages' migration; see MIGRATIONS
   for (const m of obj.modules || []) {
     const page = m.page || (legacy ? homePage(rack, m.type) : 'a1');
-    const rec = await rack.addModule(m.type, m.row, m.x, { page });
-    if (rec) idToKey.set(m.id, rec.key);
+    const rec = await rack.addModule(m.type, m.row, m.x, opts.keepKeys ? { page, key: m.id } : { page });
+    if (rec) { idToKey.set(m.id, rec.key); if (opts.keepKeys && rack.reserveKey) rack.reserveKey(rec.key); }
   }
   // Put the pinned mixer back where it was saved (it survives rack.clear() at its boot x=0 otherwise).
   if (obj.mixerPos) rack.placeModule(mixer.key, obj.mixerPos.row, obj.mixerPos.x);
