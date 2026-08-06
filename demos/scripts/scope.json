@@ -1,0 +1,55 @@
+{
+  "id": "scope",
+  "title": "Seeing a signal — a scope on a terminal",
+  "stage": "default",
+  "defaults": {
+    "perform": 1.2,
+    "arrive": 2.0,
+    "beat": 0.7,
+    "settle": 1.0,
+    "hold": 2.5
+  },
+  "steps": [
+    {
+      "do": "patch",
+      "from": "osc:prinFinalOut",
+      "to": "mixer:chanA",
+      "note": "A drone to look at."
+    },
+    {
+      "do": "set",
+      "target": "mixer:engine",
+      "to": "on"
+    },
+    {
+      "do": "set",
+      "target": "mixer:master",
+      "to": 0.22,
+      "perform": 1.5
+    },
+    {
+      "do": "menu",
+      "on": "osc:prinSquareOut",
+      "choose": [
+        "Scope"
+      ],
+      "note": "Any terminal will show you its signal. Right-click one and choose Scope."
+    },
+    {
+      "do": "pause",
+      "for": 4.0,
+      "note": "The scope stays where you drop it, showing whatever that terminal is carrying."
+    },
+    {
+      "do": "set",
+      "target": "osc:prinFreq",
+      "to": 220,
+      "perform": 6.0,
+      "note": "Scroll the pitch and the wavelength changes with it."
+    },
+    {
+      "do": "pause",
+      "for": 3.0
+    }
+  ]
+}

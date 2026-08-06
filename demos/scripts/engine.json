@@ -1,0 +1,42 @@
+{
+  "id": "engine",
+  "title": "The engine — where sound starts",
+  "stage": "default",
+  "defaults": {
+    "perform": 1.0,
+    "arrive": 2.0,
+    "beat": 0.7,
+    "settle": 0.8,
+    "hold": 2.5
+  },
+  "steps": [
+    {
+      "do": "patch",
+      "from": "osc:prinFinalOut",
+      "to": "mixer:chanA",
+      "note": "A cable in, so there is something to hear."
+    },
+    {
+      "do": "page",
+      "to": "output",
+      "note": "The engine lamp is on the Mixer and Output page."
+    },
+    {
+      "do": "set",
+      "target": "mixer:engine",
+      "to": "on",
+      "note": "On. The master bus lamp lights with it."
+    },
+    {
+      "do": "set",
+      "target": "mixer:master",
+      "to": 0.22,
+      "perform": 3.0,
+      "note": "And up with the master fader."
+    },
+    {
+      "do": "pause",
+      "for": 3.0
+    }
+  ]
+}

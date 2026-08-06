@@ -1,0 +1,18 @@
+{
+  "id": "tabs",
+  "title": "Pages — a cable that crosses a tab",
+  "stage": "default",
+  "defaults": { "perform": 1.2, "arrive": 2.0, "beat": 0.7, "settle": 1.0, "hold": 2.5 },
+  "steps": [
+    { "do": "patch", "from": "osc:prinFinalOut", "to": "lpg:inA",
+      "note": "A patch on the audio page, to have something to send." },
+    { "do": "patch", "from": "lpg:outA", "to": "mixer:chanA",
+      "note": "Now to the mixer. Drop the cable on the button under the Mixer and Output tab." },
+    { "do": "pause", "for": 1.5,
+      "note": "The cable ends at the tab, because the mixer is not on this page." },
+    { "do": "page", "to": "output",
+      "note": "So follow it — click the tab." },
+    { "do": "pause", "for": 4.0,
+      "note": "There it is, arriving at the mixer's own input. You built the patch on the audio page; dropping a cable on the button under a tab runs it through to the module on the other side." }
+  ]
+}

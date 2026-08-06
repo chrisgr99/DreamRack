@@ -14,11 +14,6 @@
   },
   "steps": [
     {
-      "do": "page",
-      "to": "a1",
-      "note": "This is the rack you start with."
-    },
-    {
       "do": "say",
       "note": "The Complex Oscillator, top left, is where sound begins. On its own it just drones.",
       "about": "osc"

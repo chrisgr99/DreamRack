@@ -1,0 +1,90 @@
+{
+  "id": "two-voices",
+  "title": "Bonus — two plucks drifting apart",
+  "defaults": {
+    "perform": 1.0,
+    "arrive": 2.0,
+    "beat": 0.7,
+    "settle": 0.8,
+    "hold": 3.0
+  },
+  "steps": [
+    {
+      "do": "example",
+      "name": "First drone",
+      "as": {
+        "osc": "wcoast.complexOsc259t"
+      },
+      "note": "Starting again from First drone, so the rack is a clean copy of what you already know."
+    },
+    {
+      "do": "set",
+      "target": "mixer:muteA",
+      "to": "off"
+    },
+    {
+      "do": "set",
+      "target": "mixer:engine",
+      "to": "on"
+    },
+    {
+      "do": "set",
+      "target": "mixer:master",
+      "to": 0.22,
+      "perform": 1.5
+    },
+    {
+      "do": "patch",
+      "from": "osc:prinSquareOut",
+      "to": "lpg:inA",
+      "note": "Square into channel A."
+    },
+    {
+      "do": "patch",
+      "from": "lpg:outA",
+      "to": "mixer:chanB"
+    },
+    {
+      "do": "patch",
+      "from": "osc:prinSineOut",
+      "to": "lpg:inB",
+      "note": "Sine into channel B."
+    },
+    {
+      "do": "patch",
+      "from": "lpg:outB",
+      "to": "mixer:chanC"
+    },
+    {
+      "do": "set",
+      "target": "lpg:clkOnA",
+      "to": "on"
+    },
+    {
+      "do": "set",
+      "target": "lpg:clkOnB",
+      "to": "on",
+      "note": "Both channels clocked."
+    },
+    {
+      "do": "set",
+      "target": "lpg:run",
+      "to": "on"
+    },
+    {
+      "do": "pause",
+      "for": 3.5
+    },
+    {
+      "do": "set",
+      "target": "lpg:divB",
+      "to": 3,
+      "perform": 2.0,
+      "note": "And a different ratio on B."
+    },
+    {
+      "do": "pause",
+      "for": 6.0
+    }
+  ]
+}

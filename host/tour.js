@@ -19,6 +19,9 @@
 
 'use strict';
 
+import { spokenText, isContentsTitle, GLYPH } from './tutorial-md.js';
+import { tip } from './tooltip.js';
+
 const POS_KEY = 'wcoast.tourPos';    // remembered card position: the reader parks it out of the way once
 const SIZE_KEY = 'wcoast.tourSize';  // remembered card size, once the reader has resized it themselves
 const SEEN_KEY = 'wcoast.introSeen';  // set only by "Don't show on startup" — a plain close still returns next run
@@ -34,7 +37,10 @@ export function tourSeen() { try { return localStorage.getItem(SEEN_KEY) === '1'
 // `steps`: the card copy, in order. `onExternal(url)`: open a link outside the app (Electron needs
 // this routed through the shell, so the caller supplies it). `isDark()`: the app's current mode —
 // the card is dressed as a faceplate, so it follows View ▸ Light/Dark mode like the panels do.
-export function createTour({ steps, onExternal, isDark, onSee, canSee, homePos }) {
+export function createTour({ steps, onExternal, isDark, onSee, canSee, homePos,
+  // Reading aloud and demonstrating. Both are optional: without them the tutorial is the document it
+  // has always been, with no speakers and no Demonstrate buttons.
+  onSpeak, onStopSpeak, onDemonstrate }) {
   let el = null;
   let titleEl, bodyEl, neverCb, homeBtn;
 
@@ -210,6 +216,7 @@ export function createTour({ steps, onExternal, isDark, onSee, canSee, homePos }
     el.appendChild(gripY); el.appendChild(gripX); el.appendChild(gripXY);
 
     document.body.appendChild(el);
+    wireCalloutDismiss();
 
     // The card resizes like a window (CSS `resize`), which fires no event — so watch it. Only a
     // USER resize is remembered: `resize` writes inline width/height, whereas the card growing or
@@ -227,6 +234,7 @@ export function createTour({ steps, onExternal, isDark, onSee, canSee, homePos }
   // One part of a step: prose, or an "Example" block. The label is inline rather than a heading —
   // a stacked one would cost a line every time, and a step may carry several.
   const renderPart = (part) => {
+    if (part && typeof part.html === 'string') return renderPart(part.html);
     if (typeof part === 'string') {
       const p = document.createElement('div');
       p.className = 'tour-p';
@@ -245,6 +253,67 @@ export function createTour({ steps, onExternal, isDark, onSee, canSee, homePos }
     box.appendChild(text);
     return box;
   };
+
+  // A LISTEN button, in a column down the left margin rather than inline. Under magnification the eye
+  // returns to the left edge, so that is where a control has to be to be found; and a column keeps the
+  // prose's left edge straight, so the buttons are equally easy to ignore.
+  //
+  // One button in one place: it shows a speaker at rest and a stop square while that block is being
+  // read, and pressing it again stops. No second control appears beside it.
+  // Drawn from the same place as the legend at the top of the tutorial, so the two can never differ.
+  const SPEAKER = GLYPH.listen, STOP_SQ = GLYPH.stop, PLAY_TRI = GLYPH.demo;
+
+  let speakingBtn = null;
+  function setSpeaking(btn) {
+    if (speakingBtn && speakingBtn !== btn) { speakingBtn.innerHTML = SPEAKER; speakingBtn.classList.remove('on'); }
+    speakingBtn = btn || null;
+    if (btn) { btn.innerHTML = STOP_SQ; btn.classList.add('on'); }
+  }
+  // Called back when a block finishes on its own, so the button returns to a speaker without a press.
+  const clearSpeaking = () => setSpeaking(null);
+
+  function listenButton(text) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'tour-listen';
+    b.setAttribute('aria-label', 'Listen');
+    tip(b, 'Listen to this');
+    b.innerHTML = SPEAKER;
+    b.addEventListener('click', (e) => {
+      e.preventDefault(); e.stopPropagation();
+      if (speakingBtn === b) { onStopSpeak && onStopSpeak(); setSpeaking(null); return; }
+      setSpeaking(b);
+      if (onSpeak) onSpeak(text, clearSpeaking);
+    });
+    return b;
+  }
+
+  function demoButton(id, sectionId) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'tour-demo';
+    b.setAttribute('aria-label', 'See a demonstration');
+    tip(b, 'See this demonstrated');
+    b.innerHTML = PLAY_TRI;
+    b.addEventListener('click', (e) => { e.preventDefault(); onDemonstrate(id, sectionId); });
+    return b;
+  }
+
+  // A part and its GUTTER, side by side. The gutter holds what you can do with this paragraph: hear
+  // it, and — where there is one — watch it. Stacked, listen above demonstrate, so both are found in
+  // the same place and the second one's absence is what tells you there is nothing to watch.
+  function renderRow(part, sectionId) {
+    const row = document.createElement('div');
+    row.className = 'tour-row';
+    const gutter = document.createElement('div');
+    gutter.className = 'tour-gutter';
+    const text = spokenText(part);
+    if (text && onSpeak) gutter.appendChild(listenButton(text));
+    if (part && part.demo && onDemonstrate) gutter.appendChild(demoButton(part.demo, sectionId));
+    row.appendChild(gutter);
+    row.appendChild(renderPart(part));
+    return row;
+  }
 
   // Render the WHOLE tutorial, once, as one continuous document. There are no cards: each `##`
   // in tutorial.md becomes a section with a heading, and the reader scrolls.
@@ -277,7 +346,9 @@ export function createTour({ steps, onExternal, isDark, onSee, canSee, homePos }
       h.textContent = num ? num + '. ' + s.title : s.title;
       sec.appendChild(h);
       const parts = Array.isArray(s.body) ? s.body : [s.body];
-      for (const part of parts) sec.appendChild(renderPart(part));
+      // The contents list is navigation, not prose: no speakers beside it.
+      const speakable = !isContentsTitle(s.title);
+      for (const part of parts) sec.appendChild(speakable ? renderRow(part, sec.id) : renderPart(part));
       bodyEl.appendChild(sec);
       sections.push({ title: s.title, num, label: num ? num + '. ' + s.title : s.title, el: sec, id: sec.id });
       wireEyes(sec, s.sees || []);
@@ -299,28 +370,30 @@ export function createTour({ steps, onExternal, isDark, onSee, canSee, homePos }
   //
   // The buttons carry no target of their own, so nothing extra is read aloud when a paragraph is
   // spoken or copied — the pairing lives in JS, keyed by order within this section.
+  // CLICKED, like the other two buttons in the tutorial. It was a hover peek, which had the virtue
+  // that a callout could never outlive the pointer that raised it — but it meant holding a pointer
+  // steady on a small target while looking at the far side of the rack, which is exactly what a
+  // magnified view makes hard. So: press to raise it, press again to drop it, and it also goes on the
+  // next click anywhere, on a scroll, and on Escape, so nothing is ever left stranded.
+  let litEye = null;
+  const dropCallout = () => { litEye = null; clearCallout(); };
+
   const wireEyes = (root, eyeTargets) => {
     [...root.querySelectorAll('.tour-eye')].forEach((eye, i) => {
       const target = eyeTargets[i];
       if (!target) return;
-      eye.addEventListener('pointerenter', () => {
-        // Re-evaluated BOTH ways on every hover. Under the old click behaviour marking a button
-        // unavailable was a deliberate, rare act, so the mark could be one-way; under hover the
-        // pointer crosses buttons incidentally on its way down the page, and a one-way mark meant
-        // a module that merely happened to be absent greyed its buttons for the rest of the
-        // session — still grey after the reader added the module back.
+      eye.addEventListener('pointerdown', (ev) => ev.preventDefault());   // no text selection on press
+      eye.addEventListener('click', (ev) => {
+        ev.preventDefault(); ev.stopPropagation();
+        if (litEye === eye) { dropCallout(); return; }                    // a second press puts it away
+        // Re-evaluated on every press: a module the reader deleted, or has since added back, must not
+        // leave a button greyed for the rest of the session.
         const ok = !canSee || canSee(target);
         eye.classList.toggle('unavailable', !ok);
-        eye.title = ok ? '' : 'Not in your rack';
-        if (!ok) return;
-        clearCallout();
-        if (onSee && onSee(target, eye)) eye.classList.add('lit');
+        if (!ok) { tip(eye, 'Not in your rack'); return; }
+        dropCallout();
+        if (onSee && onSee(target, eye)) { eye.classList.add('lit'); litEye = eye; }
       });
-      eye.addEventListener('pointerleave', clearCallout);
-      // The button is no longer a control, so a click on it should do nothing at all rather than
-      // select the paragraph around it or fall through to the card.
-      eye.addEventListener('pointerdown', (ev) => ev.preventDefault());
-      eye.addEventListener('click', (ev) => { ev.preventDefault(); ev.stopPropagation(); });
     });
   };
 
@@ -346,9 +419,30 @@ export function createTour({ steps, onExternal, isDark, onSee, canSee, homePos }
     }
   };
 
-  const scrollToSection = (sec) => {
+  // `smooth` is right when a contents link is clicked — the movement shows you where you went. It is
+  // wrong when the window has just been SHOWN: the scroll is queued against a layout that does not
+  // exist yet, so it lands at zero. Arriving jumps instead, on the next frame.
+  // Anything that moves the page, or a press somewhere else, puts a raised callout away. Wired once,
+  // at build, so it covers every marker in the document rather than each having to police itself.
+  const wireCalloutDismiss = () => {
+    bodyEl.addEventListener('scroll', () => { if (litEye) dropCallout(); }, { passive: true });
+    document.addEventListener('pointerdown', (ev) => {
+      if (litEye && !(ev.target && ev.target.closest && ev.target.closest('.tour-eye'))) dropCallout();
+    }, true);
+    document.addEventListener('keydown', (ev) => { if (litEye && ev.key === 'Escape') dropCallout(); }, true);
+  };
+
+  const scrollToSection = (sec, smooth = true) => {
     if (!sec || !bodyEl) return;
-    bodyEl.scrollTo({ top: Math.max(0, offsetInBody(sec.el) - 4), behavior: 'smooth' });
+    // scrollIntoView rather than a computed offset: on a window that has only just been shown the
+    // measurement is taken against a layout that has not settled, and lands at zero.
+    const go = () => sec.el.scrollIntoView({ behavior: smooth ? 'smooth' : 'auto', block: 'start' });
+    if (smooth) { go(); return; }
+    // Arriving: the window has only just been shown, and its size is settled by placeInitial after
+    // this call — so scroll on a later turn, and again once more, because the first landing can be
+    // measured against a body that has not finished laying out.
+    requestAnimationFrame(() => requestAnimationFrame(go));
+    setTimeout(go, 80);
   };
 
   const hide = () => { if (el) el.style.display = 'none'; };
@@ -386,7 +480,7 @@ export function createTour({ steps, onExternal, isDark, onSee, canSee, homePos }
       if (at != null) {
         const sec = typeof at === 'number' ? sections[at]
           : sections.find((x) => x.id === 'sec-' + String(at).replace(/^#/, ''));
-        if (sec) scrollToSection(sec); else bodyEl.scrollTop = 0;
+        if (sec) scrollToSection(sec, false); else bodyEl.scrollTop = 0;
       }
       refreshCurrentSection();
       placeInitial();

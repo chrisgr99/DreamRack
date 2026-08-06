@@ -1,0 +1,105 @@
+{
+  "id": "fast-knobs",
+  "title": "Fast first sound — playing with the sound",
+  "defaults": {
+    "perform": 1.2,
+    "arrive": 2.0,
+    "beat": 0.7,
+    "settle": 1.0,
+    "hold": 2.5
+  },
+  "steps": [
+    {
+      "do": "example",
+      "name": "First drone",
+      "as": {
+        "osc": "wcoast.complexOsc259t"
+      }
+    },
+    {
+      "do": "set",
+      "target": "mixer:engine",
+      "to": "on"
+    },
+    {
+      "do": "set",
+      "target": "mixer:master",
+      "to": 0.22,
+      "perform": 1.5
+    },
+    {
+      "do": "pause",
+      "for": 2.0,
+      "note": "The drone, playing. Now change it."
+    },
+    {
+      "do": "set",
+      "target": "osc:prinFreq",
+      "to": 220,
+      "perform": 5.0,
+      "note": "The principal oscillator's Pitch sets the note. Hover and scroll."
+    },
+    {
+      "do": "set",
+      "target": "osc:prinFreq",
+      "to": 98,
+      "perform": 5.0
+    },
+    {
+      "do": "pause",
+      "for": 1.5
+    },
+    {
+      "do": "set",
+      "target": "osc:pitchMod",
+      "to": "on",
+      "note": "Press Pitch Mod, and the second oscillator on the left starts driving the one you are hearing."
+    },
+    {
+      "do": "set",
+      "target": "osc:modIndex",
+      "to": 0.3,
+      "perform": 5.0,
+      "note": "Mod Index is how hard it drives."
+    },
+    {
+      "do": "pause",
+      "for": 2.0
+    },
+    {
+      "do": "set",
+      "target": "osc:modFreq",
+      "to": 6,
+      "perform": 6.0,
+      "note": "Now the modulation oscillator's own Frequency. Slow is vibrato."
+    },
+    {
+      "do": "set",
+      "target": "osc:modFreq",
+      "to": 340,
+      "perform": 7.0,
+      "note": "Fast is a new timbre altogether — the same two oscillators, doing something quite different."
+    },
+    {
+      "do": "pause",
+      "for": 2.0
+    },
+    {
+      "do": "set",
+      "target": "osc:pitchMod",
+      "to": "off",
+      "note": "Off again."
+    },
+    {
+      "do": "set",
+      "target": "osc:timbre",
+      "to": 0.85,
+      "perform": 7.0,
+      "note": "And Timbre, on the wavefolder. More harmonics the further it goes, and the note never moves."
+    },
+    {
+      "do": "pause",
+      "for": 3.0
+    }
+  ]
+}

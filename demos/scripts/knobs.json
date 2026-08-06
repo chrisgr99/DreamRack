@@ -1,0 +1,32 @@
+{
+  "id": "knobs",
+  "title": "Knobs — hover and scroll",
+  "stage": "default",
+  "defaults": {
+    "perform": 1.0,
+    "arrive": 2.0,
+    "beat": 0.7,
+    "settle": 0.8,
+    "hold": 2.5
+  },
+  "steps": [
+    {
+      "do": "set",
+      "target": "osc:timbre",
+      "to": 0.8,
+      "perform": 4.0,
+      "note": "Hover the knob and scroll. Nothing is pressed and nothing is dragged."
+    },
+    {
+      "do": "set",
+      "target": "osc:timbre",
+      "to": 0.2,
+      "perform": 3.0,
+      "note": "Scrolling the other way takes it back."
+    },
+    {
+      "do": "pause",
+      "for": 1.5
+    }
+  ]
+}

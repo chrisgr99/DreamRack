@@ -24,8 +24,7 @@ const CSS = `
   .demo-card { position: fixed; z-index: 4001; pointer-events: none; box-sizing: border-box;
     max-width: min(460px, 52vw); padding: 12px 20px; border-radius: 12px;
     background: rgba(20,17,13,0.92); color: #f2ead9; text-align: center;
-    font: 600 23px/1.35 -apple-system, system-ui, sans-serif;
-    box-shadow: 0 4px 22px rgba(0,0,0,0.55); border: 1px solid rgba(242,234,217,0.18);
+    font: 600 23px/1.35 -apple-system, system-ui, sans-serif; border: 1px solid rgba(242,234,217,0.18);
     opacity: 0; transition: opacity 0.3s ease; }
   .demo-card.show { opacity: 1; }
 `;

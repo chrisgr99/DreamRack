@@ -1,0 +1,54 @@
+{
+  "id": "gate-patch",
+  "title": "Building a patch — through the gate",
+  "defaults": {
+    "perform": 1.0,
+    "arrive": 2.0,
+    "beat": 0.7,
+    "settle": 0.8,
+    "hold": 3.0
+  },
+  "steps": [
+    {
+      "do": "example",
+      "name": "First drone",
+      "as": {
+        "osc": "wcoast.complexOsc259t"
+      },
+      "note": "Starting again from First drone, so the rack is a clean copy of what you already know."
+    },
+    {
+      "do": "set",
+      "target": "mixer:muteA",
+      "to": "off"
+    },
+    {
+      "do": "set",
+      "target": "mixer:engine",
+      "to": "on"
+    },
+    {
+      "do": "set",
+      "target": "mixer:master",
+      "to": 0.22,
+      "perform": 1.5
+    },
+    {
+      "do": "patch",
+      "from": "osc:prinSquareOut",
+      "to": "lpg:inA",
+      "note": "Square output to channel A's input."
+    },
+    {
+      "do": "patch",
+      "from": "lpg:outA",
+      "to": "mixer:chanB",
+      "note": "Channel A's output to mixer channel two."
+    },
+    {
+      "do": "pause",
+      "for": 2.5,
+      "note": "Nothing sounds — the gate is shut."
+    }
+  ]
+}

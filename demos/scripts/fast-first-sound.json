@@ -1,0 +1,83 @@
+{
+  "id": "fast-first-sound",
+  "title": "Fast first sound — open an example and play it",
+  "defaults": {
+    "perform": 1.2,
+    "arrive": 2.0,
+    "beat": 0.7,
+    "settle": 1.0,
+    "hold": 2.5
+  },
+  "steps": [
+    {
+      "do": "example",
+      "name": "First drone",
+      "via": "menu",
+      "from": "File",
+      "as": {
+        "osc": "wcoast.complexOsc259t"
+      },
+      "note": "Open the File menu and go to Examples."
+    },
+    {
+      "do": "pause",
+      "for": 3.0,
+      "note": "There is our patch: a Complex Oscillator, a Quad Function Generator and a Quad Low Pass Gate, with just one connection for now — from the Complex Oscillator to the sound output."
+    },
+    {
+      "do": "say",
+      "hold": 8.0,
+      "note": "Notice which tab you are on: Audio 1. The cable from the oscillator runs off to the right and ends at the Mixer / Output tab, because the mixer is on a page of its own."
+    },
+    {
+      "do": "page",
+      "to": "output",
+      "note": "Now click the Mixer / Output tab — and watch the cable. It leaves the same connection it was tied to, and comes in from the Audio 1 tab at this end."
+    },
+    {
+      "do": "pause",
+      "for": 2.5,
+      "note": "This is the mixer. The oscillator arrives on channel one, and everything sums to the Master fader on the right."
+    },
+    {
+      "do": "set",
+      "target": "mixer:engine",
+      "to": "on",
+      "note": "Engine starts the sound."
+    },
+    {
+      "do": "set",
+      "target": "mixer:master",
+      "to": 0.22,
+      "perform": 2.5,
+      "note": "And the Master fader sets how loud it is."
+    },
+    {
+      "do": "key",
+      "key": " ",
+      "note": "The space bar is the same switch, from anywhere in the rack. Press it once and the sound stops."
+    },
+    {
+      "do": "pause",
+      "for": 2.0
+    },
+    {
+      "do": "key",
+      "key": " ",
+      "note": "Press it again and it starts. Watch the ENGINE lamp."
+    },
+    {
+      "do": "pause",
+      "for": 2.5
+    },
+    {
+      "do": "page",
+      "to": "a1",
+      "note": "Click Audio 1 to go back to the modules."
+    },
+    {
+      "do": "pause",
+      "for": 2.0
+    }
+  ]
+}

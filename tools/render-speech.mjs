@@ -24,6 +24,7 @@ import { fileURLToPath } from 'node:url';
 
 import { speechId } from '../host/demo/speech-id.js';
 import { parseActions, parseControls, createPhraseBook, parseVoiceSettings } from '../host/demo/phrases.js';
+import { parseTutorial, tutorialLines } from '../host/tutorial-md.js';
 
 const run = promisify(execFile);
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -85,6 +86,13 @@ async function collect() {
       if (s.do === 'set') noteKind(s.target, typeof s.to === 'number' ? 'knob' : 'button');
     }
   }
+
+  // The TUTORIAL's own prose, block by block — the Listen button beside each one plays these. Same
+  // pipeline as the demos' notes, because it is the same voice saying the same kind of thing.
+  try {
+    const steps = parseTutorial(await readFile(path.join(ROOT, 'host', 'tutorial.md'), 'utf8'));
+    for (const line of tutorialLines(steps)) lines.add(line);
+  } catch { console.warn('render-speech: host/tutorial.md not readable — tutorial not narrated.'); }
 
   // The phrase table LAST, now that the kinds are known.
   try {

@@ -12,11 +12,13 @@
 // and otherwise stays wherever you drag it to, remembered between sessions.
 'use strict';
 
+import { tip } from '../tooltip.js';
+
 const CSS = `
   .demo-panel { position: fixed; left: 50%; transform: translateX(-50%); bottom: 12px; z-index: 2000;
     width: 430px; display: none; cursor: move;
     background: var(--panel, #211c15); color: var(--ink, #f2ead9); border: 1px solid #cfcfcf;
-    border-radius: 9px; box-shadow: 0 6px 22px rgba(0,0,0,0.55); user-select: none;
+    border-radius: 9px; user-select: none;
     font: 13px/1.3 -apple-system, system-ui, sans-serif; }
   .demo-panel.open { display: flex; }
   .demo-panel-left { flex: 1 1 auto; min-width: 0; padding: 7px 6px 7px 9px;
@@ -40,6 +42,8 @@ const CSS = `
   .demo-panel-dot { width: 8px; height: 8px; border-radius: 50%; background: #5a5348; flex: none; }
   .demo-panel-dot.on { background: #43c463; box-shadow: 0 0 6px #43c463; }
   .demo-panel-pos { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1 1 auto; }
+  .demo-panel-title { flex: 1 1 auto; min-width: 0; font-weight: 600; white-space: nowrap;
+    overflow: hidden; text-overflow: ellipsis; display: none; }
 
   .demo-panel-btns { display: flex; gap: 4px; }
   /* Every button carries its border at rest. A control whose outline only appears when the pointer
@@ -57,7 +61,7 @@ const CSS = `
   html.demo-playing .demo-panel { cursor: move !important; }
 `;
 
-export function createDemoPanel({ demos = [], onSelect, onRun, onStop, onRestart, onRate, onCaptions, onStep, onBack, onPlay, onReload } = {}) {
+export function createDemoPanel({ demos = [], onSelect, onRun, onStop, onRestart, onRate, onCaptions, onStep, onBack, onPlay, onReload, onClose } = {}) {
   const style = document.createElement('style'); style.textContent = CSS; document.head.appendChild(style);
   const el = document.createElement('div');
   el.className = 'demo-panel';
@@ -68,6 +72,7 @@ export function createDemoPanel({ demos = [], onSelect, onRun, onStop, onRestart
       // it, which is everything a title bar would have done and one thing more.
       '<div class="demo-panel-row">' +
         '<select class="demo-panel-select"></select>' +
+        '<span class="demo-panel-title"></span>' +
       '</div>' +
       '<div class="demo-panel-row">' +
         '<label>Rate ' +
@@ -83,7 +88,7 @@ export function createDemoPanel({ demos = [], onSelect, onRun, onStop, onRestart
       '<div class="demo-panel-row">' +
         '<span class="demo-panel-dot"></span>' +
         '<span class="demo-panel-pos">—</span>' +
-        '<button class="demo-panel-reload" data-act="reload" title="Re-read the script from disk and come back to this step">Reload</button>' +
+        '<button class="demo-panel-reload" data-act="reload">Reload</button>' +
       '</div>' +
     '</div>' +
     '<div class="demo-panel-right">' +
@@ -98,19 +103,20 @@ export function createDemoPanel({ demos = [], onSelect, onRun, onStop, onRestart
       '<div class="demo-panel-btns">' +
         '<button data-act="back">Back</button>' +
         '<button data-act="step">Step</button>' +
-        '<button data-act="play" title="Perform this step at full speed, with narration">Play</button>' +
+        '<button data-act="play">Play</button>' +
       '</div>' +
       // Close is a NAMED button in the lower right. A bare × had nowhere to go: the top corners are
       // taken by the picker and the first button row, and in the middle of the window it read as
       // something to do with the step it sat beside.
       '<div class="demo-panel-btns demo-panel-btns-end">' +
-        '<button class="demo-panel-close">Close</button>' +
+        '<button class="demo-panel-close">Exit</button>' +
       '</div>' +
     '</div>';
   document.body.appendChild(el);
 
   const dot = el.querySelector('.demo-panel-dot');
   const sel = el.querySelector('.demo-panel-select');
+  const titleEl = el.querySelector('.demo-panel-title');
   const runBtn = el.querySelector('[data-act="run"]');
   const stopBtn = el.querySelector('[data-act="stop"]');
 
@@ -123,9 +129,20 @@ export function createDemoPanel({ demos = [], onSelect, onRun, onStop, onRestart
   rateSel.addEventListener('change', () => onRate && onRate(Number(rateSel.value)));
   capsChk.addEventListener('change', () => onCaptions && onCaptions(capsChk.checked));
   const on = (act, fn) => el.querySelector(`[data-act="${act}"]`).addEventListener('click', () => fn && fn());
+  // Delayed tips, in the app's own chip rather than the operating system's.
+  for (const [act, text] of [
+    ['run', 'Play this demonstration from the start'],
+    ['stop', 'Stop — and stay on the step it reached'],
+    ['restart', 'Start again from the beginning'],
+    ['back', 'Back one step'],
+    ['step', 'Forward one step, without waiting'],
+    ['play', 'Perform this one step at full speed, with narration'],
+    ['reload', 'Re-read the script from disk and come back to this step'],
+  ]) { const b = el.querySelector(`[data-act="${act}"]`); if (b) tip(b, text); }
+  tip(el.querySelector('.demo-panel-close'), 'Leave the demonstration');
   on('run', onRun); on('stop', onStop); on('restart', onRestart);
   on('step', onStep); on('back', onBack); on('play', onPlay); on('reload', onReload);
-  el.querySelector('.demo-panel-close').addEventListener('click', () => close());
+  el.querySelector('.demo-panel-close').addEventListener('click', () => (onClose ? onClose() : close()));
 
   // ---- where it sits --------------------------------------------------------
   const POS_KEY = 'wcoast.demoPanelPos';
@@ -212,6 +229,27 @@ export function createDemoPanel({ demos = [], onSelect, onRun, onStop, onRestart
     el.querySelector('.demo-panel-pos').textContent =
       n ? `step ${Math.min(i + 1, n)} of ${n}${label ? ' — ' + label : ''}` : '—';
   }
+  // TWO FACES. A reader arrives from a tutorial section, so the demo is already chosen: the picker
+  // goes and its title stands there instead, and the author-only controls go with it. An author gets
+  // the lot. Exit reads as Exit either way — it closes the window, and for a reader that is also how
+  // they get back to the tutorial.
+  function setMode(mode) {
+    const author = mode !== 'reader';
+    el.classList.toggle('reader', !author);
+    sel.style.display = author ? '' : 'none';
+    titleEl.style.display = author ? 'none' : 'block';   // '' would fall back to the CSS default, which is none
+    // Only the two author controls go. NOT their rows — Play shares a row with Back and Step, which a
+    // reader very much needs, and hiding the row took them with it.
+    for (const act of ['play', 'reload']) {
+      const b = el.querySelector(`[data-act="${act}"]`);
+      if (b) b.style.display = author ? '' : 'none';
+    }
+  }
+  function setTitle(t) { titleEl.textContent = t || ''; }
+  // "Return to tutorial" when that is where leaving goes, "Close" when it just closes. The button has
+  // to say where it takes you, since a finished demo now waits here rather than bouncing you back.
+  function setExitLabel(t) { el.querySelector('.demo-panel-close').textContent = t || 'Exit'; }
+
   function open() { el.classList.add('open'); restorePos(); }
   function close() { el.classList.remove('open'); }
   function toggle() { el.classList.contains('open') ? close() : open(); }
@@ -219,5 +257,5 @@ export function createDemoPanel({ demos = [], onSelect, onRun, onStop, onRestart
   setRunning(null);
   if (demos[0] && onSelect) onSelect(demos[0]);   // default selection matches the drop-down
 
-  return { open, close, toggle, setRunning, setPosition, avoid, rect, el };
+  return { open, close, toggle, setRunning, setPosition, setMode, setTitle, setExitLabel, avoid, rect, el };
 }

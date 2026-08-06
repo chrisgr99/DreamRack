@@ -39,6 +39,33 @@ sometimes an abbreviation, so anything a demo actually points at is worth writin
 | lpg:run | the run button on the gate's clock |
 | lpg:clkOnA | the clock button for channel A |
 | mixer:chanA | the mixer input for channel one |
+| mixer:chanB | the mixer input for channel two |
+| mixer:chanC | the mixer input for channel three |
+| mixer:engine | the engine button on the mixer |
+| mixer:master | the master fader |
+| mixer:levelA | the fader for channel one |
+| mixer:levelB | the fader for channel two |
+| mixer:muteA | the enable button under channel one |
+| mixer:monitorLevel | the monitor fader |
+| osc:prinSquareOut | the square output of the principal oscillator |
+| osc:prinSineOut | the sine output of the principal oscillator |
+| osc:prinFreq | the big pitch knob |
+| osc:symmetry | the symmetry knob |
+| osc:order | the order knob |
+| osc:pitchMod | the pitch mod button |
+| osc:modIndex | the mod index knob |
+| osc:modFreq | the modulation oscillator's frequency knob |
+| lpg:inB | the input terminal of channel B |
+| lpg:levelCvA | the control input on channel A's level knob |
+| osc:modTriOut | the triangle output of the modulation oscillator |
+| lpg:outB | the output terminal of channel B |
+| lpg:strikeA | the strike button on channel A |
+| lpg:decayA | the decay knob on channel A |
+| lpg:levelA | the level knob on channel A |
+| lpg:clkOnB | the clock button for channel B |
+| lpg:rate | the rate knob on the gate's clock |
+| lpg:divA | the clock ratio for channel A |
+| lpg:divB | the clock ratio for channel B |
 
 # How this file works
 
@@ -195,6 +222,43 @@ the words under an existing one does not.
 **Short**
 - scroll
 - wheel it
+
+## rightClick
+
+**Badge** right click
+
+**Long**
+- right click {target} to open its menu
+- right click {target}
+
+**After**
+- right click it to open its menu
+- right click it
+
+**Short**
+- right click
+
+## moveToMenuItem
+
+**Badge** move pointer
+
+**Long**
+- move the pointer down the menu
+- move down to the item
+
+**Short**
+- move
+
+## chooseItem
+
+**Badge** left click
+
+**Long**
+- click it
+- choose it
+
+**Short**
+- click
 
 ## switchPage
 

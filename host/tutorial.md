@@ -20,37 +20,105 @@ This is the tutorial DreamRack shows in its floating window — one continuous d
 
 ## Contents
 
+- [**Using the tutorial**](#using-the-tutorial) — the three things you can click
+- [**Fast first sound**](#fast-first-sound) — open a patch that already works, and turn its knobs
 - [**A few essentials**](#a-few-essentials) — the handful of things that work differently here
 - [**First sound**](#first-sound) — the shortest path to hearing something
 - [**Building a patch**](#building-a-patch) — adding modules, and how cables behave here
 - [**Seeing and hearing**](#seeing-and-hearing) — scopes and monitors on any terminal
-- [**Getting around**](#getting-around) — panning and zooming a rack bigger than the window
+- [**Getting around**](#getting-around) — pages, and a rack bigger than the window
 - [**Saving your work**](#saving-your-work) — saving, loading, and what carries over
 - [**Vocabulary**](#vocabulary) — the modular terms this tutorial uses, if you want them
+
+## Using the tutorial
+
+- {icon:listen} Click the speaker button to listen to something.
+- {icon:find} Click the question mark button to find something.
+- {icon:demo} Click the play button to see a demonstration.
+
+Where there is a demonstration, the short list just above it is not a set of instructions — it is what to ==watch for== while the demonstration runs. Read it, watch, and then try the same thing yourself.
+
+## Fast first sound
+
+A ==patch== is a set of ==modules== wired together to make an "interesting" sound. To start quickly we'll load one that already exists, play it, and learn about it.
+
+Open the **File** menu, go to the ==Examples== submenu and choose **First drone** to load it. Note that opening it will replace what is on the rack.
+
+**Watch for:**
+
+- You'll find example patches in the **File** menu, under **Examples**.
+- This one has three modules and one cable.
+- The cable goes off the page to the **Mixer / Output** tab.
+- It carries on from that tab, on the mixer's page.
+- The **ENGINE** button {see:mixer/engine}, above the mixer's output faders, gates the sound. The ==space bar== does the same from anywhere.
+- The **Master** fader {see:mixer/master} sets how loud it is.
+
+{demo:fast-first-sound}
+
+Almost every knob and button above the bottom row on the Complex Oscillator can change the sound. Knobs are adjusted by holding the mouse pointer over them (hovering) and scrolling (not dragging) i.e. operating the scroll wheel on your mouse or two finger drag on your trackpad.
+
+- ==Pitch== {see:complexOsc259t/prinFreq} sets the frequency of the sound.
+- ==Pitch Mod== {see:complexOsc259t/pitchMod} hands the sound over to the second oscillator on the left, and ==Mod Index== {see:complexOsc259t/modIndex} sets how hard it drives.
+- The modulation oscillator's own ==Frequency== {see:complexOsc259t/modFreq} decides what that sounds like: slow is vibrato, fast is a new timbre.
+- ==Timbre== {see:complexOsc259t/timbre} folds the waveform — more harmonics, same note.
+
+**Watch for:**
+
+- Point at a knob and scroll. No button is pressed.
+- **Pitch** changes the note.
+- **Pitch Mod** brings in the second oscillator, and **Mod Index** sets how hard it drives.
+- Slow modulation gives vibrato; fast modulation changes the timbre.
+- **Timbre** adds harmonics without changing the note.
+
+{demo:fast-knobs}
+
+Then keep going on your own. **Ampl Mod** {see:complexOsc259t/amplMod} and **Timbre Mod** {see:complexOsc259t/timbreMod} drive the principal oscillator in other ways, and any of the three can be on together. **Order** {see:complexOsc259t/order} and **Symmetry** {see:complexOsc259t/symmetry} change the shape of the fold. The modulation oscillator has a ==Range== switch {see:complexOsc259t/modRange} between audio rates and slow ones, and a waveshape {see:complexOsc259t/modWave} of its own — and that is the shape doing the driving.
+
+
+The sound leaves by a cable you can see. It runs from the oscillator's **Final** output {see:complexOsc259t/prinFinalOut} to the right of the rack, and ends at a button under the **Mixer / Output** tab — because the mixer is on its own page.
+
+**Watch for:**
+
+- One cable leaves the oscillator's **Final** output.
+- It ends at a button under the **Mixer / Output** tab.
+- On the mixer's page it arrives at input one.
+- **Audio 1** goes back to the modules.
+
+{demo:fast-output}
 
 ## A few essentials
 
 Even if you've used a software modular before, there are a few things you need to know to succeed in DreamRack.
 
-Also, hover a callout like this {see:mixer} in the tutorial to see any item being referred to.
+==Connecting cables:== ==click== an output and the cable follows the pointer with ==no button held==; click an input to connect it, or click empty space to let it go. Clicking a terminal that already has cables does one of two things, and the direction you move the mouse decides which: move along an existing cable and that cable lifts off, or move where there is no cable and you start a new one. Escape leaves everything where it was.
 
-==Dragging cables:== there is ==no dragging==. ==Click== an output and the cable follows the pointer with ==no button held==; click an input to connect it, or click empty space to let it go. Clicking a terminal that already has cables does one of two things, and the direction you move the mouse decides which: move along an existing cable and that cable lifts off, or move where there is no cable and you start a new one. Escape leaves everything where it was.
+{demo:cables}
 
 ==Turning knobs:== ==hover== a knob and ==scroll== (i.e. don't press the mouse button, just turn the scroll wheel). Double-click any knob to reset it.
 
+{demo:knobs}
+
 ==Starting the engine:== nothing makes a sound until the engine is on. Press the space bar, or click **Engine** at the top of the **Rack** menu, or the **ENGINE** lamp {see:mixer/engine} on the mixer — all three are the same switch. Press again to stop.
+
+{demo:engine}
+
 
 ==Menus:== the menu bar sits at the top of the window. ==Right-click a faceplate== for the same menu where you are working. Right-click a module's title bar for that module's own menu, and a knob or jack for that control's.
 
-==Moving around:== hold the ==Option key== — Alt on Windows — then ==scroll== to zoom the view in and out, and move the pointer to travel across the rack (again, ==don't drag==). Try it: hold Option and scroll up to zoom in, move the pointer to bring another part of the rack into view, then hold Option and scroll all the way out to see the whole rack at once. You can do all of this while carrying a cable, since none of these actions needs a mouse button held.
+==Getting around:== the rack is split into ==pages==, with a tab for each across the top. Click a tab to go there. There is a section on this below.
 
 ## First sound
 
 > **Example** — Click the **Final** output {see:complexOsc259t/prinFinalOut} on the Complex Oscillator, then click **channel A** {see:mixer/chanA} on the mixer. The cable is yellow — the colour of the audio input it landed on.
 
+{demo:first-sound}
+
+
+
 > **Example** — On the **Mixer / Output** module, turn on the **ENGINE** {see:mixer/engine} — the **MSTR** bus lamp {see:mixer/masterEnable} lights with it. Then set a comfortable level on the **Master** fader {see:mixer/master}.
 
 That is your first sound. Now change it. Everything below is on the Complex Oscillator, and every control scrolls.
+
 
 ==Pitch:== the big **Pitch** knob {see:complexOsc259t/prinFreq} sets the note. Hover it and scroll (not drag) to hear the sound change.
 
@@ -66,29 +134,57 @@ Move one at a time and listen.
 
 ## Building a patch
 
-The default rack contains five modules: the Complex Oscillator {see:complexOsc259t}, Quad Function Generator {see:quadFn281t}, Sequencer / Programmer Eight {see:programmer-8}, Quad Low Pass Gate {see:lpg-292} and Mixer / Output {see:mixer}.
+Carry straight on from the last section, or load **First drone** again for a clean start from something familiar. Either way you have the Complex Oscillator {see:complexOsc259t} going into the mixer, and two modules sitting unused: the Quad Low Pass Gate {see:lpg-292} and the Quad Function Generator {see:quadFn281t}.
 
-This section uses the Quad Low Pass Gate {see:lpg-292}. Move or resize the tutorial if it covers the module.
+The drone is about to be in the way. You do not have to unplug it — every mixer channel has an ==Enable== button {see:mixer/muteA} under its fader, and switching one off silences that channel while leaving everything wired exactly as it is. That is how you audition one part of a patch against another.
 
-A low pass gate opens and shuts quickly, turning a continuous signal into a short burst — a pluck.
+> **Example** — Switch **channel one** {see:mixer/muteA} off on the mixer. The cable is still there; the drone is not.
 
-> **Example** — Cable the Complex Oscillator's **Square** output {see:complexOsc259t/prinSquareOut} to the gate's **channel A** input {see:lpg-292/inA}, and the gate's **channel A** output {see:lpg-292/outA} to the mixer's **channel B** {see:mixer/chanB}. Check that the engine is started and the master bus enabled (see above). Nothing sounds: the gate is shut.
+{demo:mute}
+
+Now the Quad Low Pass Gate {see:lpg-292}. It opens and shuts quickly, turning a continuous signal into a short burst — a pluck. Move or resize the tutorial if it covers the module.
+
+> **Example** — Cable the Complex Oscillator's **Square** output {see:complexOsc259t/prinSquareOut} to the gate's **channel A** input {see:lpg-292/inA}, and the gate's **channel A** output {see:lpg-292/outA} to the mixer's **channel two** {see:mixer/chanB}. Nothing sounds: the gate is shut.
+
+{demo:gate-patch}
+
+
 
 **Strike** {see:lpg-292/strikeA} opens the gate once. **Decay** {see:lpg-292/decayA} sets the length of the tail.
 
 > **Example** — Press **Strike** on channel A. Scroll **Decay** and press **Strike** again.
 
+{demo:strike}
+
+
+
 The gate also has a clock, which strikes a channel repeatedly.
 
 > **Example** — Turn on channel A's **Clock** {see:lpg-292/clkOnA}, then **Run** {see:lpg-292/run} at the bottom of the module. Scroll **Rate** {see:lpg-292/rate} to set the tempo. Channel A's **clock ratio** {see:lpg-292/divA} divides or multiplies that rate.
+
+{demo:gate-clock}
+
+
 
 The oscillator now reaches mixer channel A directly and channel B through the gate.
 
 > **Example** — Set the **channel A** {see:mixer/levelA} and **channel B** {see:mixer/levelB} faders against each other. The **Enable** buttons {see:mixer/muteA} below them switch each voice off.
 
+{demo:mixing}
+
+
+
 > **Example** — Switch channel A off and shape the plucks with the oscillator controls from the last section, and with channel A's **Level** {see:lpg-292/levelA} and **Decay** {see:lpg-292/decayA} on the gate.
 
+{demo:shaping}
+
+
+
 > **Bonus** — Cable the oscillator's **Sine** output {see:complexOsc259t/prinSineOut} to the gate's **channel B** input {see:lpg-292/inB}, and channel B's output {see:lpg-292/outB} to mixer **channel C** {see:mixer/chanC}. Turn on channel B's **Clock** {see:lpg-292/clkOnB} and set its **clock ratio** {see:lpg-292/divB} differently from channel A's. The two plucks drift in and out of phase.
+
+{demo:two-voices}
+
+
 
 ## Seeing and hearing
 
@@ -118,17 +214,15 @@ The mixer's **Monitor** bus sums every monitor you have dropped; **Master** is t
 
 ## Getting around
 
-The Option key, from the essentials, is how you reach a rack larger than the window.
+==Pages:== the rack is divided into pages, each with a tab across the top — **Audio 1** to begin with, plus **Mixer / Output** and **Video**. Click a tab to go to that page.
 
-> **Example** — Hold **Option** and scroll to zoom in, then move the pointer to bring another part of the rack into view. Release **Option** to work a control.
+A cable can cross between them. Under every tab is a row of buttons, one per mixer input: drop a cable on one and it connects to the mixer on its own page, leaving a stub at the tab to show where it went. Click the tab to follow it.
 
-Option also works while you carry a cable, so a target off screen is still reachable.
+{demo:tabs}
 
-> **Example** — Zoom in until only part of the rack shows. Click an **output** to pick up a cable, hold **Option**, and move and zoom until the module you want appears. Release **Option** and click a terminal to drop the cable.
+Add a page with the ==+== button at the end of the tab bar, and rename one by double-clicking its tab. A rack that has grown past one screenful is usually better split across pages than squeezed onto one.
 
-Zooming magnifies a scope in place. Dragging its border resizes it instead.
-
-> **Example** — Put a scope on an output that is sounding — the Complex Oscillator's **Final** {see:complexOsc259t/prinFinalOut}, say. Hover it, hold **Option** and scroll.
+==Also worth knowing:== the ==Option key== — Alt on Windows — zooms and pans within a page. Hold it and scroll to zoom toward the pointer, move the pointer to travel, and release it to work a control again. It works while you are carrying a cable, so a terminal off the edge of the window is still reachable, and it magnifies a scope in place.
 
 ## Saving your work
 

@@ -19,8 +19,10 @@
 // when they don't.
 'use strict';
 
+// TWICE the size it was. This pointer is being watched from across the room, or through a magnified
+// view, and at 26 pixels it was the smallest thing on screen while being the thing to follow.
 const CURSOR_SVG =
-  '<svg width="26" height="26" viewBox="0 0 26 26" aria-hidden="true">' +
+  '<svg width="52" height="52" viewBox="0 0 26 26" aria-hidden="true">' +
   '<path d="M3 2 L3 21 L8 16 L11.5 23 L14.5 21.8 L11 15 L17.5 15 Z" ' +
   'fill="#ffffff" stroke="#111111" stroke-width="1.3" stroke-linejoin="round"/></svg>';
 
@@ -31,8 +33,8 @@ const BADGE_OFF = 15;   // px from the pointer to the near corner of the badge
 
 const CSS = `
   html.demo-playing, html.demo-playing * { cursor: none !important; }
-  .demo-cursor { position: fixed; z-index: 4000; pointer-events: none; margin: -2px 0 0 -3px;
-    filter: drop-shadow(0 1px 2px rgba(0,0,0,0.55)); will-change: left, top; }
+  .demo-cursor { position: fixed; z-index: 4000; pointer-events: none; margin: -4px 0 0 -6px;
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.55)); will-change: left, top; }
   .demo-cursor svg { display: block; }
   .demo-cursor.press svg { animation: demo-press 0.18s ease; }
   @keyframes demo-press { 0% { transform: scale(1); } 45% { transform: scale(0.78); } 100% { transform: scale(1); } }
@@ -42,19 +44,32 @@ const CSS = `
   .demo-badge { position: fixed; z-index: 4002; display: none; pointer-events: none;
     background: #000; border: 1px solid #cfcfcf; color: #fff;
     font: 600 14px/11px system-ui, -apple-system, sans-serif;
-    padding: 3px 8px 4px; border-radius: 3px; white-space: nowrap;
-    box-shadow: 0 1px 4px rgba(0,0,0,.55); }
-  .demo-ripple { position: fixed; z-index: 3999; pointer-events: none; width: 10px; height: 10px;
-    margin: -5px 0 0 -5px; border-radius: 50%; border: 2px solid var(--accent, #e0a353);
-    animation: demo-ripple 0.5s ease-out forwards; }
-  @keyframes demo-ripple { 0% { opacity: 0.9; transform: scale(0.4); } 100% { opacity: 0; transform: scale(4.2); } }
+    padding: 3px 8px 4px; border-radius: 3px; white-space: nowrap; }
+  /* RADIATING RINGS. One ring was a blink you could miss; three, staggered, read as a press even out
+     of the corner of the eye — which is what the convention is for in every screen recording that
+     uses it. They start at the pointer and travel outwards. */
+  .demo-ripple { position: fixed; z-index: 3999; pointer-events: none; width: 14px; height: 14px;
+    margin: -7px 0 0 -7px; border-radius: 50%; border: 2.5px solid var(--accent, #e0a353);
+    animation: demo-ripple 0.75s cubic-bezier(0.2, 0.6, 0.3, 1) forwards; }
+  @keyframes demo-ripple { 0% { opacity: 0.95; transform: scale(0.35); } 100% { opacity: 0; transform: scale(5); } }
   .demo-hot { filter: drop-shadow(0 0 4px var(--accent, #e0a353)) drop-shadow(0 0 9px var(--accent, #e0a353)); }
+  /* A MENU HIGHLIGHT MUST FOLLOW THE SYNTHETIC POINTER, NOT THE REAL ONE. The reader's own mouse is
+     lying still wherever they left it, and a menu that opens under it lights whichever row it
+     happens to cover — so the pointer is on "First drone" while "Save As" is picked out, and the
+     reader believes the pointer, or the highlight, or neither. Real hover is switched off for the
+     duration and the demo says which row it is on. */
+  html.demo-playing .rack-menu-item:hover { background: transparent; color: var(--ink); }
+  html.demo-playing .rack-menu-item:hover .rack-menu-check,
+  html.demo-playing .rack-menu-item:hover .rack-menu-arrow { color: inherit; }
+  html.demo-playing .rack-menu-item.demo-hover { background: var(--accent); color: var(--accent-ink); }
+  html.demo-playing .rack-menu-item.demo-hover .rack-menu-check,
+  html.demo-playing .rack-menu-item.demo-hover .rack-menu-arrow { color: var(--accent-ink); }
 `;
 
 // ease-in-out (quadratic): accelerate away, settle on arrival.
 const ease = (u) => (u < 0.5 ? 2 * u * u : 1 - Math.pow(-2 * u + 2, 2) / 2);
 
-export function createDemoTheatre(getCtx) {
+export function createDemoTheatre() {
   let styleEl = null, cursorEl = null, badgeEl = null;
   let rate = 1, cancelled = false, instant = false;
   let px = Math.round(window.innerWidth / 2), py = Math.round(window.innerHeight / 2);
@@ -110,8 +125,14 @@ export function createDemoTheatre(getCtx) {
   // `hideOS` hides the real pointer, which is what a RUN wants — only the synthetic one should be in
   // the recording. Stepping through while authoring passes false: the synthetic cursor still shows
   // where the demo is pointing, but you keep your own pointer to work with.
-  function begin(hideOS = true) {
+  // `home` puts the pointer back to the middle of the window. A run otherwise starts wherever the
+  // last one left off — which meant a demo could open with its pointer already sitting on the very
+  // terminal it was about to travel to, so the first move looked like nothing at all.
+  const home = () => { px = Math.round(window.innerWidth / 2); py = Math.round(window.innerHeight / 2); };
+
+  function begin(hideOS = true, fromHome = false) {
     ensure(); cancelled = false;
+    if (fromHome) home();
     document.documentElement.classList.toggle('demo-playing', !!hideOS);
     cursorEl.style.display = 'block';
     place(px, py);
@@ -119,6 +140,7 @@ export function createDemoTheatre(getCtx) {
   function end() {
     cancelled = true;
     tracker = null;
+    hoverItem(null);
     if (cursorEl) cursorEl.style.display = 'none';
     if (badgeEl) badgeEl.style.display = 'none';
     document.documentElement.classList.remove('demo-playing');
@@ -132,12 +154,17 @@ export function createDemoTheatre(getCtx) {
   // One helper behind every wait and every animation. It reads elapsed time off the AudioContext
   // (falling back to wall clock when there is no context yet) and calls `onFrame(u)` with progress
   // 0..1. Animation frames drive it when they arrive; a timer drives it when they don't.
+  // THE CHOREOGRAPHY RUNS ON WALL-CLOCK TIME, NOT THE AUDIO CLOCK. This used to read
+  // `ctx.currentTime`, on the reasoning that motion should be in step with sound. It is not worth
+  // what it costs: `currentTime` only advances while the context is RUNNING, so the moment anything
+  // stops the audio clock — and silencing a patch as it loads can — `u` never reaches 1, the promise
+  // never resolves, and the demo freezes mid-step with no error and no way out. Nothing here needs
+  // sample accuracy anyway: narration is a separate promise that the step waits on in its own right.
   function span(demoSecs, onFrame) {
     return new Promise((resolve) => {
-      const c = getCtx();
       const dur = instant ? 0 : Math.max(0, demoSecs) / rate;
       if (cancelled || dur <= 0) { if (onFrame) onFrame(1); resolve(); return; }
-      const now = () => (c ? c.currentTime : performance.now() / 1000);
+      const now = () => performance.now() / 1000;
       const t0 = now();
       let done = false, timer = 0;
       const tick = () => {
@@ -164,12 +191,18 @@ export function createDemoTheatre(getCtx) {
   // A visible click at the current pointer: an expanding ripple plus a press pulse.
   function click() {
     if (!cursorEl || instant) return;
-    const rip = document.createElement('div');
-    rip.className = 'demo-ripple';
-    rip.style.left = px + 'px'; rip.style.top = py + 'px';
-    document.body.appendChild(rip);
-    rip.addEventListener('animationend', () => rip.remove());
-    setTimeout(() => rip.remove(), 1200);   // animationend never fires in a window that is not painting
+    const x = px, y = py;
+    for (let i = 0; i < 3; i++) {
+      setTimeout(() => {
+        const rip = document.createElement('div');
+        rip.className = 'demo-ripple';
+        rip.style.left = x + 'px'; rip.style.top = y + 'px';
+        document.body.appendChild(rip);
+        rip.addEventListener('animationend', () => rip.remove());
+        // animationend never fires in a window that is not painting, so sweep it either way
+        setTimeout(() => rip.remove(), 1600);
+      }, i * 130);
+    }
     cursorEl.classList.remove('press'); void cursorEl.offsetWidth; cursorEl.classList.add('press');
   }
 
@@ -181,6 +214,15 @@ export function createDemoTheatre(getCtx) {
     return span(demoSecs, (u) => { const want = Math.min(n, Math.ceil(u * n)); while (fired < want) { fired++; click(); } });
   }
 
+  // Which menu row the synthetic pointer is standing on — see the CSS above. Only ever one, and it
+  // is cleared when the demo ends, so a stopped demo never leaves a row lit.
+  let hovered = null;
+  function hoverItem(el) {
+    if (hovered) hovered.classList.remove('demo-hover');
+    hovered = el || null;
+    if (hovered) hovered.classList.add('demo-hover');
+  }
+
   // Briefly glow the control being acted on.
   function highlight(el) {
     if (!el || instant) return;
@@ -188,6 +230,6 @@ export function createDemoTheatre(getCtx) {
     setTimeout(() => el.classList.remove('demo-hot'), 550);
   }
 
-  return { begin, end, place, moveTo, click, wheelTicks, highlight, badge, sleep, span, setRate, setInstant,
-    setTracker, get pos() { return { x: px, y: py }; } };
+  return { begin, end, place, moveTo, click, wheelTicks, highlight, hoverItem, badge, sleep, span, setRate, setInstant,
+    setTracker, home, get pos() { return { x: px, y: py }; } };
 }

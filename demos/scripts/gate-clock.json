@@ -1,0 +1,86 @@
+{
+  "id": "gate-clock",
+  "title": "Letting the gate strike itself",
+  "defaults": {
+    "perform": 1.0,
+    "arrive": 2.0,
+    "beat": 0.7,
+    "settle": 0.8,
+    "hold": 3.0
+  },
+  "steps": [
+    {
+      "do": "example",
+      "name": "First drone",
+      "as": {
+        "osc": "wcoast.complexOsc259t"
+      },
+      "note": "Starting again from First drone, so the rack is a clean copy of what you already know."
+    },
+    {
+      "do": "set",
+      "target": "mixer:muteA",
+      "to": "off"
+    },
+    {
+      "do": "set",
+      "target": "mixer:engine",
+      "to": "on"
+    },
+    {
+      "do": "set",
+      "target": "mixer:master",
+      "to": 0.22,
+      "perform": 1.5
+    },
+    {
+      "do": "patch",
+      "from": "osc:prinSquareOut",
+      "to": "lpg:inA",
+      "note": "The same patch again."
+    },
+    {
+      "do": "patch",
+      "from": "lpg:outA",
+      "to": "mixer:chanB"
+    },
+    {
+      "do": "set",
+      "target": "lpg:clkOnA",
+      "to": "on",
+      "note": "Channel A's clock on."
+    },
+    {
+      "do": "set",
+      "target": "lpg:run",
+      "to": "on",
+      "note": "Then Run, to start the clock."
+    },
+    {
+      "do": "pause",
+      "for": 3.5
+    },
+    {
+      "do": "set",
+      "target": "lpg:rate",
+      "to": 0.6,
+      "perform": 4.0,
+      "note": "Rate sets the tempo."
+    },
+    {
+      "do": "pause",
+      "for": 2.0
+    },
+    {
+      "do": "set",
+      "target": "lpg:divA",
+      "to": 3,
+      "perform": 2.0,
+      "note": "And channel A's ratio divides it."
+    },
+    {
+      "do": "pause",
+      "for": 4.0
+    }
+  ]
+}

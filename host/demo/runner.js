@@ -49,7 +49,7 @@ export function createDemoRunner(rack, opts = {}) {
   let history = [];              // history[i] = the app state as it stood BEFORE step i
   let noteText = null;
 
-  const theatre = createDemoTheatre(ctx);
+  const theatre = createDemoTheatre();   // wall-clock only — see span() on why it no longer takes the audio clock
   const card = createDemoCard();
   const voice = createVoice(ctx, { register: opts.registerAudio || null });
   let verbosity = 'long';        // which list the spoken gesture phrases come from: 'long', 'short' or 'off'
@@ -59,8 +59,14 @@ export function createDemoRunner(rack, opts = {}) {
   loadPhraseBook().then((p) => { phrases = p; });
 
 
-  const split = (ref) => { const i = String(ref).indexOf(':'); return [ref.slice(0, i), ref.slice(i + 1)]; };
-  const recOf = (key) => rack.records.get(key);
+  // A demo that LOADS a patch inherits whatever keys the file happened to use, which are no use to a
+  // script. An `example` step binds readable names to them by module type — "osc" is the first
+  // Complex Oscillator in the patch — and everything below resolves through that.
+  let aliases = {};
+  const realKey = (k) => (aliases[k] || k);
+
+  const split = (ref) => { const i = String(ref).indexOf(':'); return [realKey(ref.slice(0, i)), ref.slice(i + 1)]; };
+  const recOf = (key) => rack.records.get(realKey(key));
   const num = (v, fb) => (Number.isFinite(Number(v)) ? Number(v) : fb);
   // Every timing question goes through here: the step's own number, else the demo's, else ours.
   const secs = (s, name) => num(s && s[name], num(defaults[name], DEFAULTS[name]));
@@ -217,6 +223,47 @@ export function createDemoRunner(rack, opts = {}) {
         // at. The note carries this step; the module simply appears.
         await rack.addModule(s.module, s.row || 0, s.x || 0, { key: s.as, page: s.page });
         return;
+      case 'example': {
+        // Load one of the shipped example patches. `via: "menu"` walks the real File ▸ Examples menu,
+        // which is the point when the demo is TEACHING where examples come from: a patch that simply
+        // materialises teaches nothing about how to open the next one.
+        //
+        // The menu OPENS WITHOUT BEING TRAVELLED TO. Walking the pointer up to the corner of the
+        // window and back costs several silent seconds, and a menu bar is the one part of this app a
+        // reader already knows how to work. It appears open; the pointer joins it at the item that
+        // matters and presses that.
+        if (s.via === 'menu' && rack.openAppMenu) {
+          const opened = rack.openAppMenu(s.from || 'File');
+          if (opened) {
+            await theatre.sleep(secs(s, 'beat'));
+            for (const label of ['Examples', s.name]) {
+              const el = rack.menuItemEl(label);
+              if (!el) { console.warn(`[demo] no menu item "${label}"`); break; }
+              const r = el.getBoundingClientRect();
+              await goTo({ el, x: r.left + r.width / 2, y: r.top + r.height / 2, w: r.width, h: r.height }, s, 'moveToMenuItem');
+              theatre.hoverItem(el);
+              await announce('chooseItem', s, true);
+              theatre.click();
+              rack.activateMenuItem(el);
+              theatre.hoverItem(null);
+              await theatre.sleep(secs(s, 'settle'));
+            }
+            // The menu's own action loads the file and does not report back, so wait for the patch to
+            // actually arrive before anything names a module in it.
+            const want = Object.values(s.as || {});
+            for (let i = 0; want.length && i < 60; i++) {
+              if (want.every((t) => [...rack.records.values()].some((r) => r.descriptorId === t))) break;
+              await theatre.sleep(0.1);
+            }
+          } else if (opts.loadExample) { await opts.loadExample(s.name); }
+        } else if (opts.loadExample) { await opts.loadExample(s.name); }
+        // Bind this demo's names to whatever keys the file used: { "osc": "<descriptorId>" }.
+        for (const [name, type] of Object.entries(s.as || {})) {
+          const rec = [...rack.records.values()].find((r) => r.descriptorId === type);
+          if (rec) aliases[name] = rec.key;
+        }
+        return;
+      }
       case 'patch': {
         // Click the source jack, travel, click the destination — which is how a cable is actually
         // made here: two clicks with the cord following the pointer between them, not a held drag.
@@ -278,6 +325,43 @@ export function createDemoRunner(rack, opts = {}) {
         // The card stays up through the steps that follow, so the explanation is still on screen
         // while the thing it explained is being done.
         return;
+      case 'menu': {
+        // A menu, driven BY NAME. The pointer travels to the thing, right-clicks it, then walks down
+        // the menu that appears and presses an item — and the press runs the very function a real
+        // click runs, rather than a second copy of it. Submenus are just more names in `choose`.
+        const t = s.on ? resolve(s.on) : null;
+        if (t) { await goTo(t, s, 'moveToTerminal'); await announce('rightClick', s, true, s.on); }
+        theatre.click();
+        if (s.on) { const [k, id] = split(s.on); rack.openTerminalMenu(k, id, t ? t.x : theatre.pos.x, t ? t.y : theatre.pos.y); }
+        for (const label of (Array.isArray(s.choose) ? s.choose : [s.choose]).filter(Boolean)) {
+          const el = rack.menuItemEl(label);
+          if (!el) { console.warn(`[demo] no menu item "${label}"`); break; }
+          const r = el.getBoundingClientRect();
+          await goTo({ el, x: r.left + r.width / 2, y: r.top + r.height / 2, w: r.width, h: r.height }, s, 'moveToMenuItem');
+          theatre.hoverItem(el);
+          await announce('chooseItem', s, true);
+          theatre.click();
+          rack.activateMenuItem(el);
+          theatre.hoverItem(null);
+          await theatre.sleep(secs(s, 'settle'));
+        }
+        return;
+      }
+      case 'key': {
+        // A KEY PRESS. No pointer travel and no click ring: the pointer has nothing to do with it,
+        // and moving it would suggest otherwise. The badge names the key instead of a gesture, and
+        // the press goes to the window as a real keydown, so the app's own handler runs — there is
+        // no second copy of what the space bar does.
+        const key = s.key || ' ';
+        theatre.badge(s.label || (key === ' ' ? 'space bar' : key));
+        await theatre.sleep(secs(s, 'beat'));
+        window.dispatchEvent(new KeyboardEvent('keydown', {
+          key, code: key === ' ' ? 'Space' : undefined, bubbles: true, cancelable: true,
+        }));
+        theatre.badge(null);
+        await theatre.sleep(secs(s, 'settle'));
+        return;
+      }
       case 'pause':
         await theatre.sleep(num(s.for, 1));
         return;
@@ -362,11 +446,19 @@ export function createDemoRunner(rack, opts = {}) {
     releaseCable();   // a cord left in hand by an interrupted run must not survive into the next one
     rack.clear();
     const stage = demo && demo.stage;
-    if (stage) await placeRack(rack, stage === 'default' ? DEFAULT_RACK : stage, { withKeys: true });
+    if (stage) {
+      await placeRack(rack, stage === 'default' ? DEFAULT_RACK : stage, { withKeys: true });
+      // Stand on the page the stage put its modules on, silently. A demo used to open by clicking a
+      // tab, which is a step the viewer has to make sense of before anything else happens and which
+      // demonstrates nothing — the demo has not started yet. A `page` step is now only for a demo that
+      // means to SHOW a page change.
+      const first = [...rack.records.values()].find((r) => !r.pinned);
+      if (first && rack.pageOf) { const pg = rack.pageOf(first); if (rack._hasPage(pg)) rack.selectPage(pg); }
+    }
     // The transport is now the ENGINE over two buses, and turning the engine on brings the master
     // bus with it — so this one switch is the whole of "make sound".
     if (rack.engineOn && !rack.engineOn()) rack.toggleEngine();
-    index = 0; history = []; noteText = null;
+    index = 0; history = []; noteText = null; aliases = {};
     card.hide();
     // Back to the first alternative of every phrase, so a replay narrates exactly as the first run
     // did rather than carrying on from wherever the last one left off.
@@ -381,8 +473,12 @@ export function createDemoRunner(rack, opts = {}) {
     theatre.setInstant(false);
     try {
       await reset();
-      theatre.begin();
+      theatre.begin(true, true);   // and from the middle of the window, not wherever the last run ended
       voice.setEnabled(true);
+      // A BEAT BEFORE ANYTHING HAPPENS. The tutorial has just vanished and the rack has just been set
+      // up; starting to narrate and move in the same instant asks the viewer to work out where they
+      // are and follow a pointer at the same time. Let them look first.
+      await theatre.sleep(num(demo.openHold, 2.5));
       if (demo.intro) { showCard(demo.intro); await Promise.all([theatre.sleep(num(demo.introHold, 2.5)), voice.speak(demo.intro)]); }
       while (index < steps.length && !cancelled) {
         capture(index);
@@ -395,6 +491,7 @@ export function createDemoRunner(rack, opts = {}) {
       theatre.end();
       card.hide();
       voice.stop();
+      silence();
       running = false;
     }
   }
@@ -446,7 +543,22 @@ export function createDemoRunner(rack, opts = {}) {
   // with. Dropping it nowhere cancels it through the rack's own path.
   function releaseCable() { theatre.setTracker(null); if (rack._carryDrop) rack._carryDrop(-1, -1); rack._demoCarry = false; }
 
-  function stop() { cancelled = true; releaseCable(); theatre.end(); card.hide(); voice.stop(); }
+  // Stopping SILENCES the voice as well as cutting it off. `voice.stop()` alone only kills the
+  // fragment that is sounding; the run is still unwinding, and a step already past its cancelled
+  // check would start the next sentence a moment later — so pressing Stop was followed by one more
+  // line being spoken. Disabling makes every later speak a no-op until the next run enables it again.
+  // A DEMO THAT ENDS MUST NOT LEAVE THE ROOM MAKING A NOISE. Whatever it built is still patched and
+  // the engine is still on, so the drone it started carries on into whatever the reader does next —
+  // and a reader who has just watched a demo may have no idea which of those controls is holding the
+  // sound up. Stepping back through the demo turns it on again; this is only about walking away.
+  function silence() { if (rack.engineOn && rack.engineOn()) rack.toggleEngine(); }
+
+  function stop() {
+    cancelled = true;
+    releaseCable(); theatre.end(); card.hide();
+    voice.stop(); voice.setEnabled(false);
+    silence();
+  }
 
   function setRate(r) { if (Number(r) > 0) { rate = Number(r); theatre.setRate(rate); } }
 
@@ -466,8 +578,35 @@ export function createDemoRunner(rack, opts = {}) {
     };
   }
 
+  // Reading a block of the TUTORIAL aloud. Same pre-rendered fragments, same pipeline — the tutorial's
+  // prose is rendered alongside the demos' notes — but no animation: hearing the words should not
+  // commit you to watching anything.
+  // `text` may be several lines — a list is spoken item by item — and they play in order. A press of
+  // the same button stops the run, so the sequence checks before each piece.
+  // A BEAT BETWEEN THE PIECES. A block spoken as several fragments — a list, or a line carrying a
+  // {pause} — runs its sentences into each other without one, because each recording starts the
+  // instant the last sample of the previous one ends. Silence is what tells the ear a sentence has
+  // finished.
+  const BETWEEN = 0.45;
+  let speakRun = 0;
+  async function speakText(text, done) {
+    const mine = ++speakRun;
+    voice.setEnabled(true);
+    voice.stop();
+    const lines = (Array.isArray(text) ? text : [text]).filter(Boolean);
+    for (let i = 0; i < lines.length; i++) {
+      if (mine !== speakRun) return;
+      if (i) await new Promise((r) => setTimeout(r, BETWEEN * 1000));
+      if (mine !== speakRun) return;
+      await voice.speak(lines[i]);
+    }
+    if (mine === speakRun && done) done();
+  }
+  const stopSpeech = () => { speakRun++; voice.stop(); };
+
   return {
     run, stop, step, playStep, back, seek, load, reset, setRate, setCaptions, state,
+    speakText, stopSpeech,
     get running() { return running; },
     get index() { return index; },
     get count() { return steps.length; },

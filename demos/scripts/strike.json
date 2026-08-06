@@ -1,0 +1,85 @@
+{
+  "id": "strike",
+  "title": "Striking the gate by hand",
+  "defaults": {
+    "perform": 1.0,
+    "arrive": 2.0,
+    "beat": 0.7,
+    "settle": 0.8,
+    "hold": 3.0
+  },
+  "steps": [
+    {
+      "do": "example",
+      "name": "First drone",
+      "as": {
+        "osc": "wcoast.complexOsc259t"
+      },
+      "note": "Starting again from First drone, so the rack is a clean copy of what you already know."
+    },
+    {
+      "do": "set",
+      "target": "mixer:muteA",
+      "to": "off"
+    },
+    {
+      "do": "set",
+      "target": "mixer:engine",
+      "to": "on"
+    },
+    {
+      "do": "set",
+      "target": "mixer:master",
+      "to": 0.22,
+      "perform": 1.5
+    },
+    {
+      "do": "patch",
+      "from": "osc:prinSquareOut",
+      "to": "lpg:inA",
+      "note": "Starting from the patch you just built."
+    },
+    {
+      "do": "patch",
+      "from": "lpg:outA",
+      "to": "mixer:chanB"
+    },
+    {
+      "do": "set",
+      "target": "lpg:strikeA",
+      "to": "on",
+      "note": "Strike channel A."
+    },
+    {
+      "do": "set",
+      "target": "lpg:strikeA",
+      "to": "off"
+    },
+    {
+      "do": "pause",
+      "for": 1.5
+    },
+    {
+      "do": "set",
+      "target": "lpg:decayA",
+      "to": 0.85,
+      "perform": 3.0,
+      "note": "Decay up."
+    },
+    {
+      "do": "set",
+      "target": "lpg:strikeA",
+      "to": "on",
+      "note": "And strike again."
+    },
+    {
+      "do": "set",
+      "target": "lpg:strikeA",
+      "to": "off"
+    },
+    {
+      "do": "pause",
+      "for": 3.0
+    }
+  ]
+}

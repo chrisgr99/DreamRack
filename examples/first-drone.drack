@@ -14,6 +14,18 @@
       "type": "wcoast.complexOsc259t",
       "row": 0,
       "x": 0
+    },
+    {
+      "id": "func",
+      "type": "wcoast.quadFn281t",
+      "row": 0,
+      "x": 95
+    },
+    {
+      "id": "lpg",
+      "type": "lpg-292",
+      "row": 1,
+      "x": 0
     }
   ],
   "wiring": [
@@ -78,7 +90,7 @@
         "panF": -0.15659658394031228,
         "panDepthF": 1,
         "muteF": "on",
-        "master": 0.4,
+        "master": 0,
         "monitorLevel": 0.29,
         "panMaster": 0,
         "panDepthMaster": 1,
@@ -88,6 +100,6 @@
     }
   },
   "probes": [],
-  "notes": "A first drone. The Complex Oscillator's principal oscillator runs straight into the mixer, and its wavefolder (Timbre, Order, Symmetry) is turned up to add harmonics.\n\nTurn the sound engine on (Engine, in the menu) to hear it. To change the sound, hover the mouse pointer over the Pitdh  knob and operate the scroll wheel. Similarly turning almost any knob above the bottom row in the complex oscillator can change the sound in interesting ways.\nNote that in DreamRack knobs operate by hovering over them and scrolling, not by dragging.\n\n",
+  "notes": "A first drone. The Complex Oscillator's principal oscillator runs straight into the mixer, and its wavefolder (Timbre, Order, Symmetry) is turned up to add harmonics.\n\nIt arrives silent. Go to the Mixer / Output tab, turn the ENGINE on and bring the Master fader up to hear it.\n\nTo change the sound, hover the mouse pointer over the Pitch knob and operate the scroll wheel. Almost any knob above the bottom row of the Complex Oscillator will change the sound in interesting ways.\nNote that in DreamRack knobs operate by hovering over them and scrolling, not by dragging.\n",
   "notesOpen": true
 }

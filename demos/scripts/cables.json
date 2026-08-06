@@ -1,0 +1,35 @@
+{
+  "id": "cables",
+  "title": "Cables — click, move, click",
+  "stage": "default",
+  "defaults": {
+    "perform": 1.2,
+    "arrive": 2.0,
+    "beat": 0.7,
+    "settle": 1.0,
+    "hold": 2.5
+  },
+  "steps": [
+    {
+      "do": "patch",
+      "from": "osc:prinFinalOut",
+      "to": "lpg:inA",
+      "note": "One click to pick the cable up, one to put it down. No button is held in between."
+    },
+    {
+      "do": "pause",
+      "for": 1.5
+    },
+    {
+      "do": "patch",
+      "from": "osc:modTriOut",
+      "to": "lpg:levelCvA",
+      "note": "Now the same thing to a different kind of input — the Level knob's own control input."
+    },
+    {
+      "do": "pause",
+      "for": 2.0,
+      "note": "That cable came out orange. A cable takes the colour of the terminal it lands on, and orange means control voltage: something moving a control for you, rather than sound you hear."
+    }
+  ]
+}

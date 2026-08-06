@@ -1,0 +1,57 @@
+{
+  "id": "mute",
+  "title": "Silencing a channel without unplugging",
+  "defaults": {
+    "perform": 1.2,
+    "arrive": 2.0,
+    "beat": 0.7,
+    "settle": 1.0,
+    "hold": 2.5
+  },
+  "steps": [
+    {
+      "do": "example",
+      "name": "First drone",
+      "as": {
+        "osc": "wcoast.complexOsc259t"
+      }
+    },
+    {
+      "do": "set",
+      "target": "mixer:engine",
+      "to": "on"
+    },
+    {
+      "do": "set",
+      "target": "mixer:master",
+      "to": 0.22,
+      "perform": 1.5
+    },
+    {
+      "do": "pause",
+      "for": 2.5,
+      "note": "First drone again, playing."
+    },
+    {
+      "do": "set",
+      "target": "mixer:muteA",
+      "to": "off",
+      "note": "The Enable button under channel one's fader. Off."
+    },
+    {
+      "do": "pause",
+      "for": 3.0,
+      "note": "Silent — and the cable is still there. Nothing was unplugged."
+    },
+    {
+      "do": "set",
+      "target": "mixer:muteA",
+      "to": "on",
+      "note": "On again, and it comes straight back."
+    },
+    {
+      "do": "pause",
+      "for": 2.5
+    }
+  ]
+}

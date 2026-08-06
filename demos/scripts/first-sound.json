@@ -1,0 +1,48 @@
+{
+  "id": "first-sound",
+  "title": "First sound — oscillator into the mixer",
+  "stage": "default",
+  "defaults": {
+    "perform": 1.0,
+    "arrive": 2.0,
+    "beat": 0.7,
+    "settle": 0.8,
+    "hold": 3.0
+  },
+  "steps": [
+    {
+      "do": "patch",
+      "from": "osc:prinFinalOut",
+      "to": "mixer:chanA",
+      "note": "The Final output, then channel one on the mixer."
+    },
+    {
+      "do": "set",
+      "target": "mixer:engine",
+      "to": "on",
+      "note": "Engine on."
+    },
+    {
+      "do": "set",
+      "target": "mixer:master",
+      "to": 0.22,
+      "perform": 3.0,
+      "note": "Master fader up."
+    },
+    {
+      "do": "pause",
+      "for": 3.0
+    },
+    {
+      "do": "set",
+      "target": "osc:prinFreq",
+      "to": 220,
+      "perform": 5.0,
+      "note": "And scroll the Pitch knob to change the note."
+    },
+    {
+      "do": "pause",
+      "for": 2.5
+    }
+  ]
+}

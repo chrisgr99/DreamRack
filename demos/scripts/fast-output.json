@@ -1,0 +1,55 @@
+{
+  "id": "fast-output",
+  "title": "Fast first sound — where the sound goes out",
+  "defaults": {
+    "perform": 1.2,
+    "arrive": 2.0,
+    "beat": 0.7,
+    "settle": 1.0,
+    "hold": 2.5
+  },
+  "steps": [
+    {
+      "do": "example",
+      "name": "First drone",
+      "as": {
+        "osc": "wcoast.complexOsc259t"
+      }
+    },
+    {
+      "do": "set",
+      "target": "mixer:engine",
+      "to": "on"
+    },
+    {
+      "do": "set",
+      "target": "mixer:master",
+      "to": 0.22,
+      "perform": 1.5
+    },
+    {
+      "do": "pause",
+      "for": 2.5,
+      "note": "One cable leaves the oscillator's Final output and ends at a button under the Mixer and Output tab."
+    },
+    {
+      "do": "page",
+      "to": "output",
+      "note": "Click the tab to follow it."
+    },
+    {
+      "do": "pause",
+      "for": 4.0,
+      "note": "There it is, arriving at the mixer's first input. The mixer is on its own page, so a cable bound for it stops at the tab and carries on from the other side."
+    },
+    {
+      "do": "page",
+      "to": "a1",
+      "note": "Click Audio 1 to come back."
+    },
+    {
+      "do": "pause",
+      "for": 2.0
+    }
+  ]
+}

@@ -1,0 +1,111 @@
+{
+  "id": "shaping",
+  "title": "Shaping the plucks",
+  "defaults": {
+    "perform": 1.0,
+    "arrive": 2.0,
+    "beat": 0.7,
+    "settle": 0.8,
+    "hold": 3.0
+  },
+  "steps": [
+    {
+      "do": "example",
+      "name": "First drone",
+      "as": {
+        "osc": "wcoast.complexOsc259t"
+      },
+      "note": "Starting again from First drone, so the rack is a clean copy of what you already know."
+    },
+    {
+      "do": "set",
+      "target": "mixer:muteA",
+      "to": "off"
+    },
+    {
+      "do": "set",
+      "target": "mixer:engine",
+      "to": "on"
+    },
+    {
+      "do": "set",
+      "target": "mixer:master",
+      "to": 0.22,
+      "perform": 1.5
+    },
+    {
+      "do": "patch",
+      "from": "osc:prinSquareOut",
+      "to": "lpg:inA",
+      "note": "One clocked voice to work on."
+    },
+    {
+      "do": "patch",
+      "from": "lpg:outA",
+      "to": "mixer:chanB"
+    },
+    {
+      "do": "set",
+      "target": "lpg:clkOnA",
+      "to": "on"
+    },
+    {
+      "do": "set",
+      "target": "lpg:run",
+      "to": "on"
+    },
+    {
+      "do": "pause",
+      "for": 3.0,
+      "note": "The gate's Level — how far it opens."
+    },
+    {
+      "do": "set",
+      "target": "lpg:levelA",
+      "to": 0.45,
+      "perform": 3.5,
+      "note": "Decay — how quickly it shuts."
+    },
+    {
+      "do": "set",
+      "target": "lpg:decayA",
+      "to": 0.15,
+      "perform": 3.5,
+      "note": "And Decay how quickly it shuts. Short is percussive."
+    },
+    {
+      "do": "pause",
+      "for": 2.5,
+      "note": "Timbre, on the oscillator."
+    },
+    {
+      "do": "set",
+      "target": "osc:timbre",
+      "to": 0.8,
+      "perform": 5.0,
+      "note": "Everything on the oscillator still applies. Timbre folds the waveform, adding harmonics without changing the note."
+    },
+    {
+      "do": "pause",
+      "for": 3.0,
+      "note": "Pitch Mod on."
+    },
+    {
+      "do": "set",
+      "target": "osc:pitchMod",
+      "to": "on",
+      "note": "And Mod Index up."
+    },
+    {
+      "do": "set",
+      "target": "osc:modIndex",
+      "to": 0.25,
+      "perform": 5.0,
+      "note": "Mod Index is how far it drives. A little is vibrato; a lot is a different instrument."
+    },
+    {
+      "do": "pause",
+      "for": 4.0
+    }
+  ]
+}
