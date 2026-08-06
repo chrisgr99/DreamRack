@@ -33,8 +33,10 @@ const line = (x1, y1, x2, y2) => items.push({ t: 'line', x1, y1, x2, y2, w: 0.35
   [39.75, 28.9, 39.75, 51.48],
   [7.8, 29.53, 66.96, 29.53], [89.68, 29.53, 144.51, 29.53],
   [7.8, 50.94, 66.96, 50.94], [89.68, 50.94, 144.51, 50.94],
-  [144.51, 69, 179.13, 69],
-  [7.8, 122.77, 179.13, 122.77],
+  // 179.13 was 11mm past the right edge of the face (which ends at 168.03), so both of these ran off
+  // the panel and were clipped by the viewBox. Trimmed to the frame's inside edge.
+  [144.51, 69, 164.13, 69],
+  [7.8, 122.77, 164.13, 122.77],
 ].forEach((l) => line(...l));
 
 // ---- Modulation oscillator (left) ----

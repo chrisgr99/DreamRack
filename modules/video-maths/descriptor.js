@@ -46,6 +46,7 @@ export default {
   id: 'video-maths',
   apiVersion: 1,
   name: 'Video Maths',
+  category: 'video',   // module library grouping
   abbreviation: 'VdM',
   worklets: [],
   signalIdentity: ['luma'],

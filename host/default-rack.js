@@ -29,6 +29,7 @@ export const ALIASES = {
   mixer: 'mixer',
   gallery: 'wcoast.gallery',
   sine: 'sine-source',
+  vco: 'wcoast.oscillator',
   field: 'coordinate-field',
   formula: 'formula',
   shapes: 'shapes',

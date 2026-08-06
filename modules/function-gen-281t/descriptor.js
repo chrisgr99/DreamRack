@@ -71,6 +71,7 @@ export default {
   id: 'wcoast.quadFn281t',
   apiVersion: 1,
   name: 'Quad Function Generator',
+  category: 'modulation',   // module library grouping
   abbreviation: 'QFG',
   sectioned: true,   // four independent channels — net highlight scopes to one
   worklets: ['modules/function-gen-281t/function-gen-281t-processor.js'],

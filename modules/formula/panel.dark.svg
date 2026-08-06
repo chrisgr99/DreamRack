@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="38mm" height="128.5mm" viewBox="0 0 38 128.5" font-family="Arial Narrow, Helvetica, Arial, sans-serif">
+<svg xmlns="http://www.w3.org/2000/svg" width="38mm" height="128.5mm" viewBox="3.9 0 38 128.5" font-family="Arial Narrow, Helvetica, Arial, sans-serif">
 <defs>
-  <filter id="softShadow" x="-30%" y="-30%" width="160%" height="160%"><feDropShadow dx="0.4733" dy="0.5916" stdDeviation="0.4733" flood-color="#000" flood-opacity=".28"/></filter>
   <radialGradient id="blueRing"><stop offset="0" stop-color="#1688cc"/><stop offset="0.55" stop-color="#006da8"/><stop offset="1" stop-color="#003d62"/></radialGradient>
   <radialGradient id="blueDial"><stop offset="0" stop-color="#1d79b7"/><stop offset="0.6" stop-color="#00639a"/><stop offset="1" stop-color="#00456e"/></radialGradient>
   <radialGradient id="knobCap"><stop offset="0" stop-color="#3a3d43"/><stop offset="0.4" stop-color="#4c5058"/><stop offset="0.62" stop-color="#5a5f67"/><stop offset="1" stop-color="#6b7079"/></radialGradient>
@@ -16,22 +15,22 @@
   <rect x="2.3" y="7.3" width="33.4" height="21.4" rx="1" fill="none" stroke="#808085" stroke-width="0.45"/>
   <line x1="3" y1="32" x2="35" y2="32" stroke="#808085" stroke-width="0.355"/>
   <g data-wcoast-port="aIn" data-wcoast-cx="12" data-wcoast-cy="38.5">
-    <rect x="9.00" y="35.50" width="6.00" height="6.00" rx="1.02" fill="#8a8a8a" data-wcoast-role="jackbody" filter="url(#softShadow)"/>
+    <rect x="9.00" y="35.50" width="6.00" height="6.00" rx="1.02" fill="#8a8a8a" data-wcoast-role="jackbody"/>
     <circle cx="12" cy="38.5" r="1.6" fill="#000000" data-wcoast-role="jackhole"/>
   </g>
   <text x="12" y="44.7" font-size="2.906" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">A</text>
   <g data-wcoast-port="bIn" data-wcoast-cx="26" data-wcoast-cy="38.5">
-    <rect x="23.00" y="35.50" width="6.00" height="6.00" rx="1.02" fill="#8a8a8a" data-wcoast-role="jackbody" filter="url(#softShadow)"/>
+    <rect x="23.00" y="35.50" width="6.00" height="6.00" rx="1.02" fill="#8a8a8a" data-wcoast-role="jackbody"/>
     <circle cx="26" cy="38.5" r="1.6" fill="#000000" data-wcoast-role="jackhole"/>
   </g>
   <text x="26" y="44.7" font-size="2.906" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">B</text>
   <g data-wcoast-port="cIn" data-wcoast-cx="12" data-wcoast-cy="51">
-    <rect x="9.00" y="48.00" width="6.00" height="6.00" rx="1.02" fill="#8a8a8a" data-wcoast-role="jackbody" filter="url(#softShadow)"/>
+    <rect x="9.00" y="48.00" width="6.00" height="6.00" rx="1.02" fill="#8a8a8a" data-wcoast-role="jackbody"/>
     <circle cx="12" cy="51" r="1.6" fill="#000000" data-wcoast-role="jackhole"/>
   </g>
   <text x="12" y="57.2" font-size="2.906" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">C</text>
   <g data-wcoast-port="dIn" data-wcoast-cx="26" data-wcoast-cy="51">
-    <rect x="23.00" y="48.00" width="6.00" height="6.00" rx="1.02" fill="#8a8a8a" data-wcoast-role="jackbody" filter="url(#softShadow)"/>
+    <rect x="23.00" y="48.00" width="6.00" height="6.00" rx="1.02" fill="#8a8a8a" data-wcoast-role="jackbody"/>
     <circle cx="26" cy="51" r="1.6" fill="#000000" data-wcoast-role="jackhole"/>
   </g>
   <text x="26" y="57.2" font-size="2.906" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">D</text>
@@ -39,7 +38,7 @@
   <text x="7.125" y="75.67246639478807" font-size="2.106" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="end" font-family="Arial Narrow, Helvetica, Arial, sans-serif">0</text>
   <text x="16.875" y="75.67246639478807" font-size="2.106" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="start" font-family="Arial Narrow, Helvetica, Arial, sans-serif">1</text>
   <g data-wcoast-param="k1" data-wcoast-cx="12" data-wcoast-cy="70" data-wcoast-angle-min="-150" data-wcoast-angle-max="150" data-wcoast-port="k1Cv" data-wcoast-depth="k1Depth" data-wcoast-av="off">
-    <circle cx="12" cy="70" r="5.4" fill="url(#blueRing)" stroke="#6fa8d6" stroke-width="0.2381" filter="url(#softShadow)"/>
+    <circle cx="12" cy="70" r="5.4" fill="url(#blueRing)" stroke="#6fa8d6" stroke-width="0.2381"/>
     <circle cx="12" cy="70" r="4" fill="url(#knobCap)" stroke="#b8b8bc" stroke-width="0.1587"/>
     <line x1="9.07" y1="75.07" x2="8.72" y2="75.67" stroke="#b8b8bc" stroke-width="0.355"/>
     <line x1="14.93" y1="75.07" x2="15.28" y2="75.67" stroke="#b8b8bc" stroke-width="0.355"/>
@@ -60,7 +59,7 @@
   <text x="21.125" y="75.67246639478807" font-size="2.106" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="end" font-family="Arial Narrow, Helvetica, Arial, sans-serif">0</text>
   <text x="30.875" y="75.67246639478807" font-size="2.106" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="start" font-family="Arial Narrow, Helvetica, Arial, sans-serif">1</text>
   <g data-wcoast-param="k2" data-wcoast-cx="26" data-wcoast-cy="70" data-wcoast-angle-min="-150" data-wcoast-angle-max="150" data-wcoast-port="k2Cv" data-wcoast-depth="k2Depth" data-wcoast-av="off">
-    <circle cx="26" cy="70" r="5.4" fill="url(#blueRing)" stroke="#6fa8d6" stroke-width="0.2381" filter="url(#softShadow)"/>
+    <circle cx="26" cy="70" r="5.4" fill="url(#blueRing)" stroke="#6fa8d6" stroke-width="0.2381"/>
     <circle cx="26" cy="70" r="4" fill="url(#knobCap)" stroke="#b8b8bc" stroke-width="0.1587"/>
     <line x1="23.07" y1="75.07" x2="22.73" y2="75.67" stroke="#b8b8bc" stroke-width="0.355"/>
     <line x1="28.93" y1="75.07" x2="29.27" y2="75.67" stroke="#b8b8bc" stroke-width="0.355"/>
@@ -81,7 +80,7 @@
   <text x="7.125" y="93.67246639478807" font-size="2.106" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="end" font-family="Arial Narrow, Helvetica, Arial, sans-serif">0</text>
   <text x="16.875" y="93.67246639478807" font-size="2.106" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="start" font-family="Arial Narrow, Helvetica, Arial, sans-serif">1</text>
   <g data-wcoast-param="k3" data-wcoast-cx="12" data-wcoast-cy="88" data-wcoast-angle-min="-150" data-wcoast-angle-max="150" data-wcoast-port="k3Cv" data-wcoast-depth="k3Depth" data-wcoast-av="off">
-    <circle cx="12" cy="88" r="5.4" fill="url(#blueRing)" stroke="#6fa8d6" stroke-width="0.2381" filter="url(#softShadow)"/>
+    <circle cx="12" cy="88" r="5.4" fill="url(#blueRing)" stroke="#6fa8d6" stroke-width="0.2381"/>
     <circle cx="12" cy="88" r="4" fill="url(#knobCap)" stroke="#b8b8bc" stroke-width="0.1587"/>
     <line x1="9.07" y1="93.07" x2="8.72" y2="93.67" stroke="#b8b8bc" stroke-width="0.355"/>
     <line x1="14.93" y1="93.07" x2="15.28" y2="93.67" stroke="#b8b8bc" stroke-width="0.355"/>
@@ -102,7 +101,7 @@
   <text x="21.125" y="93.67246639478807" font-size="2.106" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="end" font-family="Arial Narrow, Helvetica, Arial, sans-serif">0</text>
   <text x="30.875" y="93.67246639478807" font-size="2.106" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="start" font-family="Arial Narrow, Helvetica, Arial, sans-serif">1</text>
   <g data-wcoast-param="k4" data-wcoast-cx="26" data-wcoast-cy="88" data-wcoast-angle-min="-150" data-wcoast-angle-max="150" data-wcoast-port="k4Cv" data-wcoast-depth="k4Depth" data-wcoast-av="off">
-    <circle cx="26" cy="88" r="5.4" fill="url(#blueRing)" stroke="#6fa8d6" stroke-width="0.2381" filter="url(#softShadow)"/>
+    <circle cx="26" cy="88" r="5.4" fill="url(#blueRing)" stroke="#6fa8d6" stroke-width="0.2381"/>
     <circle cx="26" cy="88" r="4" fill="url(#knobCap)" stroke="#b8b8bc" stroke-width="0.1587"/>
     <line x1="23.07" y1="93.07" x2="22.73" y2="93.67" stroke="#b8b8bc" stroke-width="0.355"/>
     <line x1="28.93" y1="93.07" x2="29.27" y2="93.67" stroke="#b8b8bc" stroke-width="0.355"/>
@@ -121,7 +120,7 @@
   </g>
   <text x="26" y="96.80000000000001" font-size="2.5060000000000002" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">K4</text>
   <g data-wcoast-port="outImage" data-wcoast-cx="19" data-wcoast-cy="104">
-    <rect x="15.80" y="100.80" width="6.40" height="6.40" rx="1.09" fill="#8a8a8a" data-wcoast-role="jackbody" filter="url(#softShadow)"/>
+    <rect x="15.80" y="100.80" width="6.40" height="6.40" rx="1.09" fill="#8a8a8a" data-wcoast-role="jackbody"/>
     <circle cx="19" cy="104" r="1.6" fill="#000000" data-wcoast-role="jackhole"/>
   </g>
   <text x="19" y="110.6" font-size="2.706" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">OUT</text>

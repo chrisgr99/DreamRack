@@ -51,6 +51,7 @@ export default {
   id: 'time-machine',
   apiVersion: 1,
   name: 'Time',
+  category: 'video',   // module library grouping
   abbreviation: 'TM',
   worklets: [],
   signalIdentity: ['luma'],

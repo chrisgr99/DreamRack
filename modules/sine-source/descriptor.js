@@ -6,6 +6,7 @@ export default {
   "apiVersion": 1,
   "id": "sine-source",
   "name": "Sine Source",
+  category: 'source',   // module library grouping
   "params": [
     {
       "id": "freq",

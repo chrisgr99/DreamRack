@@ -54,6 +54,7 @@ export default {
   id: 'shapes',
   apiVersion: 1,
   name: 'Shapes',
+  category: 'video',   // module library grouping
   abbreviation: 'Shp',
   worklets: [],
   signalIdentity: ['luma'],

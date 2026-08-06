@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="270mm" height="128.5mm" viewBox="0 0 270 128.5" font-family="Arial Narrow, Helvetica, Arial, sans-serif">
 <defs>
-  <filter id="softShadow" x="-30%" y="-30%" width="160%" height="160%"><feDropShadow dx="0.4733" dy="0.5916" stdDeviation="0.4733" flood-color="#000" flood-opacity=".28"/></filter>
   <radialGradient id="blueRing"><stop offset="0" stop-color="#1688cc"/><stop offset="0.55" stop-color="#006da8"/><stop offset="1" stop-color="#003d62"/></radialGradient>
   <radialGradient id="blueDial"><stop offset="0" stop-color="#1d79b7"/><stop offset="0.6" stop-color="#00639a"/><stop offset="1" stop-color="#00456e"/></radialGradient>
   <radialGradient id="knobCap"><stop offset="0" stop-color="#f8f8f8"/><stop offset="0.4" stop-color="#bfc3c5"/><stop offset="0.62" stop-color="#f4f4f4"/><stop offset="1" stop-color="#777777"/></radialGradient>
@@ -19,42 +18,42 @@
   <line x1="230" y1="11" x2="230" y2="111" stroke="#7d7d7d" stroke-width="0.355"/>
   <text x="52" y="15.5" font-size="3.106" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">jack — family colour + direction ring</text>
   <g data-wcoast-port="audioIn" data-wcoast-cx="18" data-wcoast-cy="27">
-    <circle cx="18" cy="27" r="3" fill="#8a8a8a" stroke="#000000" stroke-width="0.3" filter="url(#softShadow)"/>
+    <circle cx="18" cy="27" r="3" fill="#8a8a8a" stroke="#000000" stroke-width="0.3"/>
     <circle cx="18" cy="27" r="1.6" fill="#000000"/>
   </g>
   <text x="18" y="33.5" font-size="3.106" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">audio in</text>
   <g data-wcoast-port="audioOut" data-wcoast-cx="18" data-wcoast-cy="49">
-    <circle cx="18" cy="49" r="3" fill="#8a8a8a" stroke="#000000" stroke-width="0.3" filter="url(#softShadow)"/>
+    <circle cx="18" cy="49" r="3" fill="#8a8a8a" stroke="#000000" stroke-width="0.3"/>
     <circle cx="18" cy="49" r="1.6" fill="#000000"/>
   </g>
   <text x="18" y="55.5" font-size="3.106" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">audio out</text>
   <g data-wcoast-port="cvIn" data-wcoast-cx="40" data-wcoast-cy="27">
-    <circle cx="40" cy="27" r="3" fill="#8a8a8a" stroke="#000000" stroke-width="0.3" filter="url(#softShadow)"/>
+    <circle cx="40" cy="27" r="3" fill="#8a8a8a" stroke="#000000" stroke-width="0.3"/>
     <circle cx="40" cy="27" r="1.6" fill="#000000"/>
   </g>
   <text x="40" y="33.5" font-size="3.106" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">cv in</text>
   <g data-wcoast-port="cvOut" data-wcoast-cx="40" data-wcoast-cy="49">
-    <circle cx="40" cy="49" r="3" fill="#8a8a8a" stroke="#000000" stroke-width="0.3" filter="url(#softShadow)"/>
+    <circle cx="40" cy="49" r="3" fill="#8a8a8a" stroke="#000000" stroke-width="0.3"/>
     <circle cx="40" cy="49" r="1.6" fill="#000000"/>
   </g>
   <text x="40" y="55.5" font-size="3.106" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">cv out</text>
   <g data-wcoast-port="trigIn" data-wcoast-cx="62" data-wcoast-cy="27">
-    <circle cx="62" cy="27" r="3" fill="#8a8a8a" stroke="#000000" stroke-width="0.3" filter="url(#softShadow)"/>
+    <circle cx="62" cy="27" r="3" fill="#8a8a8a" stroke="#000000" stroke-width="0.3"/>
     <circle cx="62" cy="27" r="1.6" fill="#000000"/>
   </g>
   <text x="62" y="33.5" font-size="3.106" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">trig in</text>
   <g data-wcoast-port="trigOut" data-wcoast-cx="62" data-wcoast-cy="49">
-    <circle cx="62" cy="49" r="3" fill="#8a8a8a" stroke="#000000" stroke-width="0.3" filter="url(#softShadow)"/>
+    <circle cx="62" cy="49" r="3" fill="#8a8a8a" stroke="#000000" stroke-width="0.3"/>
     <circle cx="62" cy="49" r="1.6" fill="#000000"/>
   </g>
   <text x="62" y="55.5" font-size="3.106" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">trig out</text>
   <g data-wcoast-port="pitchIn" data-wcoast-cx="84" data-wcoast-cy="27">
-    <circle cx="84" cy="27" r="3" fill="#8a8a8a" stroke="#000000" stroke-width="0.3" filter="url(#softShadow)"/>
+    <circle cx="84" cy="27" r="3" fill="#8a8a8a" stroke="#000000" stroke-width="0.3"/>
     <circle cx="84" cy="27" r="1.6" fill="#000000"/>
   </g>
   <text x="84" y="33.5" font-size="3.106" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">pitch in</text>
   <g data-wcoast-port="pitchOut" data-wcoast-cx="84" data-wcoast-cy="49">
-    <circle cx="84" cy="49" r="3" fill="#8a8a8a" stroke="#000000" stroke-width="0.3" filter="url(#softShadow)"/>
+    <circle cx="84" cy="49" r="3" fill="#8a8a8a" stroke="#000000" stroke-width="0.3"/>
     <circle cx="84" cy="49" r="1.6" fill="#000000"/>
   </g>
   <text x="84" y="55.5" font-size="3.106" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">pitch out</text>
@@ -67,29 +66,29 @@
   <text x="78" y="73" font-size="3.506" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif"><tspan x="78" dy="0">phase</tspan><tspan x="78" dy="4.03">lock</tspan></text>
   <text x="78" y="84" font-size="2.706" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">free · tight → wraps</text>
   <g data-wcoast-port="labelBelow" data-wcoast-cx="18" data-wcoast-cy="100">
-    <circle cx="18" cy="100" r="3" fill="#8a8a8a" stroke="#000000" stroke-width="0.3" filter="url(#softShadow)"/>
+    <circle cx="18" cy="100" r="3" fill="#8a8a8a" stroke="#000000" stroke-width="0.3"/>
     <circle cx="18" cy="100" r="1.6" fill="#000000"/>
   </g>
   <text x="18" y="106.69232" font-size="2.906" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">below</text>
   <g data-wcoast-port="labelAbove" data-wcoast-cx="42" data-wcoast-cy="100">
-    <circle cx="42" cy="100" r="3" fill="#8a8a8a" stroke="#000000" stroke-width="0.3" filter="url(#softShadow)"/>
+    <circle cx="42" cy="100" r="3" fill="#8a8a8a" stroke="#000000" stroke-width="0.3"/>
     <circle cx="42" cy="100" r="1.6" fill="#000000"/>
   </g>
   <text x="42" y="95.4" font-size="2.906" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">above</text>
   <g data-wcoast-port="labelLeft" data-wcoast-cx="66" data-wcoast-cy="100">
-    <circle cx="66" cy="100" r="3" fill="#8a8a8a" stroke="#000000" stroke-width="0.3" filter="url(#softShadow)"/>
+    <circle cx="66" cy="100" r="3" fill="#8a8a8a" stroke="#000000" stroke-width="0.3"/>
     <circle cx="66" cy="100" r="1.6" fill="#000000"/>
   </g>
   <text x="61.4" y="101.04616" font-size="2.906" font-weight="700" font-style="italic" fill="#163a69" text-anchor="end" font-family="Arial Narrow, Helvetica, Arial, sans-serif">left</text>
   <g data-wcoast-port="labelRight" data-wcoast-cx="90" data-wcoast-cy="100">
-    <circle cx="90" cy="100" r="3" fill="#8a8a8a" stroke="#000000" stroke-width="0.3" filter="url(#softShadow)"/>
+    <circle cx="90" cy="100" r="3" fill="#8a8a8a" stroke="#000000" stroke-width="0.3"/>
     <circle cx="90" cy="100" r="1.6" fill="#000000"/>
   </g>
   <text x="94.6" y="101.04616" font-size="2.906" font-weight="700" font-style="italic" fill="#163a69" text-anchor="start" font-family="Arial Narrow, Helvetica, Arial, sans-serif">right</text>
   <text x="52" y="112" font-size="2.706" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">attached · below · above · left · right</text>
   <text x="130" y="15.5" font-size="2.906" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">knob — size · sweep · ticks · skirt · scale</text>
   <g data-wcoast-param="knobSmall" data-wcoast-cx="114" data-wcoast-cy="26" data-wcoast-angle-min="-150" data-wcoast-angle-max="150">
-    <circle cx="114" cy="26" r="4.2" fill="url(#blueRing)" stroke="#004b7a" stroke-width="0.355" filter="url(#softShadow)"/>
+    <circle cx="114" cy="26" r="4.2" fill="url(#blueRing)" stroke="#004b7a" stroke-width="0.355"/>
     <circle cx="114" cy="26" r="3.02" fill="url(#knobCap)" stroke="#666666" stroke-width="0.2366"/>
     <g data-wcoast-role="indicator">
     <line x1="112.16" y1="29.19" x2="111.77" y2="29.86" stroke="#ffffff" stroke-width="0.2087"/>
@@ -104,7 +103,7 @@
   </g>
   <text x="114" y="33.89232" font-size="2.906" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">r 4.2</text>
   <g data-wcoast-param="knobMedium" data-wcoast-cx="132" data-wcoast-cy="26" data-wcoast-angle-min="-150" data-wcoast-angle-max="150">
-    <circle cx="132" cy="26" r="6.4" fill="url(#blueRing)" stroke="#004b7a" stroke-width="0.355" filter="url(#softShadow)"/>
+    <circle cx="132" cy="26" r="6.4" fill="url(#blueRing)" stroke="#004b7a" stroke-width="0.355"/>
     <circle cx="132" cy="26" r="4.61" fill="url(#knobCap)" stroke="#666666" stroke-width="0.2366"/>
     <g data-wcoast-role="indicator">
     <line x1="129.20" y1="30.85" x2="128.60" y2="31.89" stroke="#ffffff" stroke-width="0.318"/>
@@ -119,7 +118,7 @@
   </g>
   <text x="132" y="36.09232" font-size="2.906" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">r 6.4</text>
   <g data-wcoast-param="knobLarge" data-wcoast-cx="150" data-wcoast-cy="26" data-wcoast-angle-min="-150" data-wcoast-angle-max="150">
-    <circle cx="150" cy="26" r="7" fill="url(#blueRing)" stroke="#004b7a" stroke-width="0.355" filter="url(#softShadow)"/>
+    <circle cx="150" cy="26" r="7" fill="url(#blueRing)" stroke="#004b7a" stroke-width="0.355"/>
     <circle cx="150" cy="26" r="5.04" fill="url(#knobCap)" stroke="#666666" stroke-width="0.2366"/>
     <g data-wcoast-role="indicator">
     <line x1="146.93" y1="31.31" x2="146.28" y2="32.44" stroke="#ffffff" stroke-width="0.3478"/>
@@ -134,7 +133,7 @@
   </g>
   <text x="150" y="36.69232" font-size="2.906" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">r 7</text>
   <g data-wcoast-param="knobDiv" data-wcoast-cx="118" data-wcoast-cy="52" data-wcoast-angle-min="-135" data-wcoast-angle-max="135">
-    <circle cx="118" cy="52" r="6" fill="url(#blueRing)" stroke="#004b7a" stroke-width="0.355" filter="url(#softShadow)"/>
+    <circle cx="118" cy="52" r="6" fill="url(#blueRing)" stroke="#004b7a" stroke-width="0.355"/>
     <circle cx="118" cy="52" r="4.32" fill="url(#knobCap)" stroke="#666666" stroke-width="0.2366"/>
     <g data-wcoast-role="indicator">
     <line x1="114.28" y1="55.72" x2="113.49" y2="56.51" stroke="#ffffff" stroke-width="0.2981"/>
@@ -157,7 +156,7 @@
     <circle cx="124.04" cy="45.87" r="1.27" fill="none" stroke="#163a69" stroke-width="0.4"/><line x1="123.41" y1="45.87" x2="124.68" y2="45.87" stroke="#163a69" stroke-width="0.4"/><line x1="124.04" y1="45.24" x2="124.04" y2="46.51" stroke="#163a69" stroke-width="0.4"/>
   </g>
   <g data-wcoast-param="knobBare" data-wcoast-cx="146" data-wcoast-cy="52" data-wcoast-angle-min="-150" data-wcoast-angle-max="150">
-    <circle cx="146" cy="52" r="6" fill="url(#blueRing)" stroke="#004b7a" stroke-width="0.355" filter="url(#softShadow)"/>
+    <circle cx="146" cy="52" r="6" fill="url(#blueRing)" stroke="#004b7a" stroke-width="0.355"/>
     <circle cx="146" cy="52" r="4.32" fill="url(#knobCap)" stroke="#666666" stroke-width="0.2366"/>
     <g data-wcoast-role="indicator">
       <line x1="146" y1="52" x2="146" y2="47.68" stroke="#163a69" stroke-width="0.55"/>
@@ -165,8 +164,8 @@
   </g>
   <text x="146" y="61.69232" font-size="2.906" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">ticks off</text>
   <g data-wcoast-param="knobSkirt" data-wcoast-cx="130" data-wcoast-cy="86" data-wcoast-angle-min="-150" data-wcoast-angle-max="150">
-    <circle cx="130" cy="86" r="11" fill="url(#blueDial)" stroke="#00507f" stroke-width="0.355" filter="url(#softShadow)"/>
-    <circle cx="130" cy="86" r="7" fill="url(#blueRing)" stroke="#004b7a" stroke-width="0.355" filter="url(#softShadow)"/>
+    <circle cx="130" cy="86" r="11" fill="url(#blueDial)" stroke="#00507f" stroke-width="0.355"/>
+    <circle cx="130" cy="86" r="7" fill="url(#blueRing)" stroke="#004b7a" stroke-width="0.355"/>
     <circle cx="130" cy="86" r="5.5" fill="url(#knobCap)" stroke="#666666" stroke-width="0.2366"/>
     <line x1="124.20" y1="96.05" x2="123.65" y2="97.00" stroke="#163a69" stroke-width="0.355"/>
       <text x="122.75" y="98.11616835487435" font-size="2.206" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">27.5</text>
@@ -204,76 +203,76 @@
   <text x="192" y="15.5" font-size="3.106" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">radio · button · slider</text>
   <g data-wcoast-param="radioMode">
     <line x1="178.00" y1="28.51" x2="190.00" y2="28.51" stroke="#7d7d7d" stroke-width="0.3"/>
-    <circle cx="178" cy="26" r="2.16" fill="url(#redLed)" stroke="#7c0000" stroke-width="0.2366" filter="url(#softShadow)" data-wcoast-role="step-indicator" data-wcoast-step="transient"/><circle cx="177.40" cy="25.40" r="0.65" fill="#ffb4b4" opacity="0.85" data-wcoast-role="led-gloss" pointer-events="none"/>
+    <circle cx="178" cy="26" r="2.16" fill="url(#redLed)" stroke="#7c0000" stroke-width="0.2366" data-wcoast-role="step-indicator" data-wcoast-step="transient"/><circle cx="177.40" cy="25.40" r="0.65" fill="#ffb4b4" opacity="0.85" data-wcoast-role="led-gloss" pointer-events="none"/>
     <polyline points="176.70,31.26 178,29.86 179.30,31.26" fill="none" stroke="#163a69" stroke-width="0.3" stroke-linejoin="round"/>
-    <circle cx="184" cy="26" r="2.16" fill="url(#redLed)" stroke="#7c0000" stroke-width="0.2366" filter="url(#softShadow)" data-wcoast-role="step-indicator" data-wcoast-step="sustained"/><circle cx="183.40" cy="25.40" r="0.65" fill="#ffb4b4" opacity="0.85" data-wcoast-role="led-gloss" pointer-events="none"/>
+    <circle cx="184" cy="26" r="2.16" fill="url(#redLed)" stroke="#7c0000" stroke-width="0.2366" data-wcoast-role="step-indicator" data-wcoast-step="sustained"/><circle cx="183.40" cy="25.40" r="0.65" fill="#ffb4b4" opacity="0.85" data-wcoast-role="led-gloss" pointer-events="none"/>
     <polyline points="182.70,31.26 183.50,29.86 184.50,29.86 185.30,31.26" fill="none" stroke="#163a69" stroke-width="0.3" stroke-linejoin="round"/>
-    <circle cx="190" cy="26" r="2.16" fill="url(#redLed)" stroke="#7c0000" stroke-width="0.2366" filter="url(#softShadow)" data-wcoast-role="step-indicator" data-wcoast-step="cyclic"/><circle cx="189.40" cy="25.40" r="0.65" fill="#ffb4b4" opacity="0.85" data-wcoast-role="led-gloss" pointer-events="none"/>
+    <circle cx="190" cy="26" r="2.16" fill="url(#redLed)" stroke="#7c0000" stroke-width="0.2366" data-wcoast-role="step-indicator" data-wcoast-step="cyclic"/><circle cx="189.40" cy="25.40" r="0.65" fill="#ffb4b4" opacity="0.85" data-wcoast-role="led-gloss" pointer-events="none"/>
     <polyline points="188.70,31.26 189.35,29.86 190,31.26 190.65,29.86 191.30,31.26" fill="none" stroke="#163a69" stroke-width="0.3" stroke-linejoin="round"/>
   </g>
   <text x="184" y="36" font-size="2.606" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">radio · horizontal + glyphs</text>
   <g data-wcoast-param="radioRange">
     <line x1="172.51" y1="45.40" x2="172.51" y2="50.60" stroke="#7d7d7d" stroke-width="0.3"/>
-    <circle cx="170" cy="45.4" r="2.16" fill="url(#redLed)" stroke="#7c0000" stroke-width="0.2366" filter="url(#softShadow)" data-wcoast-role="step-indicator" data-wcoast-step="low"/><circle cx="169.40" cy="44.80" r="0.65" fill="#ffb4b4" opacity="0.85" data-wcoast-role="led-gloss" pointer-events="none"/>
+    <circle cx="170" cy="45.4" r="2.16" fill="url(#redLed)" stroke="#7c0000" stroke-width="0.2366" data-wcoast-role="step-indicator" data-wcoast-step="low"/><circle cx="169.40" cy="44.80" r="0.65" fill="#ffb4b4" opacity="0.85" data-wcoast-role="led-gloss" pointer-events="none"/>
       <text x="173.46" y="46.135" font-size="2.806" font-weight="700" font-style="italic" fill="#163a69" text-anchor="start" font-family="Arial Narrow, Helvetica, Arial, sans-serif">low</text>
-    <circle cx="170" cy="50.6" r="2.16" fill="url(#redLed)" stroke="#7c0000" stroke-width="0.2366" filter="url(#softShadow)" data-wcoast-role="step-indicator" data-wcoast-step="high"/><circle cx="169.40" cy="50.00" r="0.65" fill="#ffb4b4" opacity="0.85" data-wcoast-role="led-gloss" pointer-events="none"/>
+    <circle cx="170" cy="50.6" r="2.16" fill="url(#redLed)" stroke="#7c0000" stroke-width="0.2366" data-wcoast-role="step-indicator" data-wcoast-step="high"/><circle cx="169.40" cy="50.00" r="0.65" fill="#ffb4b4" opacity="0.85" data-wcoast-role="led-gloss" pointer-events="none"/>
       <text x="173.46" y="51.335" font-size="2.806" font-weight="700" font-style="italic" fill="#163a69" text-anchor="start" font-family="Arial Narrow, Helvetica, Arial, sans-serif">high</text>
   </g>
   <text x="170" y="59" font-size="2.606" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">radio · vertical</text>
-  <g data-wcoast-param="btnStrike"><circle cx="192" cy="44" r="2.4" fill="#e9e9ec" stroke="#8a8a8e" stroke-width="0.35" filter="url(#softShadow)" data-wcoast-role="step-indicator" data-wcoast-step="on"/><circle cx="191.33" cy="43.33" r="0.72" fill="#ffffff" opacity="0.8" data-wcoast-role="led-gloss" pointer-events="none"/></g>
+  <g data-wcoast-param="btnStrike"><circle cx="192" cy="44" r="2.4" fill="#e9e9ec" stroke="#8a8a8e" stroke-width="0.35" data-wcoast-role="step-indicator" data-wcoast-step="on"/><circle cx="191.33" cy="43.33" r="0.72" fill="#ffffff" opacity="0.8" data-wcoast-role="led-gloss" pointer-events="none"/></g>
   <text x="192" y="49.5" font-size="2.5060000000000002" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">strike</text>
-  <g data-wcoast-param="btnTrig"><circle cx="210" cy="44" r="2.4" fill="#e9e9ec" stroke="#8a8a8e" stroke-width="0.35" filter="url(#softShadow)" data-wcoast-role="step-indicator" data-wcoast-step="on"/><circle cx="209.33" cy="43.33" r="0.72" fill="#ffffff" opacity="0.8" data-wcoast-role="led-gloss" pointer-events="none"/></g>
+  <g data-wcoast-param="btnTrig"><circle cx="210" cy="44" r="2.4" fill="#e9e9ec" stroke="#8a8a8e" stroke-width="0.35" data-wcoast-role="step-indicator" data-wcoast-step="on"/><circle cx="209.33" cy="43.33" r="0.72" fill="#ffffff" opacity="0.8" data-wcoast-role="led-gloss" pointer-events="none"/></g>
   <text x="210" y="49.5" font-size="2.5060000000000002" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">trig</text>
-  <g data-wcoast-param="btnToggle"><circle cx="192" cy="60" r="2.4" fill="#e9e9ec" stroke="#8a8a8e" stroke-width="0.35" filter="url(#softShadow)" data-wcoast-role="step-indicator" data-wcoast-step="on"/><circle cx="191.33" cy="59.33" r="0.72" fill="#ffffff" opacity="0.8" data-wcoast-role="led-gloss" pointer-events="none"/></g>
+  <g data-wcoast-param="btnToggle"><circle cx="192" cy="60" r="2.4" fill="#e9e9ec" stroke="#8a8a8e" stroke-width="0.35" data-wcoast-role="step-indicator" data-wcoast-step="on"/><circle cx="191.33" cy="59.33" r="0.72" fill="#ffffff" opacity="0.8" data-wcoast-role="led-gloss" pointer-events="none"/></g>
   <text x="192" y="65.5" font-size="2.5060000000000002" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">toggle</text>
-  <g data-wcoast-param="btnOn"><circle cx="210" cy="60" r="2.16" fill="url(#redLed)" stroke="#7c0000" stroke-width="0.2366" filter="url(#softShadow)" data-wcoast-role="step-indicator" data-wcoast-step="on"/><circle cx="209.40" cy="59.40" r="0.65" fill="#ffb4b4" opacity="0.85" data-wcoast-role="led-gloss" pointer-events="none"/></g>
+  <g data-wcoast-param="btnOn"><circle cx="210" cy="60" r="2.16" fill="url(#redLed)" stroke="#7c0000" stroke-width="0.2366" data-wcoast-role="step-indicator" data-wcoast-step="on"/><circle cx="209.40" cy="59.40" r="0.65" fill="#ffb4b4" opacity="0.85" data-wcoast-role="led-gloss" pointer-events="none"/></g>
   <text x="210" y="65" font-size="2.5060000000000002" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">on</text>
   <text x="201" y="73" font-size="2.5060000000000002" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">momentary (strike/trig) · toggle · lamp</text>
   <g data-wcoast-param="radioGreen">
     <line x1="194.80" y1="82.15" x2="205.20" y2="82.15" stroke="#7d7d7d" stroke-width="0.3"/>
-    <circle cx="194.8" cy="80" r="1.8" fill="url(#greenLed)" stroke="#005c1e" stroke-width="0.2366" filter="url(#softShadow)" data-wcoast-role="step-indicator" data-wcoast-step="1" data-wcoast-led="green"/><circle cx="194.30" cy="79.50" r="0.54" fill="#b7ffc6" opacity="0.85" data-wcoast-role="led-gloss" pointer-events="none"/>
-    <circle cx="200" cy="80" r="1.8" fill="url(#greenLed)" stroke="#005c1e" stroke-width="0.2366" filter="url(#softShadow)" data-wcoast-role="step-indicator" data-wcoast-step="2" data-wcoast-led="green"/><circle cx="199.50" cy="79.50" r="0.54" fill="#b7ffc6" opacity="0.85" data-wcoast-role="led-gloss" pointer-events="none"/>
-    <circle cx="205.2" cy="80" r="1.8" fill="url(#greenLed)" stroke="#005c1e" stroke-width="0.2366" filter="url(#softShadow)" data-wcoast-role="step-indicator" data-wcoast-step="3" data-wcoast-led="green"/><circle cx="204.70" cy="79.50" r="0.54" fill="#b7ffc6" opacity="0.85" data-wcoast-role="led-gloss" pointer-events="none"/>
+    <circle cx="194.8" cy="80" r="1.8" fill="url(#greenLed)" stroke="#005c1e" stroke-width="0.2366" data-wcoast-role="step-indicator" data-wcoast-step="1" data-wcoast-led="green"/><circle cx="194.30" cy="79.50" r="0.54" fill="#b7ffc6" opacity="0.85" data-wcoast-role="led-gloss" pointer-events="none"/>
+    <circle cx="200" cy="80" r="1.8" fill="url(#greenLed)" stroke="#005c1e" stroke-width="0.2366" data-wcoast-role="step-indicator" data-wcoast-step="2" data-wcoast-led="green"/><circle cx="199.50" cy="79.50" r="0.54" fill="#b7ffc6" opacity="0.85" data-wcoast-role="led-gloss" pointer-events="none"/>
+    <circle cx="205.2" cy="80" r="1.8" fill="url(#greenLed)" stroke="#005c1e" stroke-width="0.2366" data-wcoast-role="step-indicator" data-wcoast-step="3" data-wcoast-led="green"/><circle cx="204.70" cy="79.50" r="0.54" fill="#b7ffc6" opacity="0.85" data-wcoast-role="led-gloss" pointer-events="none"/>
   </g>
-  <g data-wcoast-param="btnGreen"><circle cx="214" cy="80" r="2.16" fill="url(#greenLed)" stroke="#005c1e" stroke-width="0.2366" filter="url(#softShadow)" data-wcoast-role="step-indicator" data-wcoast-step="on" data-wcoast-led="green"/><circle cx="213.40" cy="79.40" r="0.65" fill="#b7ffc6" opacity="0.85" data-wcoast-role="led-gloss" pointer-events="none"/></g>
+  <g data-wcoast-param="btnGreen"><circle cx="214" cy="80" r="2.16" fill="url(#greenLed)" stroke="#005c1e" stroke-width="0.2366" data-wcoast-role="step-indicator" data-wcoast-step="on" data-wcoast-led="green"/><circle cx="213.40" cy="79.40" r="0.65" fill="#b7ffc6" opacity="0.85" data-wcoast-role="led-gloss" pointer-events="none"/></g>
   <g data-wcoast-param="radioOrange">
     <line x1="194.80" y1="90.15" x2="205.20" y2="90.15" stroke="#7d7d7d" stroke-width="0.3"/>
-    <circle cx="194.8" cy="88" r="1.8" fill="url(#orangeLed)" stroke="#8a3d00" stroke-width="0.2366" filter="url(#softShadow)" data-wcoast-role="step-indicator" data-wcoast-step="1" data-wcoast-led="orange"/><circle cx="194.30" cy="87.50" r="0.54" fill="#ffdcb0" opacity="0.85" data-wcoast-role="led-gloss" pointer-events="none"/>
-    <circle cx="200" cy="88" r="1.8" fill="url(#orangeLed)" stroke="#8a3d00" stroke-width="0.2366" filter="url(#softShadow)" data-wcoast-role="step-indicator" data-wcoast-step="2" data-wcoast-led="orange"/><circle cx="199.50" cy="87.50" r="0.54" fill="#ffdcb0" opacity="0.85" data-wcoast-role="led-gloss" pointer-events="none"/>
-    <circle cx="205.2" cy="88" r="1.8" fill="url(#orangeLed)" stroke="#8a3d00" stroke-width="0.2366" filter="url(#softShadow)" data-wcoast-role="step-indicator" data-wcoast-step="3" data-wcoast-led="orange"/><circle cx="204.70" cy="87.50" r="0.54" fill="#ffdcb0" opacity="0.85" data-wcoast-role="led-gloss" pointer-events="none"/>
+    <circle cx="194.8" cy="88" r="1.8" fill="url(#orangeLed)" stroke="#8a3d00" stroke-width="0.2366" data-wcoast-role="step-indicator" data-wcoast-step="1" data-wcoast-led="orange"/><circle cx="194.30" cy="87.50" r="0.54" fill="#ffdcb0" opacity="0.85" data-wcoast-role="led-gloss" pointer-events="none"/>
+    <circle cx="200" cy="88" r="1.8" fill="url(#orangeLed)" stroke="#8a3d00" stroke-width="0.2366" data-wcoast-role="step-indicator" data-wcoast-step="2" data-wcoast-led="orange"/><circle cx="199.50" cy="87.50" r="0.54" fill="#ffdcb0" opacity="0.85" data-wcoast-role="led-gloss" pointer-events="none"/>
+    <circle cx="205.2" cy="88" r="1.8" fill="url(#orangeLed)" stroke="#8a3d00" stroke-width="0.2366" data-wcoast-role="step-indicator" data-wcoast-step="3" data-wcoast-led="orange"/><circle cx="204.70" cy="87.50" r="0.54" fill="#ffdcb0" opacity="0.85" data-wcoast-role="led-gloss" pointer-events="none"/>
   </g>
-  <g data-wcoast-param="btnOrange"><circle cx="214" cy="88" r="2.16" fill="url(#orangeLed)" stroke="#8a3d00" stroke-width="0.2366" filter="url(#softShadow)" data-wcoast-role="step-indicator" data-wcoast-step="on" data-wcoast-led="orange"/><circle cx="213.40" cy="87.40" r="0.65" fill="#ffdcb0" opacity="0.85" data-wcoast-role="led-gloss" pointer-events="none"/></g>
+  <g data-wcoast-param="btnOrange"><circle cx="214" cy="88" r="2.16" fill="url(#orangeLed)" stroke="#8a3d00" stroke-width="0.2366" data-wcoast-role="step-indicator" data-wcoast-step="on" data-wcoast-led="orange"/><circle cx="213.40" cy="87.40" r="0.65" fill="#ffdcb0" opacity="0.85" data-wcoast-role="led-gloss" pointer-events="none"/></g>
   <text x="206" y="95" font-size="2.4059999999999997" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">LED colour · green · orange</text>
   <g data-wcoast-param="stepWave">
-    <circle cx="178" cy="84" r="2.2" fill="url(#knobCap)" stroke="#666666" stroke-width="0.3" filter="url(#softShadow)" data-wcoast-role="stepper" style="cursor:pointer"/>
+    <circle cx="178" cy="84" r="2.2" fill="url(#knobCap)" stroke="#666666" stroke-width="0.3" data-wcoast-role="stepper" style="cursor:pointer"/>
     <circle cx="178" cy="84" r="1.14" fill="url(#knobCap)" stroke="#666666" stroke-width="0.18" pointer-events="none"/>
     <circle cx="177.56" cy="83.56" r="0.35" fill="#ffffff" opacity="0.55" pointer-events="none"/>
-    <circle cx="171.25" cy="88.35000000000001" r="0.95" fill="url(#redLed)" stroke="#7c0000" stroke-width="0.2366" filter="url(#softShadow)" data-wcoast-role="step-indicator" data-wcoast-step="sawtooth"/><circle cx="170.98" cy="88.08" r="0.28" fill="#ffb4b4" opacity="0.85" data-wcoast-role="led-gloss" pointer-events="none"/>
+    <circle cx="171.25" cy="88.35000000000001" r="0.95" fill="url(#redLed)" stroke="#7c0000" stroke-width="0.2366" data-wcoast-role="step-indicator" data-wcoast-step="sawtooth"/><circle cx="170.98" cy="88.08" r="0.28" fill="#ffb4b4" opacity="0.85" data-wcoast-role="led-gloss" pointer-events="none"/>
     <polyline points="169.95,92.00 172.55,90.60 172.55,92.00" fill="none" stroke="#163a69" stroke-width="0.3" stroke-linejoin="round"/>
-    <circle cx="175.75" cy="88.35000000000001" r="0.95" fill="#505055" stroke="#4a4a4a" stroke-width="0.2366" filter="url(#softShadow)" data-wcoast-role="step-indicator" data-wcoast-step="square"/><circle cx="175.48" cy="88.08" r="0.28" fill="#ffb4b4" opacity="0" data-wcoast-role="led-gloss" pointer-events="none"/>
+    <circle cx="175.75" cy="88.35000000000001" r="0.95" fill="#505055" stroke="#4a4a4a" stroke-width="0.2366" data-wcoast-role="step-indicator" data-wcoast-step="square"/><circle cx="175.48" cy="88.08" r="0.28" fill="#ffb4b4" opacity="0" data-wcoast-role="led-gloss" pointer-events="none"/>
     <path d="M 174.45 92.00 L 174.45 90.60 L 175.75 90.60 L 175.75 92.00 L 177.05 92.00 L 177.05 90.60" fill="none" stroke="#163a69" stroke-width="0.3" stroke-linejoin="round"/>
-    <circle cx="180.25" cy="88.35000000000001" r="0.95" fill="#505055" stroke="#4a4a4a" stroke-width="0.2366" filter="url(#softShadow)" data-wcoast-role="step-indicator" data-wcoast-step="triangle"/><circle cx="179.98" cy="88.08" r="0.28" fill="#ffb4b4" opacity="0" data-wcoast-role="led-gloss" pointer-events="none"/>
+    <circle cx="180.25" cy="88.35000000000001" r="0.95" fill="#505055" stroke="#4a4a4a" stroke-width="0.2366" data-wcoast-role="step-indicator" data-wcoast-step="triangle"/><circle cx="179.98" cy="88.08" r="0.28" fill="#ffb4b4" opacity="0" data-wcoast-role="led-gloss" pointer-events="none"/>
     <polyline points="178.95,92.00 179.60,90.60 180.25,92.00 180.90,90.60 181.55,92.00" fill="none" stroke="#163a69" stroke-width="0.3" stroke-linejoin="round"/>
-    <circle cx="184.75" cy="88.35000000000001" r="0.95" fill="#505055" stroke="#4a4a4a" stroke-width="0.2366" filter="url(#softShadow)" data-wcoast-role="step-indicator" data-wcoast-step="sustained"/><circle cx="184.48" cy="88.08" r="0.28" fill="#ffb4b4" opacity="0" data-wcoast-role="led-gloss" pointer-events="none"/>
+    <circle cx="184.75" cy="88.35000000000001" r="0.95" fill="#505055" stroke="#4a4a4a" stroke-width="0.2366" data-wcoast-role="step-indicator" data-wcoast-step="sustained"/><circle cx="184.48" cy="88.08" r="0.28" fill="#ffb4b4" opacity="0" data-wcoast-role="led-gloss" pointer-events="none"/>
     <polyline points="183.45,92.00 184.25,90.60 185.25,90.60 186.05,92.00" fill="none" stroke="#163a69" stroke-width="0.3" stroke-linejoin="round"/>
   </g>
   <text x="178" y="98" font-size="2.4059999999999997" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">stepper · button above · glyphs</text>
   <g data-wcoast-param="stepRange">
-    <circle cx="165" cy="106" r="2.2" fill="url(#knobCap)" stroke="#666666" stroke-width="0.3" filter="url(#softShadow)" data-wcoast-role="stepper" style="cursor:pointer"/>
+    <circle cx="165" cy="106" r="2.2" fill="url(#knobCap)" stroke="#666666" stroke-width="0.3" data-wcoast-role="stepper" style="cursor:pointer"/>
     <circle cx="165" cy="106" r="1.14" fill="url(#knobCap)" stroke="#666666" stroke-width="0.18" pointer-events="none"/>
     <circle cx="164.56" cy="105.56" r="0.35" fill="#ffffff" opacity="0.55" pointer-events="none"/>
-    <circle cx="169.34999999999997" cy="106" r="0.95" fill="url(#redLed)" stroke="#7c0000" stroke-width="0.2366" filter="url(#softShadow)" data-wcoast-role="step-indicator" data-wcoast-step="lo"/><circle cx="169.08" cy="105.73" r="0.28" fill="#ffb4b4" opacity="0.85" data-wcoast-role="led-gloss" pointer-events="none"/>
+    <circle cx="169.34999999999997" cy="106" r="0.95" fill="url(#redLed)" stroke="#7c0000" stroke-width="0.2366" data-wcoast-role="step-indicator" data-wcoast-step="lo"/><circle cx="169.08" cy="105.73" r="0.28" fill="#ffb4b4" opacity="0.85" data-wcoast-role="led-gloss" pointer-events="none"/>
       <text x="169.34999999999997" y="109.35000000000001" font-size="2.606" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">lo</text>
-    <circle cx="173.84999999999997" cy="106" r="0.95" fill="#505055" stroke="#4a4a4a" stroke-width="0.2366" filter="url(#softShadow)" data-wcoast-role="step-indicator" data-wcoast-step="mid"/><circle cx="173.58" cy="105.73" r="0.28" fill="#ffb4b4" opacity="0" data-wcoast-role="led-gloss" pointer-events="none"/>
+    <circle cx="173.84999999999997" cy="106" r="0.95" fill="#505055" stroke="#4a4a4a" stroke-width="0.2366" data-wcoast-role="step-indicator" data-wcoast-step="mid"/><circle cx="173.58" cy="105.73" r="0.28" fill="#ffb4b4" opacity="0" data-wcoast-role="led-gloss" pointer-events="none"/>
       <text x="173.84999999999997" y="109.35000000000001" font-size="2.606" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">mid</text>
-    <circle cx="178.34999999999997" cy="106" r="0.95" fill="#505055" stroke="#4a4a4a" stroke-width="0.2366" filter="url(#softShadow)" data-wcoast-role="step-indicator" data-wcoast-step="hi"/><circle cx="178.08" cy="105.73" r="0.28" fill="#ffb4b4" opacity="0" data-wcoast-role="led-gloss" pointer-events="none"/>
+    <circle cx="178.34999999999997" cy="106" r="0.95" fill="#505055" stroke="#4a4a4a" stroke-width="0.2366" data-wcoast-role="step-indicator" data-wcoast-step="hi"/><circle cx="178.08" cy="105.73" r="0.28" fill="#ffb4b4" opacity="0" data-wcoast-role="led-gloss" pointer-events="none"/>
       <text x="178.34999999999997" y="109.35000000000001" font-size="2.606" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">hi</text>
   </g>
   <text x="178" y="112" font-size="2.4059999999999997" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">stepper · button left · text</text>
   <g data-wcoast-param="sliderLevel" data-wcoast-role="slider" data-wcoast-cx="222" data-wcoast-top="30" data-wcoast-bot="84">
     <rect x="220.80" y="28.00" width="2.4" height="58.00" rx="1.2" fill="#20242a" stroke="#000000" stroke-width="0.3"/>
     <g data-wcoast-role="handle" transform="translate(0 -10.800)">
-      <rect x="218.00" y="54.80" width="8" height="4.4" rx="1.1" fill="#3c4653" stroke="#0d1218" stroke-width="0.4" filter="url(#softShadow)"/>
+      <rect x="218.00" y="54.80" width="8" height="4.4" rx="1.1" fill="#3c4653" stroke="#0d1218" stroke-width="0.4"/>
       <line x1="218.80" y1="57" x2="225.20" y2="57" stroke="#e6ecf3" stroke-width="0.7"/>
     </g>
   </g>

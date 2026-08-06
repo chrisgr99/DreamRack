@@ -43,6 +43,7 @@ export default {
   id: 'formula',
   apiVersion: 1,
   name: 'Formula',
+  category: 'video',   // module library grouping
   abbreviation: 'Form',
   worklets: [],
   signalIdentity: ['luma'],

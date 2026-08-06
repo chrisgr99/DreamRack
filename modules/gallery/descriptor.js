@@ -60,6 +60,7 @@ export default {
   id: 'wcoast.gallery',
   apiVersion: 1,
   name: 'Control Gallery',
+  category: 'utility',   // module library grouping
   hp: 53,
   ports,
   params,

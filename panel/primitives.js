@@ -13,7 +13,6 @@ import { JACK_NEUTRAL, JACK_HOLE } from './theme.js';
 function defs(theme) {
   const cap = (theme && theme.cap) || ['#f8f8f8', '#bfc3c5', '#f4f4f4', '#777777'];
   return `<defs>
-  <filter id="softShadow" x="-30%" y="-30%" width="160%" height="160%"><feDropShadow dx="0.4733" dy="0.5916" stdDeviation="0.4733" flood-color="#000" flood-opacity=".28"/></filter>
   <radialGradient id="blueRing"><stop offset="0" stop-color="#1688cc"/><stop offset="0.55" stop-color="#006da8"/><stop offset="1" stop-color="#003d62"/></radialGradient>
   <radialGradient id="blueDial"><stop offset="0" stop-color="#1d79b7"/><stop offset="0.6" stop-color="#00639a"/><stop offset="1" stop-color="#00456e"/></radialGradient>
   <radialGradient id="knobCap"><stop offset="0" stop-color="${cap[0]}"/><stop offset="0.4" stop-color="${cap[1]}"/><stop offset="0.62" stop-color="${cap[2]}"/><stop offset="1" stop-color="${cap[3]}"/></radialGradient>
@@ -30,7 +29,7 @@ function defs(theme) {
 // the running host; real panels leave it neutral.
 function jack(id, cx, cy, { r = 3.0, hole = 1.6, fill = JACK_NEUTRAL, label: lab = null } = {}) {
   let out = `  <g data-wcoast-port="${id}" data-wcoast-cx="${cx}" data-wcoast-cy="${cy}">
-    <circle cx="${cx}" cy="${cy}" r="${r}" fill="${fill}" stroke="#000000" stroke-width="0.3" filter="url(#softShadow)"/>
+    <circle cx="${cx}" cy="${cy}" r="${r}" fill="${fill}" stroke="#000000" stroke-width="0.3"/>
     <circle cx="${cx}" cy="${cy}" r="${hole}" fill="${JACK_HOLE}"/>
   </g>`;
   // Optional attached label the jack draws itself — on any side (lab.placement),
@@ -56,7 +55,7 @@ function jack(id, cx, cy, { r = 3.0, hole = 1.6, fill = JACK_NEUTRAL, label: lab
 function vjack(id, cx, cy, { r = 3.0, hole = 1.6, fill = JACK_NEUTRAL, label: lab = null } = {}) {
   const rr = (r * 0.34).toFixed(2);                 // corner radius: square, but not sharp
   let out = `  <g data-wcoast-port="${id}" data-wcoast-cx="${cx}" data-wcoast-cy="${cy}">
-    <rect x="${(cx - r).toFixed(2)}" y="${(cy - r).toFixed(2)}" width="${(r * 2).toFixed(2)}" height="${(r * 2).toFixed(2)}" rx="${rr}" fill="${fill}" data-wcoast-role="jackbody" filter="url(#softShadow)"/>
+    <rect x="${(cx - r).toFixed(2)}" y="${(cy - r).toFixed(2)}" width="${(r * 2).toFixed(2)}" height="${(r * 2).toFixed(2)}" rx="${rr}" fill="${fill}" data-wcoast-role="jackbody"/>
     <circle cx="${cx}" cy="${cy}" r="${hole}" fill="${JACK_HOLE}" data-wcoast-role="jackhole"/>
   </g>`;
   if (lab) out += '\n' + attachedLabel(cx, cy, r, r, lab);
@@ -120,7 +119,7 @@ function knob(id, cx, cy, opts = {}) {
   // beneath the inner ring. Static, like the ring — only the face rotates.
   const hasSkirt = skirt > radius;
   const skirtSvg = hasSkirt
-    ? `\n    <circle cx="${cx}" cy="${cy}" r="${skirt}" fill="url(#blueDial)" stroke="#00507f" stroke-width="0.355" filter="url(#softShadow)"/>` : '';
+    ? `\n    <circle cx="${cx}" cy="${cy}" r="${skirt}" fill="url(#blueDial)" stroke="#00507f" stroke-width="0.355"/>` : '';
   // A second pointer segment across the skirt band, colinear with the inner pointer
   // (from the skirt's inner edge out to its outer circumference), same weight. In the
   // indicator group, so it turns with the knob.
@@ -131,11 +130,11 @@ function knob(id, cx, cy, opts = {}) {
   // label one or more lines. Optional 12-o'clock index triangle. Static (not rotated).
   const outerR = hasSkirt ? skirt : radius;
   const scaleSvg = dialScale(cx, cy, outerR, scale, angleMin, angleMax, ink);
-  // The ring (with its directional drop-shadow) and the cap are rotationally
+  // The ring and the cap are rotationally
   // symmetric, so they stay put. The ticks and the pointer ARE the knob face — they
   // sit in the indicator group and rotate together, so the ticks turn with the knob.
   let out = `  <g data-wcoast-param="${id}" data-wcoast-cx="${cx}" data-wcoast-cy="${cy}" data-wcoast-angle-min="${angleMin}" data-wcoast-angle-max="${angleMax}">${skirtSvg}
-    <circle cx="${cx}" cy="${cy}" r="${radius}" fill="${ring}" stroke="${ringStroke}" stroke-width="0.355" filter="url(#softShadow)"/>
+    <circle cx="${cx}" cy="${cy}" r="${radius}" fill="${ring}" stroke="${ringStroke}" stroke-width="0.355"/>
     <circle cx="${cx}" cy="${cy}" r="${cap}" fill="url(#knobCap)" stroke="${capStroke}" stroke-width="0.2366"/>${scaleSvg}
     <g data-wcoast-role="indicator">${tickSvg}
       <line x1="${cx}" y1="${cy}" x2="${cx}" y2="${(cy - cap).toFixed(2)}" stroke="${ink}" stroke-width="0.55"/>${skirtLine}
@@ -208,7 +207,7 @@ function knack(id, cx, cy, opts = {}) {
     (quantize ? ` data-wcoast-quantize="${quantize}"` : '') +
     (av ? ` data-wcoast-av="${av}"` : '');
   let out = `  <g${attrs}>
-    <circle cx="${cx}" cy="${cy}" r="${radius}" fill="url(#blueRing)" stroke="${ringStroke}" stroke-width="${ringW}" filter="url(#softShadow)"/>
+    <circle cx="${cx}" cy="${cy}" r="${radius}" fill="url(#blueRing)" stroke="${ringStroke}" stroke-width="${ringW}"/>
     <circle cx="${cx}" cy="${cy}" r="${cap}" fill="url(#knobCap)" stroke="${capStroke}" stroke-width="${capW}"/>${scaleSvg}
     <circle cx="${cx}" cy="${cy}" r="${band}" fill="#ff7300"/>
     <circle cx="${cx}" cy="${cy}" r="${hole}" fill="#000000" data-wcoast-role="jackhole"/>
@@ -326,7 +325,7 @@ function ledLamp(cx, cy, { r = 1.66, role = null, step = null, white = false, on
   const ledAttr = (!white && led !== 'red') ? ` data-wcoast-led="${led}"` : '';
   const hr = 0.3 * r, hx = cx - 0.28 * r, hy = cy - 0.28 * r;
   const hFill = white ? '#ffffff' : c.gloss, hOp = white ? '0.8' : (on ? '0.85' : '0');
-  return `<circle cx="${cx}" cy="${cy}" r="${r}" fill="${fill}" stroke="${stroke}" stroke-width="${sw}" filter="url(#softShadow)"${roleAttr}${ledAttr}/>`
+  return `<circle cx="${cx}" cy="${cy}" r="${r}" fill="${fill}" stroke="${stroke}" stroke-width="${sw}"${roleAttr}${ledAttr}/>`
     + `<circle cx="${hx.toFixed(2)}" cy="${hy.toFixed(2)}" r="${hr.toFixed(2)}" fill="${hFill}" opacity="${hOp}" data-wcoast-role="led-gloss" pointer-events="none"/>`;
 }
 
@@ -399,7 +398,7 @@ function stepButton(id, cx, cy, { steps = [], orientation = 'v', btnR = 2.2, led
   const ly = orientation === 'h' ? cy : cy + btnR + 1.2 + ledR;
   let g = `  <g data-wcoast-param="${id}">`;
   // metal-dome push button with a slightly raised centre; the actuator (role=stepper)
-  g += `\n    <circle cx="${cx}" cy="${cy}" r="${btnR}" fill="url(#knobCap)" stroke="${capStroke}" stroke-width="0.3" filter="url(#softShadow)" data-wcoast-role="stepper" style="cursor:pointer"/>`;
+  g += `\n    <circle cx="${cx}" cy="${cy}" r="${btnR}" fill="url(#knobCap)" stroke="${capStroke}" stroke-width="0.3" data-wcoast-role="stepper" style="cursor:pointer"/>`;
   g += `\n    <circle cx="${cx}" cy="${cy}" r="${(btnR * 0.52).toFixed(2)}" fill="url(#knobCap)" stroke="${capStroke}" stroke-width="0.18" pointer-events="none"/>`;
   g += `\n    <circle cx="${(cx - btnR * 0.2).toFixed(2)}" cy="${(cy - btnR * 0.2).toFixed(2)}" r="${(btnR * 0.16).toFixed(2)}" fill="#ffffff" opacity="0.55" pointer-events="none"/>`;
   for (let i = 0; i < n; i++) {
@@ -420,7 +419,7 @@ function slider(id, cx, { top = 24, bot = 78, valuePos = 0.5, theme = {} } = {})
   return `  <g data-wcoast-param="${id}" data-wcoast-role="slider" data-wcoast-cx="${cx}" data-wcoast-top="${top}" data-wcoast-bot="${bot}">
     <rect x="${(cx - 1.2).toFixed(2)}" y="${(top - 2).toFixed(2)}" width="2.4" height="${(travel + 4).toFixed(2)}" rx="1.2" fill="${track}" stroke="${trackEdge}" stroke-width="0.3"/>
     <g data-wcoast-role="handle" transform="translate(0 ${(hy - mid).toFixed(3)})">
-      <rect x="${(cx - 4).toFixed(2)}" y="${(mid - 2.2).toFixed(2)}" width="8" height="4.4" rx="1.1" fill="${handle}" stroke="${handleEdge}" stroke-width="0.4" filter="url(#softShadow)"/>
+      <rect x="${(cx - 4).toFixed(2)}" y="${(mid - 2.2).toFixed(2)}" width="8" height="4.4" rx="1.1" fill="${handle}" stroke="${handleEdge}" stroke-width="0.4"/>
       <line x1="${(cx - 3.2).toFixed(2)}" y1="${mid}" x2="${(cx + 3.2).toFixed(2)}" y2="${mid}" stroke="${handleLine}" stroke-width="0.7"/>
     </g>
   </g>`;

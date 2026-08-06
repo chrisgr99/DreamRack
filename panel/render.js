@@ -71,7 +71,7 @@ function renderItem(it, th, dark) {
     // A plain indicator LED (not a bound control). `ledRed` resolves per theme; any other value is a literal colour.
     case 'indLed': {
       const c = it.color === 'ledRed' ? (dark ? '#d33' : '#c00') : it.color;
-      return `  <circle cx="${it.x}" cy="${it.y}" r="1.15" fill="${c}" stroke="#00000055" stroke-width="0.2" filter="url(#softShadow)"/>`;
+      return `  <circle cx="${it.x}" cy="${it.y}" r="1.15" fill="${c}" stroke="#00000055" stroke-width="0.2"/>`;
     }
     case 'raw':          return it.svg;
     default: throw new Error(`render: unknown item type "${it.t}"`);
@@ -83,7 +83,18 @@ function renderPanel(layout, dark) {
   const { faceW, faceH, faceLeft, faceTop, wrap, items } = layout;
   const p = [];
   p.push(`<?xml version="1.0" encoding="utf-8"?>`);
-  p.push(`<svg xmlns="http://www.w3.org/2000/svg" width="${faceW}mm" height="128.5mm" viewBox="0 0 ${faceW} 128.5" font-family="Arial Narrow, Helvetica, Arial, sans-serif">`);
+  // THE VIEWBOX HAS TO FOLLOW THE WRAP. A wrapped layout draws its face at (faceLeft, faceTop) inside
+  // the 3U row, so its content spans faceLeft..faceLeft+faceW — while a viewBox starting at 0 shows
+  // 0..faceW. The right `faceLeft` millimetres fell outside the box and were clipped: the frame's
+  // right border and a sliver of whatever sat next to it, on every wrapped panel. Starting the box at
+  // the same origin the content was translated to shows the face exactly, and moves the drawing and
+  // its jack positions together so nothing lands anywhere new.
+  // Where the face actually starts. A WRAPPED layout is translated to faceLeft by the wrapper; an
+  // unwrapped one draws its own face rect, and the 259t draws that rect at faceLeft too — so read it
+  // rather than assuming zero. `viewX` on the layout overrides both if a panel ever needs to say.
+  const faceRect = items.find((it) => it.t === 'rect' && it.fill === 'face');
+  const vbX = layout.viewX != null ? layout.viewX : (wrap ? faceLeft : (faceRect ? faceRect.x : 0));
+  p.push(`<svg xmlns="http://www.w3.org/2000/svg" width="${faceW}mm" height="128.5mm" viewBox="${vbX} 0 ${faceW} 128.5" font-family="Arial Narrow, Helvetica, Arial, sans-serif">`);
   p.push(defs(th));
   const wi = layout.wrapIndent != null ? layout.wrapIndent : '  ';
   if (wrap) p.push(`${wi}<g transform="translate(${faceLeft} ${faceTop})">`);

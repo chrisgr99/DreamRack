@@ -111,6 +111,7 @@ export default {
   id: 'mixer',
   apiVersion: 1,
   name: 'Mixer / Output',
+  category: 'utility',   // module library grouping
   abbreviation: 'Mix',
   worklets: [],          // native Web Audio nodes only
   sectioned: true,       // ten independent channel strips — net highlight scopes to the hovered channel

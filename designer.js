@@ -26,6 +26,10 @@ import galleryLayout from './modules/gallery/panel.layout.js';
 import galleryDesc from './modules/gallery/descriptor.js';
 import progLayout from './modules/programmer-8/panel.layout.js';
 import progDesc from './modules/programmer-8/descriptor.js';
+import vcoLayout from './modules/oscillator/panel.layout.js';
+import vcoDesc from './modules/oscillator/descriptor.js';
+import noiseLayout from './modules/noise/panel.layout.js';
+import noiseDesc from './modules/noise/descriptor.js';
 
 const NS = 'http://www.w3.org/2000/svg';
 const clone = (o) => JSON.parse(JSON.stringify(o));
@@ -38,6 +42,8 @@ const MODULES = [
   { name: 'Mixer / Output', dir: 'mixer', base: mixerLayout, desc: mixerDesc },
   { name: 'Control Gallery', dir: 'gallery', base: galleryLayout, desc: galleryDesc },
   { name: 'Sequencer / Programmer Eight', dir: 'programmer-8', base: progLayout, desc: progDesc },
+  { name: 'Oscillator', dir: 'oscillator', base: vcoLayout, desc: vcoDesc },
+  { name: 'Noise', dir: 'noise', base: noiseLayout, desc: noiseDesc },
 ];
 
 const stage = document.getElementById('stage');

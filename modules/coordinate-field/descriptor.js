@@ -69,6 +69,7 @@ export default {
   id: 'coordinate-field',
   apiVersion: 1,
   name: 'Coordinate Field',
+  category: 'video',   // module library grouping
   abbreviation: 'CF',
   worklets: [],
   signalIdentity: ['luma'],
