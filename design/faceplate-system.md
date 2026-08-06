@@ -132,6 +132,11 @@ The human-authored part: a list of items. Two conveniences keep it usable:
 
 - **Channel repeat.** For quad/multi-channel modules, author one channel's items
   once and stamp them at N row offsets, so a row is never copied by hand.
+- **The panel grammar.** `panel/grammar.js` is the layer above this one: a module declares its
+  faceplate as bands and rows of named controls and the grammar solves the millimetres, sharing
+  leftover width between the gaps in a row and leftover height between the gaps down the panel. New
+  modules are written against the grammar; `design/module-set.md` holds the pattern it enforces. The
+  primitives and the flow layout below are what it builds on.
 - **Flow layout.** Instead of hand-placing x for every control, a row declares
   each control's **visual extent** (its half-widths left and right of its anchor,
   including attached labels and scale rings) and one inter-control gap is solved so

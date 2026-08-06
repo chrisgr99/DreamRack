@@ -13,9 +13,14 @@ settled plan. Where something is deliberately left open, it says so.
 architecture; individual features and modules are specified in their own files
 under `design/` — among them `control-protocol.md`, `save-load.md`,
 `faceplate-system.md`, `panel-editor.md`, `scripted-demo.md`, `source-of-entropy.md`,
-`dual-slope.md`, `scope.md`, `sound-and-monitoring.md`, `ai-mirror.md`, and
+`dual-slope.md`, `scope.md`, `sound-and-monitoring.md`, `ai-mirror.md`, `module-set.md`,
+`module-library.md`, and
 `cv-sequencer.md` (the Sequencer/Programmer Eight) and `video-synthesis.md`. Where a `design/` file and this
 document disagree, the `design/` file is newer.
+
+**How everything reads is specified too.** `design/voice.md` holds the one voice used for the
+tutorial, the demo narration, the README, patch notes and anything else a person reads: plain
+language, conversational register, second person. Read it before writing prose for this project.
 
 ---
 

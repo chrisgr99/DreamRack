@@ -12,6 +12,7 @@ import { ModuleRegistry } from '../host/registry.js';
 import { SynthHost } from '../host/host.js';
 import { Rack } from '../host/rack.js';
 import { Recorder } from '../host/recorder.js';
+import { createLibrary } from '../host/library.js';
 import oscDescriptor from '../modules/complex-oscillator-259t/descriptor.js';
 import { create as oscCreate } from '../modules/complex-oscillator-259t/factory.js';
 import mixerDescriptor from '../modules/mixer/descriptor.js';
@@ -24,6 +25,10 @@ import galleryDescriptor from '../modules/gallery/descriptor.js';
 import { create as galleryCreate } from '../modules/gallery/factory.js';
 import sineDescriptor from '../modules/sine-source/descriptor.js';
 import { create as sineCreate } from '../modules/sine-source/factory.js';
+import vcoDescriptor from '../modules/oscillator/descriptor.js';
+import { create as vcoCreate } from '../modules/oscillator/factory.js';
+import noiseDescriptor from '../modules/noise/descriptor.js';
+import { create as noiseCreate } from '../modules/noise/factory.js';
 import progDescriptor from '../modules/programmer-8/descriptor.js';
 import { create as progCreate } from '../modules/programmer-8/factory.js';
 import vidDescriptor from '../modules/video-out/descriptor.js';
@@ -60,6 +65,8 @@ registry.register({ descriptor: lpgDescriptor, create: lpgCreate });
 registry.register({ descriptor: fnDescriptor, create: fnCreate });
 registry.register({ descriptor: galleryDescriptor, create: galleryCreate });
 registry.register({ descriptor: sineDescriptor, create: sineCreate });
+registry.register({ descriptor: vcoDescriptor, create: vcoCreate });
+registry.register({ descriptor: noiseDescriptor, create: noiseCreate });
 registry.register({ descriptor: progDescriptor, create: progCreate });
 registry.register({ descriptor: vidDescriptor, create: vidCreate });
 registry.register({ descriptor: fieldDescriptor, create: fieldCreate });
@@ -94,6 +101,23 @@ const MODULE_TYPES = [{
   hp: 53,
   panelUrl: 'modules/gallery/panel.svg',
   descriptor: galleryDescriptor,
+}, {
+  // Oscillator — the ordinary East Coast VCO, beside the Complex Oscillator rather than competing
+  // with it: one oscillator, four phase-coherent shapes, through-zero linear FM, and a feedback knob
+  // that modulates its own phase. 13 HP.
+  descriptorId: vcoDescriptor.id,
+  name: 'Oscillator',
+  hp: 10,
+  panelUrl: 'modules/oscillator/panel.svg',
+  descriptor: vcoDescriptor,
+}, {
+  // Noise — five colours from one generator, no controls. First module built from the panel grammar
+  // (panel/grammar.js): its whole faceplate is a list of five jacks.
+  descriptorId: noiseDescriptor.id,
+  name: 'Noise',
+  hp: 5,
+  panelUrl: 'modules/noise/panel.svg',
+  descriptor: noiseDescriptor,
 }, {
   // Sine Source — authored in the panel editor (panel + descriptor drawn), factory
   // hand-written. The Phase 6 closed-loop proof: a drawn module that loads and plays.
@@ -491,7 +515,21 @@ async function boot() {
   function onEdit() { markDirty(); autosaveSession(); if (mirror) mirror.project(); updateTrace(); pushMenuState(); }
   // After loading any patch (open/recent/reopen/session-resume/AI-apply): refresh the notes card, and let
   // a note that asked to greet the user pop open.
-  function afterLoad() { if (!notes) return; notes.refresh(); if (rack.patchNotesOpen) notes.open(); }
+  // After ANY patch arrives — opened, dropped, pasted, or an example — the engine goes OFF. A patch
+  // that started sounding the moment it loaded would be making a noise nobody asked for, from a rack
+  // the reader has not even looked at yet. It is the same rule the app starts under: sound happens
+  // because you asked for it. Turning the engine off is what guarantees it, so it is cleared last.
+  function silenceAfterLoad() {
+    if (!mixRec) return;
+    rack.applyParam(mixRec, 'masterEnable', 'off');
+    rack.applyParam(mixRec, 'monitorEnable', 'off');
+    rack.applyParam(mixRec, 'engine', 'off');
+  }
+
+  // A patch that asks to show its notes on opening does so — unless a DEMO opened it. A demo is
+  // already narrating this patch, and a notes panel unfurling over the modules it is talking about
+  // hides the very thing being pointed at.
+  function afterLoad() { silenceAfterLoad(); if (!notes) return; notes.refresh(); if (rack.patchNotesOpen && !demoActive) notes.open(); }
 
   // Master level lives on the mixer module's own faceplate; this is just the last read of
   // it, kept for the AI mirror's `master` field. Re-read it whenever the fader may have
@@ -638,7 +676,11 @@ async function boot() {
   function autosaveSession() { if (!booted || demoActive) return; clearTimeout(sessTimer); sessTimer = setTimeout(() => { try { localStorage.setItem(SESSION_KEY, patchText()); } catch (_e) { /* no storage */ } }, 400); }
   function flushSession() { if (!booted || demoActive) return; clearTimeout(sessTimer); try { localStorage.setItem(SESSION_KEY, patchText()); } catch (_e) { /* no storage */ } }
   // Guard the destructive actions (New / Open / Reopen) when there's unsaved work.
-  const okToDiscard = () => !dirty || window.confirm('You have unsaved changes. Discard them?');
+  // A DEMO is never asked. It reached File ▸ Examples by script, the user's own patch was snapshotted
+  // before the demo began and is put back when it ends — so the one thing this prompt protects is
+  // already safe, and a modal appearing over a demonstration is a dead end: the synthetic pointer
+  // cannot press it.
+  const okToDiscard = () => !dirty || demoActive || window.confirm('You have unsaved changes. Discard them?');
 
   // The rack a brand-new user gets on a first run, and exactly what File > New rebuilds.
   // Shared between the two so they can never drift apart.
@@ -773,6 +815,7 @@ async function boot() {
 
   // The commands the two menus share. Both the in-window menu and the native one call THESE, so
   // there is one implementation of each and they can't drift apart.
+  let libraryTheme = null;   // set once the library exists; the theme toggle re-skins its thumbnails
   const toggleDark = () => {
     const d = !rack.isDark();
     rack.setDarkMode(d);   // re-skins every module, the pinned mixer included
@@ -780,6 +823,7 @@ async function boot() {
     if (notes) notes.applyTheme();
     if (composer) composer.applyTheme();
     if (about) about.applyTheme();
+    if (typeof libraryTheme === 'function') libraryTheme();
     try { localStorage.setItem('wcoast.dark', d ? '1' : '0'); } catch (_e) { /* no storage */ }
     pushMenuState();
   };
@@ -950,6 +994,17 @@ async function boot() {
     refreshRecent().then(() => rack.openMenuBar(x, y, appMenuItems(rec, rowIndex)));
   };
 
+  // The MODULE LIBRARY, on right-click over empty rack background. `at` carries the point that was
+  // clicked, so the module lands there rather than at the end of the row.
+  const library = createLibrary({
+    types: MODULE_TYPES,
+    isTaken: (id) => rack.hasModule(id),
+    isDark: () => rack.isDark(),
+    onChoose: (id, at) => rack.addModuleAt(id, at),
+  });
+  rack.onLibrary = (at) => library.show(at);
+  libraryTheme = library.refreshTheme;
+
   // The docked bar. It hands the rack a PROVIDER rather than a fixed set of items, so each menu
   // is rebuilt as it opens — a bar that lives all session would otherwise keep the Undo state,
   // the Recent list and the light/dark label it happened to be born with.
@@ -1030,7 +1085,13 @@ async function boot() {
     tour = createTour({ steps, onExternal: (url) => rack._openExternal(url), isDark: () => rack.isDark(),
       onSee: (t, el) => (t ? rack.showCallout(t, el) : rack.clearCallout()),
       canSee: (t) => rack.calloutAvailable(t),
-      homePos: (w, h) => rack.tutorialHomePos(w, h) });
+      homePos: (w, h) => rack.tutorialHomePos(w, h),
+      // Reading a block aloud: the same pre-rendered narration the demos use, with no animation.
+      onSpeak: (text, done) => rack.demo && rack.demo.speakText(text, done),
+      onStopSpeak: () => rack.demo && rack.demo.stopSpeech(),
+      // DEMONSTRATE hands over: the tutorial closes and the transport takes its place. They never
+      // share the screen — the demo needs the rack, and the tutorial window sits over it.
+      onDemonstrate: (id, sectionId) => demonstrate(id, sectionId) });
     rack.onTutorial = () => tour.open(0);
     if (!tourSeen()) tour.open(0);
   } catch (e) {
@@ -1176,6 +1237,19 @@ async function boot() {
   // script, and for the reader who wants to see a step again.
   rack.demo = createDemoRunner(rack, {
     registerAudio: (node) => rack.addAudioTap(node),   // narration goes into a recording, not just the speakers
+    // Load a shipped example, the same route File ▸ Examples takes, so a demo can start from a patch
+    // that already works rather than building one first.
+    loadExample: async (name) => {
+      const entry = (examples || []).find((e) => e.name === name || e.file === name);
+      if (!entry) { log(`no example named "${name}"`); return; }
+      try {
+        const res = await fetch('examples/' + entry.file);
+        if (!res.ok) throw new Error(String(res.status));
+        await restore(await res.json(), rack, mixerIO, { keepKeys: true });
+        syncMaster();
+        silenceAfterLoad();   // an example arrives silent, like every other patch
+      } catch (e) { log(`example load failed: ${e.message}`); }
+    },
     onAvoid: (region) => { if (demoPanel) demoPanel.avoid(region); },   // the transport window steps out of the work
     panelRect: () => (demoPanel ? demoPanel.rect() : null),             // ...and the card then keeps off the window
     snapshot: () => ({ patch: patchText(), page: rack.page, view: rack.viewState() }),
@@ -1224,19 +1298,35 @@ async function boot() {
       // A demo STOPPED mid-way leaves you standing on the step it reached — that is what stopping is
       // for while authoring. Only a demo that ran to its end puts your patch back on its own.
       if (demoStop) { demoStepping = demoStepping || true; showPos(); }
-      else { demoActive = false; await releaseUserState(); }
+      else {
+        demoActive = false;
+        await releaseUserState();
+        // A finished demo STAYS. The rack is left as the demo built it and the transport is still
+        // there, so the obvious next thing — watch that again — is one press away. Going back is the
+        // reader's decision, not the clock's: the button says so.
+        if (demoPanel) demoPanel.setExitLabel(cameFromTutorial ? 'Return to tutorial' : 'Close');
+      }
     }
   }
 
   let overrideRate = 1, loopWanted = false;   // window controls: pace vs legibility, attract loop
 
+  // A LATCH TAKEN SYNCHRONOUSLY, before the first await. Every other guard here — `rack.demo.running`,
+  // `demoActive` — is only set once the script has been fetched and the run has actually begun, so two
+  // presses a moment apart both sailed past them and started two demos over the top of each other. A
+  // reader who presses again because nothing has visibly happened yet is doing the obvious thing.
+  let demoStarting = false;
+
   async function runSelected() {
-    if (!selectedEntry || rack.demo.running || demoActive) return;
-    let obj; try { obj = await loadDemo(selectedEntry); } catch (e) { log(`demo load failed: ${e.message}`); return; }
-    const base = Number(obj.rate) > 0 ? Number(obj.rate) : 1;
-    const eff = { ...obj, rate: base * overrideRate };   // global rate override on top of the reel's own
-    demoPromise = runDemo(eff, selectedEntry.title || selectedEntry.id, { loop: loopWanted });
-    return demoPromise;
+    if (!selectedEntry || demoStarting || rack.demo.running || demoActive) return;
+    demoStarting = true;
+    try {
+      let obj; try { obj = await loadDemo(selectedEntry); } catch (e) { log(`demo load failed: ${e.message}`); return; }
+      const base = Number(obj.rate) > 0 ? Number(obj.rate) : 1;
+      const eff = { ...obj, rate: base * overrideRate };   // global rate override on top of the reel's own
+      demoPromise = runDemo(eff, selectedEntry.title || selectedEntry.id, { loop: loopWanted });
+      return demoPromise;
+    } finally { demoStarting = false; }
   }
   async function stopDemo() { if (rack.demo.running) { demoStop = true; rack.demo.stop(); } if (demoPromise) { try { await demoPromise; } catch (_e) { /* ignore */ } } }
   async function restartDemo() { await stopDemo(); runSelected(); }
@@ -1284,6 +1374,43 @@ async function boot() {
     log(`demo reloaded at step ${rack.demo.index + 1}`);
   }
 
+  // ---- the tutorial's hand-off ---------------------------------------------
+  // Pressing Demonstrate in a section closes the tutorial and opens the transport on that demo, in its
+  // reader face. Exiting the transport reopens the tutorial where it was left. One or the other is on
+  // screen, never both: the demo needs the rack, and the tutorial window sits over it.
+  let cameFromTutorial = null;   // the section id to return to, or null when opened from the DEV menu
+
+  async function demonstrate(id, sectionId) {
+    if (demoStarting || rack.demo.running || demoActive) return;   // a second press while one is starting
+    const entry = demoList.find((d) => d.id === id);
+    if (!entry) { log(`no demo named "${id}"`); return; }
+    cameFromTutorial = sectionId || true;
+    if (tour) tour.close();
+    selectedEntry = entry;
+    demoPanel.setMode('reader');
+    demoPanel.setTitle(entry.title || entry.id);
+    demoPanel.setExitLabel('Return to tutorial');
+    demoPanel.open();
+    await exitStepping();
+    runSelected();
+  }
+
+  // Put the transport away and open the tutorial at the section that launched the demo. Shared by the
+  // Exit button and by a demo reaching its own end, so both leave you in the same place.
+  function returnToTutorial() {
+    demoPanel.close();
+    const back = cameFromTutorial; cameFromTutorial = null;
+    if (back && tour) tour.open(typeof back === 'string' ? back.replace(/^sec-/, '') : 0);
+  }
+
+  // Leaving the transport by hand. From the tutorial it goes back there, at the section you pressed
+  // the play button in; opened from the DEV menu it simply closes.
+  async function leaveDemo() {
+    await stopDemo();
+    await exitStepping();
+    returnToTutorial();
+  }
+
   selectedEntry = demoList[0] || null;
   demoPanel = createDemoPanel({
     demos: demoList,
@@ -1301,8 +1428,10 @@ async function boot() {
     onRate: (v) => { if (v > 0) overrideRate = v; },
     onCaptions: (v) => rack.demo.setCaptions(!!v),
     onStep: stepDemo, onBack: backDemo, onPlay: playStepDemo, onReload: reloadDemo,
+    onClose: leaveDemo,
   });
-  rack.openDemoPanel = () => demoPanel.open();
+  // The DEV menu opens it as an AUTHOR tool — picker, Play and Reload — and closing it just closes it.
+  rack.openDemoPanel = () => { cameFromTutorial = null; demoPanel.setMode('author'); demoPanel.setExitLabel('Close'); demoPanel.open(); };
 
   window.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && rack.demo.running) { stopDemo(); return; }

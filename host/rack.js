@@ -1070,6 +1070,34 @@ export class Rack {
   // opts.centred treats (x, y) as the menu's CENTRE rather than its top-left (used by F1 ▸ Help).
   openMenu(x, y, items, opts) { this._openMenu(x, y, items, opts); }
 
+  // ---- menus, for a scripted demo -------------------------------------------
+  // A demo drives menus BY NAME rather than by faking clicks: it asks for the item's element so the
+  // synthetic pointer can travel to it, then runs the very function the click handler runs.
+  menuItemEl(label) {
+    const want = String(label).replace(/^[✓\s]+/, '').trim().toLowerCase();
+    const roots = [...this._openSubs].reverse().concat(this._menuEl ? [this._menuEl] : []);
+    for (const root of roots) {
+      for (const el of root.querySelectorAll('.rack-menu-item')) {
+        const text = (el.textContent || '').replace(/^[✓\s]+/, '').trim().toLowerCase();
+        if (text === want || text.startsWith(want)) return el;
+      }
+    }
+    return null;
+  }
+  activateMenuItem(el) { if (el && el._activate) { el._activate(); return true; } return false; }
+  menuIsOpen() { return !!this._menuEl; }
+
+  // Open the menu a right-click on a TERMINAL raises, at a given point. The same entry point the
+  // real gesture uses, so the items and their behaviour are not a second copy.
+  openTerminalMenu(key, portId, x, y) {
+    const el = this._jackElement(key, portId);
+    if (!el) return false;
+    const ev = { clientX: x, clientY: y, target: el, preventDefault() {}, stopPropagation() {} };
+    if (typeof this._onJackContextMenu !== 'function') return false;
+    this._onJackContextMenu(ev, key, portId);
+    return true;
+  }
+
   // Where the tutorial should open so it doesn't cover the modules it describes: just clear of the
   // rightmost module, near the top. Returns null when there isn't room, and the card falls back to
   // its own default placement.
@@ -7702,12 +7730,32 @@ export class Rack {
   }
 
   // ---- context menus ----
+  // Right-click on empty rack background opens the MODULE LIBRARY, at the point you clicked — which
+  // is also where the chosen module will land. The application menu used to be here; it is still on
+  // the bar and under the title-bar hamburgers, and this gesture is worth more spent on the thing you
+  // reach for constantly. The click point travels with the request, in rack millimetres, because by
+  // the time a module is chosen the pointer is somewhere else entirely.
   _onRowContextMenu(e, rowIndex) {
     if (e.target.closest('.rack-module')) return;
     e.preventDefault();
-    // Background right-click still reaches the application menu, but as the BAR — so there is one
-    // main menu with one shape, wherever it is summoned from.
+    if (this.onLibrary) {
+      const mm = this._clientToMm(e.clientX, e.clientY);
+      this.onLibrary({ row: rowIndex, xMm: mm.x, page: this.page });
+      return;
+    }
     if (this.onAppMenuBar) this.onAppMenuBar(e.clientX, e.clientY, null, rowIndex);
+  }
+
+  // Add a module AT a point: the row that was clicked, slid left until it butts against whatever is
+  // already there. `_snapLeftX` finds the right-hand edge of the nearest module to the left of the
+  // cursor, so nothing is left with a gap in front of it and no manual nudging is needed.
+  async addModuleAt(descriptorId, at) {
+    if (!at || at.row == null) return this.addModuleFromMenu(descriptorId, null);
+    if (at.page && at.page !== this.page && this._hasPage(at.page)) this.selectPage(at.page);
+    const row = Math.max(0, Math.min(this.rowCount - 1, at.row));
+    const rec = await this._addModuleWithUndo(descriptorId, row, this._snapLeftX(row, at.xMm));
+    if (rec) this._panToModule(rec);
+    return rec;
   }
 
   // Add a module from Rack ▸ Add module: append it to the END of the row the menu was opened over — the
@@ -7897,14 +7945,18 @@ export class Rack {
         return;
       }
       this._closeMenu();
-      for (const t of built.titles) t.el.classList.toggle('open', t.idx === i);
-      openIdx = i;
       const r = btn.getBoundingClientRect();
       const fresh = provider ? provider() : null;
       const use = (fresh && fresh[i] && fresh[i].submenu) || items[i].submenu;
       this._openMenu(r.left, r.bottom + 2, use);
+      // Light the title AFTER the menu is up. _openMenu tears down whatever was showing, and that
+      // teardown puts the titles out (see _closeMenu) — so lighting first would light nothing.
+      for (const t of built.titles) t.el.classList.toggle('open', t.idx === i);
+      openIdx = i;
     };
     const built = this._buildBarTitles(items, drop);
+    this._dockDrop = drop; this._dockTitles = built.titles;   // see openAppMenu
+    this._dockOnClose = () => { for (const t of built.titles) t.el.classList.remove('open'); openIdx = -1; };
     built.bar.classList.add('docked');
     this._dockedBar = built.bar;
     const rackEl = document.getElementById('rack') || this.container;
@@ -7926,7 +7978,22 @@ export class Rack {
     document.addEventListener('pointerdown', this._dockAway, true);
   }
 
+  // Open one of the menu bar's menus BY NAME — File, Edit, View — as though its title had been
+  // pressed. Deliberately without any pointer choreography: a demo that walks the pointer to the
+  // top-left corner of the window and back spends several seconds saying nothing, and the menu bar
+  // is the one part of the app a reader already knows how to use. The menu simply appears, and the
+  // pointer joins it at the item that matters.
+  openAppMenu(label) {
+    if (!this._dockDrop || !this._dockTitles) return null;
+    const want = String(label).trim().toLowerCase();
+    const t = this._dockTitles.find((x) => (x.el.textContent || '').trim().toLowerCase() === want);
+    if (!t) return null;
+    this._dockDrop(t.idx, t.el);
+    return t.el;
+  }
+
   undockMenuBar() {
+    if (this._dockDrop) { this._dockDrop = null; this._dockTitles = null; this._dockOnClose = null; }
     if (this._dockAway) { document.removeEventListener('pointerdown', this._dockAway, true); this._dockAway = null; }
     if (this._dockedBar) { this._dockedBar.remove(); this._dockedBar = null; }
     this._homeTabBar();   // ...and stand alone above the rack when there is no bar to ride in
@@ -8166,6 +8233,9 @@ export class Rack {
         item.addEventListener('mouseenter', (e) => this._hoverMainItem(item, () => this._openSubmenu(item, it.submenu), null, e));
         item.addEventListener('mouseleave', () => this._leaveMainItem(item));
         item.addEventListener('click', (e) => { e.stopPropagation(); this._openSubmenu(item, it.submenu); });
+        // The same act, reachable by name — see activateMenuItem. One function, so a scripted demo
+        // opening a submenu can never diverge from what your own click does.
+        item._activate = () => this._openSubmenu(item, it.submenu);
       } else if (it.disabled) {
         item.classList.add('disabled');
         item.addEventListener('mouseenter', (e) => this._hoverMainItem(item, () => this._closeSubs(), null, e));
@@ -8178,7 +8248,9 @@ export class Rack {
         const onDwell = it.onDwell ? () => { this._closeSubs(); it.onDwell(); } : () => this._closeSubs();
         item.addEventListener('mouseenter', (e) => this._hoverMainItem(item, onDwell, it.onLeave || null, e));
         item.addEventListener('mouseleave', () => this._leaveMainItem(item));
-        item.addEventListener('click', (e) => { if (it.latch) this._peekLatched = true; this._closeMenu(); if (it.action) it.action(e); });
+        const run = (e) => { if (it.latch) this._peekLatched = true; this._closeMenu(); if (it.action) it.action(e); };
+        item.addEventListener('click', run);
+        item._activate = run;
       }
       (group || menu).appendChild(item);
       // The first connected row is the focus: the menu opens with it under the
@@ -8237,6 +8309,10 @@ export class Rack {
     clearTimeout(this._menuDwellTimer); this._menuDwellTimer = null;
     this._hoverItem = null; this._hoverSwitch = null; this._hoverLeave = null; this._dwellAnchor = null; this._peekLatched = false;
     if (this._menuEl) { this._menuEl.remove(); this._menuEl = null; }
+    // A DOCKED BAR'S TITLE MUST GO OUT WITH ITS MENU. Choosing an item closes the drop-down from
+    // inside, past the click-away handler that would otherwise have unlit the title — so without
+    // this, File stays highlighted over a menu that is no longer there.
+    if (this._dockOnClose) this._dockOnClose();
   }
 
   // The pointer is over a top-level item: remember it and its action (open its submenu, or
@@ -8345,6 +8421,7 @@ export class Rack {
         item.appendChild(arrow);
         item.addEventListener('mouseenter', () => this._openSubmenu(item, it.submenu, depth + 1));
         item.addEventListener('click', (e) => { e.stopPropagation(); this._openSubmenu(item, it.submenu, depth + 1); });
+        item._activate = () => this._openSubmenu(item, it.submenu, depth + 1);   // ...and by name, for a demo
         sub.appendChild(item);
         continue;
       }
@@ -8358,7 +8435,11 @@ export class Rack {
       });
       if (it.onLeave) item.addEventListener('mouseleave', () => { if (this._auditionLeave === it.onLeave) this._auditionLeave = null; it.onLeave(); });
       if (it.disabled) item.classList.add('disabled');
-      else item.addEventListener('click', () => { this._closeMenu(); it.action(); });
+      else {
+        const run = () => { this._closeMenu(); it.action(); };
+        item.addEventListener('click', run);
+        item._activate = run;   // one function, so a demo choosing "First drone" does what your click does
+      }
       sub.appendChild(item);
     }
     return sub;

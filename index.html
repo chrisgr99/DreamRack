@@ -31,7 +31,7 @@
 
     /* floating signal scopes + their callouts */
     .scope { position: fixed; z-index: 1250; background: #0d0f0c; border: 1px solid #3ad16b; border-radius: 6px;
-      box-shadow: 0 6px 18px rgba(0,0,0,0.5); padding: 0; cursor: default; }
+ padding: 0; cursor: default; }
     .scope-canvas { display: block; border-radius: 3px; }
     /* A small clickable nub at the bottom-centre of the display opens the values panel. */
     /* Values panel below the display: spin boxes for the two scales. */
@@ -105,7 +105,7 @@
        so the leader lines and handles would lag behind their scopes/monitors. Hide them for the gesture. */
     body.view-navigating .scope-callouts, body.view-navigating .scope-dot { display: none; }
     .mon { position: fixed; z-index: 1250; width: 34px; height: 34px; border-radius: 50%; background: #0d0f0c; border: 1px solid #8a8d92;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.5); cursor: default; display: flex; align-items: center; justify-content: center; color: #cfe8d4; }
+ cursor: default; display: flex; align-items: center; justify-content: center; color: #cfe8d4; }
     .mon svg:not(.mon-arc) { width: 15px; height: 15px; display: block; }
     .mon-tick { position: absolute; left: 50%; top: 2.5px; width: 2px; height: 6px; margin-left: -1px; background: #dfeee3; border-radius: 1px; transform-origin: 50% 14.5px; pointer-events: none; }
     .mon-arc { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; }
@@ -113,8 +113,8 @@
     .mon-close { position: absolute; top: -3px; left: -3px; width: 11px; height: 11px; border-radius: 50%; background: #ff5f57; color: rgba(70,8,8,0.55); font: 700 9px/1 sans-serif; display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.1s; cursor: pointer; z-index: 1; }
     .mon:hover .mon-close { opacity: 0.9; }
     .mon-close:hover { opacity: 1; }
-    .mon-live { border-color: #3ad16b; box-shadow: inset 0 0 0 2px #3ad16b, 0 4px 12px rgba(0,0,0,0.5); }   /* green: this monitor is feeding the enabled monitor bus */
-    .mon-muted { border-color: #e22a2a; box-shadow: inset 0 0 0 2px #e22a2a, 0 4px 12px rgba(0,0,0,0.5); }   /* muted: red ring, thickened inward */
+    .mon-live { border-color: #3ad16b; box-shadow: inset 0 0 0 2px #3ad16b; }   /* green: this monitor is feeding the enabled monitor bus */
+    .mon-muted { border-color: #e22a2a; box-shadow: inset 0 0 0 2px #e22a2a; }   /* muted: red ring, thickened inward */
     .mon-muted::after { content: ''; position: absolute; left: 3px; right: 3px; top: calc(50% - 1.5px); height: 3px; background: #e22a2a; border-radius: 1px; transform: rotate(-45deg); pointer-events: none; }   /* red diagonal, upper-right to lower-left, as thick as the ring */
     .mixer-monitor-mode [data-wcoast-param^="level"] { opacity: 0.32; transition: opacity 0.15s; }   /* channels grayed while the monitor bus is the output */
     /* Engine off: the two bus lamps keep their own state but go dim, so a lit master lamp over
@@ -131,7 +131,7 @@
        window. A menu bar's shape and reach, with none of the vertical space given up to it. */
     .rack-menubar { position: fixed; z-index: 1305; display: flex; align-items: stretch;
       background: var(--panel); border: 1px solid var(--line); border-radius: 7px;
-      box-shadow: 0 6px 22px rgba(0,0,0,0.5); padding: 3px 5px; gap: 0.34em;
+ padding: 3px 5px; gap: 0.34em;
       font: 500 13px/1 -apple-system, system-ui, sans-serif; user-select: none; }
     /* As narrow as the words themselves: no column padding, one space between items, so each
        title takes exactly the width of its own text. "DR" is short and "View" is longer, and the
@@ -160,8 +160,9 @@
       position: fixed; z-index: 1350; width: 30rem; min-width: 20rem; min-height: 130px;
       max-height: 90vh; max-width: 95vw;
       overflow: hidden; display: flex; flex-direction: column;
+      will-change: transform;                 /* its own compositing layer, so the rack is not repainted with it */
       background: var(--t-face); color: var(--t-ink);
-      border: 1.5px solid var(--t-edge); border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+      border: 1.5px solid var(--t-edge); border-radius: 8px;
       font: 400 0.8rem/1.5 -apple-system, system-ui, sans-serif; user-select: none; -webkit-user-select: none; }
     .tour-card.theme-dark { --t-face: #262629; --t-ink: #b8b8bc; --t-dim: #8a8a90; --t-edge: #d2d2d6;
       --t-sep: rgba(184,184,188,0.24); --t-accent: #e0a353; --t-tint: rgba(224,163,83,0.10); }
@@ -171,16 +172,20 @@
     /* The show-me marker: an orange rounded square carrying a black question mark, drawn in the
        callout's own orange so the marker and the ring it raises read as one mechanism. No round
        button behind it — a circle behind a square looked accidental. */
-    .tour-eye { display: inline-flex; align-items: center; justify-content: center; vertical-align: baseline;
-      width: 1em; height: 1em; margin: 0 0.2em; padding: 0; border: none; border-radius: 3px;
-      user-select: none; -webkit-user-select: none;
-      background: none; color: #ff7300; font: inherit; line-height: 1; cursor: pointer; }
+    /* The same chip as the listen and play buttons: black fill, orange border, near-white mark. It was
+       a black question mark on a filled orange square, which made it the brightest thing on a page it
+       appears in every other sentence of. */
+    .tour-eye { display: inline-flex; align-items: center; justify-content: center; vertical-align: -0.15em;
+      width: 1.15em; height: 1.15em; margin: 0 0.15em; padding: 0.1em; border-radius: 4px;
+      user-select: none; -webkit-user-select: none; box-sizing: border-box;
+      background: #000; border: 1px solid var(--t-accent); color: rgba(255,255,255,0.8);
+      font: inherit; line-height: 1; cursor: pointer; }
     .tour-eye svg { width: 100%; height: 100%; fill: currentColor; display: block; }
-    .tour-eye:hover { background: none; filter: brightness(1.25); }
-    /* Lit = this marker's callout is the one on screen. A white ring reads on the orange without
-       repainting the glyph, so the square stays the same object it was before it was clicked. */
-    .tour-eye.lit { background: none; box-shadow: 0 0 0 2px #ffffff; border-radius: 4px; }
-    .tour-eye.unavailable { color: var(--t-dim); cursor: default; opacity: 0.5; }
+    .tour-eye:hover { color: #fff; border-color: #fff; }
+    /* Lit = this marker's callout is the one on screen. The mark itself goes to the callout's orange,
+       which is the colour of the ring it has just raised. */
+    .tour-eye.lit { color: var(--t-accent); border-color: #fff; }
+    .tour-eye.unavailable { color: var(--t-dim); border-color: var(--t-dim); cursor: default; opacity: 0.6; }
     /* The callout itself: a full-window overlay ABOVE the rack and the card, and click-through, so
        the panel stays live and can be worked while it's ringed. */
     /* An <svg> is a replaced element: inset:0 alone leaves it at its 300x150 intrinsic size, which
@@ -217,7 +222,7 @@
        dimmer still. A lifted background and a soft shadow put the head on its own plane. */
     .tour-head { flex: none; display: flex; align-items: center; gap: 8px; padding: 7px 8px 7px 11px;
       border-bottom: 2.5px solid var(--t-edge); background: rgba(128,128,128,0.10);
-      box-shadow: 0 2px 6px rgba(0,0,0,0.22); cursor: move; touch-action: none;
+ cursor: move; touch-action: none;
       position: relative; z-index: 1; }
     .tour-title { flex: 1 1 auto; font-weight: 600; }
     .tour-x { flex: none; width: 1.3em; height: 1.3em; padding: 0; background: none; border: none;
@@ -234,7 +239,13 @@
        Deliberately NO scrollbar-width/scrollbar-color: setting either makes Chromium ignore the
        ::-webkit-scrollbar rules below and fall back to a macOS OVERLAY bar, which fades out when
        idle — and an invisible bar means a reader can't tell the step continues below the fold. */
-    .tour-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain;
+    /* SCROLL COST. The handler is cheap; the paint was not. The card sits over the rack — a large,
+       SVG-heavy DOM — and without containment the browser had to consider all of that on every
+       scroll of a five-thousand-pixel document carrying nine hundred elements. `contain: paint` says
+       nothing inside can draw outside, so the scroller becomes its own raster; promoting the card
+       keeps the rack behind it off the repaint entirely; and containing each section stops one
+       section's layout from being re-examined when another moves. */
+    .tour-body { contain: paint; flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain;
       padding: 10px 11px; user-select: text; -webkit-user-select: text; }
     .tour-body::-webkit-scrollbar { width: 9px; }
     .tour-body::-webkit-scrollbar-track { background: transparent; }
@@ -249,7 +260,7 @@
        (Firefox, Safari). Chromium gets a real OS window instead and never draws this. */
     .video-window { position: fixed; right: 24px; bottom: 24px; z-index: 1400;
       display: flex; flex-direction: column; background: #000; resize: both; overflow: hidden;
-      border: 1px solid #444; border-radius: 6px; box-shadow: 0 10px 30px rgba(0,0,0,0.6); }
+      border: 1px solid #444; border-radius: 6px; }
     .video-window-bar { flex: none; display: flex; align-items: center; justify-content: space-between;
       padding: 3px 4px 3px 8px; background: #1b1b1e; color: #c8c8cc; cursor: grab;
       font: 600 11px/1.4 -apple-system, system-ui, sans-serif; user-select: none; }
@@ -265,7 +276,7 @@
        it is frozen. No title bar — at 160px wide a bar spends a tenth of the picture saying what
        the object already says. */
     .video-monitor { position: fixed; z-index: 1260; background: #000; padding: 0;
-      border: 1px solid #3ad16b; border-radius: 6px; box-shadow: 0 6px 18px rgba(0,0,0,0.55);
+      border: 1px solid #3ad16b; border-radius: 6px;
       cursor: var(--move); }
     .video-monitor.frozen { border-color: #e22a2a; }
     .video-monitor-canvas { display: block; width: 80px; height: 45px; border-radius: 5px; }
@@ -287,7 +298,7 @@
     .readout-editor { position: fixed; z-index: 1450; width: 340px; display: flex;
       flex-direction: column; gap: 6px; padding: 8px; border-radius: 8px;
       background: #cfcfcf; color: #163a69; border: 1.5px solid #141414;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.5); font: 400 13px/1.4 -apple-system, system-ui, sans-serif; }
+ font: 400 13px/1.4 -apple-system, system-ui, sans-serif; }
     .readout-editor.theme-dark { background: #262629; color: #b8b8bc; border-color: #d2d2d6; }
     .readout-editor-title { font-weight: 600; cursor: grab; user-select: none; }
     .readout-editor-text { width: 100%; min-height: 54px; resize: vertical; padding: 5px 6px;
@@ -300,7 +311,7 @@
       border: 1px solid currentColor; background: none; color: inherit; cursor: pointer; font: inherit; }
     .video-follow { position: fixed; z-index: 1500; width: 96px; height: 54px;
       pointer-events: none; background: #000; border: 1px solid #555; border-radius: 4px;
-      box-shadow: 0 4px 14px rgba(0,0,0,0.6); }
+ }
     /* One continuous document: each `##` in tutorial.md is a section with its own heading and a
        seam above it. The head reports which section you are scrolled into, so the heading here is
        for scanning while you scroll rather than for telling you where you are. */
@@ -309,8 +320,31 @@
     /* As bright as the seam under the title bar — same --t-edge — so a section boundary is
        unmistakable. Thinner than the head's 2.5px, so the head still reads as the heavier line
        and the hierarchy survives: window chrome, then section, then text. */
+    .tour-section { contain: layout style; }
     .tour-section hr { border: none; border-top: 1.5px solid var(--t-edge);
       margin: 18px 0 14px; }
+    /* A block and its GUTTER, side by side. The gutter is a column down the LEFT margin: under
+       magnification the eye returns to the left edge, so that is where a control has to be to be
+       found, and a column keeps the prose's left edge straight. It holds what you can do with this
+       paragraph — listen on top, and where there is one, a play triangle below it. */
+    .tour-row { display: flex; align-items: flex-start; gap: 8px; }
+    .tour-row > .tour-p, .tour-row > .tour-try { flex: 1 1 auto; min-width: 0; }
+    .tour-row + .tour-row { margin-top: 10px; }
+    .tour-gutter { flex: none; width: 22px; display: flex; flex-direction: column; gap: 4px; margin-top: 1px; }
+    /* ORANGE OUTLINE, BLACK FILL, near-white glyph. The black is what makes one small control legible
+       on either face — the tutorial has a light one and a dark one — and it is the same chip the demo's
+       gesture badge wears, so everything this subsystem puts on screen reads as one family. Filling
+       the button with orange made it shout louder than the paragraph it belongs to.
+       The LEGEND draws the whole button rather than a bare glyph: the line then shows you the thing
+       you are about to look for, which is the entire point of a legend. */
+    .tour-listen, .tour-demo, .tour-icon { border-radius: 5px; line-height: 0;
+      background: #000; border: 1px solid var(--t-accent); color: rgba(255,255,255,0.8); }
+    .tour-listen, .tour-demo { width: 22px; height: 22px; padding: 3px; cursor: pointer; }
+    .tour-listen svg, .tour-demo svg, .tour-icon svg { width: 100%; height: 100%; display: block; }
+    .tour-listen:hover, .tour-demo:hover { color: #fff; border-color: #fff; }
+    .tour-listen.on { color: var(--t-accent); }
+    .tour-icon { display: inline-block; width: 17px; height: 17px; padding: 2px; vertical-align: -4px;
+      margin-right: 3px; box-sizing: border-box; }
     .tour-p ul { margin: 4px 0 0; padding-left: 15px; }
     .tour-p li { margin: 3px 0; }
     .tour-p li::marker { color: var(--t-dim); }
@@ -373,16 +407,16 @@
        pointer target whatever its visibility, so hiding the module alone left its knobs turnable
        through the page in front of them. */
     .rack-module.off-page, .rack-module.off-page * { pointer-events: none !important; }
+    /* NO DROP SHADOW. House rule, and a large performance one: a CSS filter forces Chromium to
+       rasterise the element's whole subtree — an entire inline SVG faceplate — before it can
+       composite, so anything drawn over the rack waited on every module first. The faceplates' own
+       jacks, knobs and lamps carried an SVG drop-shadow each (79 on the mixer alone) for the same
+       cost; those are gone too. Line art reads more crisply without them. */
     .rack-module {
       position: absolute; top: 0; cursor: default;
       user-select: none; -webkit-user-select: none; touch-action: none;
-      filter: drop-shadow(0 2px 3px rgba(0,0,0,0.5));
     }
     .rack-module.dragging { opacity: 0.85; z-index: 20; }
-    /* During a view glide, drop the per-module drop-shadows: a filter on every module makes Chromium
-       rasterise all of them before it can start compositing the rack's transform, which delays the start
-       of the zoom/pan by hundreds of ms. Without them the transition begins on the very next frame. */
-    body.view-easing .rack-module { filter: none; }
     .rack-module svg { display: block; width: 100%; height: 100%; }
     /* Overview navigator: press Option to see the whole rack fit to the window and aim the viewport. */
     .rack-overview-backdrop { position: fixed; inset: 0; z-index: 4000; background: var(--bg); pointer-events: none; }   /* opaque — the frozen fit-to-window picture fully replaces the live view (fills any letterbox margin) */
@@ -399,7 +433,7 @@
     .rack-menu {
       position: fixed; z-index: 1400; min-width: 92px; max-height: 72vh; overflow-y: auto; font-size: 12px; line-height: 1.25;
       background: var(--panel); border: 1px solid var(--line); border-radius: 8px;
-      padding: 3px; box-shadow: 0 6px 20px rgba(0,0,0,0.5);
+      padding: 3px;
     }
     .rack-menu-header { padding: 5px 10px 2px; font-size: 10px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: var(--ink-dim); }
     .rack-menu-header.clickable { cursor: pointer; user-select: none; }
@@ -444,7 +478,7 @@
     .rack-menubar.theme-dark { border-color: #d2d2d6; }
     .confirm-overlay { position: fixed; inset: 0; z-index: 3200; background: rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; }
     .confirm-box { background: var(--panel); color: var(--ink); border: 1px solid var(--line); border-radius: 10px; padding: 18px 20px;
-      min-width: 240px; max-width: 360px; box-shadow: 0 12px 36px rgba(0,0,0,0.55); font: 13px/1.45 -apple-system, system-ui, sans-serif; }
+      min-width: 240px; max-width: 360px; font: 13px/1.45 -apple-system, system-ui, sans-serif; }
     .confirm-msg { margin-bottom: 16px; }
     .confirm-btns { display: flex; justify-content: flex-end; gap: 8px; }
     .confirm-btn { padding: 5px 14px; border-radius: 6px; border: 1px solid var(--line); background: transparent; color: var(--ink); cursor: pointer; font: inherit; }
@@ -519,7 +553,7 @@
          caps actually need spends that space on the glyphs instead. */
       font: 600 14px/11px system-ui, -apple-system, sans-serif;
       padding: 1px 7px 2px; border-radius: 3px; white-space: nowrap;
-      box-shadow: 0 1px 4px rgba(0,0,0,.55); }
+ }
     .stub-flag-name { color: #fff; }
     /* A channel stub's chip stands UPRIGHT: the channel number on top, the meter down the left and
        the fader down the right — each the way its counterpart stands on the mixer. Fifteen screen
