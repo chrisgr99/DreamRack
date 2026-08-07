@@ -50,7 +50,7 @@ for (const L of CH) ports.push({ id: `clkOut${L}`, name: `Clk ${L}`, section: 'c
 // its ON button gates the internal clock into that channel.
 const onoff = () => ({ curve: 'stepped', steps: [{ value: 'off' }, { value: 'on' }] });
 for (const L of CH) {
-  params.push({ id: `level${L}`, name: `Level ${L}`, section: 'channel', curve: 'linear', min: 0, max: 1, default: 0.8, glideMs: 15 });
+  params.push({ id: `level${L}`, signal: 'audio', name: `Level ${L}`, section: 'channel', curve: 'linear', min: 0, max: 1, default: 0.8, glideMs: 15 });
   params.push({ id: `decay${L}`, name: `Decay ${L}`, section: 'channel', curve: 'linear', min: 0, max: 1, default: 0.4, glideMs: 10 });
   params.push({ id: `lp${L}`, name: `Lowpass ${L}`, section: 'channel', ...onoff(), default: 'on' });
   params.push({ id: `vca${L}`, name: `VCA ${L}`, section: 'channel', ...onoff(), default: 'on' });
@@ -58,7 +58,7 @@ for (const L of CH) {
   // Clock ratio: a detented knob that clicks to the integers 1..8 (its pointer only ever
   // rests ON a mark, never between two). The ratio is applied as DIVIDE or MULTIPLY per the
   // mode pair below it — divide slows this channel's clock, multiply speeds it up.
-  params.push({ id: `div${L}`, name: `Clock ratio ${L}`, section: 'channel', curve: 'detent', min: 1, max: 8, default: 1, glideMs: 0 });
+  params.push({ id: `div${L}`, signal: 'trigger', name: `Clock ratio ${L}`, section: 'channel', curve: 'detent', min: 1, max: 8, default: 1, glideMs: 0 });
   // Divide-or-multiply mode: a mutually-exclusive pair (÷ / ×) drawn under the knob; divide is
   // the default and preserves the original behaviour.
   params.push({ id: `clkMode${L}`, name: `Clock mode ${L}`, section: 'channel', curve: 'stepped', steps: [{ value: 'div' }, { value: 'mul' }], default: 'div' });
@@ -73,7 +73,7 @@ for (const L of CH) {
   // CV-modulated ratio snaps to whole divisions 1..8; off = it sweeps continuously.
   params.push({ id: `ratioQuant${L}`, name: `Ratio quantize ${L}`, section: 'channel', ...onoff(), default: 'on', subControl: true });
 }
-params.push({ id: 'rate', name: 'Clock Rate', section: 'clock', curve: 'linear', min: 0, max: 1, default: 0.35, glideMs: 10 });
+params.push({ id: 'rate', signal: 'trigger', name: 'Clock Rate', section: 'clock', curve: 'linear', min: 0, max: 1, default: 0.35, glideMs: 10 });
 params.push({ id: 'rateDepth', name: 'Rate CV depth', section: 'clock', curve: 'linear', min: -1, max: 1, default: 0, glideMs: 10, subControl: true });
 params.push({ id: 'run', name: 'Clock Run', section: 'clock', ...onoff(), default: 'off' });
 

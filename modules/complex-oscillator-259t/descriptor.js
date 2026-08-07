@@ -89,10 +89,10 @@ export default {
   //   `target` back to this id).
   params: [
     // Modulation oscillator
-    { id: "modFreq",  section: "modOsc", name: "Frequency",
+    { id: "modFreq", signal: "audio",  section: "modOsc", name: "Frequency",
       min: 27.5, max: 7040, default: 220, unit: "Hz", curve: "exp",
       glideMs: 8, modulatable: true },
-    { id: "modFine",  section: "modOsc", name: "Fine Tune",
+    { id: "modFine", signal: "audio",  section: "modOsc", name: "Fine Tune",
       min: -3.5, max: 3.5, default: 0, unit: "st", curve: "linear",
       glideMs: 8, modulatable: false },   // ~a fifth of range per manual
     { id: "modCvAmount", section: "modOsc", name: "CV Amount",
@@ -116,10 +116,10 @@ export default {
       ] },   // selects the Signal output shape; Triangle out is always present
 
     // Principal oscillator
-    { id: "prinFreq", section: "prinOsc", name: "Frequency",
+    { id: "prinFreq", signal: "audio", section: "prinOsc", name: "Frequency",
       min: 27.5, max: 7040, default: 110, unit: "Hz", curve: "exp",
       glideMs: 8, modulatable: true },
-    { id: "prinFine", section: "prinOsc", name: "Fine Tune",
+    { id: "prinFine", signal: "audio", section: "prinOsc", name: "Fine Tune",
       min: -3.5, max: 3.5, default: 0, unit: "st", curve: "linear",
       glideMs: 8, modulatable: false },
     { id: "prinCvAmount", section: "prinOsc", name: "CV Amount",

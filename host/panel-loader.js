@@ -18,11 +18,19 @@
 'use strict';
 
 import { attachKnobHover } from './knob-hover.js';
+import { showReadout, formatParamValue } from './knob-readout.js';
 
 // Default pointer sweep (degrees each side of straight-up), per the contract.
 // A control may override with data-wcoast-angle-min / -max.
 const KNOB_SPAN = 150;
 const SWITCH_SPAN = 20;
+// How far the scroll area reaches beyond the dial. Same band the hover wedge occupies (its 0.35mm
+// clearance plus its 3mm thick end), so what you can scroll on and what is drawn agree.
+const HOVER_BAND_MM = 3.35;
+const MIN_BAND_MM = 0.6;     // every knob reaches at least this far, however crowded it is
+const JACK_CLEAR_MM = 1.6;   // margin against a jack: the host gives every jack a grab pad about
+                             // 1.3mm wider than the circle in the file, and that pad is what takes
+                             // the click. Measured, not guessed — a 3.0mm jack hit-tests at 4.3.
 
 // Panels are authored at the full 128.5 mm Eurorack height, but only the
 // functional FACE — the region between the top and bottom frame rails — is
@@ -161,9 +169,74 @@ export function positionToValue(meta, pos) {
 
 // ---- applying a value to the SVG ----------------------------------------
 
-// Rotate a knob's pointer (or a lever switch's lever) to a normalised position.
+// ---- the gauge ----------------------------------------------------------
+// A continuous knob shows its setting as a filled arc in the band between the cap and the edge, not
+// as a pointer. See design/knob-gauge.md. The arc is one circle stroked as wide as the band, with a
+// dash pattern that opens and closes — so a value change writes two attributes and does no path
+// arithmetic, which matters while you are dragging.
+//
+// A circle's own path starts at three o'clock and runs clockwise, so the whole element is rotated to
+// put its start where the fill starts.
+const GAUGE_MIN_SWEEP = 3;      // degrees — a knob at its minimum still shows a stub, so zero reads
+                                // as SET TO ZERO rather than as an unpainted control
+
+// The colour code, by what kind of quantity the knob sets — the same families as the jacks, declared
+// per parameter (`signal`) because it cannot be derived: nothing in a port's domain knows that pulse
+// width is a percentage while coarse is an audio frequency.
+const GAUGE_COLOR = {
+  audio: '#f3c40b',    // levels, and frequencies in the audio band
+  cv: '#ff7300',       // every other setting — the default
+  trigger: '#5aa0e6',  // things measured in pulses: clock rates, divisions, repeat counts
+  pitch: '#39a85a',    // 1V/oct amounts, and only those
+  rgb: '#e0359b',      // picture quantities on the video modules
+  luma: '#babab6',
+};
+
+function ensureGaugeFill(binding) {
+  if (binding.gaugeFill !== undefined) return binding.gaugeFill;
+  const track = binding.group.querySelector('[data-wcoast-role="gauge-track"]');
+  if (!track) return (binding.gaugeFill = null);
+  const doc = binding.group.ownerDocument;
+  const fill = doc.createElementNS('http://www.w3.org/2000/svg', 'circle');
+  for (const a of ['cx', 'cy', 'r', 'stroke-width']) fill.setAttribute(a, track.getAttribute(a));
+  fill.setAttribute('fill', 'none');
+  fill.setAttribute('stroke', GAUGE_COLOR[(binding.meta && binding.meta.signal) || 'cv'] || GAUGE_COLOR.cv);
+  fill.setAttribute('class', 'gauge-fill');
+  fill.style.pointerEvents = 'none';
+  track.after(fill);
+  binding.gaugeR = parseFloat(track.getAttribute('r')) || 1;
+  // Bipolar is read off the RANGE, not declared: a control that crosses zero fills from twelve
+  // o'clock either way, because on those the middle is the meaningful place and filling from the
+  // minimum would make centred look half on.
+  const m = binding.meta || {};
+  binding.gaugeBipolar = typeof m.min === 'number' && typeof m.max === 'number' && m.min < 0 && m.max > 0;
+  return (binding.gaugeFill = fill);
+}
+
+function showGauge(binding, pos) {
+  const fill = ensureGaugeFill(binding);
+  if (!fill || !binding.pivot) return;
+  const a = binding.angleMin + clamp01(pos) * (binding.angleMax - binding.angleMin);
+  // Where the fill starts: twelve o'clock on a bipolar control, the knob's own minimum otherwise.
+  const zero = binding.gaugeBipolar
+    ? 0
+    : binding.angleMin;
+  let lo = Math.min(zero, a), hi = Math.max(zero, a);
+  if (hi - lo < GAUGE_MIN_SWEEP) {
+    if (binding.gaugeBipolar) { const mid = (lo + hi) / 2; lo = mid - GAUGE_MIN_SWEEP / 2; hi = mid + GAUGE_MIN_SWEEP / 2; }
+    else hi = lo + GAUGE_MIN_SWEEP;
+  }
+  const c = 2 * Math.PI * binding.gaugeR;
+  const len = c * (hi - lo) / 360;
+  fill.setAttribute('stroke-dasharray', `${round2(len)} ${round2(c)}`);
+  fill.setAttribute('transform', `rotate(${round2(lo - 90)} ${binding.pivot.x} ${binding.pivot.y})`);
+}
+
+// Rotate a knob's pointer (or a lever switch's lever) to a normalised position, and fill its gauge.
 export function showPosition(binding, pos) {
-  if (!binding.indicator || !binding.pivot) return;
+  if (!binding.pivot) return;
+  showGauge(binding, pos);
+  if (!binding.indicator) return;
   const a = binding.angleMin + clamp01(pos) * (binding.angleMax - binding.angleMin);
   binding.indicator.setAttribute(
     'transform', `rotate(${round2(a)} ${binding.pivot.x} ${binding.pivot.y})`);
@@ -233,6 +306,49 @@ export function showValue(binding, value) {
 
 // ---- parsing / validation -----------------------------------------------
 
+// Each knob's outward reach, keyed by its group element: half the clear space to the nearest other
+// knob on the panel, capped at HOVER_BAND_MM and floored at nothing. Measured in the panel's own
+// millimetres off the drawn geometry, so it needs no layout pass and no numbers from the descriptor.
+function knobBands(svg) {
+  const disc = (el) => {
+    const cx = numAttr(el, 'data-wcoast-cx'), cy = numAttr(el, 'data-wcoast-cy');
+    if (cx == null || cy == null) return null;
+    let r = 0;
+    for (const c of el.querySelectorAll('circle')) { const cr = numAttr(c, 'r'); if (cr != null && cr > r) r = cr; }
+    // A video jack is a square, so it has no circle to measure; its half-width is its `r`.
+    if (!r) for (const q of el.querySelectorAll('rect')) { const w = numAttr(q, 'width'); if (w) r = Math.max(r, w / 2); }
+    return r > 0 ? { el, cx, cy, r } : null;
+  };
+  const knobs = [], others = [];
+  for (const el of svg.querySelectorAll('[data-wcoast-param]')) { const d = disc(el); if (d) knobs.push(d); }
+  // JACKS COUNT TOO. A knob's reach that lands on a neighbouring jack takes the clicks that pick up
+  // and drop cables, which is a worse fault than a knob that is a millimetre harder to scroll. A
+  // knАck is both, and is skipped against itself by element identity.
+  for (const el of svg.querySelectorAll('[data-wcoast-port]')) { const d = disc(el); if (d) others.push(d); }
+  const band = new Map();
+  for (const k of knobs) {
+    let room = HOVER_BAND_MM;
+    for (const o of knobs) {
+      if (o.el === k.el) continue;
+      const clear = (Math.hypot(k.cx - o.cx, k.cy - o.cy) - k.r - o.r) / 2;   // shared, so halved
+      if (clear < room) room = clear;
+    }
+    for (const o of others) {
+      if (o.el === k.el || k.el.contains(o.el) || o.el.contains(k.el)) continue;
+      // A millimetre of margin, because a jack is DRAWN bigger than it is authored — the host paints
+      // its family ring and lays direction dashes outside the circle in the file. Measuring the
+      // authored radius alone left fifteen knobs reaching about 0.9mm over a neighbouring jack.
+      const clear = Math.hypot(k.cx - o.cx, k.cy - o.cy) - k.r - o.r - JACK_CLEAR_MM;
+      if (clear < room) room = clear;
+    }
+    // A FLOOR, even where the room says none. A knob with no band gets no reach and no hover mark
+    // at all, which is worse than a fraction of a millimetre of encroachment — and what it
+    // encroaches on is a jack's grab padding, not the jack that is drawn.
+    band.set(k.el, Math.max(MIN_BAND_MM, Math.min(HOVER_BAND_MM, room)));
+  }
+  return band;
+}
+
 // Build the binding model from an already-parsed SVG root and a descriptor.
 // Pure DOM reading + validation; returns { svg, controls, ports, warnings }.
 export function parsePanel(svg, descriptor) {
@@ -241,6 +357,13 @@ export function parsePanel(svg, descriptor) {
   const portMeta = new Map((descriptor.ports || []).map((p) => [p.id, p]));
   const controls = new Map();
   const ports = new Map();
+
+  // How far each knob's scroll area may reach past its own dial, worked out BEFORE any of them are
+  // built. A fixed band would be right on the complex oscillator and wrong on the mixer, where the
+  // send knobs sit close enough that a 3.35mm reach on each would have them overlapping by three
+  // millimetres — and an overlap means one knob quietly stealing the other's scroll. So each knob
+  // gets half the clear space to its nearest neighbour, capped at the full band.
+  const bandFor = knobBands(svg);
 
   for (const el of svg.querySelectorAll('[data-wcoast-param]')) {
     const id = el.getAttribute('data-wcoast-param');
@@ -299,6 +422,24 @@ export function parsePanel(svg, descriptor) {
       binding.stepIndicators.set(declared !== undefined ? declared : raw, s);
     }
 
+    // A STEPPED control needs a pointer — it is a selector or a toggle, and a filled arc says nothing
+    // about which of three positions it is in. Faceplates no longer draw one (a continuous knob reads
+    // from its gauge instead), so it is added here, where the curve is known. Panels that carry their
+    // own drawn pointer, the hand-held ones, already have a line and are left alone.
+    if (stepped && binding.indicator && binding.pivot && !binding.indicator.querySelector('line')) {
+      const capR = parseFloat(binding.indicator.getAttribute('data-wcoast-cap'));
+      if (isFinite(capR) && capR > 0) {
+        const ln = el.ownerDocument.createElementNS('http://www.w3.org/2000/svg', 'line');
+        ln.setAttribute('x1', binding.pivot.x); ln.setAttribute('y1', binding.pivot.y);
+        ln.setAttribute('x2', binding.pivot.x); ln.setAttribute('y2', round2(binding.pivot.y - capR));
+        ln.setAttribute('stroke', '#163a69'); ln.setAttribute('stroke-width', '0.55');
+        ln.style.pointerEvents = 'none';
+        binding.indicator.appendChild(ln);
+      }
+    }
+    // A continuous knob still has an indicator group, empty, and it is still rotated: the drag and
+    // scroll code and the hover mark measure from it.
+
     // Geometry validation (the contract's load-time checks).
     if (!stepped) {
       if (!binding.indicator) warnings.push(`knob "${id}" has no indicator element`);
@@ -347,7 +488,15 @@ export function parsePanel(svg, descriptor) {
         const hit = el.ownerDocument.createElementNS(SVG_NS, 'circle');
         hit.setAttribute('cx', dial.getAttribute('cx'));
         hit.setAttribute('cy', dial.getAttribute('cy'));
-        hit.setAttribute('r', String(dr));
+        // THE SCROLL AREA REACHES PAST THE DIAL, by exactly the band the hover wedge is drawn in.
+        // On a knАck the dial itself is mostly jack and attenuverter, which leaves a narrow ring
+        // for the value — and that ring is the control you reach for most. The band outside the
+        // knob is free (it is where the wedge already goes), and it is FULL WIDTH all the way
+        // round, even where the wedge tapers to nothing.
+        binding.dial = dial;
+        binding.dialR = dr;
+        binding.hoverBand = bandFor.has(el) ? bandFor.get(el) : HOVER_BAND_MM;
+        hit.setAttribute('r', String(round2(dr + binding.hoverBand)));
         hit.setAttribute('fill', 'none');
         hit.setAttribute('pointer-events', 'all');
         hit.setAttribute('class', 'knob-hit');
@@ -374,7 +523,7 @@ export function parsePanel(svg, descriptor) {
     // a cord can end in the middle of the jack's coloured ring — inside the colour
     // but clear of the dark centre hole.
     let holeR = 0, outerR = 0;
-    for (const c of el.querySelectorAll('circle')) {
+    for (const c of panelCircles(el)) {
       const r = numAttr(c, 'r');
       if (r == null) continue;
       if (holeR === 0 || r < holeR) holeR = r;
@@ -459,9 +608,20 @@ function makeHitPad(lamp, growMm) {
 // the fine/coarse zones off the box meant the rim never reached the intended quarter rate — it
 // bottomed out near half — and the feel differed from knob to knob purely by how much text was
 // printed beside it. The largest circle in the group is the dial.
+// The circles a panel actually DREW. The transparent hit circle is deliberately the largest one in a
+// knob's group — the scroll area reaches past the dial — so anything that reasons about "the biggest
+// circle" (the knob's face, a jack's coloured ring, a cord's anchor radius) has to leave it out.
+function panelCircles(el) {
+  return [...el.querySelectorAll('circle')].filter((c) => c.getAttribute('class') !== 'knob-hit');
+}
+
+// The DIAL's radius on screen — what the radial fine-control law and the knАck's zone test both
+// measure against. It skips the hit circle, which is deliberately larger than the dial: counting it
+// would put the "rim" outside the knob and quietly slow every knob's scrolling near its own edge.
 export function knobRadiusPx(el) {
   let r = 0;
   for (const c of el.querySelectorAll('circle')) {
+    if (c.getAttribute('class') === 'knob-hit') continue;
     const w = c.getBoundingClientRect().width;
     if (w > r) r = w;
   }
@@ -470,6 +630,7 @@ export function knobRadiusPx(el) {
 
 export function attachControlInteraction(binding, hooks, opts = {}) {
   const el = binding.group;
+  binding.readValue = hooks.get;   // the hover readout asks for the number a second later
   if (binding.kind === 'knob' && binding.meta.curve === 'detent') {
     // A DETENT knob steps by whole integers. Momentum integration would move the
     // position by less than one detent per gentle notch and round straight back, so
@@ -491,6 +652,7 @@ export function attachControlInteraction(binding, hooks, opts = {}) {
       let guard = 0;
       while (acc >= THRESH && guard++ < 8) { acc -= THRESH; step(+1); }
       while (acc <= -THRESH && guard++ < 8) { acc += THRESH; step(-1); }
+      showReadout(formatParamValue(binding.meta, hooks.get()), e.clientX, e.clientY, true, { sticky: true });
     }, { passive: false });
     return;
   }
@@ -503,12 +665,17 @@ export function attachControlInteraction(binding, hooks, opts = {}) {
     let vel = 0;      // position units per second
     let raf = null;
     let last = 0;
+    let at = null;    // where the pointer was, so the readout can follow the value as it coasts
     const tick = (t) => {
       const now = t || performance.now();
       const dt = Math.min(0.05, (now - last) / 1000);
       last = now;
       const next = clamp01(valueToPosition(binding.meta, hooks.get()) + vel * dt);
       hooks.set(positionToValue(binding.meta, next));
+      // Refreshed from the LOOP, not from the wheel event: momentum keeps the value moving after
+      // the last tick, and a readout driven by the event alone would freeze on the first number
+      // while the knob carried on somewhere else.
+      if (at) showReadout(formatParamValue(binding.meta, hooks.get()), at.x, at.y, true, { sticky: true });
       vel *= Math.exp(-KNOB_DRAG * dt);
       // Stop only when the velocity is spent, or when we're pushing INTO a
       // boundary (not when velocity would carry us away from it — that's how you
@@ -532,6 +699,10 @@ export function attachControlInteraction(binding, hooks, opts = {}) {
         const r = Math.hypot(e.clientX - cx, e.clientY - cy);
         factor = Math.max(0.25, 1 - 0.75 * Math.min(1, r / R));
       }
+      at = { x: e.clientX, y: e.clientY };
+      // Straight away, not on the next frame: the chip is standing in for the pointer, and a frame's
+      // wait is enough to see it arrive late. The loop keeps it current from here on.
+      showReadout(formatParamValue(binding.meta, hooks.get()), at.x, at.y, true, { sticky: true });
       vel += (-d / 100) * KNOB_STEP * KNOB_DRAG * factor;   // up (negative delta) raises
       if (vel > KNOB_MAXV) vel = KNOB_MAXV; else if (vel < -KNOB_MAXV) vel = -KNOB_MAXV;
       if (!raf) { last = performance.now(); raf = requestAnimationFrame(tick); }
@@ -577,7 +748,12 @@ export function attachControlInteraction(binding, hooks, opts = {}) {
       const ly = inv.b * e.clientX + inv.d * e.clientY + inv.f;
       return clamp01((binding.bot - ly) / (binding.bot - binding.top));
     };
-    const onMove = (e) => { const p = posFromEvent(e); if (p != null) hooks.set(positionToValue(binding.meta, p)); };
+    const onMove = (e) => {
+      const p = posFromEvent(e);
+      if (p == null) return;
+      hooks.set(positionToValue(binding.meta, p));
+      showReadout(formatParamValue(binding.meta, hooks.get()), e.clientX, e.clientY, true);
+    };
     el.addEventListener('pointerdown', (e) => {
       e.stopPropagation(); e.preventDefault();
       el.setPointerCapture && el.setPointerCapture(e.pointerId);
@@ -594,13 +770,14 @@ export function attachControlInteraction(binding, hooks, opts = {}) {
     });
     // Faders also take the scroll wheel, with the same momentum feel as the knobs
     // (no radial factor — a fader is linear).
-    let vel = 0, raf = null, last = 0;
+    let vel = 0, raf = null, last = 0, at = null;
     const tick = (t) => {
       const now = t || performance.now();
       const dt = Math.min(0.05, (now - last) / 1000);
       last = now;
       const next = clamp01(valueToPosition(binding.meta, hooks.get()) + vel * dt);
       hooks.set(positionToValue(binding.meta, next));
+      if (at) showReadout(formatParamValue(binding.meta, hooks.get()), at.x, at.y, true);
       vel *= Math.exp(-KNOB_DRAG * dt);
       const pinned = (next <= 0 && vel < 0) || (next >= 1 && vel > 0);
       if (Math.abs(vel) > 1e-3 && !pinned) raf = requestAnimationFrame(tick);
@@ -610,6 +787,8 @@ export function attachControlInteraction(binding, hooks, opts = {}) {
       if (e.ctrlKey) return;   // ctrl+wheel is the rack pinch-zoom
       e.preventDefault();
       const d = e.deltaMode === 1 ? e.deltaY * 16 : e.deltaMode === 2 ? e.deltaY * 400 : e.deltaY;
+      at = { x: e.clientX, y: e.clientY };
+      showReadout(formatParamValue(binding.meta, hooks.get()), at.x, at.y, true);
       vel += (-d / 100) * KNOB_STEP * KNOB_DRAG;   // up (negative delta) raises
       if (vel > KNOB_MAXV) vel = KNOB_MAXV; else if (vel < -KNOB_MAXV) vel = -KNOB_MAXV;
       if (!raf) { last = performance.now(); raf = requestAnimationFrame(tick); }
@@ -732,7 +911,7 @@ function paintJack(port, dark) {
     addSquareDirRing(port, body, hole);
     return;
   }
-  const circles = [...port.element.querySelectorAll('circle')];
+  const circles = panelCircles(port.element);
   if (!circles.length || !port.meta) return;
   let outer = circles[0], hole = circles[0], ro = -1, rh = Infinity;
   for (const c of circles) { const r = parseFloat(c.getAttribute('r')) || 0; if (r > ro) { ro = r; outer = c; } if (r < rh) { rh = r; hole = c; } }
@@ -830,7 +1009,10 @@ function paintKnAck(port, dark) {
   // separating that from the medium face. The calibrations (drawn by the rack) sit on the medium
   // face, never on the dark ring.
   const KN_MED = '#0f6cad', KN_DARK = '#063f63', KN_LIGHT = '#ffffff';
-  const kcircles = [...port.element.querySelectorAll('circle')];
+  // NOT the hit circle. It is transparent and it is deliberately the largest circle in the group —
+  // the scroll area reaches past the dial — so "the biggest circle" is no longer "the knob's face".
+  // Painting it drew a blue disc a band wider than every knАck on the rack.
+  const kcircles = panelCircles(port.element);
   const outerRing = kcircles.reduce((a, c) => (parseFloat(c.getAttribute('r')) || 0) > (parseFloat(a.getAttribute('r')) || 0) ? c : a, kcircles[0]);
   const cap = kcircles.find((c) => /knobCap/.test(c.getAttribute('fill') || ''));
   const KR = outerRing ? (parseFloat(outerRing.getAttribute('r')) || 5) : 5;
@@ -840,7 +1022,15 @@ function paintKnAck(port, dark) {
   // doesn't define blueRing falls back to the flat medium face.)
   const svgRoot = port.element.closest('svg');
   const faceFill = (svgRoot && svgRoot.querySelector('#blueRing')) ? 'url(#blueRing)' : KN_MED;
-  if (outerRing) { outerRing.setAttribute('fill', faceFill); outerRing.setAttribute('stroke', KN_LIGHT); outerRing.setAttribute('stroke-width', round3((parseFloat(outerRing.getAttribute('stroke-width')) || 0.355) * 0.5)); }
+  // The rim is DRAWN BY THE PANEL now — a knurled path, blue-filled, no outline. What is left at the
+  // outer radius is an invisible circle the geometry is measured from (data-wcoast-role="rim"), and
+  // painting it puts a full white circle straight over the knurl, which is the busy perimeter we were
+  // trying to get rid of. So measure from it and leave it alone. Older panels that still carry a real
+  // drawn ring are painted as before.
+  if (outerRing && outerRing.getAttribute('data-wcoast-role') !== 'rim') {
+    outerRing.setAttribute('fill', faceFill); outerRing.setAttribute('stroke', KN_LIGHT);
+    outerRing.setAttribute('stroke-width', round3((parseFloat(outerRing.getAttribute('stroke-width')) || 0.355) * 0.5));
+  }
   if (cap) { cap.setAttribute('fill', 'none'); cap.setAttribute('stroke', 'none'); }
   const ro = rh + 1.0;   // orange band outer radius (the jack)
   for (const old of port.element.querySelectorAll('.knack-accent')) old.remove();

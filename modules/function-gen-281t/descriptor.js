@@ -50,8 +50,8 @@ ports.push({ id: 'quadOutCD', name: 'C-D out', section: 'quad', domain: 'control
 // cycleIn gate forces cycling in any mode while it's held.
 const onoff = () => ({ curve: 'stepped', steps: [{ value: 'off' }, { value: 'on' }] });
 for (const L of CH) {
-  params.push({ id: `attack${L}`, name: `Attack ${L}`, section: 'channel', curve: 'exp', min: 0.001, max: 10, default: 0.05, glideMs: 0 });
-  params.push({ id: `decay${L}`, name: `Decay ${L}`, section: 'channel', curve: 'exp', min: 0.001, max: 10, default: 0.2, glideMs: 0 });
+  params.push({ id: `attack${L}`, name: `Attack ${L}`, section: 'channel', curve: 'exp', min: 0.001, max: 10, default: 0.05, unit: 's', glideMs: 0 });
+  params.push({ id: `decay${L}`, name: `Decay ${L}`, section: 'channel', curve: 'exp', min: 0.001, max: 10, default: 0.2, unit: 's', glideMs: 0 });
   params.push({ id: `trigBtn${L}`, name: `Trig ${L}`, section: 'channel', ...onoff(), default: 'off', momentary: true });
   params.push({ id: `mode${L}`, name: `Mode ${L}`, section: 'channel', curve: 'stepped', steps: [{ value: 'transient' }, { value: 'sustained' }, { value: 'cyclic' }], default: 'transient' });
   // knAck AV depth per time knob: time = knob x 2^(depth x CV x octaves). Default 1 =

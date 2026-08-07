@@ -32,8 +32,8 @@ for (const L of CH) {
   // Gain (amp) CV: a control-voltage input that drives the channel level 0..1, the
   // same range the fader spans bottom-to-top.
   ports.push({ id: `ampCv${L}`, name: `Gain ${CH_LABEL[L]}`, section: 'ampCv', domain: 'control', dir: 'in', target: `level${L}` });
-  params.push({ id: `level${L}`, name: `Level ${L}`, section: 'channel', curve: 'gainDb', min: 0, max: 1, default: 0.29, glideMs: 20 });   // ~-11 dB → ~70% up the throw
-  params.push({ id: `pan${L}`, name: `Pan ${L}`, section: 'channel', curve: 'linear', min: -1, max: 1, default: 0, glideMs: 20 });
+  params.push({ id: `level${L}`, signal: 'audio', name: `Level ${L}`, section: 'channel', curve: 'gainDb', min: 0, max: 1, default: 0.29, glideMs: 20 });   // ~-11 dB → ~70% up the throw
+  params.push({ id: `pan${L}`, signal: 'audio', name: `Pan ${L}`, section: 'channel', curve: 'linear', min: -1, max: 1, default: 0, glideMs: 20 });
   // The pan knob is a knAck, so it carries a CV-depth param: the host keys on this to
   // treat the knob as one, and the patchbay uses it as the cord's attenuator. AV is off
   // on the faceplate, which pins it to 1 — full-strength CV — until a knob is given an
@@ -50,7 +50,7 @@ for (const L of CH) {
   // makes you choose. Zero by default: a send that came up open would put every new patch through
   // whatever happens to be on the bus.
   for (const N of SENDS) {
-    params.push({ id: `send${N}${L}`, name: `Send ${N} ${L}`, section: 'channel', curve: 'gainDb', min: 0, max: 1, default: 0, glideMs: 20 });
+    params.push({ id: `send${N}${L}`, signal: 'audio', name: `Send ${N} ${L}`, section: 'channel', curve: 'gainDb', min: 0, max: 1, default: 0, glideMs: 20 });
     params.push({ id: `send${N}Depth${L}`, name: `Send ${N} depth ${L}`, section: 'channel', curve: 'linear', min: -1, max: 1, default: 1, glideMs: 0 });
     ports.push({ id: `send${N}Cv${L}`, name: `Send ${N} ${CH_LABEL[L]}`, section: 'channel', domain: 'control', dir: 'in', target: `send${N}${L}`, via: `send${N}Depth${L}` });
   }
@@ -74,11 +74,11 @@ for (const N of SENDS) ports.push({ id: `send${N}Out`, name: `Send ${N}`, sectio
 for (const L of CH) {
   ports.push({ id: `panCv${L}`, name: `Pan ${CH_LABEL[L]}`, section: 'panCv', domain: 'control', dir: 'in', target: `pan${L}`, via: `panDepth${L}` });
 }
-params.push({ id: 'master', name: 'Master', section: 'master', curve: 'gainDb', min: 0, max: 1, default: 0.29, glideMs: 20 });   // ~-11 dB → ~70% up the throw
+params.push({ id: 'master', signal: 'audio', name: 'Master', section: 'master', curve: 'gainDb', min: 0, max: 1, default: 0.29, glideMs: 20 });   // ~-11 dB → ~70% up the throw
 // Monitor bus: its own fader (level) beside the master. Its enable is INDEPENDENT of the master's
 // (see the per-bus enables below) — both, either, or neither bus can play. Enabling a monitor object
 // turns the Monitor bus on. All handled by the host (routing lives in the rack), not the DSP.
-params.push({ id: 'monitorLevel', name: 'Monitor', section: 'master', curve: 'gainDb', min: 0, max: 1, default: 0.29, glideMs: 20 });
+params.push({ id: 'monitorLevel', signal: 'audio', name: 'Monitor', section: 'master', curve: 'gainDb', min: 0, max: 1, default: 0.29, glideMs: 20 });
 // The ENGINE — the one switch that decides whether this rack makes sound at all. It sits ABOVE
 // the two buses: with it off, neither bus can be heard however its own lamp is set, and both
 // lamps dim to say so. Turning it ON also turns the MASTER bus on, always, even if the master
@@ -102,7 +102,7 @@ for (const [B, N] of [['Master', 'Master'], ['Monitor', 'Monitor']]) {
   if (B !== 'Master') continue;
   const lvl = 'master';
   ports.push({ id: `ampCv${B}`, name: `Gain ${N}`, section: 'ampCv', domain: 'control', dir: 'in', target: lvl });
-  params.push({ id: `pan${B}`, name: `Pan ${N}`, section: 'master', curve: 'linear', min: -1, max: 1, default: 0, glideMs: 20 });
+  params.push({ id: `pan${B}`, signal: 'audio', name: `Pan ${N}`, section: 'master', curve: 'linear', min: -1, max: 1, default: 0, glideMs: 20 });
   params.push({ id: `panDepth${B}`, name: `Pan depth ${N}`, section: 'master', curve: 'linear', min: -1, max: 1, default: 1, glideMs: 0 });
   ports.push({ id: `panCv${B}`, name: `Pan ${N}`, section: 'panCv', domain: 'control', dir: 'in', target: `pan${B}`, via: `panDepth${B}` });
 }

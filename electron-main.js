@@ -574,6 +574,20 @@ function createWindow() {
 
   mainWindow.loadURL(`${APP_ORIGIN}/index.html`);
 
+  // DEV WATCH. `npm run dev` sets WCOAST_DEV; a normal run carries none of this. Save any renderer
+  // file and the window reloads itself — no quitting, no relaunching, and the window stays where it
+  // is. See dev-watch.js for why it reloads rather than restarts.
+  if (process.env.WCOAST_DEV) {
+    try {
+      require('./dev-watch.js').start(__dirname, (what) => {
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          console.log('[dev] ' + what + ' — reloading');
+          mainWindow.webContents.reloadIgnoringCache();
+        }
+      });
+    } catch (e) { console.log('[dev] watcher unavailable — ' + e.message); }
+  }
+
   // Disable Chromium's built-in pinch / Control+wheel PAGE zoom (min=max=1). Without this, macOS
   // accessibility zoom (Control+scroll) also reaches the page as a ctrl+wheel event and Chromium
   // scales the whole document toward the cursor — so the app content jerks sideways under the fixed

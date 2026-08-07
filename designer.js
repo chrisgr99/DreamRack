@@ -30,6 +30,14 @@ import vcoLayout from './modules/oscillator/panel.layout.js';
 import vcoDesc from './modules/oscillator/descriptor.js';
 import noiseLayout from './modules/noise/panel.layout.js';
 import noiseDesc from './modules/noise/descriptor.js';
+import envLayout from './modules/envelope/panel.layout.js';
+import envDesc from './modules/envelope/descriptor.js';
+import vcaLayout from './modules/vca/panel.layout.js';
+import vcaDesc from './modules/vca/descriptor.js';
+import filterLayout from './modules/filter/panel.layout.js';
+import filterDesc from './modules/filter/descriptor.js';
+import octLayout from './modules/octave/panel.layout.js';
+import octDesc from './modules/octave/descriptor.js';
 
 const NS = 'http://www.w3.org/2000/svg';
 const clone = (o) => JSON.parse(JSON.stringify(o));
@@ -44,6 +52,10 @@ const MODULES = [
   { name: 'Sequencer / Programmer Eight', dir: 'programmer-8', base: progLayout, desc: progDesc },
   { name: 'Oscillator', dir: 'oscillator', base: vcoLayout, desc: vcoDesc },
   { name: 'Noise', dir: 'noise', base: noiseLayout, desc: noiseDesc },
+  { name: 'ADSR', dir: 'envelope', base: envLayout, desc: envDesc },
+  { name: 'VCA', dir: 'vca', base: vcaLayout, desc: vcaDesc },
+  { name: 'Filter', dir: 'filter', base: filterLayout, desc: filterDesc },
+  { name: 'Octave', dir: 'octave', base: octLayout, desc: octDesc },
 ];
 
 const stage = document.getElementById('stage');

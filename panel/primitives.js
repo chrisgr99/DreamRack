@@ -102,14 +102,16 @@ function dialScale(cx, cy, outerR, scale, angleMin, angleMax, ink) {
 
 function knob(id, cx, cy, opts = {}) {
   const { radius = 4.6, cap = +(radius * 0.72).toFixed(2), angleMin = -150, angleMax = 150,
-    ticks = 7, tickColor = '#ffffff', ring = 'url(#blueRing)', skirt = 0, scale = null, theme = {}, label: lab = null } = opts;
+    ticks = KNOB_GRIPS ? 7 : 0, tickColor = KNOB_GRIP_COLOR, ring = 'url(#blueRing)', skirt = 0, scale = null, theme = {}, label: lab = null } = opts;
   const ink = theme.ink || '#163a69', ringStroke = theme.ringStroke || '#004b7a', capStroke = theme.capStroke || '#666666';
   const a0 = angleMin * Math.PI / 180, a1 = angleMax * Math.PI / 180;
-  // White ticks around the rim — mostly ON the blue ring (so they read white in
-  // both themes) with a very slight protrusion past the outer circumference.
+  // TICKS ARE RETIRED. They were face marks that turned with the knob, from before the band became
+  // the reading — on a gauged knob they are marks laid over the gauge, which is the clutter the whole
+  // change was about. A few layouts still ask for them (`ticks: 11`); the option is accepted and
+  // ignored rather than removed, so those layouts keep working.
   const tIn = radius * (1 - TICK_IN), tOut = radius * (1 + TICK_OUT);
   let tickSvg = '';
-  for (let k = 0; k < ticks; k++) {
+  for (let k = 0; TICKS_ON && k < ticks; k++) {
     const a = ticks === 1 ? (a0 + a1) / 2 : a0 + (k / (ticks - 1)) * (a1 - a0);
     const x1 = cx + Math.sin(a) * tIn, y1 = cy - Math.cos(a) * tIn;
     const x2 = cx + Math.sin(a) * tOut, y2 = cy - Math.cos(a) * tOut;
@@ -119,25 +121,33 @@ function knob(id, cx, cy, opts = {}) {
   // beneath the inner ring. Static, like the ring — only the face rotates.
   const hasSkirt = skirt > radius;
   const skirtSvg = hasSkirt
-    ? `\n    <circle cx="${cx}" cy="${cy}" r="${skirt}" fill="url(#blueDial)" stroke="#00507f" stroke-width="0.355"/>` : '';
+    ? `\n    <circle cx="${cx}" cy="${cy}" r="${skirt}" fill="${KNOB_BODY}" stroke="${KNOB_EDGE}" stroke-width="0.25"/>` : '';
   // A second pointer segment across the skirt band, colinear with the inner pointer
   // (from the skirt's inner edge out to its outer circumference), same weight. In the
   // indicator group, so it turns with the knob.
-  const skirtLine = hasSkirt
-    ? `\n      <line x1="${cx}" y1="${(cy - radius).toFixed(2)}" x2="${cx}" y2="${(cy - skirt).toFixed(2)}" stroke="${ink}" stroke-width="0.55"/>` : '';
+  const skirtLine = '';   // the gauge is ON the skirt tier now; a pointer across it would sit in the band
   // Calibration scale — fixed panel art around the knob: a tick and/or a label at
   // each mark's angle (from `at` 0..1 along the sweep, or an explicit `angle`), the
   // label one or more lines. Optional 12-o'clock index triangle. Static (not rotated).
   const outerR = hasSkirt ? skirt : radius;
   const scaleSvg = dialScale(cx, cy, outerR, scale, angleMin, angleMax, ink);
-  // The ring and the cap are rotationally
-  // symmetric, so they stay put. The ticks and the pointer ARE the knob face — they
-  // sit in the indicator group and rotate together, so the ticks turn with the knob.
+  // The body disc and the empty gauge band. The host fills the band; the panel only says where it is.
+  // A skirted knob's outer tier is the skirt, already drawn, so its disc at `radius` carries nothing
+  // but the measurement.
+  // On a two-tier knob the gauge goes on the OUTER tier, where it is biggest — those are the two
+  // largest controls on the rack and the reading should be the easiest one on it, not the smallest.
+  const g = hasSkirt ? gaugeBand(skirt, radius) : gaugeBand(radius, cap);
+  const bodyFill = hasSkirt ? 'none' : KNOB_BODY;
+  const bodyStroke = hasSkirt ? 'none' : KNOB_EDGE;
+  // NO POINTER IN THE ART. A continuous knob reads from its band, and a stepped one — a selector or a
+  // toggle, where a filled arc would say nothing — has its pointer added by the host, which is the
+  // only side that knows a param's curve. Drawing one here and hiding it at runtime looked the same
+  // on the rack and wrong everywhere the raw faceplate is shown, which is the module library.
   let out = `  <g data-wcoast-param="${id}" data-wcoast-cx="${cx}" data-wcoast-cy="${cy}" data-wcoast-angle-min="${angleMin}" data-wcoast-angle-max="${angleMax}">${skirtSvg}
-    <circle cx="${cx}" cy="${cy}" r="${radius}" fill="${ring}" stroke="${ringStroke}" stroke-width="0.355"/>
+    <circle cx="${cx}" cy="${cy}" r="${radius}" fill="${bodyFill}" stroke="${bodyStroke}" stroke-width="0.25" data-wcoast-role="rim"/>
+    <circle cx="${cx}" cy="${cy}" r="${g.r}" fill="none" stroke="${GAUGE_TRACK}" stroke-width="${g.w}" data-wcoast-role="gauge-track"/>
     <circle cx="${cx}" cy="${cy}" r="${cap}" fill="url(#knobCap)" stroke="${capStroke}" stroke-width="0.2366"/>${scaleSvg}
-    <g data-wcoast-role="indicator">${tickSvg}
-      <line x1="${cx}" y1="${cy}" x2="${cx}" y2="${(cy - cap).toFixed(2)}" stroke="${ink}" stroke-width="0.55"/>${skirtLine}
+    <g data-wcoast-role="indicator" data-wcoast-cap="${cap}">${tickSvg}${skirtLine}
     </g>
   </g>`;
   const ext = Math.max(radius, skirt);   // label clears the outermost tier (skirt if present)
@@ -164,8 +174,66 @@ function knob(id, cx, cy, opts = {}) {
 // should not have been drawn that small.
 const KNOB_REF_R = 8.05;
 const kf = (mm) => mm / KNOB_REF_R;
-const TICK_IN = kf(1.0);                      // how far a tick reaches INSIDE the rim
-const TICK_OUT = kf(0.5);                     // ...and how far it pokes past it
+const TICK_IN = kf(1.5);                      // how far a tick reaches INSIDE the rim
+const TICK_OUT = 0;                           // ...and it no longer pokes past it at all
+// GRIPS ARE A SHADOW, NOT A HIGHLIGHT. They used to be white and about the pointer's weight, so a knob
+// showed eight bright marks and the eye had to find which one was the indicator. Drawn in a blue
+// darker than the ring they read as moulding — the knob still looks gripped and turnable — while the
+// pointer is the only bright thing on it and the position reads at a glance.
+//
+// They also stop AT the rim now rather than poking past it. The protruding ends were the part that
+// tangled with the scale numerals and the neighbouring labels.
+// A KNURLED RIM, NOT MARKS ON THE FACE. Grip marks — white or dark — sit on the knob's face beside
+// the pointer and are read as marks, which is why white ones competed with the indicator and dark ones
+// were too quiet to register at all. Real knobs are gripped at their EDGE, so the grip belongs in the
+// silhouette: the rim is drawn as a shallow zigzag instead of a circle. It reads as texture at any
+// size, costs the pointer nothing, and there is no third bright thing on the control.
+//
+// A THIN OUTLINE ON IT, AND IT TURNS. Two things the first version got wrong. Blue fill on a dark
+// panel has almost no edge, so the teeth were invisible — what had been making them read was the full
+// white circle drawn over them, which is the wrong thing to keep. The outline follows the teeth
+// instead: one hairline, about a pixel at normal magnification, so the zigzag is the silhouette. And
+// the knurl SPINS with the value. A texture that stays still while the pointer moves does not look
+// like part of the knob; a knurl that turns is the whole reason the knob looks turnable.
+//
+// IT SITS AROUND THE CENTRE, NOT AT THE EDGE. The complex oscillator's big two-tier knobs had it
+// right by accident: their knurl is drawn on the inner tier, so it is a ring of teeth surrounded by
+// blue rather than the outline of the whole control. That reads as a gripped collar; a knurl on the
+// outer silhouette reads as a cog. So every knob is built the same way now — a plain blue body disc,
+// a knurled ring inside it, then the cap.
+//
+// The ring's geometry is a proportion of the BAND between the cap and the body edge, not millimetres,
+// so it holds at every size: the teeth peak three-quarters of the way out across that band and are
+// just under half of it deep, which leaves plain blue on both sides of them. Fixed millimetres put
+// the teeth through the cap on the small knobs.
+// A KNOB IS A GAUGE, NOT A PICTURE OF A KNOB. Everything above — grips, ticks, knurls — was an
+// attempt to make the control look like a real one, and every one of them added something to read
+// that was not the setting. What you actually need to know at a glance is where the knob is set, so
+// the band between the cap and the edge fills with colour from the minimum round to the setting, and
+// the colour says what kind of quantity it is. See design/knob-gauge.md.
+//
+// The panel draws the EMPTY band only. The fill depends on the value, so the host paints it, the same
+// way it already dresses a knАck.
+export const KNOB_GRIPS = false;          // retired with the knurl; kept false so old call sites pass
+const TICKS_ON = false;                   // ...and so are the rotating face ticks, for the same reason
+export const KNOB_GRIP_COLOR = '#04304f';
+// Four greys, dark to light: the panel behind, the body, the empty band, the metal cap. The body has
+// a hairline edge so it stands off a dark panel.
+const KNOB_BODY = '#4a4e52';
+const KNOB_EDGE = '#ffffff';   // a white circle round the outside — it is what lifts a knob off the panel
+const GAUGE_TRACK = '#2b2e31';
+const GAUGE_INSET = 0.12;                 // of the cap-to-edge band, left as body on each side
+
+// Where the gauge band sits on a knob of this radius, as a stroked circle: mid-radius and width. A
+// proportion of the cap-to-edge band rather than millimetres, so the smallest knob on the rack gets a
+// band it can still show a colour in.
+function gaugeBand(radius, cap) {
+  const band = Math.max(0.4, radius - cap);
+  const inset = band * GAUGE_INSET;
+  const inner = cap + inset, outer = radius - inset;
+  return { r: +((inner + outer) / 2).toFixed(3), w: +(outer - inner).toFixed(3) };
+}
+
 const KNACK_GRIP_LEN = TICK_IN + TICK_OUT;    // a grip is the same mark, described end to end
 const KNACK_GRIP_OUT = TICK_OUT;
 const KNACK_GRIP_W = kf(0.4);                 // tick thickness
@@ -193,11 +261,11 @@ function knack(id, cx, cy, opts = {}) {
   // re-draws these, reading the FIRST white line's length as the dash length — so the
   // grips must precede the pointer here), then a pointer from the jack band to the rim.
   let tickSvg = '';
-  for (let k = 0; k < 7; k++) {
+  for (let k = 0; KNOB_GRIPS && k < 7; k++) {
     const a = k * (2 * Math.PI / 7);
     const sn = Math.sin(a), cs = Math.cos(a);
     const oR = radius * (1 + KNACK_GRIP_OUT), iR = oR - radius * KNACK_GRIP_LEN;
-    tickSvg += `\n      <line x1="${(cx + sn * oR).toFixed(2)}" y1="${(cy - cs * oR).toFixed(2)}" x2="${(cx + sn * iR).toFixed(2)}" y2="${(cy - cs * iR).toFixed(2)}" stroke="#ffffff" stroke-width="${gripW}"/>`;
+    tickSvg += `\n      <line x1="${(cx + sn * oR).toFixed(2)}" y1="${(cy - cs * oR).toFixed(2)}" x2="${(cx + sn * iR).toFixed(2)}" y2="${(cy - cs * iR).toFixed(2)}" stroke="${KNOB_GRIP_COLOR}" stroke-width="${gripW}"/>`;
   }
   const attrs =
     ` data-wcoast-param="${id}" data-wcoast-cx="${cx}" data-wcoast-cy="${cy}"` +
@@ -206,13 +274,14 @@ function knack(id, cx, cy, opts = {}) {
     (depth ? ` data-wcoast-depth="${depth}"` : '') +
     (quantize ? ` data-wcoast-quantize="${quantize}"` : '') +
     (av ? ` data-wcoast-av="${av}"` : '');
+  const g = gaugeBand(radius, cap);
   let out = `  <g${attrs}>
-    <circle cx="${cx}" cy="${cy}" r="${radius}" fill="url(#blueRing)" stroke="${ringStroke}" stroke-width="${ringW}"/>
+    <circle cx="${cx}" cy="${cy}" r="${radius}" fill="${KNOB_BODY}" stroke="${KNOB_EDGE}" stroke-width="0.25" data-wcoast-role="rim"/>
+    <circle cx="${cx}" cy="${cy}" r="${g.r}" fill="none" stroke="${GAUGE_TRACK}" stroke-width="${g.w}" data-wcoast-role="gauge-track"/>
     <circle cx="${cx}" cy="${cy}" r="${cap}" fill="url(#knobCap)" stroke="${capStroke}" stroke-width="${capW}"/>${scaleSvg}
     <circle cx="${cx}" cy="${cy}" r="${band}" fill="#ff7300"/>
     <circle cx="${cx}" cy="${cy}" r="${hole}" fill="#000000" data-wcoast-role="jackhole"/>
-    <g data-wcoast-role="indicator">${tickSvg}
-      <line x1="${cx}" y1="${(cy - band).toFixed(2)}" x2="${cx}" y2="${(cy - radius).toFixed(2)}" stroke="#ffffff" stroke-width="${pointerW}"/>
+    <g data-wcoast-role="indicator" data-wcoast-cap="${cap}">${tickSvg}
     </g>
   </g>`;
   if (lab) out += '\n' + attachedLabel(cx, cy, radius, radius, lab);

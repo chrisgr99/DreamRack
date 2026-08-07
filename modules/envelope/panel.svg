@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="utf-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="50.8mm" height="128.5mm" viewBox="3.9 0 50.8 128.5" font-family="Arial Narrow, Helvetica, Arial, sans-serif">
+<defs>
+  <radialGradient id="blueRing"><stop offset="0" stop-color="#1688cc"/><stop offset="0.55" stop-color="#006da8"/><stop offset="1" stop-color="#003d62"/></radialGradient>
+  <radialGradient id="blueDial"><stop offset="0" stop-color="#1d79b7"/><stop offset="0.6" stop-color="#00639a"/><stop offset="1" stop-color="#00456e"/></radialGradient>
+  <radialGradient id="knobCap"><stop offset="0" stop-color="#f8f8f8"/><stop offset="0.4" stop-color="#bfc3c5"/><stop offset="0.62" stop-color="#f4f4f4"/><stop offset="1" stop-color="#777777"/></radialGradient>
+  <radialGradient id="redLed"><stop offset="0" stop-color="#ff4a4a"/><stop offset="0.55" stop-color="#d00000"/><stop offset="1" stop-color="#650000"/></radialGradient>
+  <radialGradient id="greenLed"><stop offset="0" stop-color="#5cf07a"/><stop offset="0.55" stop-color="#12a531"/><stop offset="1" stop-color="#054d15"/></radialGradient>
+  <radialGradient id="orangeLed"><stop offset="0" stop-color="#ffbf5c"/><stop offset="0.55" stop-color="#ef7d00"/><stop offset="1" stop-color="#7a3a00"/></radialGradient>
+</defs>
+  <g transform="translate(3.9 7.0994)">
+  <rect x="0" y="0" width="50.8" height="113.5912" rx="2.5" fill="#cfcfcf"/>
+  <rect x="0.5" y="0.5" width="49.8" height="112.5912" rx="2.2" fill="none" stroke="#7d7d7d" stroke-width="0.5"/>
+  <text x="7.188000000000001" y="7.4" font-size="3.106" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">ADSR</text>
+  <rect x="4.5" y="9.4" width="41.8" height="30.79119999999999" rx="1.2" fill="none" stroke="#7d7d7d" stroke-width="0.355"/>
+  <g data-wcoast-display="env" data-x="4.5" data-y="9.4" data-w="41.8" data-h="30.79119999999999"></g>
+  <line x1="4.5" y1="41.59" x2="46.3" y2="41.59" stroke="#7d7d7d" stroke-width="0.355"/>
+  <g data-wcoast-param="decay" data-wcoast-cx="15.399999999999999" data-wcoast-cy="53.79119999999999" data-wcoast-angle-min="-150" data-wcoast-angle-max="150" data-wcoast-port="decayCv" data-wcoast-depth="decayDepth" data-wcoast-av="on">
+    <circle cx="15.399999999999999" cy="53.79119999999999" r="8.5" fill="#4a4e52" stroke="#ffffff" stroke-width="0.25" data-wcoast-role="rim"/>
+    <circle cx="15.399999999999999" cy="53.79119999999999" r="7.31" fill="none" stroke="#2b2e31" stroke-width="1.809" data-wcoast-role="gauge-track"/>
+    <circle cx="15.399999999999999" cy="53.79119999999999" r="6.12" fill="url(#knobCap)" stroke="#666666" stroke-width="0.2498"/>
+    <circle cx="15.399999999999999" cy="53.79119999999999" r="2.8" fill="#ff7300"/>
+    <circle cx="15.399999999999999" cy="53.79119999999999" r="1.8" fill="#000000" data-wcoast-role="jackhole"/>
+    <g data-wcoast-role="indicator" data-wcoast-cap="6.12">
+    </g>
+  </g>
+  <text x="5.53" y="49.32" font-size="4.106" font-weight="700" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">D</text>
+  <g data-wcoast-param="sustain" data-wcoast-cx="35.4" data-wcoast-cy="53.79119999999999" data-wcoast-angle-min="-150" data-wcoast-angle-max="150" data-wcoast-port="sustainCv" data-wcoast-depth="sustainDepth" data-wcoast-av="on">
+    <circle cx="35.4" cy="53.79119999999999" r="8.5" fill="#4a4e52" stroke="#ffffff" stroke-width="0.25" data-wcoast-role="rim"/>
+    <circle cx="35.4" cy="53.79119999999999" r="7.31" fill="none" stroke="#2b2e31" stroke-width="1.809" data-wcoast-role="gauge-track"/>
+    <circle cx="35.4" cy="53.79119999999999" r="6.12" fill="url(#knobCap)" stroke="#666666" stroke-width="0.2498"/>
+    <circle cx="35.4" cy="53.79119999999999" r="2.8" fill="#ff7300"/>
+    <circle cx="35.4" cy="53.79119999999999" r="1.8" fill="#000000" data-wcoast-role="jackhole"/>
+    <g data-wcoast-role="indicator" data-wcoast-cap="6.12">
+    </g>
+  </g>
+  <text x="45.27" y="49.32" font-size="4.106" font-weight="700" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">S</text>
+  <g data-wcoast-param="attack" data-wcoast-cx="10.5" data-wcoast-cy="73.79119999999999" data-wcoast-angle-min="-150" data-wcoast-angle-max="150" data-wcoast-port="attackCv" data-wcoast-depth="attackDepth" data-wcoast-av="on">
+    <circle cx="10.5" cy="73.79119999999999" r="8.5" fill="#4a4e52" stroke="#ffffff" stroke-width="0.25" data-wcoast-role="rim"/>
+    <circle cx="10.5" cy="73.79119999999999" r="7.31" fill="none" stroke="#2b2e31" stroke-width="1.809" data-wcoast-role="gauge-track"/>
+    <circle cx="10.5" cy="73.79119999999999" r="6.12" fill="url(#knobCap)" stroke="#666666" stroke-width="0.2498"/>
+    <circle cx="10.5" cy="73.79119999999999" r="2.8" fill="#ff7300"/>
+    <circle cx="10.5" cy="73.79119999999999" r="1.8" fill="#000000" data-wcoast-role="jackhole"/>
+    <g data-wcoast-role="indicator" data-wcoast-cap="6.12">
+    </g>
+  </g>
+  <text x="4.8" y="65.14" font-size="4.106" font-weight="700" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">A</text>
+  <g data-wcoast-param="release" data-wcoast-cx="40.3" data-wcoast-cy="73.79119999999999" data-wcoast-angle-min="-150" data-wcoast-angle-max="150" data-wcoast-port="releaseCv" data-wcoast-depth="releaseDepth" data-wcoast-av="on">
+    <circle cx="40.3" cy="73.79119999999999" r="8.5" fill="#4a4e52" stroke="#ffffff" stroke-width="0.25" data-wcoast-role="rim"/>
+    <circle cx="40.3" cy="73.79119999999999" r="7.31" fill="none" stroke="#2b2e31" stroke-width="1.809" data-wcoast-role="gauge-track"/>
+    <circle cx="40.3" cy="73.79119999999999" r="6.12" fill="url(#knobCap)" stroke="#666666" stroke-width="0.2498"/>
+    <circle cx="40.3" cy="73.79119999999999" r="2.8" fill="#ff7300"/>
+    <circle cx="40.3" cy="73.79119999999999" r="1.8" fill="#000000" data-wcoast-role="jackhole"/>
+    <g data-wcoast-role="indicator" data-wcoast-cap="6.12">
+    </g>
+  </g>
+  <text x="46" y="65.14" font-size="4.106" font-weight="700" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">R</text>
+  <line x1="4.5" y1="86.29" x2="46.3" y2="86.29" stroke="#7d7d7d" stroke-width="0.355"/>
+  <g data-wcoast-param="gateBtn"><circle cx="6.74" cy="90.69" r="2" fill="url(#redLed)" stroke="#7c0000" stroke-width="0.2366" data-wcoast-role="step-indicator" data-wcoast-step="on"/><circle cx="6.18" cy="90.13" r="0.60" fill="#ffb4b4" opacity="0.85" data-wcoast-role="led-gloss" pointer-events="none"/>
+      <text x="6.74" y="96.23831999999999" font-size="2.706" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">PUSH</text></g>
+  <g data-wcoast-port="gateIn" data-wcoast-cx="24.64" data-wcoast-cy="90.69">
+    <circle cx="24.64" cy="90.69" r="3" fill="#8a8a8a" stroke="#000000" stroke-width="0.3"/>
+    <circle cx="24.64" cy="90.69" r="1.6" fill="#000000"/>
+  </g>
+  <text x="24.64" y="97.09432" font-size="2.5060000000000002" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">gate</text>
+  <g data-wcoast-port="retrigIn" data-wcoast-cx="43.3" data-wcoast-cy="90.69">
+    <circle cx="43.3" cy="90.69" r="3" fill="#8a8a8a" stroke="#000000" stroke-width="0.3"/>
+    <circle cx="43.3" cy="90.69" r="1.6" fill="#000000"/>
+  </g>
+  <text x="43.3" y="97.09432" font-size="2.5060000000000002" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">retrig</text>
+  <line x1="4.5" y1="97.99" x2="46.3" y2="97.99" stroke="#7d7d7d" stroke-width="0.355"/>
+  <text x="4" y="104.59" font-size="2.906" font-weight="700" font-style="italic" fill="#163a69" text-anchor="start" font-family="Arial Narrow, Helvetica, Arial, sans-serif">OUT</text>
+  <g data-wcoast-port="envOut" data-wcoast-cx="13.7" data-wcoast-cy="103.3912">
+    <circle cx="13.7" cy="103.3912" r="3" fill="#8a8a8a" stroke="#000000" stroke-width="0.3"/>
+    <circle cx="13.7" cy="103.3912" r="1.6" fill="#000000"/>
+  </g>
+  <text x="13.7" y="110.08352" font-size="2.906" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">env</text>
+  <g data-wcoast-port="invOut" data-wcoast-cx="28.5" data-wcoast-cy="103.3912">
+    <circle cx="28.5" cy="103.3912" r="3" fill="#8a8a8a" stroke="#000000" stroke-width="0.3"/>
+    <circle cx="28.5" cy="103.3912" r="1.6" fill="#000000"/>
+  </g>
+  <text x="28.5" y="110.08352" font-size="2.906" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">inv</text>
+  <g data-wcoast-port="eocOut" data-wcoast-cx="43.3" data-wcoast-cy="103.3912">
+    <circle cx="43.3" cy="103.3912" r="3" fill="#8a8a8a" stroke="#000000" stroke-width="0.3"/>
+    <circle cx="43.3" cy="103.3912" r="1.6" fill="#000000"/>
+  </g>
+  <text x="43.3" y="110.08352" font-size="2.906" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">eoc</text>
+  </g>
+</svg>

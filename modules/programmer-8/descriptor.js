@@ -60,7 +60,7 @@ for (const s of STAGES) {
   // `stepped` it rendered correctly and could not be turned at all. Same declaration as
   // the LPG's clock-ratio knob.
   params.push({
-    id: `rpt${s}`, name: `Repeat ${s}`, section: 'stage',
+    id: `rpt${s}`, signal: 'trigger', name: `Repeat ${s}`, section: 'stage',
     curve: 'detent', min: 0, max: 4, default: RPT_DEFAULT, glideMs: 0,
   });
 }

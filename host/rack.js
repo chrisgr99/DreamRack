@@ -21,8 +21,9 @@
 
 // The knАck's proportions come from the CANONICAL control, not from a copy of its numbers: the same
 // fractions that draw the faceplate drive the runtime dress, so changing the control changes both.
-import { KNACK_GRIP_LEN, KNACK_GRIP_OUT, KNACK_GRIP_W } from '../panel/primitives.js';
+import { KNACK_GRIP_LEN, KNACK_GRIP_OUT, KNACK_GRIP_W, KNOB_GRIPS, KNOB_GRIP_COLOR } from '../panel/primitives.js';
 import { loadPanel, showValue, attachControlInteraction, knobRadiusPx, valueToPosition, positionToValue, FACE_H_MM, FACE_TOP_MM, FACE_LEFT_MM, TITLE_STRIP_MM, TITLE_BAR_MM } from './panel-loader.js';
+import { showReadout, formatParamValue } from './knob-readout.js';
 import { Patchbay } from './patchbay.js';
 import { VideoEngine } from './video-engine.js';
 
@@ -30,6 +31,9 @@ const PANEL_H_MM = FACE_H_MM + TITLE_STRIP_MM;   // the cropped functional face 
 const ROW_GAP_MM = 0;           // vertical gap between rows (0 = flush, faceplates touch)
 const GAP_MM = 4;               // horizontal margin at the right of the case, in mm
 const SVG_NS = 'http://www.w3.org/2000/svg';
+// The attenuverter's travel, each way from straight up: the same sweep a value knob has, so a
+// knАck's two rings read alike — seven o'clock, up through twelve, round to five.
+const AV_SPAN = 150;
 
 // A press on the DEMO TRANSPORT is that window's, not the rack's. A cord in hand listens on the
 // document in the CAPTURE phase and swallows every left click, so while a scripted demo was carrying
@@ -5477,6 +5481,103 @@ export class Rack {
     }
   }
 
+  // A DRAWN ENVELOPE on the faceplate, for a module whose panel declares a display area. The shape is
+  // redrawn when its knobs move — a handful of line segments, and only while you are turning
+  // something — and the stage that is RUNNING is drawn brighter and thicker when the module reports
+  // one. Nothing animates: there is no dot travelling along the curve, so a repaint happens on a
+  // stage change and not per frame.
+  //
+  // A PICTURE OF THE SHAPE, NOT A TIMELINE. Sustain is a level and has no duration, so it gets a
+  // fixed plateau; the three times share the rest of the width by their cube roots, which keeps a
+  // 1ms attack visible beside a 10s release. A true timeline would be unreadable at the ends of the
+  // knobs, which is why no ADSR display has ever been one.
+  _attachGraph(rec, desc) {
+    if (!desc || !desc.graph) return;
+    const svg = rec.el && rec.el.querySelector('svg');
+    if (!svg) return;
+    const host = svg.querySelector('[data-wcoast-display]');
+    if (!host) return;
+    // The box comes from the PANEL, which is where it was drawn, rather than from a second copy of
+    // the numbers in the descriptor. Two copies drift the moment a layout moves, and the drawing
+    // would then sit outside its own frame with nothing to say so.
+    const g = { x: +host.dataset.x, y: +host.dataset.y, w: +host.dataset.w, h: +host.dataset.h };
+    if (!Number.isFinite(g.x) || !Number.isFinite(g.w)) return;
+    while (host.firstChild) host.removeChild(host.firstChild);
+
+    const PAD = 1.6;
+    const x0 = g.x + PAD, y0 = g.y + PAD, w = g.w - PAD * 2, h = g.h - PAD * 2;
+    const seg = {};
+    for (const name of ['attack', 'decay', 'sustain', 'release']) {
+      const p = document.createElementNS(SVG_NS, 'path');
+      p.setAttribute('fill', 'none');
+      p.setAttribute('stroke-linecap', 'round');
+      p.setAttribute('stroke-linejoin', 'round');
+      p.setAttribute('data-stage', name);
+      host.appendChild(p);
+      seg[name] = p;
+    }
+
+    const paint = () => {
+      const v = (id, d) => { const n = Number(rec.values.get(id)); return Number.isFinite(n) ? n : d; };
+      const a = v('attack', 0.01), d = v('decay', 0.2), sL = v('sustain', 0.6), r = v('release', 0.4);
+      // Cube roots, so ten thousand to one of real time becomes about twenty to one on the panel.
+      const ca = Math.cbrt(a), cd = Math.cbrt(d), cr = Math.cbrt(r);
+      const plateau = w * 0.22;
+      const rest = w - plateau;
+      const tot = ca + cd + cr || 1;
+      const wa = rest * ca / tot, wd = rest * cd / tot, wr = rest * cr / tot;
+      const yOf = (level) => y0 + h * (1 - level);
+      // The same curve the DSP uses: fast first, then easing.
+      const curve = (xa, xb, la, lb) => {
+        let s = `M ${xa.toFixed(2)} ${yOf(la).toFixed(2)}`;
+        for (let i = 1; i <= 12; i++) {
+          const t = i / 12, k = 1 - t;
+          const lv = lb + (la - lb) * (k * k * k);
+          s += ` L ${(xa + (xb - xa) * t).toFixed(2)} ${yOf(lv).toFixed(2)}`;
+        }
+        return s;
+      };
+      let x = x0;
+      seg.attack.setAttribute('d', curve(x, x + wa, 0, 1)); x += wa;
+      seg.decay.setAttribute('d', curve(x, x + wd, 1, sL)); x += wd;
+      seg.sustain.setAttribute('d', `M ${x.toFixed(2)} ${yOf(sL).toFixed(2)} L ${(x + plateau).toFixed(2)} ${yOf(sL).toFixed(2)}`);
+      x += plateau;
+      seg.release.setAttribute('d', curve(x, x + wr, sL, 0));
+    };
+
+    const paintStage = (stage) => {
+      for (const name of Object.keys(seg)) {
+        const on = name === stage;
+        seg[name].setAttribute('stroke', on ? '#3ad16b' : (this.isDark() ? '#e8e8ea' : '#ffffff'));
+        seg[name].setAttribute('stroke-width', on ? '1.1' : '0.55');
+      }
+    };
+
+    // A MINIMUM TIME ON SCREEN. A 10ms attack is over before the eye can register it, so a stage that
+    // arrives while the last one is still young is queued rather than dropped: each is shown for at
+    // least DWELL and then the next takes over. Without this the panel lit sustain and nothing else,
+    // because attack and decay had come and gone between two frames.
+    const DWELL = 110;
+    let shownAt = 0, queued = null, timer = 0;
+    const light = (stage) => {
+      const now = performance.now();
+      const wait = shownAt + DWELL - now;
+      if (wait <= 0) { shownAt = now; queued = null; paintStage(stage); return; }
+      queued = stage;
+      if (!timer) {
+        timer = setTimeout(() => {
+          timer = 0;
+          if (queued !== null) { const s2 = queued; queued = null; light(s2); }
+        }, wait);
+      }
+    };
+
+    paint();
+    paintStage(null);
+    rec.repaintGraph = paint;
+    if (typeof rec.instance.onStage === 'function') rec.instance.onStage(light);
+  }
+
   // The editor: a floating panel, not a field on the face. Applies as you type, because the
   // module keeps its last GOOD expression running — so a half-typed one costs nothing and you
   // see the result the moment it becomes valid.
@@ -7002,6 +7103,7 @@ export class Rack {
     if (typeof instance.onParamChange === 'function') instance.onParamChange((id, v) => this.applyParam(rec, id, v));
     if (typeof instance.attachEngine === 'function') this._attachVideoModule(rec, type.descriptor);
     this._attachReadout(rec, type.descriptor);
+    this._attachGraph(rec, type.descriptor);
 
     // Module-level handlers live on the wrapper element, so they survive a skin swap.
     el.addEventListener('pointerdown', (e) => this._startDrag(e, rec));
@@ -7058,6 +7160,7 @@ export class Rack {
     const b = rec.panel.controls.get(id);
     if (b) showValue(b, value);
     this._mirrorMixerEnable(rec, id);   // the tab's buttons are the panel's lamps, seen twice
+    if (rec.repaintGraph) rec.repaintGraph();   // a drawn envelope follows its own knobs
     this.patchbay.setDepth(rec.key, id, value);   // if this knob is a cord's depth control
     if (rec.pinned && id === 'monitorLevel') this._setMonMaster(value);              // the Monitor fader
     if (rec.pinned && (id === 'engine' || id === 'masterEnable' || id === 'monitorEnable')) {
@@ -7265,13 +7368,15 @@ export class Rack {
     if (b.indicator) {
       const len = R * KNACK_GRIP_LEN, outR = R * (1 + KNACK_GRIP_OUT), inR = outR - len;
       for (const ln of b.indicator.querySelectorAll('line')) ln.style.display = 'none';   // retire authored grips + the dark pointer
-      for (let i = 0; i < 7; i++) {
+      // Grips are drawn as a shadow, in a blue darker than the ring, so the pointer stays the only
+      // bright mark on the knob. See panel/primitives.js.
+      for (let i = 0; KNOB_GRIPS && i < 7; i++) {
         const t = i * (2 * Math.PI / 7) - Math.PI / 2;   // evenly round the circle, starting straight up
         const ux = Math.cos(t), uy = Math.sin(t);
         const ln = doc.createElementNS(SVG_NS, 'line');
         ln.setAttribute('x1', r2(cx + outR * ux)); ln.setAttribute('y1', r2(cy + outR * uy));
         ln.setAttribute('x2', r2(cx + inR * ux)); ln.setAttribute('y2', r2(cy + inR * uy));
-        ln.setAttribute('stroke', '#ffffff'); ln.setAttribute('stroke-width', r2(R * KNACK_GRIP_W));
+        ln.setAttribute('stroke', KNOB_GRIP_COLOR); ln.setAttribute('stroke-width', r2(R * KNACK_GRIP_W));
         ln.setAttribute('stroke-linecap', 'round');
         b.indicator.appendChild(ln);
       }
@@ -7323,43 +7428,29 @@ export class Rack {
     const bandUnder = el.querySelector('.knack-band');
     if (bandUnder) el.insertBefore(metal, bandUnder); else el.appendChild(metal);
 
-    // AV markings (patched only): a white zero tick in the band, big − / + flanking it, and a TWO-TONE
-    // pointer — white over the dark jack centre, black over the metallic band — rotating ±90° about down.
+    // ---- The attenuverter, shown only when patched: an INNER RING in the gap between the jack and
+    // the cap, filled from twelve o'clock — right for positive, left for negative. It carries no
+    // signal colour, light grey on the darker grey body: colour means signal on this panel, and an
+    // attenuverter is the control's own machinery rather than a signal. See design/knob-gauge.md.
+    //
+    // It replaces the metal knob-top while it shows, which is the same swap the old bottom-hemisphere
+    // version did, without the clip path.
+    const avR = (ro + gOut) / 2, avW = Math.max(0.3, (gOut - ro) * (2 / 3));   // a third narrower than the
+    // gap it sits in, so body grey shows on both sides and it reads as a ring rather than a collar
     const av = doc.createElementNS(SVG_NS, 'g'); av.setAttribute('class', 'knack-av'); av.style.display = 'none'; av.style.pointerEvents = 'none';
-    const zline = doc.createElementNS(SVG_NS, 'line');
-    zline.setAttribute('x1', r2(cx)); zline.setAttribute('y1', r2(cy + ro)); zline.setAttribute('x2', r2(cx)); zline.setAttribute('y2', r2(cy + gOut));
-    zline.setAttribute('stroke', '#ffffff'); zline.setAttribute('stroke-width', 0.22); av.appendChild(zline);
-    const lbl = (deg, s) => { const [lx, ly] = avPolar(deg, gMid); const t = doc.createElementNS(SVG_NS, 'text'); t.setAttribute('x', r2(lx)); t.setAttribute('y', r2(ly)); t.setAttribute('font-size', r2(gOut - ro)); t.setAttribute('fill', '#ffffff'); t.setAttribute('text-anchor', 'middle'); t.setAttribute('dominant-baseline', 'central'); t.setAttribute('font-weight', '700'); t.textContent = s; av.appendChild(t); };
-    lbl(110, '−'); lbl(70, '+');
-    const avp = doc.createElementNS(SVG_NS, 'g'); avp.setAttribute('class', 'knack-av-pointer');
-    const pIn = doc.createElementNS(SVG_NS, 'line');    // white — over the dark jack centre
-    pIn.setAttribute('x1', r2(cx)); pIn.setAttribute('y1', r2(cy)); pIn.setAttribute('x2', r2(cx)); pIn.setAttribute('y2', r2(cy + ro));
-    pIn.setAttribute('stroke', '#ffffff'); pIn.setAttribute('stroke-width', 0.4); pIn.setAttribute('stroke-linecap', 'round');
-    const pOut = doc.createElementNS(SVG_NS, 'line');   // white all the way (black added no visibility)
-    pOut.setAttribute('x1', r2(cx)); pOut.setAttribute('y1', r2(cy + ro)); pOut.setAttribute('x2', r2(cx)); pOut.setAttribute('y2', r2(cy + gOut));
-    pOut.setAttribute('stroke', '#ffffff'); pOut.setAttribute('stroke-width', 0.4); pOut.setAttribute('stroke-linecap', 'round');
-    avp.appendChild(pIn); avp.appendChild(pOut); av.appendChild(avp);
+    const avTrack = doc.createElementNS(SVG_NS, 'circle');
+    avTrack.setAttribute('cx', r2(cx)); avTrack.setAttribute('cy', r2(cy)); avTrack.setAttribute('r', r2(avR));
+    avTrack.setAttribute('fill', 'none'); avTrack.setAttribute('stroke', '#3c4044'); avTrack.setAttribute('stroke-width', r2(avW));
+    const avFill = doc.createElementNS(SVG_NS, 'circle');
+    avFill.setAttribute('cx', r2(cx)); avFill.setAttribute('cy', r2(cy)); avFill.setAttribute('r', r2(avR));
+    avFill.setAttribute('fill', 'none'); avFill.setAttribute('stroke', '#c3c9cf'); avFill.setAttribute('stroke-width', r2(avW));
+    av.appendChild(avTrack); av.appendChild(avFill);
     el.appendChild(av);
-
-    // ---- VALUE indicator: a plain white radial line in the outer ring, from about half-way between
-    // the rim and the jack out to the outer white edge. Replaces the external triangle. ----
-    // A FULL-LENGTH pointer — from the jack edge across the metal band and blue ring to the rim —
-    // with a dark casing under the white line, so it reads unmistakably as THE pointer at panel
-    // size. (A short grip-length pointer aliased into the 7 grips: detent steps of 42.9° against
-    // 51.4° grip spacing made the knob look like it wiggled in a ~60° arc at the bottom.)
-    const vcase = doc.createElementNS(SVG_NS, 'line');
-    vcase.setAttribute('x1', r2(cx)); vcase.setAttribute('y1', r2(cy - ro));
-    vcase.setAttribute('x2', r2(cx)); vcase.setAttribute('y2', r2(cy - R));
-    vcase.setAttribute('stroke', '#06253d'); vcase.setAttribute('stroke-width', 1.0); vcase.setAttribute('stroke-linecap', 'round');
-    const vline = doc.createElementNS(SVG_NS, 'line');
-    vline.setAttribute('x1', r2(cx)); vline.setAttribute('y1', r2(cy - ro));
-    vline.setAttribute('x2', r2(cx)); vline.setAttribute('y2', r2(cy - R));
-    vline.setAttribute('stroke', '#ffffff'); vline.setAttribute('stroke-width', 0.5); vline.setAttribute('stroke-linecap', 'round');
-    // The pointer (casing + white line) joins the grips' group so they rotate together; lift the
-    // group above the band.
-    if (b.indicator) { b.indicator.appendChild(vcase); b.indicator.appendChild(vline); el.appendChild(b.indicator); }
-    else { const vg = doc.createElementNS(SVG_NS, 'g'); vg.setAttribute('data-wcoast-role', 'indicator'); vg.appendChild(vcase); vg.appendChild(vline); el.appendChild(vg); b.indicator = vg; }
-    // showValue rotates b.indicator (grips + value line) over the full value range
+    // The hover mark lifts this ring while a scroll would move the DEPTH rather than the value —
+    // which is the only thing left telling a knАck's two controls apart now that the wedge is gone.
+    b.avRing = { track: avTrack, fill: avFill };
+    // The VALUE has no pointer any more — the gauge band on the faceplate is the reading. The
+    // indicator group stays (the drag and scroll code measures from it) and is simply empty.
 
     // Faceplate ticks at the two travel extremes: short radial marks just outside the ring at the
     // value pointer's min and max angles (± full sweep from straight up), so the knob's range reads
@@ -7375,7 +7466,7 @@ export class Rack {
       el.appendChild(tk);
     }
 
-    const dk = { rec, b, el, portId, depthMeta, metal, clipId, av, avPointer: avp, cx, cy, R, greenOut: gOut, patched: false };
+    const dk = { rec, b, el, portId, depthMeta, metal, clipId, av, avFill, avR, avW, cx, cy, R, greenOut: gOut, patched: false };
     // Per-knob AV state: the designer's default (data-wcoast-av) unless the user flipped it from the
     // right-click menu. Stored as a pseudo-param in rec.values, so it saves/loads with the patch.
     dk.avKey = 'av.' + b.id;
@@ -7401,9 +7492,15 @@ export class Rack {
     });
     el.addEventListener('wheel', (e) => this._dualKnackWheel(e, dk), { passive: false });
     b.hoverProbe = (e) => this._knackHoverProbe(e, dk);   // the hover mark follows the zone
+    // The jack in the middle is a TERMINAL: the hover readout keeps away from it.
+    b.onTerminal = (e) => this._onKnackTerminal(e, rec.key, portId);
+    // What the hover readout should say, for whichever zone the pointer is in.
+    b.readoutText = (zone) => (zone === 'av'
+      ? formatParamValue(dk.depthMeta, rec.values.get(b.depthId) || 0)
+      : formatParamValue(b.meta, rec.values.get(b.id)));
     // Scrolling the AV band turns the AV POINTER, not the knob's value indicator, so the hover
     // mark has to watch that element too or its bar sits still while the depth moves under it.
-    b.hoverWatch = avp;
+    b.hoverWatch = avFill;
     // RIGHT-CLICK IS TWO MENUS, split by the same test the cable drop uses. On the CENTRE JACK it
     // is the terminal's menu — scope, monitor, upstream — because that centre IS a terminal and
     // was otherwise the only jack in the rack you could not probe. Anywhere else on the knob it
@@ -7437,10 +7534,10 @@ export class Rack {
   _knackHoverProbe(e, dk) {
     const { zone, frac, greenFrac } = this._knackZone(e, dk);
     if (zone === 'av') {
-      // The AV pointer's own angle, in the hover mark's convention (zero up, clockwise):
-      // depth 0 points straight down, +1 swings to the right, -1 to the left.
+      // The AV's own angle, in the hover mark's convention (zero up, clockwise): depth 0 points
+      // straight up, +1 round to five o'clock, -1 back to seven — the same sweep a value knob has.
       const depth = Math.max(-1, Math.min(1, Number(dk.rec.values.get(dk.b.depthId)) || 0));
-      return { mode: 'av', avOuter: dk.greenOut, knobR: dk.R, avAngle: 180 - depth * 90,
+      return { mode: 'av', avOuter: dk.greenOut, knobR: dk.R, avAngle: depth * AV_SPAN,
         factor: Math.max(0.2, 1 - 0.8 * Math.min(1, frac / greenFrac)) };
     }
     return { mode: 'value', factor: this._knackRadialFactor(dk.b, e) };
@@ -7459,6 +7556,8 @@ export class Rack {
       const np = Math.max(0, Math.min(1, valueToPosition(dk.depthMeta, dk.rec.values.get(dk.b.depthId) || 0) + step));
       this._setParam(dk.rec, dk.b.depthId, positionToValue(dk.depthMeta, np));
       this._renderKnackSplit(dk, true);
+      // In this zone a scroll moves the DEPTH, so that is the number to show.
+      showReadout(formatParamValue(dk.depthMeta, dk.rec.values.get(dk.b.depthId) || 0), e.clientX, e.clientY, true, { sticky: true });
     } else if (dk.b.meta.curve === 'detent') {
       // detented value (the clock ratio): accumulate scroll, step one whole detent per threshold
       dk.acc = (dk.acc || 0) - raw;
@@ -7469,11 +7568,13 @@ export class Rack {
         const nv = Math.max(dk.b.meta.min, Math.min(dk.b.meta.max, cur + dir));
         if (nv !== cur) this._setParam(dk.rec, dk.b.id, nv);
       }
+      showReadout(formatParamValue(dk.b.meta, dk.rec.values.get(dk.b.id)), e.clientX, e.clientY, true, { sticky: true });
     } else {
       // continuous value: position-based speed over the blue ring
       const step = (-raw / 100) * 0.05 * this._knackRadialFactor(dk.b, e);
       const np = Math.max(0, Math.min(1, valueToPosition(dk.b.meta, dk.rec.values.get(dk.b.id)) + step));
       this._setParam(dk.rec, dk.b.id, positionToValue(dk.b.meta, np));   // _setParam → showValue moves the value pointer
+      showReadout(formatParamValue(dk.b.meta, dk.rec.values.get(dk.b.id)), e.clientX, e.clientY, true, { sticky: true });
     }
   }
 
@@ -7499,7 +7600,10 @@ export class Rack {
       belowCentre = e.clientY > sy;
     }
     const greenFrac = dk.greenOut / dk.R;
-    const zone = (dk.patched && dk.avOn() && belowCentre && frac <= greenFrac) ? 'av' : 'value';
+    // The attenuverter is an inner RING now, not a bottom hemisphere, so the zone is radial: inside
+    // the ring is depth, the gauge band outside it is the value. (`belowCentre` is still measured
+    // because the hover mark reads it.)
+    const zone = (dk.patched && dk.avOn() && frac <= greenFrac) ? 'av' : 'value';
     return { zone, frac, greenFrac };
   }
 
@@ -7522,18 +7626,23 @@ export class Rack {
     }
   }
 
-  // Show/hide the bottom attenuverter gauge on patch, and slide its marker to the current depth.
-  // The value knob's rotation is independent (full range, always) — nothing about it changes here.
+  // Show or hide the attenuverter ring on patch, and fill it to the current depth. The value gauge is
+  // independent — full range, always — and nothing about it changes here.
   _renderKnackSplit(dk, patched) {
     dk.patched = patched;
     const split = patched && dk.avOn();   // AV off = a plain knАck: never splits, whatever is patched
-    dk.av.style.display = split ? '' : 'none';   // AV marks only when split
-    // Metallic knob-top: full disc when unsplit, clipped to the bottom hemisphere (the AV) when split.
-    if (split) dk.metal.setAttribute('clip-path', `url(#${dk.clipId})`); else dk.metal.removeAttribute('clip-path');
-    if (split) {
-      const depth = dk.rec.values.get(dk.b.depthId) || 0;   // -1..1
-      dk.avPointer.setAttribute('transform', `rotate(${r2(-depth * 90)} ${r2(dk.cx)} ${r2(dk.cy)})`);   // down=0, +1 right, −1 left
-    }
+    dk.av.style.display = split ? '' : 'none';
+    dk.metal.style.display = split ? 'none' : '';   // the ring takes the metal knob-top's place
+    if (!split) return;
+    // Bipolar, from twelve o'clock: +1 fills clockwise to three o'clock, −1 anticlockwise to nine.
+    // Same dash-around-a-circle trick the value gauge uses (see panel-loader showGauge).
+    const depth = Math.max(-1, Math.min(1, dk.rec.values.get(dk.b.depthId) || 0));
+    const a = depth * AV_SPAN;
+    let lo = Math.min(0, a), hi = Math.max(0, a);
+    if (hi - lo < 3) { const mid = (lo + hi) / 2; lo = mid - 1.5; hi = mid + 1.5; }
+    const c = 2 * Math.PI * dk.avR;
+    dk.avFill.setAttribute('stroke-dasharray', `${r2(c * (hi - lo) / 360)} ${r2(c)}`);
+    dk.avFill.setAttribute('transform', `rotate(${r2(lo - 90)} ${r2(dk.cx)} ${r2(dk.cy)})`);
   }
 
   _dualKnackMenu(e, dk) {

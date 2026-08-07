@@ -1,74 +1,22 @@
-export default {
-  "faceW": 44,
-  "faceH": 113.5912,
-  "faceLeft": 3.9,
-  "faceTop": 7.0994,
-  "wrap": true,
-  "items": [
-    {
-      "t": "rect",
-      "x": 0,
-      "y": 0,
-      "w": 44,
-      "h": 113.5912,
-      "rx": 2.5,
-      "fill": "face"
-    },
-    {
-      "t": "rect",
-      "x": 0.5,
-      "y": 0.5,
-      "w": 43,
-      "h": 112.5912,
-      "rx": 2.2,
-      "fill": "none",
-      "stroke": "frame",
-      "sw": 0.5
-    },
-    {
-      "t": "label",
-      "id": "label1",
-      "x": 10,
-      "y": 10,
-      "text": "SINE",
-      "opts": {
-        "size": 3
-      }
-    },
-    {
-      "t": "divider",
-      "id": "divider2",
-      "x": 7,
-      "y": 15,
-      "len": 30,
-      "w": 0.355
-    },
-    {
-      "t": "knob",
-      "id": "freq",
-      "x": 22,
-      "y": 48,
-      "opts": {
-        "radius": 4.6,
-        "label": {
-          "text": "knob",
-          "placement": "below",
-          "size": 2
-        }
-      }
-    },
-    {
-      "t": "jack",
-      "id": "out",
-      "x": 22,
-      "y": 92,
-      "opts": {
-        "label": {
-          "text": "out",
-          "placement": "below",
-          "size": 2
-        }
-      }
-    }
-  ]
-};
+// panel.layout.js — the Sine Source faceplate, in the panel grammar.
+//
+// 5 HP. The smallest useful thing in the rack: one sine, one knob, one jack — and a 1V/oct input, so
+// it can be played rather than only tuned. It exists as a known-good test signal, which is worth
+// keeping now that the Oscillator is here to do the real work.
+//
+// Its previous panel was the artefact the panel editor was proved with: 8.7 HP for a single control,
+// and the knob was labelled "knob".
+
+'use strict';
+
+import { panel, band, row, knob, jack, outputs } from '../../panel/grammar.js';
+
+export default panel({ hp: 5 }, [
+  band('SINE', [
+    // A medium knob and no scale ring: at 5 HP the panel is 25.4mm across and a big knob with a scale
+    // reaches 23.4mm before its margins, which is 7mm more than there is.
+    row([knob('freq', 'FREQ', { size: 'medium' })]),
+    row([jack('pitchIn', '1V/oct')]),
+  ]),
+  outputs([jack('out', 'out')]),
+]);

@@ -16,14 +16,23 @@ export function create(ctx, _services) {
   osc.connect(out);
   osc.start();
 
+  // 1V/OCT WITHOUT A WORKLET. `detune` is in cents and is exponential by definition, so one volt of
+  // pitch is 1200 cents and a plain gain of 1200 tracks exactly. A frequency input would have had to
+  // be summed in the exponent, which is the whole reason the other oscillators run a processor.
+  const pitch = ctx.createGain();
+  pitch.gain.value = 1200;
+  pitch.connect(osc.detune);
+
   const anchor = { node: out, index: 0 };
   return {
     node: out,
     getOutput: (portId) => (portId === 'out' ? anchor : null),
-    getInput: () => null,                                   // no inputs — it's a source
+    getInput: (portId) => (portId === 'pitchIn' ? { node: pitch, index: 0 } : null),
     getParam: (paramId) => (paramId === 'freq' ? osc.frequency : null),
     setParam: (paramId, value) => { if (paramId === 'freq') osc.frequency.value = value; },
     supports: (paramId) => paramId === 'freq',
-    dispose: () => { try { osc.stop(); osc.disconnect(); out.disconnect(); } catch (_e) { /* already gone */ } },
+    dispose: () => {
+      try { osc.stop(); osc.disconnect(); out.disconnect(); pitch.disconnect(); } catch (_e) { /* already gone */ }
+    },
   };
 }

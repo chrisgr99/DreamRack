@@ -32,7 +32,7 @@ params.push({ id: 'window', name: 'Window', section: 'out', curve: 'stepped',
 // BRIGHT — master brightness, and the one video parameter that most wants CV: fading the
 // whole image from an envelope is the video equivalent of a master fader. A knАck, so the
 // cable and the knob share one control.
-params.push({ id: 'bright', name: 'Brightness', section: 'out', curve: 'linear', min: 0, max: 1, default: 1, glideMs: 0 });
+params.push({ id: 'bright', signal: 'rgb', name: 'Brightness', section: 'out', curve: 'linear', min: 0, max: 1, default: 1, glideMs: 0 });
 params.push({ id: 'brightDepth', name: 'Brightness depth', section: 'out', curve: 'linear', min: -1, max: 1, default: 1, glideMs: 0, subControl: true });
 ports.push({ id: 'brightCv', name: 'Brightness', section: 'out', domain: 'control', dir: 'in', target: 'bright', via: 'brightDepth' });
 

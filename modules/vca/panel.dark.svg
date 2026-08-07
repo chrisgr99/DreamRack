@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="30.48mm" height="128.5mm" viewBox="3.9 0 30.48 128.5" font-family="Arial Narrow, Helvetica, Arial, sans-serif">
+<defs>
+  <radialGradient id="blueRing"><stop offset="0" stop-color="#1688cc"/><stop offset="0.55" stop-color="#006da8"/><stop offset="1" stop-color="#003d62"/></radialGradient>
+  <radialGradient id="blueDial"><stop offset="0" stop-color="#1d79b7"/><stop offset="0.6" stop-color="#00639a"/><stop offset="1" stop-color="#00456e"/></radialGradient>
+  <radialGradient id="knobCap"><stop offset="0" stop-color="#3a3d43"/><stop offset="0.4" stop-color="#4c5058"/><stop offset="0.62" stop-color="#5a5f67"/><stop offset="1" stop-color="#6b7079"/></radialGradient>
+  <radialGradient id="redLed"><stop offset="0" stop-color="#ff4a4a"/><stop offset="0.55" stop-color="#d00000"/><stop offset="1" stop-color="#650000"/></radialGradient>
+  <radialGradient id="greenLed"><stop offset="0" stop-color="#5cf07a"/><stop offset="0.55" stop-color="#12a531"/><stop offset="1" stop-color="#054d15"/></radialGradient>
+  <radialGradient id="orangeLed"><stop offset="0" stop-color="#ffbf5c"/><stop offset="0.55" stop-color="#ef7d00"/><stop offset="1" stop-color="#7a3a00"/></radialGradient>
+</defs>
+  <g transform="translate(3.9 7.0994)">
+  <rect x="0" y="0" width="30.48" height="113.5912" rx="2.5" fill="#262629"/>
+  <rect x="0.5" y="0.5" width="29.48" height="112.5912" rx="2.2" fill="none" stroke="#808085" stroke-width="0.5"/>
+  <text x="6.516" y="7.4" font-size="3.106" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">VCA</text>
+  <g data-wcoast-param="level" data-wcoast-cx="15.24" data-wcoast-cy="17.9" data-wcoast-angle-min="-150" data-wcoast-angle-max="150" data-wcoast-port="levelCv" data-wcoast-depth="levelDepth" data-wcoast-av="on">
+    <circle cx="15.24" cy="17.9" r="8.5" fill="#4a4e52" stroke="#ffffff" stroke-width="0.25" data-wcoast-role="rim"/>
+    <circle cx="15.24" cy="17.9" r="7.31" fill="none" stroke="#2b2e31" stroke-width="1.809" data-wcoast-role="gauge-track"/>
+    <circle cx="15.24" cy="17.9" r="6.12" fill="url(#knobCap)" stroke="#b8b8bc" stroke-width="0.2498"/>
+    <circle cx="15.24" cy="17.9" r="2.8" fill="#ff7300"/>
+    <circle cx="15.24" cy="17.9" r="1.8" fill="#000000" data-wcoast-role="jackhole"/>
+    <g data-wcoast-role="indicator" data-wcoast-cap="6.12">
+    </g>
+  </g>
+  <text x="15.24" y="29.94832" font-size="2.706" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">LEVEL</text>
+  <g data-wcoast-param="response">
+    <circle cx="12.74" cy="48.93" r="1.5" fill="url(#redLed)" stroke="#7c0000" stroke-width="0.2366" data-wcoast-role="step-indicator" data-wcoast-step="lin"/><circle cx="12.32" cy="48.51" r="0.45" fill="#ffb4b4" opacity="0.85" data-wcoast-role="led-gloss" pointer-events="none"/>
+    <circle cx="17.74" cy="48.93" r="1.5" fill="url(#redLed)" stroke="#7c0000" stroke-width="0.2366" data-wcoast-role="step-indicator" data-wcoast-step="exp"/><circle cx="17.32" cy="48.51" r="0.45" fill="#ffb4b4" opacity="0.85" data-wcoast-role="led-gloss" pointer-events="none"/>
+      <text x="9.57" y="49.53" font-size="2.4059999999999997" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">lin</text>
+      <text x="21.31" y="49.53" font-size="2.4059999999999997" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">exp</text>
+  </g>
+  <g data-wcoast-port="audioIn" data-wcoast-cx="15.24" data-wcoast-cy="70.16">
+    <circle cx="15.24" cy="70.16" r="3" fill="#8a8a8a" stroke="#000000" stroke-width="0.3"/>
+    <circle cx="15.24" cy="70.16" r="1.6" fill="#000000"/>
+  </g>
+  <text x="15.24" y="76.56432" font-size="2.5060000000000002" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">in</text>
+  <line x1="4.5" y1="97.99" x2="25.98" y2="97.99" stroke="#808085" stroke-width="0.355"/>
+  <text x="4" y="104.59" font-size="2.906" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="start" font-family="Arial Narrow, Helvetica, Arial, sans-serif">OUT</text>
+  <g data-wcoast-port="out" data-wcoast-cx="13.7" data-wcoast-cy="103.3912">
+    <circle cx="13.7" cy="103.3912" r="3" fill="#8a8a8a" stroke="#000000" stroke-width="0.3"/>
+    <circle cx="13.7" cy="103.3912" r="1.6" fill="#000000"/>
+  </g>
+  <text x="13.7" y="109.79552" font-size="2.5060000000000002" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">out</text>
+  </g>
+</svg>

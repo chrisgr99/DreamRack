@@ -15,7 +15,9 @@
 //               outside" and "driving itself" apart.
 //
 // The four outputs sit in one row along the bottom, evenly spaced and full size. They are the things
-// a cable has to find, so they get the easiest targets on the panel.
+// a cable has to find, so they get the easiest targets on the panel. Their centres are 10.2mm off the
+// bottom edge, matching the panel grammar: at 8.2 their labels ended a millimetre from the edge and
+// the row read as crowded against it.
 
 'use strict';
 
@@ -71,14 +73,14 @@ items.push({ t: 'knack', id: 'pulseWidth', x: 15, y: 88, opts: {
   radius: 6.8, port: 'pwIn', depth: 'pwDepth', av: 'on', label: lab('PULSE WIDTH', 1.9),
 } });
 items.push({ t: 'knob', id: 'feedback', x: 37, y: 88, opts: { radius: 6.8, label: lab('FEEDBACK', 1.9) } });
-rule(100);
+rule(98);
 
 // ---- outputs ----------------------------------------------------------------
-ink(4, 106.6, 'OUT', { size: 2.2, anchor: 'start' });
-items.push({ t: 'jack', id: 'sineOut', x: 16, y: 105.4, opts: { label: lab('sine', 1.8) } });
-items.push({ t: 'jack', id: 'triOut', x: 25, y: 105.4, opts: { label: lab('tri', 1.8) } });
-items.push({ t: 'jack', id: 'sawOut', x: 34, y: 105.4, opts: { label: lab('saw', 1.8) } });
-items.push({ t: 'jack', id: 'pulseOut', x: 43, y: 105.4, opts: { label: lab('pulse', 1.8) } });
+ink(4, 104.6, 'OUT', { size: 2.2, anchor: 'start' });
+items.push({ t: 'jack', id: 'sineOut', x: 16, y: 103.4, opts: { label: lab('sine', 1.8) } });
+items.push({ t: 'jack', id: 'triOut', x: 25, y: 103.4, opts: { label: lab('tri', 1.8) } });
+items.push({ t: 'jack', id: 'sawOut', x: 34, y: 103.4, opts: { label: lab('saw', 1.8) } });
+items.push({ t: 'jack', id: 'pulseOut', x: 43, y: 103.4, opts: { label: lab('pulse', 1.8) } });
 
 // wrap: TRUE. This layout works from 0,0 — which is what makes it readable — so the renderer has to
 // translate it to (faceLeft, faceTop) inside the 3U row. The rack's panel loader crops every module

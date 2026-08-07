@@ -46,10 +46,10 @@ const ports = [
 const params = [
   // Coarse spans nine octaves, low enough to be an LFO and high enough to be a modulator. Exponential,
   // so the knob moves in musical steps rather than crowding every note into its last few degrees.
-  { id: 'coarse', name: 'Coarse', section: 'freq', curve: 'exp', min: 8, max: 8000, default: 220, unit: 'Hz' },
+  { id: 'coarse', signal: 'audio', name: 'Coarse', section: 'freq', curve: 'exp', min: 8, max: 8000, default: 220, unit: 'Hz' },
   // Fine is ±3.5 semitones, matching the 259t's, so tuning two oscillators together feels the same
   // whichever one you are holding.
-  { id: 'fine', name: 'Fine', section: 'freq', curve: 'linear', min: -3.5, max: 3.5, default: 0, unit: 'semitones' },
+  { id: 'fine', signal: 'audio', name: 'Fine', section: 'freq', curve: 'linear', min: -3.5, max: 3.5, default: 0, unit: 'semitones' },
 
   // The two FM depths. Both are the knAck's ring; both are a-rate so they can themselves be moved
   // quickly without stepping.

@@ -29,6 +29,14 @@ import vcoDescriptor from '../modules/oscillator/descriptor.js';
 import { create as vcoCreate } from '../modules/oscillator/factory.js';
 import noiseDescriptor from '../modules/noise/descriptor.js';
 import { create as noiseCreate } from '../modules/noise/factory.js';
+import envDescriptor from '../modules/envelope/descriptor.js';
+import { create as envCreate } from '../modules/envelope/factory.js';
+import vcaDescriptor from '../modules/vca/descriptor.js';
+import { create as vcaCreate } from '../modules/vca/factory.js';
+import filterDescriptor from '../modules/filter/descriptor.js';
+import { create as filterCreate } from '../modules/filter/factory.js';
+import octDescriptor from '../modules/octave/descriptor.js';
+import { create as octCreate } from '../modules/octave/factory.js';
 import progDescriptor from '../modules/programmer-8/descriptor.js';
 import { create as progCreate } from '../modules/programmer-8/factory.js';
 import vidDescriptor from '../modules/video-out/descriptor.js';
@@ -67,6 +75,10 @@ registry.register({ descriptor: galleryDescriptor, create: galleryCreate });
 registry.register({ descriptor: sineDescriptor, create: sineCreate });
 registry.register({ descriptor: vcoDescriptor, create: vcoCreate });
 registry.register({ descriptor: noiseDescriptor, create: noiseCreate });
+registry.register({ descriptor: envDescriptor, create: envCreate });
+registry.register({ descriptor: vcaDescriptor, create: vcaCreate });
+registry.register({ descriptor: filterDescriptor, create: filterCreate });
+registry.register({ descriptor: octDescriptor, create: octCreate });
 registry.register({ descriptor: progDescriptor, create: progCreate });
 registry.register({ descriptor: vidDescriptor, create: vidCreate });
 registry.register({ descriptor: fieldDescriptor, create: fieldCreate });
@@ -119,11 +131,42 @@ const MODULE_TYPES = [{
   panelUrl: 'modules/noise/panel.svg',
   descriptor: noiseDescriptor,
 }, {
+  // ADSR — the ordinary four-stage envelope, which the rack did not have: the Quad Function Generator
+  // is struck, this one is HELD. Its panel draws its own shape and lights the stage running. 10 HP.
+  descriptorId: envDescriptor.id,
+  name: 'ADSR',
+  hp: 10,
+  panelUrl: 'modules/envelope/panel.svg',
+  descriptor: envDescriptor,
+}, {
+  // Filter — a state-variable filter with low, band and high live at once, two or four poles, and
+  // drive into the input so the filter smooths what the saturation makes. 8 HP.
+  descriptorId: filterDescriptor.id,
+  name: 'Filter',
+  hp: 8,
+  panelUrl: 'modules/filter/panel.svg',
+  descriptor: filterDescriptor,
+}, {
+  // Octave — a 1V/oct signal moved whole octaves. No worklet: on 1V/oct an octave is exactly one, so
+  // it is a sum the audio graph does for free. 4 HP.
+  descriptorId: octDescriptor.id,
+  name: 'Octave',
+  hp: 4,
+  panelUrl: 'modules/octave/panel.svg',
+  descriptor: octDescriptor,
+}, {
+  // VCA — one signal, one knob, one voltage on the knob. Linear or exponential response. 5 HP.
+  descriptorId: vcaDescriptor.id,
+  name: 'VCA',
+  hp: 6,
+  panelUrl: 'modules/vca/panel.svg',
+  descriptor: vcaDescriptor,
+}, {
   // Sine Source — authored in the panel editor (panel + descriptor drawn), factory
   // hand-written. The Phase 6 closed-loop proof: a drawn module that loads and plays.
   descriptorId: sineDescriptor.id,
   name: 'Sine Source',
-  hp: 9,
+  hp: 5,
   panelUrl: 'modules/sine-source/panel.svg',
   descriptor: sineDescriptor,
 }, {
