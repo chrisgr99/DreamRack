@@ -84,6 +84,7 @@ const PAGE_MAX_AUDIO = 8;
 // pages ARE — the sound side of the rack together, the picture side last.
 const PAGE_FIXED = [{ id: 'output', kind: 'output', name: 'Mixer/Output' }, { id: 'video', kind: 'video', name: 'Video' }];
 const CABLE_PX = 3.8;   // cord thickness in px at zoom 1 (scales up as you zoom in)
+const CABLE_GRAB_TOL_MM = 0.8;   // ...and how far outside it still counts as pressing the cord
 // A crossing cable arrives at its tab in its own LANE. The spacing is what a turned label needs, so a
 // label can hang under each stub without either moving when you hover.
 const STUB_GAP_PX = 18;
@@ -145,12 +146,23 @@ const LIT_GRAB_FROM_R = 1.25;   // just outside the rim
 // ...and far enough beyond it to be AIMED AT. At 3.25 radii the stretch was about nine pixels long,
 // which is not a target — it is a coincidence. Longer costs a little more panel face covered near the
 // terminal, which is the right trade for a control you are meant to be able to hit.
-// HALF ITS OLD LENGTH. Long enough to aim at, short enough that it stops before the next control —
-// it was reaching over things that need pressing themselves.
-const LIT_GRAB_TO_R = 3.4;
+// HALVED AGAIN. It still reached far enough to lie over a knob beyond the terminal, and a control you
+// cannot press because a cable is lying across it is worse than a cable that is a little harder to
+// take hold of. At just over one radius of cord it is still a target rather than a coincidence.
+const LIT_GRAB_TO_R = 2.33;
 // ONE WIDTH FOR BOTH: what you can press is exactly what you can see. They used to differ — a hit
 // area half again as wide as the marker — which meant the marker appeared to stop short of the port
 // while the pressable region carried on over it, and over whatever control sat beyond.
+// AND IT STANDS OFF THE TERMINAL by this much before it begins. Two reasons, both about what the
+// stretch sits ON TOP OF. A knАck is a knob with the jack at its centre, so a cord leaves from the
+// middle of a control and crosses its face before reaching bare panel — a stretch starting at the
+// jack's rim lies over the part of the knob you turn. And cords fanning into one terminal are still
+// bunched together right at it, so their stretches overlap; a couple of millimetres out they have
+// separated enough to tell apart and to aim at individually.
+//
+// MILLIMETRES, not jack radii like the length below: this is a clearance from other things on the
+// panel, and those are laid out in millimetres.
+const LIT_GRAB_GAP_MM = 2.0;
 const LIT_GRAB_W = 2.2;      // hit width, in cord widths
 const LIT_GRAB_SHOW = 2.2;   // ...and the width it is drawn at once you have dwelt on it
 const LIT_HOVER_MS = 300;    // dwell before the stretch reveals itself
@@ -203,7 +215,6 @@ const VIEW_ZOOM_MAX = 8;
 // the whole rack; 2 keeps a wide rack well under a few thousand pixels a side.
 const FROZEN_MAX_SCALE = 2;
 // How much of a row must be showing before it counts as a row you meant to see, as a fraction of a row.
-const SNAP_EDGE_FRAC = 0.30;
 // Fanning cords that leave one jack together: FAN_MIN_DEG is how far apart two must set off before they
 // read as separate, and FAN_MAX_DEG the furthest a cord will be swung from its natural path to get there.
 const FAN_MIN_DEG = 26;
@@ -239,12 +250,10 @@ const JACK_DROP_MARGIN_MM = 2;   // a cable arms/drops within this much of a ter
 // Grabbing vs. new cable off a populated OUTPUT: a left move within this angle of an
 // existing cord's departure grabs that cord; a move in a fresher direction starts a new
 // one. Math.SQRT1_2 = cos(45°) — the half-angle of the "grab" cone. Tune to taste.
-const GRAB_MAX_COS = Math.SQRT1_2;
 // Terminals get an invisible hit-pad this many mm beyond their outer edge, so a click or
 // drag is easier to land. 1.3mm is safe against the tightest jack pair (3mm apart → both
 // grow, meeting only past 1.5mm). Push buttons grow adaptively up to the same cap.
 const HIT_GROW_MM = 1.3;
-const JACK_PICK_HOLD_MS = 150;   // press-and-hold before a click on a jack picks a cord up
 // KnAck (a knob a cable plugs into): a lone left-click waits this long to see whether a
 // second click follows (a double-click = reset the knob). Only after the window passes does the
 // click commit to pulling a cable — the small lag is what keeps click-to-patch and double-click-
@@ -346,7 +355,6 @@ export class Rack {
     this._rowEls = [];
     this._menuEl = null;
     this._ghostEl = null;
-    this._hoverCableEdgeId = null;  // cable under the pointer (reveals its reshape handle)
     this._reshaping = false;   // a middle-handle reshape drag is in progress
     this._tempCable = null;    // live cord element while dragging a new/regrabbed cable
     this._dragEdgeId = null;   // edge whose end is being dragged (hidden meanwhile)
@@ -382,6 +390,7 @@ export class Rack {
     // run on their own elements first (and preventDefault themselves); this is the
     // catch-all for areas without one (controls, empty space).
     document.addEventListener('contextmenu', (e) => e.preventDefault());
+    this._watchCableDrag();   // press ON a cord and move → bend it; see _watchCableDrag
     // A press outside an open pop-up menu (the app/File menu, a scope menu) just
     // DISMISSES it — that click must not also nudge a control. Capture phase +
     // stopPropagation keeps it from reaching the faceplate/jack/knob handlers;
@@ -435,7 +444,6 @@ export class Rack {
       if (this._ovActive || !e.altKey) return;   // plain scroll stays with the control under the pointer
       e.preventDefault(); e.stopPropagation();
       this._optUsed = true;
-      this._navZoomed = true;   // this gesture has changed the magnification, not merely moved about
       this._panBusyUntil = performance.now() + 300;
       this.content.style.transition = '';
       const rect = this.container.getBoundingClientRect();
@@ -485,11 +493,9 @@ export class Rack {
       // DOM each time, which Zoom then re-tracks — a feedback loop that jerks the pointer rightward over a
       // module. Pausing the hover work while Control is down breaks the loop without touching the zoom.
       if (this._ovActive || this._optDown || e.ctrlKey) return;
-      this._updateCableHover(e);
     });
     this.container.addEventListener('pointerleave', () => {
       let redraw = false;
-      if (this._hoverCableEdgeId !== null) { this._hoverCableEdgeId = null; redraw = true; }
       if (this._fadedCables) { this._fadedCables = null; this._cableFadeCtrl = null; redraw = true; }
       if (this._netOrigin !== null) { this._netOrigin = null; this._rebuildHoverFocus(); redraw = true; }
       if (redraw) this._drawCables();
@@ -543,10 +549,7 @@ export class Rack {
         // Full brightness while navigating: clear any current hover dim/fade (per-move hover work is
         // skipped while Option is held; see the container pointermove handler).
         if (this._netOrigin !== null) { this._netOrigin = null; this._rebuildHoverFocus(); }
-        if (this._hoverCableEdgeId !== null || this._fadedCables) { this._hoverCableEdgeId = null; this._fadedCables = null; this._cableFadeCtrl = null; this._drawCables(); }
-        // What the view was when the gesture began, so a pure pan can be put back at the same height.
-        this._navRows = Math.max(1, Math.min(this.rowCount, Math.round(this._rowsAt(this.zoom))));
-        this._navZoomed = false;
+        if (this._fadedCables) { this._fadedCables = null; this._cableFadeCtrl = null; this._drawCables(); }
         this._freezeView();
         this._armPanWheel(true);
         document.addEventListener('pointermove', this._navMove, true);         // pointer motion pans while held
@@ -574,7 +577,6 @@ export class Rack {
     });
     const endNav = () => {
       this._optDown = false;
-      this._settleOnWholeRows();   // before the thaw, so the picture and the live rack agree
       this._thawView();
       this._armPanWheel(false);
       document.removeEventListener('pointermove', this._navMove, true);
@@ -1726,7 +1728,7 @@ export class Rack {
           const startR = (fromA ? g.aR : g.bR) || ring;
           // Its round cap reaches half a width back along the cord, so starting the segment half a
           // width beyond the disc puts the cap's edge exactly ON the disc's edge: touching, not over.
-          const from = Math.max(0, outer + (wmm * LIT_GRAB_W) / 2 - startR);
+          const from = Math.max(0, outer + (wmm * LIT_GRAB_W) / 2 - startR) + LIT_GRAB_GAP_MM;
           const seg = this._cordSegment(g, fromA, from, from + ring * (LIT_GRAB_TO_R - LIT_GRAB_FROM_R));
           if (!seg) continue;
           const end = fromA ? 'a' : 'b';
@@ -1773,34 +1775,37 @@ export class Rack {
             this._grabOver = null; this._grabShown = null;
             paint(liveEl(), false);
           });
+          // THIS STRETCH IS HOW A CABLE COMES OFF. Press it and move and you are pulling THIS end of
+          // THIS cord — no timing, no direction, no guess about which of several you meant. Press and
+          // release without moving and it toggles the cable bright instead.
+          //
+          // The listeners go on the DOCUMENT, not on this element: the cable layer redraws on almost
+          // every pointer move, and a listener bound to the stretch would be listening from a corpse
+          // before the pointer had travelled six pixels.
           hit.addEventListener('pointerdown', (ev) => {
             if (ev.button !== 0) return;
             ev.preventDefault(); ev.stopPropagation();
             clearTimeout(this._litHoverTimer);
-            this._litEdgeId = this._litEdgeId === e.id ? null : e.id;
-            this._drawCables();
+            const sx = ev.clientX, sy = ev.clientY, id = e.id, atA = fromA;
+            const off = () => {
+              document.removeEventListener('pointermove', mv, true);
+              document.removeEventListener('pointerup', up, true);
+            };
+            const mv = (m) => {
+              if (Math.hypot(m.clientX - sx, m.clientY - sy) < 6) return;
+              off();
+              // Look the edge up again rather than closing over it: a redraw between the press and the
+              // move replaces the objects this closure was built with.
+              const live = this.patchbay.list().find((x) => x.id === id);
+              if (!live) return;
+              if (live.link) this._startLinkRegrab(live, atA ? 'anchor' : 'dst', m.clientX, m.clientY, true);
+              else this._startStickyRegrab(live, atA ? 'src' : 'dst', m.clientX, m.clientY, true);
+            };
+            const up = () => { off(); this._litEdgeId = this._litEdgeId === id ? null : id; this._drawCables(); };
+            document.addEventListener('pointermove', mv, true);
+            document.addEventListener('pointerup', up, true);
           });
         }
-      }
-      // Middle reshape handle. Built for every cable and merely HIDDEN, so showing it is a mutation
-      // rather than a redraw of the whole layer — a redraw destroys the grab stretch the pointer is
-      // sitting on, which is what made clicking a cable end so unreliable.
-      {
-        const mid = {
-          x: 0.125 * g.pA.x + 0.375 * g.c1.x + 0.375 * g.c2.x + 0.125 * g.pB.x,
-          y: 0.125 * g.pA.y + 0.375 * g.c1.y + 0.375 * g.c2.y + 0.125 * g.pB.y,
-        };
-        const rMm = 5.5 / (s || 1);
-        const hd = document.createElementNS(SVG_NS, 'circle');
-        hd.setAttribute('cx', r2(mid.x)); hd.setAttribute('cy', r2(mid.y)); hd.setAttribute('r', r2(rMm));
-        hd.setAttribute('fill', color); hd.setAttribute('stroke', '#fff'); hd.setAttribute('stroke-width', r2(rMm * 0.28));
-        hd.style.pointerEvents = 'auto';
-        hd.style.cursor = 'var(--grip)';
-        hd.addEventListener('pointerdown', (ev) => this._startReshape(ev, e));
-        hd.setAttribute('class', 'cable-reshape');
-        hd.dataset.edge = e.id;
-        if (e.id !== this._hoverCableEdgeId) hd.style.display = 'none';
-        this.cables.appendChild(hd);
       }
     }
     // Forget eased-opacity state for cables that no longer exist.
@@ -2602,25 +2607,72 @@ export class Rack {
 
   // Nearest module-to-module cable to a point (mm), within a small pixel radius,
   // or null. Samples each cord's cubic and measures point-to-segment distance.
-  _nearestCable(m) {
-    const thr = 8 / ((this.pxPerMm || 1) * this.zoom);
-    let best = null, bestD = thr;
+  // WHICH CORD IS UNDER THIS POINT, or null. Within the cord's own DRAWN WIDTH — not the generous
+  // proximity the old middle-handle hover used, because this decides whether a drag bends a cable or
+  // does whatever the thing underneath would have done. You pressed ON the cable, so you meant the
+  // cable; a millimetre off and you meant the panel.
+  //
+  // The LAST match wins: cables are drawn in list order, so the last one drawn is the one on top, and
+  // the one on top is the one you were pointing at. No cleverer tie-break than that.
+  _cordAtPoint(m) {
+    // Half the cord's drawn width, plus a little. Dead on the width is honest but hard to hit — a cord
+    // is a couple of millimetres of moving target — and the cost of being generous is small: the only
+    // thing this takes away is a drag on whatever lies under the extra sliver.
+    const half = (CABLE_PX / (this._fit || 1)) / 2 + CABLE_GRAB_TOL_MM;
+    let hit = null;
     for (const e of this.patchbay.list()) {
       const g = this._cordGeom(e);
       if (!g) continue;
       let prev = g.pA;
-      for (let i = 1; i <= 16; i++) {
-        const t = i / 16, mt = 1 - t;
+      for (let i = 1; i <= 24; i++) {
+        const t = i / 24, mt = 1 - t;
         const cur = {
           x: mt * mt * mt * g.pA.x + 3 * mt * mt * t * g.c1.x + 3 * mt * t * t * g.c2.x + t * t * t * g.pB.x,
           y: mt * mt * mt * g.pA.y + 3 * mt * mt * t * g.c1.y + 3 * mt * t * t * g.c2.y + t * t * t * g.pB.y,
         };
-        const d = this._distToSeg(m, prev, cur);
-        if (d < bestD) { bestD = d; best = e; }
+        if (this._distToSeg(m, prev, cur) <= half) { hit = e; break; }
         prev = cur;
       }
     }
-    return best;
+    return hit;
+  }
+
+  // DRAGGING A CABLE BENDS IT, from wherever you took hold — there is no handle to find. The old one
+  // sat at the cord's midpoint and appeared when the pointer came merely NEAR the cable, which meant
+  // a handle popping up in the middle of the rack while you were down at a terminal, often over a
+  // control. You cannot aim at a point you have to hunt for.
+  //
+  // THE CORD STAYS POINTER-TRANSPARENT and this listens at the document instead. That matters for
+  // more than tidiness: an element that takes pointer events also takes the WHEEL, so a pressable
+  // cord would stop you scrolling a knob it happened to lie across. Hover, scroll and clicks all pass
+  // straight through as before — only a press that MOVES is taken, and only if it began on the cord.
+  //
+  // Which means a cable wins over a module's title band and over a fader, both of which it may cross.
+  // That is deliberate: there is plenty of either left to grab where no cable lies.
+  // `_cableDragCand` is set at PRESS time and read by anything else that might want the same drag.
+  // It has to be decided then, not when the reshape actually starts: the two gestures have different
+  // movement thresholds — a module counts Manhattan distance, this counts Euclidean — so on a diagonal
+  // the module could pass its threshold first, mark itself as dragging, and only then find the cable
+  // taking over. It had already drawn its held-and-moving dashes by that point. Knowing at the press
+  // that this drag belongs to a cable removes the race rather than tidying up after it.
+  _watchCableDrag() {
+    let sx = 0, sy = 0;
+    document.addEventListener('pointerdown', (e) => {
+      this._cableDragCand = null;
+      if (e.button !== 0 || this._tempCable || this._reshaping || this._optDown) return;
+      if (e.target && e.target.closest && e.target.closest('.cable-grab')) return;   // the ends unplug, not bend
+      sx = e.clientX; sy = e.clientY;
+      this._cableDragCand = this._cordAtPoint(this._clientToMm(e.clientX, e.clientY));
+    }, true);
+    document.addEventListener('pointermove', (e) => {
+      const edge = this._cableDragCand;
+      if (!edge) return;
+      if (Math.hypot(e.clientX - sx, e.clientY - sy) < 4) return;
+      this._cableDragCand = null;
+      if (!this.patchbay.list().some((x) => x.id === edge.id)) return;
+      this._startReshape(e, edge);
+    }, true);
+    document.addEventListener('pointerup', () => { this._cableDragCand = null; }, true);
   }
 
   _distToSeg(p, a, b) {
@@ -2631,20 +2683,6 @@ export class Rack {
     if (c2 <= c1) return Math.hypot(p.x - b.x, p.y - b.y);
     const t = c1 / c2;
     return Math.hypot(p.x - (a.x + t * vx), p.y - (a.y + t * vy));
-  }
-
-  // Track the hovered cable (skip while a cable interaction is under way), and
-  // redraw only when it changes so the middle handle appears/disappears.
-  _updateCableHover(ev) {
-    if (this._tempCable || this._reshaping) return;
-    const near = this._nearestCable(this._clientToMm(ev.clientX, ev.clientY));
-    const id = near ? near.id : null;
-    if (id === this._hoverCableEdgeId) return;
-    this._hoverCableEdgeId = id;
-    // Mutate, never redraw — see the reshape handle in _drawCables.
-    for (const h of this.cables.querySelectorAll('.cable-reshape')) {
-      h.style.display = h.dataset.edge === id ? '' : 'none';
-    }
   }
 
   // ---- drag-to-patch ----
@@ -2710,37 +2748,36 @@ export class Rack {
     if (e.button !== 0) return;
     e.preventDefault();
     if (this._tempCable) return;   // a cord is already in hand (click-carry) — its own handlers take this drop
-    const cx = e.clientX, cy = e.clientY, t0 = performance.now();
-    const cleanup = () => { document.removeEventListener('pointermove', onMove, true); document.removeEventListener('pointerup', onUp, true); };
-    // Two gestures share the press: DRAG (move while held) pulls a cord in drag-mode, dropped on release;
-    // a plain CLICK (release without moving) starts click-to-carry, dropped by a later click.
-    const onMove = (ev) => {
-      if (Math.hypot(ev.clientX - cx, ev.clientY - cy) < 6) return;
-      cleanup();
-      const dir = unit(ev.clientX - cx, ev.clientY - cy);
-      const grab = this._grabDecision(key, portId, dir);
-      if (grab && grab.edge.link) this._startLinkRegrab(grab.edge, grab.linkEnd, ev.clientX, ev.clientY, true);
-      else if (grab) this._startStickyRegrab(grab.edge, grab.grabbedEnd, ev.clientX, ev.clientY, true);
-      else this._startStickyCable(key, portId, ev.clientX, ev.clientY, true);
-    };
-    // A TAP IS NOT A PICK. Click-to-carry used to arm on any release, and a stray brush of a trackpad
-    // over a jack is a release — you looked up with a cable in your hand that you never asked for.
-    // Holding for a moment is what separates "I meant this" from "my finger touched the pad", and at
-    // this length a deliberate click does not feel held at all. The DRAG gesture needs no such guard:
-    // it already asks for 6px of travel with the button down, which a tap cannot produce.
+    const cx = e.clientX, cy = e.clientY;
+    const cleanup = () => { document.removeEventListener('pointerup', onUp, true); };
+    // A CLICK ON A TERMINAL STARTS A NEW CABLE, and a click is the only thing that does. Nothing about
+    // timing, nothing about direction, and no way to pull an existing cord out by accident — an
+    // existing cord is taken by grabbing THE CORD, at the short stretch drawn just off each of its ends.
+    //
+    // DRAGGING OFF A TERMINAL USED TO DO IT TOO, and that had to go: pressing and dragging is now how a
+    // cable is BENT, so a cord passing over or near a terminal made the same press mean two things.
+    // Losing the drag costs nothing, because click-to-carry does the same job without a button held —
+    // you can scroll, zoom and roam on the way to the other end, which a drag never allowed.
+    //
+    // It also replaced two schemes that tried to guess which you meant. DIRECTION: move along a cord
+    // and you took it, move elsewhere and you got a new one — two gestures identical to the hand, told
+    // apart by an angle nobody was aiming at. Then a HOLD: quick press for a new cable, long press for
+    // an existing one — honest, but invisible, and it put a delay on the commonest action in the app.
+    // AND A CLICK MEANS THE POINTER STAYED PUT. Dropping the drag gesture is not the same as ignoring
+    // a drag: without this check, pressing a terminal and dragging away did nothing while the button was
+    // down and then handed you a cable the moment you let go — the gesture you had deliberately
+    // abandoned, arriving late. A press that travels is a press that changed its mind.
     const onUp = (ev) => {
       cleanup();
-      if (performance.now() - t0 < JACK_PICK_HOLD_MS) return;
+      if (Math.hypot(ev.clientX - cx, ev.clientY - cy) > 4) return;
       this._armStickyPick(key, portId, ev.clientX, ev.clientY);
     };
-    document.addEventListener('pointermove', onMove, true);
     document.addEventListener('pointerup', onUp, true);
   }
 
-  // After a click on a jack, wait for the first pointer move and THEN decide, by its direction,
-  // whether to carry an existing cord or a new one — either way with no button held, dropped by a
-  // later click. Before that first move a fresh click, a right-click, or Escape cancels the armed
-  // pick, so a mis-click leaves nothing behind.
+  // After a click on a jack, wait for the first pointer move and then carry a NEW cable — with no
+  // button held, dropped by a later click. Waiting for the move is what lets a mis-click be taken back:
+  // before it, a fresh click, a right-click, or Escape cancels the armed pick and leaves nothing behind.
   _armStickyPick(key, portId, cx, cy) {
     const TH = 6;
     const cleanup = () => {
@@ -2752,11 +2789,7 @@ export class Rack {
     const onMove = (ev) => {
       if (Math.hypot(ev.clientX - cx, ev.clientY - cy) < TH) return;
       cleanup();
-      const dir = unit(ev.clientX - cx, ev.clientY - cy);
-      const grab = this._grabDecision(key, portId, dir);
-      if (grab && grab.edge.link) this._startLinkRegrab(grab.edge, grab.linkEnd, ev.clientX, ev.clientY);
-      else if (grab) this._startStickyRegrab(grab.edge, grab.grabbedEnd, ev.clientX, ev.clientY);
-      else this._startStickyCable(key, portId, ev.clientX, ev.clientY);
+      this._startStickyCable(key, portId, ev.clientX, ev.clientY);
     };
     const onCancel = () => cleanup();   // a fresh click or right-click before moving abandons the pick
     const onKey = (ev) => { if (ev.key === 'Escape') { ev.preventDefault(); cleanup(); } };
@@ -3171,83 +3204,6 @@ export class Rack {
       if ('origStroke' in h) { if (h.origStroke == null) h.ring.removeAttribute('stroke'); else h.ring.setAttribute('stroke', h.origStroke); }
     }
     this._highlights = [];
-  }
-
-  // Of the cords on a port, the one whose departure direction (uA at its src end,
-  // uB at its dst end) best matches the drag — so a drag lifts the cord heading
-  // that way. dragDir is a screen-px vector; zoom is uniform so the angle matches.
-  _pickByDirection(key, portId, edges, dragDir) {
-    let best = edges[0], bestDot = -Infinity;
-    for (const edge of edges) {
-      // A CABLE CROSSING TO ANOTHER PAGE leaves toward that page's TAB — that is the stub you can see,
-      // and the direction you would naturally pull. Its cord geometry is no use here: it is computed
-      // against the far module's position in the OTHER page's layout, which has nothing to do with
-      // where the cable appears to go on this one. So the phantom departure pointed somewhere arbitrary
-      // and only a pull that happened to match it grabbed the cable; every other direction quietly
-      // started a new one instead.
-      if (!this._edgeOnPage(edge)) {
-        const dep = this._stubDeparture(edge, key, portId);
-        if (!dep) continue;
-        const d = dep.x * dragDir.x + dep.y * dragDir.y;
-        if (d > bestDot) { bestDot = d; best = edge; }
-        continue;
-      }
-      const g = this._cordGeom(edge);
-      if (!g) continue;
-      // pA is the src side for a normal cord, the ANCHOR side for a link (see _cordGeom); pB is the dst.
-      const atStart = edge.link ? (edge.link.key === key && edge.link.portId === portId)
-                                : (edge.src.key === key && edge.src.portId === portId);
-      const dep = atStart ? g.uA : g.uB;
-      const d = dep.x * dragDir.x + dep.y * dragDir.y;
-      if (d > bestDot) { bestDot = d; best = edge; }
-    }
-    return { edge: best, dot: bestDot };   // dot = cosine of the angle between the move and that cord's departure
-  }
-
-  // Which way a crossing cable sets off from the jack on THIS page, in screen terms: toward the tab of
-  // the page it is bound for. The same direction its stub is drawn in, so what you see and what you pull
-  // are the same thing.
-  _stubDeparture(edge, key, portId) {
-    const srcRef = edge.link || edge.src;
-    const a = this.records.get(srcRef.key), b = this.records.get(edge.dst.key);
-    if (!a || !b) return null;
-    const nearIsSrc = srcRef.key === key && srcRef.portId === portId;
-    const farPage = this.pageOf(nearIsSrc ? b : a);
-    const anchor = this._tabAnchorClient(farPage);
-    const jack = this._jackPosMm(key, portId);
-    if (!anchor || !jack) return null;
-    const rect = this.container.getBoundingClientRect();
-    const s = (this.pxPerMm || 1) * this.zoom;
-    return unit(anchor.x - (rect.left + this._tx + jack.x * s), anchor.y - (rect.top + this._ty + jack.y * s));
-  }
-
-  // Decide what a LEFT drag/move off a jack should do, given the move DIRECTION (a unit
-  // screen vector). Returns { edge, grabbedEnd } to grab an existing cord and carry its
-  // end, or null to start a NEW cord.
-  //   - no cords on the jack        → null (new)
-  //   - an INPUT holds one cord     → grab it to re-route, whatever the direction
-  //   - an OUTPUT can fan out       → grab the best-matching cord only within GRAB_MAX_COS;
-  //                                    a move in a fresh direction returns null (new cord)
-  _grabDecision(key, portId, dir) {
-    // A LINK cord is drawn from the input it TAPS (its ANCHOR) to the sharing input — never touching
-    // its hidden source jack. So drop links at their source, but ADD links whose anchor is this jack
-    // (they end here visually and must be grabbable here, chosen by drag direction against any main
-    // cable also landing on this input).
-    const main = this.patchbay.edgesAtJack(key, portId).filter((e) => !(e.link && e.src.key === key && e.src.portId === portId));
-    const anchored = this.patchbay.list().filter((e) => e.link && e.link.key === key && e.link.portId === portId);
-    const edges = [...main, ...anchored];
-    if (!edges.length) return null;
-    const ep = this._ep(key, portId);
-    const isInput = ep && ep.meta.dir === 'in';
-    const { edge, dot } = this._pickByDirection(key, portId, edges, dir);
-    if (!edge) return null;
-    if (!isInput && dot < GRAB_MAX_COS) return null;   // output + off-axis → new cable
-    if (edge.link) {   // a link: which drawn end did we grab — the anchor (tap) or the shared input?
-      const atAnchor = edge.link.key === key && edge.link.portId === portId;
-      return { edge, grabbedEnd: 'dst', linkEnd: atAnchor ? 'anchor' : 'dst' };
-    }
-    const grabbedEnd = (edge.src.key === key && edge.src.portId === portId) ? 'src' : 'dst';
-    return { edge, grabbedEnd };
   }
 
   // The SVG element of a jack, for the receive-cue enlarge.
@@ -6128,7 +6084,10 @@ export class Rack {
   // belly follows the pointer, either side of the chord); a click with no drag
   // passes through to whatever is behind the handle, preserving click-through.
   _startReshape(ev, edge) {
-    if (ev.button !== 0) return;
+    // ONLY A pointerdown CARRIES A BUTTON. This is now entered from a pointerMOVE — the drag watcher
+    // decides on the first travel, not on the press — and `button` on a move is -1, not 0, so testing
+    // it unconditionally rejected every drag silently.
+    if (ev.type === 'pointerdown' && ev.button !== 0) return;
     ev.preventDefault();
     ev.stopPropagation();
     this._reshaping = true;
@@ -6136,7 +6095,6 @@ export class Rack {
     const a = this._jackPosMm(edge.src.key, edge.src.portId);
     const b = this._jackPosMm(edge.dst.key, edge.dst.portId);
     if (!a || !b) { this._reshaping = false; return; }
-    const target = ev.target;
     let moved = false;
     const onMove = (e2) => {
       if (!moved && Math.abs(e2.clientX - startX) + Math.abs(e2.clientY - startY) < 3) return;
@@ -6148,13 +6106,9 @@ export class Rack {
       document.removeEventListener('pointermove', onMove);
       document.removeEventListener('pointerup', onUp);
       this._reshaping = false;
-      if (moved) { this.onChange(); return; }
-      // No drag: forward the click to the element behind the cord.
-      target.style.pointerEvents = 'none';
-      const under = document.elementFromPoint(e2.clientX, e2.clientY);
-      target.style.pointerEvents = 'stroke';
-      if (under) under.dispatchEvent(new MouseEvent('click',
-        { bubbles: true, cancelable: true, clientX: e2.clientX, clientY: e2.clientY, view: window }));
+      // Always moved: this only starts once the pointer has travelled, so there is no click to
+      // forward any more. The cord is pointer-transparent and never took the press in the first place.
+      if (moved) this.onChange();
     };
     document.addEventListener('pointermove', onMove);
     document.addEventListener('pointerup', onUp);
@@ -6810,6 +6764,9 @@ export class Rack {
   // trackball report completely differently — which is why it could be tuned for one and not the
   // other. A position has no such argument with itself.
 
+  // Row arithmetic. NOTHING CALLS THESE at the moment — the whole-row snap that used them is gone —
+  // and they are kept because any further experiment with the view's behaviour starts by asking one
+  // of these two questions. Delete them if a month goes by and nothing has.
   // How many rows the window holds at a given zoom.
   _rowsAt(zoom) {
     const pitch = (PANEL_H_MM + ROW_GAP_MM) * (this.pxPerMm || 1);
@@ -6822,60 +6779,15 @@ export class Rack {
     return (pitch > 0 && rows > 0) ? vpH / (rows * pitch) : this.zoom;
   }
 
-  // ON RELEASE, SHOW WHOLE WHATEVER YOU WERE PARTLY LOOKING AT.
+  // NO SNAP ON RELEASE. Letting go used to resize the view so a whole number of rack rows filled the
+  // window — the rows you could see any part of taken as the rows you meant. It was written to stop a
+  // pan ending with a row sliced by an edge, and for that it worked, but it decides something you did
+  // not ask it to decide. Zoom in past a single row and the only whole-row answer available is one
+  // row, so the view sprang back open the moment the key came up. Refusing to zoom that far instead
+  // was tried and felt worse: a wall where there had been a spring.
   //
-  // Zooming stays completely free while Option is held — no detent, no lean, nothing to fight. When you
-  // let go, the rows you can see ANY PART of are taken as the rows you meant, and the view is sized to
-  // hold exactly those, from the top of the first to the bottom of the last.
-  //
-  // That makes the gesture something you can aim rather than something you have to land. Want three
-  // rows: let the middle one and a sliver of the ones above and below show. Want the top two: show
-  // those and keep the third out. There is no arithmetic to hit, and it cannot end with a row sliced by
-  // an edge — which was the whole complaint.
-  //
-  // Earlier attempts pulled the zoom toward whole rows AS YOU SCROLLED. Even done as a pure mapping,
-  // which cured the trackpad-versus-trackball inconsistency, it stayed unpredictable in the hand: the
-  // snap arrived while you were still moving, so whether it caught depended on where you happened to
-  // stop. Doing nothing until you let go removes the guesswork entirely.
-  _settleOnWholeRows() {
-    const pitch = (PANEL_H_MM + ROW_GAP_MM) * (this.pxPerMm || 1);
-    const vpH = this.container.clientHeight || 0;
-    if (!(pitch > 0) || !(vpH > 0) || !(this.zoom > 0)) return;
-    const top = -this._ty / this.zoom;             // the visible span, in base px
-    const bot = top + vpH / this.zoom;
-    // A PURE PAN KEEPS THE HEIGHT IT STARTED WITH. Moving about is not a request to change how much you
-    // are looking at, and it should not be able to: following a cable down from a two-row view and
-    // letting go over a sliver of a third row would otherwise land you in a three-row view you never
-    // asked for. Only the wheel changes the number of rows.
-    if (!this._navZoomed && this._navRows) {
-      const n = Math.max(1, Math.min(this.rowCount, this._navRows));
-      const firstPan = Math.max(0, Math.min(this.rowCount - n, Math.round(top / pitch)));
-      this.zoom = Math.max(1, Math.min(VIEW_ZOOM_MAX, vpH / (n * pitch)));
-      this._ty = -firstPan * pitch * this.zoom;
-      this._clampPan();
-      this.content.style.transition = '';
-      this._applyTransform();
-      return;
-    }
-    // A row counts as one you were looking at only if a REAL PORTION of it is showing — a third of it,
-    // not a sliver. Being generous here is what stops a near-miss on the zoom turning "I want these two
-    // rows" into three, and it is the forgiving direction: too little of a row showing was almost
-    // certainly not deliberate, whereas a third of one is hard to leave on screen by accident.
-    //
-    // As a FRACTION of a row rather than a number of pixels, so it means the same thing at every zoom.
-    const edge = pitch * SNAP_EDGE_FRAC;
-    let first = Math.floor((top + edge) / pitch);
-    let last = Math.ceil((bot - edge) / pitch) - 1;
-    first = Math.max(0, Math.min(this.rowCount - 1, first));
-    last = Math.max(first, Math.min(this.rowCount - 1, last));
-    const n = last - first + 1;
-    this.zoom = Math.max(1, Math.min(VIEW_ZOOM_MAX, vpH / (n * pitch)));
-    this._ty = -first * pitch * this.zoom;
-    this._clampPan();
-    this.content.style.transition = '';
-    this._applyTransform();
-  }
-
+  // The view now stays exactly where you left it. A part-showing row at the edge is a smaller price
+  // than a magnification that will not hold still.
   // Navigate-mode cursor: shown while Option is held (wheel zooms, motion pans), cleared on release.
   _setNavCursor(on) { if (this.container) this.container.style.cursor = on ? 'all-scroll' : ''; }
 
@@ -7057,9 +6969,10 @@ export class Rack {
             if (def !== undefined) this._setParam(rec, b.id, def);
             return;
           }
-          const x = e.clientX, y = e.clientY;
-          clearTimeout(pend);
-          pend = setTimeout(() => { pend = 0; this._togglePin(rec, b, 'value', x, y); }, DBL_MS);
+          this._armPinOnRelease(e.clientX, e.clientY, (x, y) => {
+            clearTimeout(pend);
+            pend = setTimeout(() => { pend = 0; this._togglePin(rec, b, 'value', x, y); }, DBL_MS);
+          });
         });
       }
     }
@@ -7164,7 +7077,13 @@ export class Rack {
       if (e.ctrlKey) return;   // Control held = macOS accessibility-zoom gesture; skip the getBoundingClientRect
                                // read + cursor write, which only fires over a module and fed the zoom feedback loop
       const inBand = (e.clientY - el.getBoundingClientRect().top) <= TITLE_BAND_MM * this.pxPerMm;
-      el.style.cursor = inBand ? 'var(--grip)' : '';
+      // NOT WHILE A CORD LIES UNDER THE POINTER. The hand says "press here and this module moves", and
+      // over a cable that is a lie — the press would bend the cable and the module would stand down.
+      // The cord test only runs inside the band, which is a few millimetres of a panel, so it costs
+      // nothing anywhere else; a per-move scan of every cable in the patch is exactly what was taken
+      // out when the old middle-handle hover went.
+      const onCord = inBand && !!this._cordAtPoint(this._clientToMm(e.clientX, e.clientY));
+      el.style.cursor = (inBand && !onCord) ? 'var(--grip)' : '';
     });
 
     this.records.set(rec.key, rec);
@@ -7551,9 +7470,10 @@ export class Rack {
           e.preventDefault();
           const d = this._paramDefault(rec, b.id); if (d !== undefined) this._setParam(rec, b.id, d);
         } else {
-          const x = e.clientX, y = e.clientY;
-          clearTimeout(dk.pendPin);
-          dk.pendPin = setTimeout(() => { dk.pendPin = 0; this._togglePin(rec, b, 'value', x, y, dk); }, DBL_MS);
+          this._armPinOnRelease(e.clientX, e.clientY, (x, y) => {
+            clearTimeout(dk.pendPin);
+            dk.pendPin = setTimeout(() => { dk.pendPin = 0; this._togglePin(rec, b, 'value', x, y, dk); }, DBL_MS);
+          });
         }
         e.stopPropagation(); return;
       }
@@ -7618,6 +7538,25 @@ export class Rack {
   // uses for its fine/coarse speed.
   // A click on a control's scrollable region puts its number up, or takes it down if that same one is
   // already up. The binding identifies the control and the zone identifies which of a knАck's two.
+  // ARM THE PIN ON RELEASE, NOT ON PRESS. The readout used to go up the instant a control was pressed,
+  // which is wrong now that the press might not have been meant for the control at all: a cable lying
+  // across a knob is dragged by pressing ON THE CORD, and the knob underneath — which never stops the
+  // press, deliberately, so scrolling and clicking still reach it — was putting its number up every
+  // time a cable was bent over it.
+  //
+  // So it waits for the release and asks two questions. Did a cable reshape start during this press?
+  // Then the gesture belonged to the cable. Did the pointer travel? Then it was a drag of some kind,
+  // not a click. Either way, no number.
+  _armPinOnRelease(x0, y0, fire) {
+    const onUp = (u) => {
+      document.removeEventListener('pointerup', onUp, true);
+      if (this._reshaping) return;                                   // the press was bending a cable
+      if (Math.hypot(u.clientX - x0, u.clientY - y0) > 4) return;     // it travelled: a drag, not a click
+      fire(u.clientX, u.clientY);
+    };
+    document.addEventListener('pointerup', onUp, true);
+  }
+
   _togglePin(rec, b, zone, x, y) {
     if (readoutPinned(b, zone)) { hideReadout(); return; }
     const text = formatParamValue(b.meta, rec.values.get(b.id), rec.values);
@@ -7796,11 +7735,18 @@ export class Rack {
     // have closed it before pointerup arrives, so without remembering this a second click would
     // close and immediately reopen it. A menu should toggle, like every other menu here.
     const barWasOpen = !!this._menuBarEl;
-    let moved = false;
+    let moved = false, yielded = false;
     let dropRow = rec.row, dropX = rec.x;
     const ghost = this._ensureGhost();
 
     const onMove = (ev) => {
+      // A CABLE BEING BENT BEATS THIS, and the question is asked as soon as the press lands: if a cord
+      // was under it, this drag is the cable's and the module never starts. Waiting to ask until the
+      // reshape was under way let the module mark itself as dragging first — the dashes appeared and
+      // then the module sat still, which reads as a fault rather than as a decision. Yielding also
+      // covers the drop, or letting go would move the module to wherever its ghost had reached.
+      if (this._reshaping || this._cableDragCand) { yielded = true; return; }
+      if (yielded) return;
       if (!moved && Math.abs(ev.clientX - startX) + Math.abs(ev.clientY - startY) < 4) return;
       moved = true;
       rec.el.classList.add('dragging');
@@ -7819,6 +7765,7 @@ export class Rack {
       document.removeEventListener('pointerup', onUp);
       rec.el.classList.remove('dragging');
       ghost.style.display = 'none';
+      if (yielded) return;
       if (moved) { this._moveModule(rec, dropRow, dropX); return; }
       if (this._isolateNet) { this._exitIsolate(); }   // a left click on empty faceplate leaves isolate mode
       // A plain click on the title bar does NOTHING beyond that. It used to open the application
