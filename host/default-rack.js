@@ -43,9 +43,15 @@ export const ALIASES = {
 // first audio page. It used to sit beside the mixer, which is no longer on this page — following the
 // mixer across would have put the one module a first patch needs most on a page you have to find.
 // The mixer is absent because it is pinned: it is placed before any of this and survives File > New.
+// The video page carries every video module we have, in signal order left to right: the field
+// generates coordinates, shapes turns a field into an image, maths and formula combine images (two
+// inputs then four), the time machine delays what it is given, and the output ends the chain. That
+// order means a first patch on that page is mostly a matter of joining neighbours. The compositor is
+// absent because it is a descriptor with no panel or factory behind it yet — placing it would fail.
 export const DEFAULT_RACK = [
   'R1: osc func prog',
   'R2: lpg',
+  'VR1: field shapes videoMaths formula timeMachine videoOut',
 ];
 
 // "T2R1" / "MR1" / "VR1" / "R2" -> which page, and which row (0-based inside the rack).

@@ -235,8 +235,8 @@ const MODULE_TYPES = [{
   panelUrl: 'modules/formula/panel.svg',
   descriptor: formulaDescriptor,
 }, {
-  // The mixer is a pinned singleton placed at boot, so it's hidden from the
-  // "Add module" menu (no second mixer). Still a normal module type otherwise.
+  // The mixer is a pinned singleton placed at boot, so it is hidden from the module
+  // library (no second mixer). Still a normal module type otherwise.
   descriptorId: mixerDescriptor.id,
   name: 'Mixer / Output',
   hp: 51,
@@ -927,14 +927,8 @@ async function boot() {
       menuStateTimer = null;
       let recent = [];
       try { recent = await storage.recent(); } catch (_e) { /* none */ }
-      // The native menu's Rack items need the same two facts the in-window one computes: whether
-      // the engine is on, and which module types are addable right now (a singleton already in the
-      // rack drops out of the list).
-      const modules = MODULE_TYPES.filter((t) => !t.hidden
-        && !(t.descriptor && t.descriptor.singleton && rack.hasModule(t.descriptorId)))
-        .map((t) => ({ id: t.descriptorId, name: t.name }));
       m.setState({ dark: rack.isDark(), rows: rack.rowCount, canUndo: rack.canUndo(), canRedo: rack.canRedo(),
-        recent, examples, engine: rack.engineOn(), modules, videoFollow: rack.videoFollowsPointer() });
+        recent, examples, videoFollow: rack.videoFollowsPointer() });
     }, 200);
   }
 
@@ -951,8 +945,10 @@ async function boot() {
       fitToWindow: () => rack.resetZoom(),
       captureWork: () => captureWork(),
       restoreWork: () => restoreWork(),
-      toggleEngine: () => { rack.toggleEngine(); pushMenuState(); },
-      addModule: (id) => rack.addModuleFromMenu(id, null),
+      library: () => library.show(),
+      duplicateWithSettings: () => rack.startModuleMode('duplicate', { withSettings: true }),
+      duplicateModule: () => rack.startModuleMode('duplicate', { withSettings: false }),
+      deleteModule: () => rack.startModuleMode('delete'),
       resetToDefault: () => resetToDefault(),
       toggleVideoFollow: () => setVideoFollow(!rack.videoFollowsPointer()),
       // Run the same items the in-window Help menu offers, rather than restating their URLs here.
@@ -973,7 +969,7 @@ async function boot() {
   // The panel menu's File entry opens the File menu, reusing the rack's pop-up menu.
   // Hierarchical menu: the top level shows File / Edit / View; hovering (or clicking) a
   // heading opens its submenu, Electron-style.
-  const appMenuItems = (rec, rowIndex) => {
+  const appMenuItems = (rec) => {
     const file = [
       { label: 'New', action: () => newPatch() },
       { label: 'Open…', action: () => openPatch() },
@@ -993,7 +989,6 @@ async function boot() {
       { label: 'Undo', disabled: !rack.canUndo(), action: () => rack.undo() },
       { label: 'Redo', disabled: !rack.canRedo(), action: () => rack.redo() },
       { label: 'Create patch from clipboard', action: () => createFromClipboard() },
-      { label: 'Clear connections & controls…', action: () => rack.confirmDeleteAllCables() },
     ];
     // View (Dark/Light mode is self-describing: the label names the mode it switches to).
     const view = [
@@ -1006,6 +1001,11 @@ async function boot() {
       { label: 'Menu bar', checkFn: () => rack.menuBarDocked(), action: () => setMenuBar(!rack.menuBarDocked()) },
       { label: 'Video follows pointer', checkFn: () => rack.videoFollowsPointer(),
         action: () => setVideoFollow(!rack.videoFollowsPointer()) },
+      // How many rows the rack stands: the shape of what you are looking at, beside Fit to window
+      // and the rest. It lived under Rack, which no longer exists.
+      { label: 'Rows', submenu: [1, 2, 3, 4, 5].map((n) => ({
+        label: String(n), checkFn: () => rack.rowCount === n, action: () => setRows(n),
+      })) },
     ];
     // Capturing what you can SEE belongs under View, beside the other things that change what is
     // on screen — not under File, which is about the patch. Both are desktop only: they need the
@@ -1019,42 +1019,25 @@ async function boot() {
         view.push({ label: `${recorder.recording ? 'Stop recording' : 'Record video…'}   R`, action: () => toggleRecording() });
       }
     }
-    // Rack: rack-shaping actions gathered in one place. "Delete this module" acts on the module that was
-    // right-clicked (rec); it's disabled when the background was clicked, or the module is pinned (mixer).
-    const rackMenu = [
-      // The transport, first: the thing reached most often in here, and now ONE row rather than a
-      // bus each. The engine is the whole question "is this rack making sound?", which is what
-      // people actually come to this menu to answer; choosing BETWEEN the two buses is a rarer,
-      // more considered act, and it belongs where both are visible side by side — the mixer.
-      { words: [{ label: 'Engine', isOn: () => rack.engineOn(), flip: () => rack.toggleEngine() }] },
+    // MODULE — what the rack is made of, and the two commands that act on the whole set of them.
+    // It replaces the old Rack menu: the engine went (the space bar toggles it, and the mixer has the
+    // control), Rows went to View, and deleting a page is now the × on the tab itself.
+    //
+    // Deleting ONE module is not here. It lives on that module's own right-click menu, where "this
+    // module" means the one under the pointer rather than whichever title bar opened this menu.
+    const modulesMenu = [
+      { label: 'Module library…', action: () => library.show() },
       { separator: true },
-      { label: 'Rows', submenu: [1, 2, 3, 4, 5].map((n) => ({
-        label: String(n), checkFn: () => rack.rowCount === n, action: () => setRows(n),
-      })) },
-      // Deleting a page lives here rather than on a right-click of the tab: it is the only thing you
-      // would ever want from such a menu, and one item is not a menu. Adding is the + in the bar and
-      // renaming is a double-click, both where your hand already is.
-      { label: 'Delete page', enabled: rack.canDeletePage(rack.currentPage()), action: () => {
-        const id = rack.currentPage();
-        const n = rack.pageModuleCount(id);
-        const name = (rack.pageList().find((p) => p.id === id) || {}).name || 'this page';
-        const msg = n
-          ? `Delete ${name}? Its ${n} module${n === 1 ? '' : 's'} will go with it.`
-          : `Delete ${name}?`;
-        rack.confirm(msg, 'Delete page', () => { rack.deletePage(id); pushMenuState(); onEdit(); });
-      } },
-      // A SINGLETON type leaves the menu once one is in the rack — Video Output, where a second
-      // one would be meaningless. Checked here rather than by hiding the entry permanently, so
-      // it comes back the moment the module is deleted.
-      { label: 'Add module', submenu: MODULE_TYPES.filter((t) => !t.hidden
-        && !(t.descriptor && t.descriptor.singleton && rack.hasModule(t.descriptorId))).map((t) => ({
-        label: t.name, action: () => rack.addModuleFromMenu(t.descriptorId, rowIndex),
-      })) },
+      // Two duplicates, named so that neither has to be read as the absence of the other: "with
+      // settings" says what it brings, "module" says only that you get one of these.
+      { label: 'Duplicate with settings…', checkFn: () => rack.moduleModeActive('duplicate', true),
+        action: () => rack.startModuleMode('duplicate', { withSettings: true }) },
+      { label: 'Duplicate…', checkFn: () => rack.moduleModeActive('duplicate', false),
+        action: () => rack.startModuleMode('duplicate', { withSettings: false }) },
+      { label: 'Delete module…', checkFn: () => rack.moduleModeActive('delete'),
+        action: () => rack.startModuleMode('delete') },
       { separator: true },
-      { label: 'Reset to default…', action: () => resetToDefault() },
-      // Deleting a module is NOT here. It lives on the module's own right-click menu, where
-      // "this module" means the one under the pointer rather than whichever title bar happened to
-      // open this menu.
+      { label: 'Clear connections & controls…', action: () => rack.confirmDeleteAllCables() },
     ];
     // DR is the application menu, in the position and role the app menu holds on a Mac. DEV is
     // last and abbreviated: it earns a place for the people who need it without taking the width
@@ -1067,7 +1050,7 @@ async function boot() {
       { label: 'File', submenu: file },
       { label: 'Edit', submenu: edit },
       { label: 'View', submenu: view },
-      { label: 'Rack', submenu: rackMenu },
+      { label: 'Module', submenu: modulesMenu },
       { label: 'Help', submenu: rack.helpMenuItems() },
       { label: 'DEV', submenu: rack.developerMenuItems(rec) },
     ];
@@ -1077,19 +1060,20 @@ async function boot() {
   // A RIGHT-CLICK ON A FACEPLATE opens this — the same items as the bar at the top of the window,
   // summoned where the pointer already is. That is the whole point: the faceplate is the largest
   // target on screen, so the main menu costs no aim at all.
-  rack.onAppMenuBar = (x, y, rec, rowIndex) => {
-    refreshRecent().then(() => rack.openMenuBar(x, y, appMenuItems(rec, rowIndex)));
+  rack.onAppMenuBar = (x, y, rec) => {
+    refreshRecent().then(() => rack.openMenuBar(x, y, appMenuItems(rec)));
   };
 
-  // The MODULE LIBRARY, on right-click over empty rack background. `at` carries the point that was
-  // clicked, so the module lands there rather than at the end of the row.
+  // The MODULE LIBRARY, on right-click over empty rack background and from Modules ▸ Module library.
+  // Choosing a card hands the module to the pointer to be carried and placed; the callback is how the
+  // library knows to come back once it has been put down.
   const library = createLibrary({
     types: MODULE_TYPES,
     isTaken: (id) => rack.hasModule(id),
     isDark: () => rack.isDark(),
-    onChoose: (id, at) => rack.addModuleAt(id, at),
+    onChoose: (id, done) => rack.startCarryModule(id, done),
   });
-  rack.onLibrary = (at) => library.show(at);
+  rack.onLibrary = () => library.show();
   libraryTheme = library.refreshTheme;
 
   // The docked bar. It hands the rack a PROVIDER rather than a fixed set of items, so each menu
@@ -1546,6 +1530,7 @@ async function boot() {
   // The same two commands the native menu bar carries — see developerMenuItems.
   rack.onCaptureWork = () => captureWork();
   rack.onRestoreWork = () => restoreWork();
+  rack.onResetDefault = () => resetToDefault();
   rack.openDemoPanel = () => { cameFromTutorial = null; demoPanel.setMode('author'); demoPanel.setExitLabel('Close'); demoPanel.open(); };
 
   window.addEventListener('keydown', (e) => {

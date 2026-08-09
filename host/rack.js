@@ -88,6 +88,8 @@ const CABLE_GRAB_TOL_MM = 0.8;   // ...and how far outside it still counts as pr
 // A crossing cable arrives at its tab in its own LANE. The spacing is what a turned label needs, so a
 // label can hang under each stub without either moving when you hover.
 const STUB_GAP_PX = 18;
+const TAB_BORDER_PX = 1.5;   // .rack-tab's border, which absolute children sit inside
+const TAB_X_ROOM = 11;   // px a closable tab gains for its × — about 3mm on screen
 // A stub's HOVER STRIP: as wide as a slot, so the strips of one bundle sit shoulder to shoulder and
 // scanning along them never falls into a gap between two, and deep enough to hover well clear of the
 // bar. A stub is a four-pixel line — far too fine to aim at, especially under magnification.
@@ -631,6 +633,16 @@ export class Rack {
   canEditPage(id) { const p = this.pages.find((x) => x.id === id); return !!p && p.kind === 'audio'; }
   canDeletePage(id) { return this.canEditPage(id) && this.pages.filter((p) => p.kind === 'audio').length > 1; }
 
+  // Close a page, asking first — and saying how many modules go with it, since that is the part
+  // you cannot see from the tab. Driven by the × on the tab itself.
+  confirmDeletePage(id) {
+    if (!this.canDeletePage(id)) return;
+    const n = this.pageModuleCount(id);
+    const name = (this.pages.find((p) => p.id === id) || {}).name || 'this page';
+    const msg = n ? `Close ${name}? Its ${n} module${n === 1 ? '' : 's'} will go with it.` : `Close ${name}?`;
+    this._confirm(msg, 'Close page', () => this.deletePage(id));   // deletePage fires onChange itself
+  }
+
   renamePage(id, name) {
     const p = this.pages.find((x) => x.id === id);
     if (!p || p.kind !== 'audio') return false;
@@ -815,6 +827,56 @@ export class Rack {
       if (p.kind === 'audio') {
         b.addEventListener('dblclick', (ev) => { ev.preventDefault(); ev.stopPropagation(); this._editTabName(b, p); });
       }
+      // CLOSE, in the tab's top right corner — the same × the tutorial card and the About card use,
+      // so it is the house control rather than new art. Only on a page that can actually go: audio
+      // pages, and never the last one. It sits in the space to the right of the name, so no tab has
+      // to grow to hold it.
+      //
+      // It replaces Rack ▸ Delete page. A command on a menu for a thing you are looking at is a
+      // detour; the × is on the thing itself, which is also where anyone would look for it first.
+      if (this.canDeletePage(p.id)) {
+        b.classList.add('closable');   // ...which carries the room for it — see _sizeTabs
+        const x = document.createElement('span');
+        x.className = 'tour-x rack-tab-x';
+        x.textContent = '×';
+        x.title = 'Close this page';
+        // The tab is a button and this sits inside it, so the press must be stopped here or closing
+        // a page would select it on the way out.
+        x.addEventListener('pointerdown', (ev) => ev.stopPropagation());
+        x.addEventListener('click', (ev) => { ev.preventDefault(); ev.stopPropagation(); this.confirmDeletePage(p.id); });
+        b.appendChild(x);
+      }
+      // THE ENGINE, in the Output tab's top right corner — the corner an audio tab spends on its ×,
+      // and this tab cannot be closed, so the two never meet. It is the app's only always-visible
+      // engine control: the tab bar is up on every page, so the rack can be started and stopped
+      // without going to the mixer to do it.
+      //
+      // The same lamp the Sound menu uses and a twin of the mixer's own — dark off, red on — drawn the
+      // size of the cable buttons already on this tab so it sits in the same family. No label:
+      // an unlabelled lamp in a corner is guessed almost immediately, and this tab has the least
+      // room to spare of any of them.
+      if (p.kind === 'output') {
+        const led = document.createElement('span');
+        led.className = 'rack-tab-engine rack-menu-led' + (this.engineOn() ? ' on' : '');
+        led.title = 'Engine — the rack\'s power (space bar)';
+        // ON THE LAST GAP IN THE CABLE ROW. The stubs land on a fixed ladder of slots along the tab
+        // (see _stubAnchor), so the lamp is centred on the space between the final two of them rather
+        // than on the tab's corner — which puts it just past the end of the name, and lets it nest in
+        // the row it belongs to instead of floating clear of everything.
+        const lanes = +b.dataset.lanes || 0;
+        if (lanes >= 2) {
+          // MEASURED FROM THE BORDER BOX, PLACED IN THE PADDING BOX. _stubAnchor works from the tab's
+          // bounding rect, whose left edge is the outside of the border; an absolutely positioned child
+          // is offset from the inside of it. Without discounting that width the lamp sat a border to the
+          // right of the gap it was supposed to be centred in.
+          const cx = SLOT_INSET + STUB_GAP_PX / 2 + (lanes - 1.5) * STUB_GAP_PX - TAB_BORDER_PX;
+          led.style.left = (cx - MIXER_BTN_PX / 2) + 'px';
+          led.style.right = 'auto';
+        }
+        led.addEventListener('pointerdown', (ev) => ev.stopPropagation());
+        led.addEventListener('click', (ev) => { ev.preventDefault(); ev.stopPropagation(); this.toggleEngine(); });
+        b.appendChild(led);
+      }
       el.appendChild(b);
     }
     if (this.canAddPage()) {
@@ -841,14 +903,21 @@ export class Rack {
     const tabs = [...el.querySelectorAll('.rack-tab[data-page]')];
     if (!tabs.length) return;
     for (const b of tabs) b.style.minWidth = '';
+    // A CLOSABLE TAB IS WIDER BY THE ROOM ITS × NEEDS, and only a closable tab. The base width is
+    // shared so that a short page name does not make a narrow tab — but it is measured from the NAME,
+    // which is why the × room is discounted here and added back below. Without that the two are
+    // locked together: padding one audio tab to clear its × would push every other tab out with it.
     let base = 0;
     for (const b of tabs) {
       const p = this.pages.find((x) => x.id === b.dataset.page);
-      if (p && p.kind === 'audio') base = Math.max(base, Math.ceil(b.getBoundingClientRect().width));
+      if (!p || p.kind !== 'audio') continue;
+      const w = Math.ceil(b.getBoundingClientRect().width) - (b.classList.contains('closable') ? TAB_X_ROOM : 0);
+      base = Math.max(base, w);
     }
     for (const b of tabs) {
       const lanes = +b.dataset.lanes || 0;
-      b.style.minWidth = Math.max(base, lanes ? SLOT_INSET * 2 + lanes * STUB_GAP_PX : 0) + 'px';
+      const want = base + (b.classList.contains('closable') ? TAB_X_ROOM : 0);
+      b.style.minWidth = Math.max(want, lanes ? SLOT_INSET * 2 + lanes * STUB_GAP_PX : 0) + 'px';
     }
   }
 
@@ -1068,6 +1137,14 @@ export class Rack {
   // The buttons and the panel's lamps are one control seen twice, so moving either moves the other.
   _mirrorMixerEnable(rec, id) {
     if (rec.descriptorId === 'mixer' && /^mute[A-Z]$/.test(id) && this._stubSvg) this._drawPageStubs();
+    // The Output tab's lamp is the mixer's engine switch seen a second time, so it follows the param
+    // rather than the click — the space bar, the mixer's own lamp and the tab all light it.
+    if (rec.descriptorId === 'mixer' && id === 'engine') this._syncEngineLamp();
+  }
+
+  _syncEngineLamp() {
+    const led = this._tabBarEl && this._tabBarEl.querySelector('.rack-tab-engine');
+    if (led) led.classList.toggle('on', this.engineOn());
   }
   // Connect two jacks by { key, portId }; returns the edge (for restoring bow).
   // `opts.restoring` suppresses the side effects that belong to a patching GESTURE rather than to the
@@ -1298,7 +1375,7 @@ export class Rack {
       const row = document.createElement('div');
       row.className = 'rack-row';
       row.dataset.row = String(i);
-      row.addEventListener('contextmenu', (e) => this._onRowContextMenu(e, i));
+      row.addEventListener('contextmenu', (e) => this._onRowContextMenu(e));
       this.content.appendChild(row);
       this._rowEls.push(row);
     }
@@ -1556,6 +1633,13 @@ export class Rack {
     return !!a && !!b && this._onPage(a) && this._onPage(b);
   }
 
+  // Either end on a module currently being held? Then this cord is not drawn — see _drawCables.
+  _edgeIsLifted(e) {
+    const srcRef = e.link || e.src;
+    const a = this.records.get(srcRef.key), b = this.records.get(e.dst.key);
+    return !!(a && a.lifted) || !!(b && b.lifted);
+  }
+
   _cordGeom(e) {
     // A LINK cord (a "mult": input sharing another input's feed) hangs off the TARGET input it was
     // chained onto, not the far source it secretly carries — so it draws as the short cord you ran.
@@ -1665,6 +1749,10 @@ export class Rack {
       // A cord with an end on ANOTHER PAGE is not drawn here — it is drawn as a stub running to that
       // page's tab, in its own window-pinned layer. See _drawPageStubs.
       if (!this._edgeOnPage(e)) continue;
+      // A cord with an end on a LIFTED module has nowhere to land while that module is in your hand,
+      // and drawing it to the hole the module left reads as a cord going nowhere. It comes back the
+      // moment the module is put down.
+      if (this._edgeIsLifted(e)) continue;
       const g = this._cordGeom(e);
       if (!g) continue;
       const color = STYLE_COLOR[e.style] || STYLE_COLOR.control;
@@ -6839,11 +6927,18 @@ export class Rack {
     if (this._ovCableSvg) { this._ovCableSvg.style.display = 'none'; this._ovCablePath.removeAttribute('d'); }
   }
 
-  // ---- placement: push-right collision (all in mm) ----
-  // Sort by x; a module that overlaps its left neighbour is pushed flush against
-  // it, but a module dropped in open space keeps its x — so you can leave gaps
-  // and drop another module between two others.
-  // Modules only collide with others ON THEIR OWN PAGE: two pages are two places, so the same x on
+  // ---- placement: a row is PACKED (all in mm) ----
+  // Sort by x, then lay the row out flush from the left with no gaps anywhere. x is therefore an
+  // ORDERING, not a position: what you drop, drag or delete decides the sequence, and the sequence
+  // decides where everything sits.
+  //
+  // It used to push overlaps apart and otherwise leave a dropped module exactly where it landed, so
+  // a row could carry gaps. Gaps existed to give you somewhere to put the next module — and carrying
+  // one from the library and dropping it on the boundary between two others does that far better, so
+  // the gaps were left holding nothing but the holes that open up when you drag a module out of the
+  // middle of a row. Packing closes those as they appear.
+  //
+  // Modules only pack against others ON THEIR OWN PAGE: two pages are two places, so the same x on
   // each is not an overlap. Each page's occupants are packed independently within the row.
   _resolveRow(row) {
     const byPage = new Map();
@@ -6854,12 +6949,27 @@ export class Rack {
     }
     for (const list of byPage.values()) {
       list.sort((a, b) => a.x - b.x);
-      for (let i = 1; i < list.length; i++) {
-        const prevEnd = list[i - 1].x + list[i - 1].panelWmm;
-        if (list[i].x < prevEnd) list[i].x = prevEnd;
-      }
+      let x = 0;
+      // A LIFTED module is one you are holding: it has left the row even though its record is still
+      // here, so the row closes up behind it. That gap closing is what tells you the thing on the
+      // pointer is the very module that was there — and it frees the right-hand end of the row, so
+      // there is somewhere to put it when you want it last.
+      for (const rec of list) { if (rec.lifted) continue; rec.x = x; x += rec.panelWmm; }
     }
     row.sort((a, b) => a.x - b.x);
+  }
+
+  // WHERE A MODULE DROPPED AT THIS POINT BELONGS, as an x that sorts it into the right place — the
+  // row then packs, so the number only has to order it, not position it. The rule is the nearest
+  // module BOUNDARY: over the left half of a module it goes in front of that module, over the right
+  // half it goes behind, past the end of the row it goes at the end. Every point on the rack means
+  // something, so "drop it on the boundary between these two" needs no precision at all.
+  _dropOrderX(row, page, xMm) {
+    const list = this._rowOccupants(row, page);
+    for (const rec of list) {
+      if (xMm < rec.x + rec.panelWmm / 2) return rec.x - 0.001;   // in front of this one
+    }
+    return list.length ? list[list.length - 1].x + 0.001 : 0;      // past everything → the end
   }
 
   // The panel URL for the current mode: dark modules load the generated
@@ -6921,6 +7031,12 @@ export class Rack {
     const svg = document.adoptNode(panel.svg);
     const vb = (svg.getAttribute('viewBox') || '0 0 171 128.5').split(/\s+/).map(Number);
     rec.panelWmm = vb[2];
+    // Remember it BY TYPE, so a module being carried from the library can be drawn its true width
+    // before one exists to measure. Its declared HP is only an approximation of the faceplate the
+    // generator actually produced — 34 HP is 172.7mm, the oscillator is 164.13 — and a ghost that
+    // is the wrong width is a ghost that lies about which slot it is going into.
+    if (!this._wmmByType) this._wmmByType = new Map();
+    if (rec.descriptorId) this._wmmByType.set(rec.descriptorId, vb[2]);
     svg.removeAttribute('width');
     svg.removeAttribute('height');
     svg.style.width = '100%';
@@ -7044,7 +7160,12 @@ export class Rack {
       // LOOKING at — with no way yet to move one between pages, that is the only way a second audio
       // page or the Video page ever gets anything on it.
       page: this._hasPage(opts.page) ? opts.page : this.page,
-      x: Math.max(0, xMm || 0), row: rowIndex, pinned: !!opts.pinned,
+      // x is an ORDERING here, not a position — the row packs the moment this module joins it, so
+      // whatever number arrives is only used to sort. It is deliberately NOT clamped to zero: a drop
+      // in front of the leftmost module asks for an x just below that module's, and at the left-hand
+      // end of a row that is a small negative. Clamping it tied the two at zero, the tie broke on
+      // insertion order, and the module you dropped in front went behind instead.
+      x: xMm || 0, row: rowIndex, pinned: !!opts.pinned,
       instanceId, instance, panel: null, el, panelWmm: 0, values: new Map(),
     };
     el.dataset.key = rec.key;
@@ -7161,6 +7282,10 @@ export class Rack {
     const i = row.indexOf(rec);
     if (i >= 0) row.splice(i, 1);
     rec.el.remove();
+    // THE ROW CLOSES BEHIND IT, at once. A row holds no gaps anywhere else — dropping into one and
+    // lifting out of one both pack it — so a hole left by a deletion would be the only kind there is.
+    this._resolveRow(row);
+    this.relayout();
     if (rec.videoView) { rec.videoView(); rec.videoView = null; }   // stop blitting into a gone panel
     this.host.dispose(rec.instanceId);
     this.records.delete(rec.key);
@@ -7689,7 +7814,7 @@ export class Rack {
     const i = old.indexOf(rec);
     if (i >= 0) old.splice(i, 1);
     rec.row = newRow;
-    rec.x = Math.max(0, newX);
+    rec.x = newX;   // an ordering, not a position, and deliberately unclamped — see addModule
     this.rows[newRow].push(rec);
     this._resolveRow(this.rows[newRow]);
     if (rec.el.parentElement !== this._rowEls[newRow]) this._rowEls[newRow].appendChild(rec.el);
@@ -7737,6 +7862,7 @@ export class Rack {
     const barWasOpen = !!this._menuBarEl;
     let moved = false, yielded = false;
     let dropRow = rec.row, dropX = rec.x;
+    const homeRow = rec.row, homeX = rec.x;
     const ghost = this._ensureGhost();
 
     const onMove = (ev) => {
@@ -7748,15 +7874,26 @@ export class Rack {
       if (this._reshaping || this._cableDragCand) { yielded = true; return; }
       if (yielded) return;
       if (!moved && Math.abs(ev.clientX - startX) + Math.abs(ev.clientY - startY) < 4) return;
+      // THE FIRST MOVE LIFTS IT OUT OF THE ROW, and the row closes up behind it. You are holding the
+      // module, not dragging a marker around while it sits there — so the drawing comes with you and
+      // the space it occupied is gone until you put it down. Its cables go quiet meanwhile: they have
+      // nowhere to land while it is in the air (see _drawCables).
+      if (!moved) {
+        rec.lifted = true;
+        rec.el.style.display = 'none';
+        void this._dressGhost(rec.descriptorId, rec);
+        this.relayout();
+        this._drawCables();
+      }
       moved = true;
-      rec.el.classList.add('dragging');
       dropRow = this._rowFromY(ev.clientY);
       const rEl = this._rowEls[dropRow];
       const rRect = rEl.getBoundingClientRect();
-      dropX = Math.max(0, (ev.clientX - rRect.left - grabDx) / sz);
+      const mmX = (ev.clientX - rRect.left - grabDx) / sz;
+      dropX = this._dropOrderX(dropRow, this.page, mmX);
       rEl.appendChild(ghost);
       ghost.style.display = 'block';
-      ghost.style.left = (dropX * s) + 'px';
+      ghost.style.left = (this._packedXAt(dropRow, this.page, mmX) * s) + 'px';
       ghost.style.width = (rec.panelWmm * s) + 'px';
       ghost.style.height = (PANEL_H_MM * s) + 'px';
     };
@@ -7764,8 +7901,13 @@ export class Rack {
       document.removeEventListener('pointermove', onMove);
       document.removeEventListener('pointerup', onUp);
       rec.el.classList.remove('dragging');
-      ghost.style.display = 'none';
-      if (yielded) return;
+      rec.el.style.display = '';
+      const wasLifted = rec.lifted;
+      rec.lifted = false;
+      this._undressGhost();
+      // A cable took the gesture over after the module was already in the air — put it back where it
+      // came from, or letting go would drop it wherever the pointer happened to be.
+      if (yielded) { if (wasLifted) { this._moveModule(rec, homeRow, homeX); } return; }
       if (moved) { this._moveModule(rec, dropRow, dropX); return; }
       if (this._isolateNet) { this._exitIsolate(); }   // a left click on empty faceplate leaves isolate mode
       // A plain click on the title bar does NOTHING beyond that. It used to open the application
@@ -7795,38 +7937,260 @@ export class Rack {
     return this._ghostEl;
   }
 
+  // DRESS THE GHOST AS THE MODULE ITSELF. A dashed outline is hard to pick out over a rack full of
+  // panels, and it never says WHICH module you are holding — carrying the drawing does both, and is
+  // the more satisfying thing to have in your hand.
+  //
+  // The picture comes from a module of that type already on the rack if there is one, which costs a
+  // clone and appears instantly; otherwise the panel is loaded exactly as adding a module loads it.
+  // Cloning a live panel also carries that module's knob positions, which is precisely right when
+  // what you are holding is a duplicate of it.
+  //
+  // Returns the panel's true width in mm — the reason to prefer this over the declared HP, which is
+  // only an approximation of what the generator drew.
+  async _dressGhost(descriptorId, fromRec, fresh) {
+    const g = this._ensureGhost();
+    g.textContent = '';
+    let svg = null;
+    // `fresh` refuses the live clone: a PLAIN duplicate comes out at its defaults, so borrowing the
+    // original's panel would put knob positions in your hand that the copy is not going to have.
+    let live = fromRec || null;
+    if (!live && !fresh) for (const r of this.records.values()) { if (r.descriptorId === descriptorId) { live = r; break; } }
+    const liveSvg = live && live.el ? live.el.querySelector('svg') : null;
+    if (liveSvg) svg = liveSvg.cloneNode(true);
+    else {
+      const type = (this.moduleTypes || []).find((t) => t.descriptorId === descriptorId);
+      if (!type) return 0;
+      const panel = await loadPanel(this._panelUrl(type), type.descriptor, { dark: this.dark });
+      svg = panel.svg;
+    }
+    if (!svg) return 0;
+    const vb = (svg.getAttribute('viewBox') || '0 0 171 128.5').split(/\s+/).map(Number);
+    svg.removeAttribute('width');
+    svg.removeAttribute('height');
+    svg.style.width = '100%';
+    svg.style.height = '100%';
+    svg.style.display = 'block';
+    g.appendChild(svg);
+    g.classList.add('carrying');
+    return vb[2] || 0;
+  }
+
+  _undressGhost() {
+    const g = this._ensureGhost();
+    g.textContent = '';
+    g.classList.remove('carrying');
+    g.style.display = 'none';
+  }
+
   // ---- context menus ----
-  // Right-click on empty rack background opens the MODULE LIBRARY, at the point you clicked — which
-  // is also where the chosen module will land. The application menu used to be here; it is still on
-  // the bar and under the title-bar hamburgers, and this gesture is worth more spent on the thing you
-  // reach for constantly. The click point travels with the request, in rack millimetres, because by
-  // the time a module is chosen the pointer is somewhere else entirely.
-  _onRowContextMenu(e, rowIndex) {
+  // Right-click on empty rack background opens the MODULE LIBRARY. The application menu used to be
+  // here; it is still on the bar and under the title-bar hamburgers, and this gesture is worth more
+  // spent on the thing you reach for constantly.
+  //
+  // The click point does NOT travel with the request. It used to, and the chosen module landed there
+  // — but a module is now carried from the library and placed by a second click, so where you were
+  // when you opened it decides nothing. This gesture and the Modules menu are the same act.
+  _onRowContextMenu(e) {
     if (e.target.closest('.rack-module')) return;
     e.preventDefault();
     if (this.onLibrary) {
-      const mm = this._clientToMm(e.clientX, e.clientY);
-      this.onLibrary({ row: rowIndex, xMm: mm.x, page: this.page });
+      this.onLibrary();
       return;
     }
-    if (this.onAppMenuBar) this.onAppMenuBar(e.clientX, e.clientY, null, rowIndex);
+    if (this.onAppMenuBar) this.onAppMenuBar(e.clientX, e.clientY, null);
   }
 
-  // Add a module AT a point: the row that was clicked, slid left until it butts against whatever is
-  // already there. `_snapLeftX` finds the right-hand edge of the nearest module to the left of the
-  // cursor, so nothing is left with a gap in front of it and no manual nudging is needed.
-  async addModuleAt(descriptorId, at) {
-    if (!at || at.row == null) return this.addModuleFromMenu(descriptorId, null);
-    if (at.page && at.page !== this.page && this._hasPage(at.page)) this.selectPage(at.page);
-    const row = Math.max(0, Math.min(this.rowCount - 1, at.row));
-    const rec = await this._addModuleWithUndo(descriptorId, row, this._snapLeftX(row, at.xMm));
-    if (rec) this._panToModule(rec);
-    return rec;
+  // CARRY A MODULE AND CLICK TO PLACE IT. Picking one from the library puts it in your hand rather
+  // than on the rack: a ghost of it follows the pointer, showing the slot it would take, and a click
+  // lands it there. Escape or a right click put it down again.
+  //
+  // The gesture is the one cabling already uses — click to pick up, roam with no button held, click
+  // to drop — so it is not a second thing to learn. It also means the point where you OPENED the
+  // library stops mattering, which is why the library no longer passes one.
+  //
+  // While you are carrying, the tab bar still works and the view still pans and zooms, so a module
+  // can be taken to a page you were not on and dropped somewhere you could not initially see.
+  // `onDone` fires however the carry ends, which is what brings the library back.
+  startCarryModule(descriptorId, onDone, opts = {}) {
+    if (this._carryingModule) return;
+    const type = (this.moduleTypes || []).find((t) => t.descriptorId === descriptorId);
+    if (!type) { if (onDone) onDone(); return; }
+    this._carryingModule = descriptorId;
+    let wmm = (this._wmmByType && this._wmmByType.get(descriptorId)) || (type.hp || 20) * 5.08;
+    const ghost = this._ensureGhost();
+    // The drawing arrives a beat later when the panel has to be fetched; until then the outline
+    // stands in at its estimated width, and the true width replaces both when it lands.
+    this._dressGhost(descriptorId, opts.fromRec || null, opts.fresh).then((w) => { if (w && this._carryingModule === descriptorId) { wmm = w; track(lastX, lastY); } });
+    document.body.classList.add('grabbing-module');
+    let slot = null;   // { row, xOrder } — where a drop would put it, recomputed as the pointer moves
+    let lastX = 0, lastY = 0;
+
+    const track = (clientX, clientY) => {
+      lastX = clientX; lastY = clientY;
+      const row = this._rowFromY(clientY);
+      const mm = this._clientToMm(clientX, clientY);
+      slot = { row, xOrder: this._dropOrderX(row, this.page, mm.x) };
+      const s = this.pxPerMm;
+      ghost.style.display = 'block';
+      ghost.style.left = (this._packedXAt(row, this.page, mm.x) * s) + 'px';
+      ghost.style.width = (wmm * s) + 'px';
+      ghost.style.height = (PANEL_H_MM * s) + 'px';
+      this._rowEls[row].appendChild(ghost);
+    };
+
+    let placed = false;
+    const finish = () => {
+      this._carryingModule = null;
+      this._viewMovedHook = null;
+      document.removeEventListener('pointermove', onMove, true);
+      document.removeEventListener('pointerdown', onDown, true);
+      document.removeEventListener('pointerup', onUp, true);
+      document.removeEventListener('contextmenu', onCtx, true);
+      document.removeEventListener('keydown', onKey, true);
+      this._undressGhost();
+      document.body.classList.remove('grabbing-module');
+      if (onDone) onDone(placed);
+    };
+
+    const drop = async () => {
+      const at = slot;
+      placed = true;
+      finish();
+      if (!at) return;
+      const rec = await this._addModuleWithUndo(descriptorId, at.row, at.xOrder);
+      if (!rec) return;
+      // A DUPLICATE arrives carrying the original's settings. Its cables do not come with it: an
+      // input already fed by the module you copied is not what anyone means by a second one.
+      if (opts.params) for (const [id, v] of opts.params) this._setParam(rec, id, v);
+      this._panToModule(rec);
+    };
+
+    // A press may be a DROP (a click) or a PAN (a drag on the rack): decided on release, exactly as a
+    // carried cable decides it.
+    let pan = null;
+    const onMove = (ev) => { if (pan) this._viewDragPan(pan, ev); track(ev.clientX, ev.clientY); };
+    const onDown = (ev) => {
+      if (this._onTabBar(ev.target) || onChrome(ev.target)) return;   // a press on the tabs changes page; the module stays in hand
+      if (ev.button !== 0) return;
+      ev.preventDefault(); ev.stopPropagation();
+      pan = this._viewDragStart(ev);
+    };
+    const onUp = (ev) => {
+      if (this._onTabBar(ev.target) || onChrome(ev.target)) return;
+      if (ev.button !== 0 || !pan) return;
+      const dragged = pan.dragged; pan = null;
+      ev.preventDefault(); ev.stopPropagation();
+      if (dragged) return;   // it was a pan of the view → the module stays in hand
+      drop();
+    };
+    const onCtx = (ev) => { if (onChrome(ev.target)) return; ev.preventDefault(); ev.stopPropagation(); finish(); };
+    const onKey = (ev) => { if (ev.key === 'Escape') { ev.preventDefault(); ev.stopPropagation(); finish(); } };
+    document.addEventListener('pointermove', onMove, true);
+    document.addEventListener('pointerdown', onDown, true);
+    document.addEventListener('pointerup', onUp, true);
+    document.addEventListener('contextmenu', onCtx, true);
+    document.addEventListener('keydown', onKey, true);
+    // The view can move with a module in hand, and the ghost is anchored in rack space — so re-aim it
+    // at the last pointer position whenever the transform changes.
+    this._viewMovedHook = () => track(lastX, lastY);
+    const c = this.container.getBoundingClientRect();
+    track(c.left + c.width / 2, c.top + c.height / 2);
   }
 
-  // Add a module from Rack ▸ Add module: append it to the END of the row the menu was opened over — the
-  // row of the right-clicked module, or the right-clicked background row. With no row context (the
-  // hamburger), fall back to the row with the most free space.
+  // ---- the two title-bar modes ----
+  // Both arm the POINTER rather than opening anything: the cursor changes to say what a click will
+  // now do, and the target is a module's TITLE BAR — the same strip you drag it by. Aiming at the
+  // faceplate does nothing at all in either mode, so a stray click on a panel full of controls is
+  // harmless, which is the whole reason for choosing the title strip over the module.
+  //
+  // `kind` is 'duplicate' or 'delete'; `opts.withSettings` decides whether a copy carries the
+  // original's knob positions. Escape, a right click, or choosing the command again ends it.
+  startModuleMode(kind, opts = {}) {
+    const withSettings = !!opts.withSettings;
+    // Choosing the SAME command again puts the mode away; choosing the other duplicate switches to it,
+    // rather than silently turning the mode off because both are called duplicate.
+    if (this._moduleMode === kind && (kind !== 'duplicate' || this._moduleModeWith === withSettings)) { this._endModuleMode(); return; }
+    this._endModuleMode();
+    this._moduleMode = kind; this._moduleModeWith = withSettings;
+    document.body.classList.add(kind === 'delete' ? 'mode-delete-module' : 'mode-duplicate-module');
+
+    const titleOf = (target) => {
+      const el = target && target.closest ? target.closest('.rack-module') : null;
+      if (!el) return null;
+      const t = target.closest('.module-title');
+      if (!t) return null;
+      return this.records.get(el.dataset.key) || null;
+    };
+    const onDown = (ev) => {
+      if (ev.button !== 0) return;
+      const rec = titleOf(ev.target);
+      // A CLICK THAT MISSES A TITLE BAR ENDS THE MODE. A mode where clicking destroys things is one
+      // you want to fall out of easily; the cost is only that a mis-aimed click ends the run early,
+      // and running it again is one menu item away.
+      if (!rec) { this._endModuleMode(); return; }
+      ev.preventDefault(); ev.stopPropagation();
+      if (kind === 'delete') {
+        if (rec.pinned) return;   // the mixer stays
+        // ONE MODULE PER INVOCATION, the same as duplicate. A mode that stays armed after destroying
+        // something is a mode the next click can destroy something else with, and the pointer is the
+        // only sign it is still on. Arm it again for the next one.
+        this._endModuleMode();
+        this._deleteModuleWithUndo(rec);   // undoable, whole — its cables and scopes come back with it
+        return;
+      }
+      const type = (this.moduleTypes || []).find((t) => t.descriptorId === rec.descriptorId);
+      const singleton = !!(type && type.descriptor && type.descriptor.singleton);
+      if (rec.pinned || singleton) return;   // one mixer, one video output — nothing to duplicate
+      const params = opts.withSettings ? new Map(rec.values) : null;
+      this._endModuleMode();
+      // One duplicate per invocation: you asked for A copy, and staying armed would make the next
+      // click somewhere harmless into another module you did not ask for.
+      this.startCarryModule(rec.descriptorId, null, { params, fromRec: opts.withSettings ? rec : null, fresh: !opts.withSettings });
+    };
+    const onCtx = (ev) => { ev.preventDefault(); ev.stopPropagation(); this._endModuleMode(); };
+    const onKey = (ev) => { if (ev.key === 'Escape') { ev.preventDefault(); this._endModuleMode(); } };
+    this._modeOff = () => {
+      document.removeEventListener('pointerdown', onDown, true);
+      document.removeEventListener('contextmenu', onCtx, true);
+      document.removeEventListener('keydown', onKey, true);
+      document.body.classList.remove('mode-delete-module', 'mode-duplicate-module');
+      this._moduleMode = null; this._modeOff = null;
+    };
+    document.addEventListener('pointerdown', onDown, true);
+    document.addEventListener('contextmenu', onCtx, true);
+    document.addEventListener('keydown', onKey, true);
+  }
+
+  _endModuleMode() { if (this._modeOff) this._modeOff(); }
+
+  moduleModeActive(kind, withSettings) {
+    if (this._moduleMode !== kind) return false;
+    return withSettings === undefined || this._moduleModeWith === !!withSettings;
+  }
+
+  // Where a module dropped at this point would COME TO REST once the row packs: the widths of
+  // everything that sorts before it. Only the ghost needs this — the drop itself just needs the
+  // ordering — but a ghost that sits anywhere else is showing you the wrong slot.
+  // Who is actually standing in this row on this page, left to right — everyone except whoever is
+  // currently being held.
+  _rowOccupants(row, page) {
+    return [...(this.rows[row] || [])].filter((r) => this.pageOf(r) === page && !r.lifted).sort((a, b) => a.x - b.x);
+  }
+
+  _packedXAt(row, page, xMm) {
+    const list = this._rowOccupants(row, page);
+    let x = 0;
+    for (const rec of list) {
+      if (xMm < rec.x + rec.panelWmm / 2) break;
+      x += rec.panelWmm;
+    }
+    return x;
+  }
+
+  // Add a module with NO POINT to put it at: append it to the END of a row, choosing the one with the
+  // most free space. Everything you place by hand is carried and dropped (startCarryModule), so this
+  // is only for the paths with nothing to aim at — a script, or a restore.
   async addModuleFromMenu(descriptorId, rowIndex) {
     let row = rowIndex;
     if (row == null || row < 0 || row >= this.rowCount) {
@@ -7894,7 +8258,7 @@ export class Rack {
     e.preventDefault();
     e.stopPropagation();
     if (e.target.closest && e.target.closest('[data-wcoast-param]')) { this._openScopeMenuForControl(e, rec); return; }   // over a knob/control → the Scopes roster
-    if (this.onAppMenuBar) this.onAppMenuBar(e.clientX, e.clientY, rec, rec.row);
+    if (this.onAppMenuBar) this.onAppMenuBar(e.clientX, e.clientY, rec);
   }
 
   _openModuleMenu(x, y, rec) {
@@ -8014,7 +8378,7 @@ export class Rack {
       const r = btn.getBoundingClientRect();
       const fresh = provider ? provider() : null;
       const use = (fresh && fresh[i] && fresh[i].submenu) || items[i].submenu;
-      this._openMenu(r.left, r.bottom + 2, use);
+      this._openMenu(r.left, r.bottom + 2, use, { above: r.top - 2 });
       // Light the title AFTER the menu is up. _openMenu tears down whatever was showing, and that
       // teardown puts the titles out (see _closeMenu) — so lighting first would light nothing.
       for (const t of built.titles) t.el.classList.toggle('open', t.idx === i);
@@ -8076,7 +8440,7 @@ export class Rack {
       for (const t of built.titles) t.el.classList.toggle('open', t.idx === i);
       openIdx = i;
       const r = btn.getBoundingClientRect();
-      this._openMenu(r.left, r.bottom + 2, items[i].submenu);
+      this._openMenu(r.left, r.bottom + 2, items[i].submenu, { above: r.top - 2 });
     };
     const built = this._buildBarTitles(items, drop);
     const bar = built.bar, titles = built.titles;
@@ -8314,7 +8678,7 @@ export class Rack {
         const onDwell = it.onDwell ? () => { this._closeSubs(); it.onDwell(); } : () => this._closeSubs();
         item.addEventListener('mouseenter', (e) => this._hoverMainItem(item, onDwell, it.onLeave || null, e));
         item.addEventListener('mouseleave', () => this._leaveMainItem(item));
-        const run = (e) => { if (it.latch) this._peekLatched = true; this._closeMenu(); if (it.action) it.action(e); };
+        const run = (e) => { if (it.latch) this._peekLatched = true; this._dismissAfterAction(); if (it.action) it.action(e); };
         item.addEventListener('click', run);
         item._activate = run;
       }
@@ -8351,7 +8715,21 @@ export class Rack {
     if (left < pad) left = pad;
     // Keep the whole menu on-screen vertically too: pull it up so its bottom clears the window edge, but
     // not above the top. (A menu taller than the window pins to the top; the wheel slide reveals the rest.)
-    top = Math.max(pad, Math.min(top, vh - pad - menu.offsetHeight));
+    //
+    // A MENU BAR'S DROP-DOWN IS THE EXCEPTION, and `opts.above` — the y its BOTTOM may sit at, i.e. the
+    // top edge of the bar — is how a bar says so. Pulling one up to clear the window edge slid it over
+    // the bar that opened it, burying every other title: the menu was on-screen and the bar was not.
+    // So a drop-down that will not fit below opens UPWARD from the bar instead, ending where the bar
+    // begins. If it fits neither way it goes against whichever edge leaves more of it showing — and if
+    // that is the bottom it stays anchored under the bar and simply runs off, since clamping it up is
+    // the very thing that buried the bar. The wheel slide reaches the rest either way.
+    const mh = menu.offsetHeight;
+    if (opts.above != null) {
+      const roomBelow = vh - pad - top, roomAbove = opts.above - pad;
+      if (mh > roomBelow && (mh <= roomAbove || roomAbove > roomBelow)) top = Math.max(pad, opts.above - mh);
+    } else {
+      top = Math.max(pad, Math.min(top, vh - pad - mh));
+    }
     recomputeBounds();
     menu.style.left = left + 'px';
     menu.style.top = top + 'px';
@@ -8364,6 +8742,12 @@ export class Rack {
     }, { passive: false });
     this._menuEl = menu;
   }
+
+  // A COMMAND HAS BEEN CHOSEN, so put the whole thing away — a menu you summoned is finished the
+  // moment you pick something from it, the way a context menu is. The FLOATING bar goes with its
+  // drop-down; the DOCKED bar stays, since it is furniture rather than something you summoned, and
+  // it is not `_menuBarEl` — so it takes the plain close and only its drop-down disappears.
+  _dismissAfterAction() { if (this._menuBarEl) this._closeMenuBar(); else this._closeMenu(); }
 
   _closeMenu() {
     this._closeSubs();
@@ -8444,6 +8828,13 @@ export class Rack {
       if (this.onCaptureWork) items.push({ label: 'Capture work state to repo', action: () => this.onCaptureWork() });
       if (this.onRestoreWork) items.push({ label: 'Restore work state from repo', action: () => this.onRestoreWork() });
     }
+    // The whole app back to what a first run gives you — modules, controls, rows, theme, zoom, the
+    // lot. It is a TESTING command: it discards the patch and the view settings together, which is
+    // why it sits here rather than beside the everyday Clear connections & controls.
+    if (this.onResetDefault) {
+      items.push({ separator: true });
+      items.push({ label: 'Restore default state…', action: () => this.onResetDefault() });
+    }
     return items;
   }
   // The Engine menu item's glyph: the same reddish push-button as the mixer's master lamp
@@ -8510,7 +8901,7 @@ export class Rack {
       if (it.onLeave) item.addEventListener('mouseleave', () => { if (this._auditionLeave === it.onLeave) this._auditionLeave = null; it.onLeave(); });
       if (it.disabled) item.classList.add('disabled');
       else {
-        const run = () => { this._closeMenu(); it.action(); };
+        const run = () => { this._dismissAfterAction(); it.action(); };
         item.addEventListener('click', run);
         item._activate = run;   // one function, so a demo choosing "First drone" does what your click does
       }

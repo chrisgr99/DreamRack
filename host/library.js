@@ -153,7 +153,9 @@ export function createLibrary(opts = {}) {
   const isTaken = opts.isTaken || (() => false);
   const isDark = opts.isDark || (() => true);
 
-  let win = null, grid = null, search = null, cards = [], pending = null;
+  let win = null, grid = null, search = null, cards = [];
+  const RETURN_MS = 2000;   // long enough to see what you placed, short enough not to feel stuck
+  let backTimer = null;
   let pref = { size: DEFAULT_SIZE, off: [], x: null, y: null, w: null, h: null, plain: false };
   try { Object.assign(pref, JSON.parse(localStorage.getItem(PREF_KEY) || '{}')); } catch (_e) { /* no storage */ }
   const savePref = () => { try { localStorage.setItem(PREF_KEY, JSON.stringify(pref)); } catch (_e) { /* no storage */ } };
@@ -268,11 +270,21 @@ export function createLibrary(opts = {}) {
       const span = document.createElement('span');
       span.textContent = t.name;
       card.append(canvas, plain, span);
+      // Choosing a module puts it in your HAND, not on the rack — so the library gets out of the way
+      // and comes back when you have placed it. It floats over the rack, and the place you want to
+      // drop is as likely as not underneath it.
       card.addEventListener('click', () => {
         if (card.classList.contains('taken')) return;
-        const at = pending; pending = null;
         hide();
-        onChoose(t.descriptorId, at);
+        // THE LIBRARY WAITS BEFORE COMING BACK. A module that lands and is instantly covered by the
+        // window you chose it from is a placement you never got to see. Only after a real drop,
+        // though: cancelling placed nothing, so there is nothing to look at and it returns at once.
+        // Any later show/hide cancels the pending return, so it can never ambush you.
+        onChoose(t.descriptorId, (placed) => {
+          clearTimeout(backTimer);
+          if (!placed) { show(); return; }
+          backTimer = setTimeout(() => { backTimer = null; show(); }, RETURN_MS);
+        });
       });
       g.appendChild(card);
       cards.push({ card, img, canvas, plain, t, search: (t.name + ' ' + (t.descriptor && t.descriptor.abbreviation || '')).toLowerCase() });
@@ -403,10 +415,9 @@ export function createLibrary(opts = {}) {
     }
   }
 
-  // `at` is where a chosen module should land — { row, xMm } from a right-click, or null.
-  function show(at = null) {
+  function show() {
+    clearTimeout(backTimer); backTimer = null;
     build();
-    pending = at;
     theme();
     applySize();
     apply();
@@ -429,7 +440,7 @@ export function createLibrary(opts = {}) {
     void r;
   }
 
-  function hide() { if (win) win.classList.remove('open'); pending = null; }
+  function hide() { clearTimeout(backTimer); backTimer = null; if (win) win.classList.remove('open'); }
   const isOpen = () => !!(win && win.classList.contains('open'));
 
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && isOpen()) { e.stopPropagation(); hide(); } }, true);

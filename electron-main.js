@@ -292,9 +292,9 @@ function registerPatchIpc() {
   });
 }
 
-// The application menu mirrors the in-window one, where a Mac user expects to find it. Engine is
-// the one item that doesn't come along: it's the instrument's power, it belongs on the panel with
-// everything else you play, and its hover-to-audition has no meaning in a native menu.
+// The application menu mirrors the in-window one, where a Mac user expects to find it. Neither has
+// an Engine item any more: it is the instrument's power, it belongs on the panel with everything
+// else you play, and the space bar toggles it.
 //
 // The commands all live in the RENDERER, so every item just names an action and sends it there —
 // which keeps ONE implementation of New/Open/Undo/Dark mode, driven from either menu.
@@ -371,10 +371,6 @@ function applyAppMenu() {
         { label: 'Create Patch from Clipboard', click: () => menuSend('createFromClipboard') },
         { type: 'separator' },
         { role: 'cut' }, { role: 'copy' }, { role: 'paste' }, { role: 'selectAll' },
-        { type: 'separator' },
-        // `&&` renders one literal '&' — a lone '&' in an Electron menu label is a mnemonic marker
-        // and gets eaten, so a single ampersand here would show as "Clear Connections  Controls…".
-        { label: 'Clear Connections && Controls…', click: () => menuSend('clearAll') },
       ],
     },
     {
@@ -389,14 +385,17 @@ function applyAppMenu() {
       ],
     },
     {
-      label: 'Rack',
+      label: 'Module',
       submenu: [
-        { label: 'Engine', type: 'checkbox', checked: !!s.engine, click: () => menuSend('toggleEngine') },
+        { label: 'Module Library…', click: () => menuSend('library') },
         { type: 'separator' },
-        { label: 'Rows', submenu: [1, 2, 3, 4, 5].map((n) => ({ label: String(n), type: 'radio', checked: s.rows === n, click: () => menuSend('setRows', n) })) },
-        { label: 'Add module', submenu: (s.modules || []).map((m) => ({ label: m.name, click: () => menuSend('addModule', m.id) })) },
+        { label: 'Duplicate with Settings…', click: () => menuSend('duplicateWithSettings') },
+        { label: 'Duplicate…', click: () => menuSend('duplicateModule') },
+        { label: 'Delete Module…', click: () => menuSend('deleteModule') },
         { type: 'separator' },
-        { label: 'Reset to Default…', click: () => menuSend('resetToDefault') },
+        // `&&` renders one literal '&' — a lone '&' in an Electron menu label is a mnemonic marker
+        // and gets eaten, so a single ampersand here would show as "Clear Connections  Controls…".
+        { label: 'Clear Connections && Controls…', click: () => menuSend('clearAll') },
       ],
     },
     {
@@ -407,6 +406,8 @@ function applyAppMenu() {
         { type: 'separator' },
         { label: 'Capture Work State to Repo', accelerator: 'CmdOrCtrl+Alt+S', click: () => menuSend('captureWork') },
         { label: 'Restore Work State from Repo', accelerator: 'CmdOrCtrl+Alt+R', click: () => menuSend('restoreWork') },
+        { type: 'separator' },
+        { label: 'Restore Default State…', click: () => menuSend('resetToDefault') },
       ],
     },
     { role: 'windowMenu' },
