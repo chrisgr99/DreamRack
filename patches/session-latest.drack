@@ -3,7 +3,7 @@
   "version": "0.1",
   "app": "DreamRack",
   "appVersion": "0.1",
-  "savedAt": "2026-08-09T19:39:54.382Z",
+  "savedAt": "2026-08-09T20:25:57.625Z",
   "rack": {
     "rows": 2
   },
@@ -87,8 +87,8 @@
     {
       "id": "m11",
       "type": "video-out",
-      "row": 1,
-      "x": 177.61,
+      "row": 0,
+      "x": 240,
       "page": "video"
     },
     {
@@ -102,6 +102,41 @@
       "type": "wcoast.filter",
       "row": 0,
       "x": 381.05
+    },
+    {
+      "id": "m14",
+      "type": "coordinate-field",
+      "row": 0,
+      "x": 0,
+      "page": "video"
+    },
+    {
+      "id": "m15",
+      "type": "shapes",
+      "row": 0,
+      "x": 80,
+      "page": "video"
+    },
+    {
+      "id": "m16",
+      "type": "video-maths",
+      "row": 0,
+      "x": 120,
+      "page": "video"
+    },
+    {
+      "id": "m17",
+      "type": "formula",
+      "row": 0,
+      "x": 162,
+      "page": "video"
+    },
+    {
+      "id": "m18",
+      "type": "time-machine",
+      "row": 0,
+      "x": 200,
+      "page": "video"
     }
   ],
   "wiring": [
