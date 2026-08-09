@@ -48,26 +48,51 @@ const rowY = (i) => ROWS_TOP + ROW_H * (i + 0.5);
 // The lamp columns are spaced by those legends, not by the lamps: PLAY, STRT and END
 // would read as one word at the lamps' own spacing. Every other gap is at least 1.0 mm,
 // leaving 1.7 mm of margin at the right edge.
-const X_NUM = 18.5;                // stage number
-const X_A = 24.1;                  // Row A knob
-const X_B = 35.6;                  // Row B knob — 11.5 mm from A, 2 mm wider than before
-const X_PLAY = 42.7;               // play button — the ACTIVE-stage indication, so it leads
-const X_START = 48.9;              // loop-window start selector (green)
-const X_END = 54.5;                // loop-window end selector (red)
-const X_RPT = 62.3;                // ratchet knob
+// EVERY KNOB ON THIS PANEL IS A TRIM — flat blue face, no ticks, no cap, one bold pointer running
+// the full radius and out past the rim. Not to save space: none of the sixteen voltage knobs carries
+// a marking, and what you actually read down a column of them is the PATTERN OF POINTER ANGLES, the
+// contour of the sequence. That is the one thing the trim is built for and the one thing a full knob
+// is worst at, because seven white ticks compete with the single line that matters.
+//
+// The columns moved to pay for the pointer's overhang. A trim reaches radius + 1.2 mm, so at the old
+// spacing A's tip crossed the stage number and B's crossed the play lamp. Two things bought the room
+// back: the stage number slid 0.3 mm left, and the A/B pair is now measured against the play LAMP at
+// 40.9 rather than against the PLAY legend at 40.0 — the legend only exists on the header row, well
+// above the first stage. Two neighbouring trims are allowed to let their tips into each other's gap
+// but never to touch the other's rim, which is what the 2r + 1.2 centre spacing enforces.
+//
+// The columns shifted again, by fractions of a millimetre, when the loop-window selectors gained
+// their track and the play button its bezel. Both grew sideways: a track reaches trackPad past its
+// lamps, a bezel half a millimetre past its. Everything from the stage number to the ratchet moved
+// to keep a real gap between neighbours — this row is packed, and the honest margins here are a few
+// tenths, not millimetres.
+const X_NUM = 18.0;                // stage number
+const X_A = 24.6;                  // Row A trim
+const X_B = 34.6;                  // Row B trim — 10.0 mm from A, against a 9.8 mm minimum
+const X_PLAY = 43.0;               // play button — the ACTIVE-stage indication, so it leads
+const X_START = 49.2;              // loop-window start selector (green)
+const X_END = 54.7;                // loop-window end selector (red)
+const X_RPT = 62.5;                // ratchet trim
 const X_SEL = 70.7;                // stage select in
 const X_PULSE = 77.0;              // stage pulse out
 
-const KNOB_R = 4.2;
-const RPT_R = 2.8;
+const KNOB_R = 4.3;                // the largest the row allows, tip to rim; the old knob was 4.2
+// The ratchet is a trim too, and the clearest case on the rack for one: it was already at trim size,
+// wearing a metal cap two millimetres across that could not read as a dome and five ticks a seventh
+// of a millimetre wide. As a trim it grows from 2.8 to 3.6 and its pointer is what points at the
+// numeral — which is what a five-position rotary switch is.
+const RPT_R = 3.6;
 const BTN_R = 1.8;
 const JACK_R = 2.6;
 
-// The ratchet scale: 0..4 across a short arc above the knob, tight gaps so the
-// numerals stay inside the 12.9 mm row.
+// The ratchet scale: 0..4 across a short arc above the knob, tight gaps so the numerals stay inside
+// the 12.9 mm row. NUMERALS ONLY. A trim's pointer already reaches past its rim to the numeral, so a
+// tick between the two is a third mark saying what two already say — and at this size three marks in
+// four millimetres is a smudge. The scale is measured from the pointer's TIP (the trim primitive does
+// that), so nothing the pointer sweeps over can be printed under it.
 const rptScale = {
-  size: 1.5, tickGap: 0.4, tickLen: 0.8, labelGap: 1.2,
-  marks: [0, 1, 2, 3, 4].map((v, i) => ({ at: i / 4, label: String(v) })),
+  size: 1.5, tickGap: 0, tickLen: 0, labelGap: 1.1,
+  marks: [0, 1, 2, 3, 4].map((v, i) => ({ at: i / 4, label: String(v), tick: false })),
 };
 
 const items = [];
@@ -111,13 +136,13 @@ for (let i = 0; i < 8; i++) {
   const s = i + 1;
   const y = rowY(i);
   items.push({ t: 'label', id: `num${s}`, x: X_NUM, y: y + 0.9, text: String(s), opts: { size: 2.1 } });
-  items.push({ t: 'knob', id: `a${s}`, x: X_A, y, opts: { radius: KNOB_R } });
-  items.push({ t: 'knob', id: `b${s}`, x: X_B, y, opts: { radius: KNOB_R } });
+  items.push({ t: 'trim', id: `a${s}`, x: X_A, y, opts: { radius: KNOB_R } });
+  items.push({ t: 'trim', id: `b${s}`, x: X_B, y, opts: { radius: KNOB_R } });
   // Play leads the lamp columns: its lamp is the active-stage indication, the thing
   // you read while the sequence runs. Orange, so it cannot be mistaken for either end
   // of the loop window beside it.
   items.push({ t: 'button', id: `play${s}`, x: X_PLAY, y, opts: { r: BTN_R, kind: 'orange' } });
-  items.push({ t: 'knob', id: `rpt${s}`, x: X_RPT, y: y + 1.0, opts: { radius: RPT_R, ticks: 5, angleMin: -50, angleMax: 50, scale: rptScale } });
+  items.push({ t: 'trim', id: `rpt${s}`, x: X_RPT, y: y + 1.0, opts: { radius: RPT_R, angleMin: -50, angleMax: 50, scale: rptScale } });
   items.push({ t: 'jack', id: `sel${s}`, x: X_SEL, y, opts: { r: JACK_R } });
   items.push({ t: 'jack', id: `pulse${s}`, x: X_PULSE, y, opts: { r: JACK_R } });
 }
@@ -128,13 +153,17 @@ for (let i = 0; i < 8; i++) {
 // drives them with no new machinery. Green for the start, red for the end, which is
 // the colour convention the two-marker design wanted but could not show on one lamp.
 //
-// The spacing IS the stage row pitch and the group is centred on the middle of the
-// eight rows, so lamp n lands exactly on stage n's centre line. No grouping outline:
-// on a column this tall the line would run most of the faceplate.
+// The spacing IS the stage row pitch and the group is centred on the middle of the eight rows, so
+// lamp n lands exactly on stage n's centre line.
+//
+// THEY WEAR THEIR PLATE, which used to be suppressed on the grounds that on a column this tall the
+// mark would run most of the faceplate. It does — and that is the point. Each of these is ONE control
+// spanning all eight stages, and nothing on the panel said so: eight lamps beside eight rows read as
+// eight separate settings. Two metal rails down the stage rows say what is true.
 const stageSteps = [1, 2, 3, 4, 5, 6, 7, 8].map((v) => ({ value: v }));
 const WINDOW_CY = (rowY(0) + rowY(7)) / 2;
-items.push({ t: 'radio', id: 'start', x: X_START, y: WINDOW_CY, opts: { orientation: 'v', spacing: ROW_H, ledR: BTN_R, outline: false, led: 'green', steps: stageSteps } });
-items.push({ t: 'radio', id: 'end', x: X_END, y: WINDOW_CY, opts: { orientation: 'v', spacing: ROW_H, ledR: BTN_R, outline: false, led: 'red', steps: stageSteps } });
+items.push({ t: 'radio', id: 'start', x: X_START, y: WINDOW_CY, opts: { orientation: 'v', spacing: ROW_H, ledR: BTN_R, led: 'green', value: 1, steps: stageSteps } });
+items.push({ t: 'radio', id: 'end', x: X_END, y: WINDOW_CY, opts: { orientation: 'v', spacing: ROW_H, ledR: BTN_R, led: 'red', value: 8, steps: stageSteps } });
 
 export default {
   faceW: FACE_W,

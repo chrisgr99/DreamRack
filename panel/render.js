@@ -17,7 +17,7 @@
 'use strict';
 
 import { THEME } from './theme.js';
-import { defs, jack, vjack, knob, knack, slider, button, vuMeter, label, radioGroup, bipolarMark, attachedLabel, ledLamp, stepButton } from './primitives.js';
+import { defs, jack, vjack, knob, knack, trim, slider, button, vuMeter, label, radioGroup, bipolarMark, attachedLabel, ledLamp, stepButton } from './primitives.js';
 
 // A control's opts carry no colour in the layout; inject the theme the primitive
 // needs — `theme` for the ones that take it, and the ink into an attached `label`
@@ -36,8 +36,9 @@ function renderItem(it, th, dark) {
     case 'vjack':        return vjack(it.id, it.x, it.y, themed(it.opts, th, false));
     case 'knob':         return knob(it.id, it.x, it.y, themed(it.opts, th, true));
     case 'knack':        return knack(it.id, it.x, it.y, themed(it.opts, th, true));
+    case 'trim':         return trim(it.id, it.x, it.y, themed(it.opts, th, true));
     case 'slider':       return slider(it.id, it.x, themed(it.opts, th, true));
-    case 'button':       return button(it.id, it.x, it.y, themed(it.opts, th, false));
+    case 'button':       return button(it.id, it.x, it.y, themed(it.opts, th, true));
     case 'vu':           return vuMeter(it.role, it.x, it.y, themed(it.opts, th, true));
     case 'radio':        return radioGroup(it.id, it.x, it.y, themed(it.opts, th, true));
     case 'stepButton':   return stepButton(it.id, it.x, it.y, themed(it.opts, th, true));

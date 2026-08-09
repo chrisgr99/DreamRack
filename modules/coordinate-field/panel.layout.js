@@ -81,7 +81,7 @@ const knack = (id, x, y, label, { ends = null, bipolar = false } = {}) => {
   // gives every knob here an attenuverter band nobody asked for. These are plain knАcks: a cable
   // in the centre drives the full sweep, and any single knob can still be given an attenuverter
   // from its own right-click menu if a patch ever wants one.
-  items.push({ t: 'knack', id, x, y, opts: { radius: R, cap: CAP, port: `${id}Cv`, depth: `${id}Depth`, av: 'off', scale } });
+  items.push({ t: 'knack', id, x, y, opts: { radius: R, cap: CAP, port: `${id}Cv`, scale } });
   if (bipolar) items.push({ t: 'bipolarMark', x, y, r: R, opts: { gap: 1.5, spanDeg: 21, r: 1.0, sw: 0.34 } });
   ink(x, y + R + NAME_DROP, label, { size: NAME_SIZE });
 };

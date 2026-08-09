@@ -57,8 +57,10 @@ for (const L of CH) {
   // knAck AV depth per time knob: time = knob x 2^(depth x CV x octaves). Default 1 =
   // the plain knАck (AV off): CV acts at full strength. subControl = driven by the knob's
   // AV ring, not its own SVG element, so the panel-coverage check skips it.
-  params.push({ id: `attackDepth${L}`, name: `Attack CV depth ${L}`, section: 'channel', curve: 'linear', min: -1, max: 1, default: 1, glideMs: 10, subControl: true });
-  params.push({ id: `decayDepth${L}`, name: `Decay CV depth ${L}`, section: 'channel', curve: 'linear', min: -1, max: 1, default: 1, glideMs: 10, subControl: true });
+  // Each has its own TRIM on the faceplate now, at four o'clock from its knАck, so it is no longer a
+  // subControl — the panel-coverage check should hold it to the same standard as any other knob.
+  params.push({ id: `attackDepth${L}`, name: `Attack CV depth ${L}`, section: 'channel', curve: 'linear', min: -1, max: 1, default: 1, glideMs: 10 });
+  params.push({ id: `decayDepth${L}`, name: `Decay CV depth ${L}`, section: 'channel', curve: 'linear', min: -1, max: 1, default: 1, glideMs: 10 });
 }
 // Quadrature (placeholder behaviour — see header): a coordinated-time knob per
 // pair plus an enable toggle per pair.

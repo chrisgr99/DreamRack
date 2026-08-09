@@ -34,6 +34,15 @@ for (const [id, def] of Object.entries(KNOB_DEFAULT)) {
   params.push({ id, name: id, section: 'knobs', curve: 'linear', min: 0, max: 1, default: def, glideMs: 0 });
 }
 
+// Trim knobs — the same plain linear param as any knob, drawn small. Turned off centre so the
+// pointer's angle is obvious on load, and the bipolar one parked at its zero so the centre mark can
+// be seen doing its job.
+const TRIM_DEFAULT = { trimSmall: 0.28, trimHouse: 0.72 };
+for (const [id, def] of Object.entries(TRIM_DEFAULT)) {
+  params.push({ id, name: id, section: 'knobs', curve: 'linear', min: 0, max: 1, default: def, glideMs: 0 });
+}
+params.push({ id: 'trimAv', name: 'Attenuverter', section: 'knobs', curve: 'linear', min: -1, max: 1, default: 0, glideMs: 0 });
+
 // Radio groups (stepped), momentary/toggle buttons (on/off), and a fader (linear).
 const step = (v) => ({ value: v });
 params.push({ id: 'radioMode', name: 'Mode', section: 'controls', curve: 'stepped', steps: ['transient', 'sustained', 'cyclic'].map(step), default: 'transient' });

@@ -1,6 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="80mm" height="128.5mm" viewBox="3.9 0 80 128.5" font-family="Arial Narrow, Helvetica, Arial, sans-serif">
 <defs>
+  <linearGradient id="metalStripV" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#f8f8f8"/><stop offset="0.45" stop-color="#d8dbdd"/><stop offset="0.7" stop-color="#f4f4f4"/><stop offset="1" stop-color="#9a9a9a"/></linearGradient>
+  <linearGradient id="metalStripH" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f8f8f8"/><stop offset="0.45" stop-color="#d8dbdd"/><stop offset="0.7" stop-color="#f4f4f4"/><stop offset="1" stop-color="#9a9a9a"/></linearGradient>
+  <radialGradient id="metalDisc"><stop offset="0" stop-color="#f8f8f8"/><stop offset="0.45" stop-color="#d8dbdd"/><stop offset="0.7" stop-color="#f4f4f4"/><stop offset="1" stop-color="#9a9a9a"/></radialGradient>
   <radialGradient id="blueRing"><stop offset="0" stop-color="#1688cc"/><stop offset="0.55" stop-color="#006da8"/><stop offset="1" stop-color="#003d62"/></radialGradient>
   <radialGradient id="blueDial"><stop offset="0" stop-color="#1d79b7"/><stop offset="0.6" stop-color="#00639a"/><stop offset="1" stop-color="#00456e"/></radialGradient>
   <radialGradient id="knobCap"><stop offset="0" stop-color="#f8f8f8"/><stop offset="0.4" stop-color="#bfc3c5"/><stop offset="0.62" stop-color="#f4f4f4"/><stop offset="1" stop-color="#777777"/></radialGradient>
@@ -16,13 +19,20 @@
   <text x="13" y="7.4" font-size="3.006" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">PLACE</text>
   <text x="39" y="7.4" font-size="3.006" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">WARP</text>
   <text x="66" y="7.4" font-size="3.006" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">FIELD</text>
-  <g data-wcoast-param="offsetX" data-wcoast-cx="13" data-wcoast-cy="20" data-wcoast-angle-min="-150" data-wcoast-angle-max="150" data-wcoast-port="offsetXCv" data-wcoast-depth="offsetXDepth" data-wcoast-av="off">
-    <circle cx="13" cy="20" r="6.6" fill="#4a4e52" stroke="#ffffff" stroke-width="0.25" data-wcoast-role="rim"/>
-    <circle cx="13" cy="20" r="5.75" fill="none" stroke="#2b2e31" stroke-width="1.292" data-wcoast-role="gauge-track"/>
+  <g data-wcoast-param="offsetX" data-wcoast-cx="13" data-wcoast-cy="20" data-wcoast-angle-min="-150" data-wcoast-angle-max="150" data-wcoast-port="offsetXCv">
+    <circle cx="13" cy="20" r="6.6" fill="url(#blueRing)" stroke="#004b7a" stroke-width="0.2911"/>
     <circle cx="13" cy="20" r="4.9" fill="url(#knobCap)" stroke="#666666" stroke-width="0.194"/>
     <circle cx="13" cy="20" r="2.6" fill="#ff7300"/>
     <circle cx="13" cy="20" r="1.6" fill="#000000" data-wcoast-role="jackhole"/>
-    <g data-wcoast-role="indicator" data-wcoast-cap="4.9">
+    <g data-wcoast-role="indicator">
+      <line x1="13.00" y1="12.99" x2="13.00" y2="14.22" stroke="#ffffff" stroke-width="0.328"/>
+      <line x1="18.48" y1="15.63" x2="17.52" y2="16.40" stroke="#ffffff" stroke-width="0.328"/>
+      <line x1="19.83" y1="21.56" x2="18.64" y2="21.29" stroke="#ffffff" stroke-width="0.328"/>
+      <line x1="16.04" y1="26.32" x2="15.51" y2="25.21" stroke="#ffffff" stroke-width="0.328"/>
+      <line x1="9.96" y1="26.32" x2="10.49" y2="25.21" stroke="#ffffff" stroke-width="0.328"/>
+      <line x1="6.17" y1="21.56" x2="7.36" y2="21.29" stroke="#ffffff" stroke-width="0.328"/>
+      <line x1="7.52" y1="15.63" x2="8.48" y2="16.40" stroke="#ffffff" stroke-width="0.328"/>
+      <line x1="13" y1="17.40" x2="13" y2="13.40" stroke="#ffffff" stroke-width="0.4099"/>
     </g>
   </g>
   <g>
@@ -34,13 +44,20 @@
     <circle cx="18.61" cy="13.48" r="1" fill="none" stroke="#163a69" stroke-width="0.34"/><line x1="18.11" y1="13.48" x2="19.11" y2="13.48" stroke="#163a69" stroke-width="0.34"/><line x1="18.61" y1="12.98" x2="18.61" y2="13.98" stroke="#163a69" stroke-width="0.34"/>
   </g>
   <text x="13" y="30.6" font-size="2.606" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">X</text>
-  <g data-wcoast-param="offsetY" data-wcoast-cx="13" data-wcoast-cy="40.5" data-wcoast-angle-min="-150" data-wcoast-angle-max="150" data-wcoast-port="offsetYCv" data-wcoast-depth="offsetYDepth" data-wcoast-av="off">
-    <circle cx="13" cy="40.5" r="6.6" fill="#4a4e52" stroke="#ffffff" stroke-width="0.25" data-wcoast-role="rim"/>
-    <circle cx="13" cy="40.5" r="5.75" fill="none" stroke="#2b2e31" stroke-width="1.292" data-wcoast-role="gauge-track"/>
+  <g data-wcoast-param="offsetY" data-wcoast-cx="13" data-wcoast-cy="40.5" data-wcoast-angle-min="-150" data-wcoast-angle-max="150" data-wcoast-port="offsetYCv">
+    <circle cx="13" cy="40.5" r="6.6" fill="url(#blueRing)" stroke="#004b7a" stroke-width="0.2911"/>
     <circle cx="13" cy="40.5" r="4.9" fill="url(#knobCap)" stroke="#666666" stroke-width="0.194"/>
     <circle cx="13" cy="40.5" r="2.6" fill="#ff7300"/>
     <circle cx="13" cy="40.5" r="1.6" fill="#000000" data-wcoast-role="jackhole"/>
-    <g data-wcoast-role="indicator" data-wcoast-cap="4.9">
+    <g data-wcoast-role="indicator">
+      <line x1="13.00" y1="33.49" x2="13.00" y2="34.72" stroke="#ffffff" stroke-width="0.328"/>
+      <line x1="18.48" y1="36.13" x2="17.52" y2="36.90" stroke="#ffffff" stroke-width="0.328"/>
+      <line x1="19.83" y1="42.06" x2="18.64" y2="41.79" stroke="#ffffff" stroke-width="0.328"/>
+      <line x1="16.04" y1="46.82" x2="15.51" y2="45.71" stroke="#ffffff" stroke-width="0.328"/>
+      <line x1="9.96" y1="46.82" x2="10.49" y2="45.71" stroke="#ffffff" stroke-width="0.328"/>
+      <line x1="6.17" y1="42.06" x2="7.36" y2="41.79" stroke="#ffffff" stroke-width="0.328"/>
+      <line x1="7.52" y1="36.13" x2="8.48" y2="36.90" stroke="#ffffff" stroke-width="0.328"/>
+      <line x1="13" y1="37.90" x2="13" y2="33.90" stroke="#ffffff" stroke-width="0.4099"/>
     </g>
   </g>
   <g>
@@ -52,13 +69,20 @@
     <circle cx="18.61" cy="33.98" r="1" fill="none" stroke="#163a69" stroke-width="0.34"/><line x1="18.11" y1="33.98" x2="19.11" y2="33.98" stroke="#163a69" stroke-width="0.34"/><line x1="18.61" y1="33.48" x2="18.61" y2="34.48" stroke="#163a69" stroke-width="0.34"/>
   </g>
   <text x="13" y="51.1" font-size="2.606" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">Y</text>
-  <g data-wcoast-param="rotate" data-wcoast-cx="13" data-wcoast-cy="61" data-wcoast-angle-min="-150" data-wcoast-angle-max="150" data-wcoast-port="rotateCv" data-wcoast-depth="rotateDepth" data-wcoast-av="off">
-    <circle cx="13" cy="61" r="6.6" fill="#4a4e52" stroke="#ffffff" stroke-width="0.25" data-wcoast-role="rim"/>
-    <circle cx="13" cy="61" r="5.75" fill="none" stroke="#2b2e31" stroke-width="1.292" data-wcoast-role="gauge-track"/>
+  <g data-wcoast-param="rotate" data-wcoast-cx="13" data-wcoast-cy="61" data-wcoast-angle-min="-150" data-wcoast-angle-max="150" data-wcoast-port="rotateCv">
+    <circle cx="13" cy="61" r="6.6" fill="url(#blueRing)" stroke="#004b7a" stroke-width="0.2911"/>
     <circle cx="13" cy="61" r="4.9" fill="url(#knobCap)" stroke="#666666" stroke-width="0.194"/>
     <circle cx="13" cy="61" r="2.6" fill="#ff7300"/>
     <circle cx="13" cy="61" r="1.6" fill="#000000" data-wcoast-role="jackhole"/>
-    <g data-wcoast-role="indicator" data-wcoast-cap="4.9">
+    <g data-wcoast-role="indicator">
+      <line x1="13.00" y1="53.99" x2="13.00" y2="55.22" stroke="#ffffff" stroke-width="0.328"/>
+      <line x1="18.48" y1="56.63" x2="17.52" y2="57.40" stroke="#ffffff" stroke-width="0.328"/>
+      <line x1="19.83" y1="62.56" x2="18.64" y2="62.29" stroke="#ffffff" stroke-width="0.328"/>
+      <line x1="16.04" y1="67.32" x2="15.51" y2="66.21" stroke="#ffffff" stroke-width="0.328"/>
+      <line x1="9.96" y1="67.32" x2="10.49" y2="66.21" stroke="#ffffff" stroke-width="0.328"/>
+      <line x1="6.17" y1="62.56" x2="7.36" y2="62.29" stroke="#ffffff" stroke-width="0.328"/>
+      <line x1="7.52" y1="56.63" x2="8.48" y2="57.40" stroke="#ffffff" stroke-width="0.328"/>
+      <line x1="13" y1="58.40" x2="13" y2="54.40" stroke="#ffffff" stroke-width="0.4099"/>
     </g>
   </g>
   <g>
@@ -72,19 +96,26 @@
   <text x="13" y="71.6" font-size="2.606" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">ROTATE</text>
   <text x="7.050000000000001" y="88.34160068989706" font-size="2.206" font-weight="700" font-style="italic" fill="#163a69" text-anchor="end" font-family="Arial Narrow, Helvetica, Arial, sans-serif">0</text>
   <text x="18.95" y="88.34160068989706" font-size="2.206" font-weight="700" font-style="italic" fill="#163a69" text-anchor="start" font-family="Arial Narrow, Helvetica, Arial, sans-serif">8</text>
-  <g data-wcoast-param="scale" data-wcoast-cx="13" data-wcoast-cy="81.5" data-wcoast-angle-min="-150" data-wcoast-angle-max="150" data-wcoast-port="scaleCv" data-wcoast-depth="scaleDepth" data-wcoast-av="off">
-    <circle cx="13" cy="81.5" r="6.6" fill="#4a4e52" stroke="#ffffff" stroke-width="0.25" data-wcoast-role="rim"/>
-    <circle cx="13" cy="81.5" r="5.75" fill="none" stroke="#2b2e31" stroke-width="1.292" data-wcoast-role="gauge-track"/>
+  <g data-wcoast-param="scale" data-wcoast-cx="13" data-wcoast-cy="81.5" data-wcoast-angle-min="-150" data-wcoast-angle-max="150" data-wcoast-port="scaleCv">
+    <circle cx="13" cy="81.5" r="6.6" fill="url(#blueRing)" stroke="#004b7a" stroke-width="0.2911"/>
     <circle cx="13" cy="81.5" r="4.9" fill="url(#knobCap)" stroke="#666666" stroke-width="0.194"/>
     <line x1="9.45" y1="87.65" x2="9.05" y2="88.34" stroke="#163a69" stroke-width="0.355"/>
     <line x1="16.55" y1="87.65" x2="16.95" y2="88.34" stroke="#163a69" stroke-width="0.355"/>
     <circle cx="13" cy="81.5" r="2.6" fill="#ff7300"/>
     <circle cx="13" cy="81.5" r="1.6" fill="#000000" data-wcoast-role="jackhole"/>
-    <g data-wcoast-role="indicator" data-wcoast-cap="4.9">
+    <g data-wcoast-role="indicator">
+      <line x1="13.00" y1="74.49" x2="13.00" y2="75.72" stroke="#ffffff" stroke-width="0.328"/>
+      <line x1="18.48" y1="77.13" x2="17.52" y2="77.90" stroke="#ffffff" stroke-width="0.328"/>
+      <line x1="19.83" y1="83.06" x2="18.64" y2="82.79" stroke="#ffffff" stroke-width="0.328"/>
+      <line x1="16.04" y1="87.82" x2="15.51" y2="86.71" stroke="#ffffff" stroke-width="0.328"/>
+      <line x1="9.96" y1="87.82" x2="10.49" y2="86.71" stroke="#ffffff" stroke-width="0.328"/>
+      <line x1="6.17" y1="83.06" x2="7.36" y2="82.79" stroke="#ffffff" stroke-width="0.328"/>
+      <line x1="7.52" y1="77.13" x2="8.48" y2="77.90" stroke="#ffffff" stroke-width="0.328"/>
+      <line x1="13" y1="78.90" x2="13" y2="74.90" stroke="#ffffff" stroke-width="0.4099"/>
     </g>
   </g>
   <text x="13" y="92.1" font-size="2.606" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">SCALE</text>
-  <g data-wcoast-param="invert"><circle cx="13" cy="96" r="2.4" fill="url(#greenLed)" stroke="#005c1e" stroke-width="0.2366" data-wcoast-role="step-indicator" data-wcoast-step="on" data-wcoast-led="green"/><circle cx="12.33" cy="95.33" r="0.72" fill="#b7ffc6" opacity="0.85" data-wcoast-role="led-gloss" pointer-events="none"/></g>
+  <g data-wcoast-param="invert"><circle cx="13" cy="96" r="3.10" fill="url(#metalDisc)" pointer-events="none" data-wcoast-role="button-metal"/><circle cx="13" cy="96" r="2.4" fill="#505055" stroke="#4a4a4a" stroke-width="0.2366" data-wcoast-role="step-indicator" data-wcoast-step="on" data-wcoast-led="green"/><circle cx="12.33" cy="95.33" r="0.72" fill="#b7ffc6" opacity="0" data-wcoast-role="led-gloss" pointer-events="none"/></g>
   <text x="13" y="101.6" font-size="2.706" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">INVERT</text>
   <g data-wcoast-port="imageIn" data-wcoast-cx="13" data-wcoast-cy="106.5">
     <rect x="10.00" y="103.50" width="6.00" height="6.00" rx="1.02" fill="#8a8a8a" data-wcoast-role="jackbody"/>
@@ -93,25 +124,39 @@
   <text x="13" y="112.3" font-size="2.606" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">IMAGE IN</text>
   <text x="33.05" y="26.841600689897064" font-size="2.206" font-weight="700" font-style="italic" fill="#163a69" text-anchor="end" font-family="Arial Narrow, Helvetica, Arial, sans-serif">XY</text>
   <text x="44.95" y="26.841600689897064" font-size="2.206" font-weight="700" font-style="italic" fill="#163a69" text-anchor="start" font-family="Arial Narrow, Helvetica, Arial, sans-serif">Rθ</text>
-  <g data-wcoast-param="polar" data-wcoast-cx="39" data-wcoast-cy="20" data-wcoast-angle-min="-150" data-wcoast-angle-max="150" data-wcoast-port="polarCv" data-wcoast-depth="polarDepth" data-wcoast-av="off">
-    <circle cx="39" cy="20" r="6.6" fill="#4a4e52" stroke="#ffffff" stroke-width="0.25" data-wcoast-role="rim"/>
-    <circle cx="39" cy="20" r="5.75" fill="none" stroke="#2b2e31" stroke-width="1.292" data-wcoast-role="gauge-track"/>
+  <g data-wcoast-param="polar" data-wcoast-cx="39" data-wcoast-cy="20" data-wcoast-angle-min="-150" data-wcoast-angle-max="150" data-wcoast-port="polarCv">
+    <circle cx="39" cy="20" r="6.6" fill="url(#blueRing)" stroke="#004b7a" stroke-width="0.2911"/>
     <circle cx="39" cy="20" r="4.9" fill="url(#knobCap)" stroke="#666666" stroke-width="0.194"/>
     <line x1="35.45" y1="26.15" x2="35.05" y2="26.84" stroke="#163a69" stroke-width="0.355"/>
     <line x1="42.55" y1="26.15" x2="42.95" y2="26.84" stroke="#163a69" stroke-width="0.355"/>
     <circle cx="39" cy="20" r="2.6" fill="#ff7300"/>
     <circle cx="39" cy="20" r="1.6" fill="#000000" data-wcoast-role="jackhole"/>
-    <g data-wcoast-role="indicator" data-wcoast-cap="4.9">
+    <g data-wcoast-role="indicator">
+      <line x1="39.00" y1="12.99" x2="39.00" y2="14.22" stroke="#ffffff" stroke-width="0.328"/>
+      <line x1="44.48" y1="15.63" x2="43.52" y2="16.40" stroke="#ffffff" stroke-width="0.328"/>
+      <line x1="45.83" y1="21.56" x2="44.64" y2="21.29" stroke="#ffffff" stroke-width="0.328"/>
+      <line x1="42.04" y1="26.32" x2="41.51" y2="25.21" stroke="#ffffff" stroke-width="0.328"/>
+      <line x1="35.96" y1="26.32" x2="36.49" y2="25.21" stroke="#ffffff" stroke-width="0.328"/>
+      <line x1="32.17" y1="21.56" x2="33.36" y2="21.29" stroke="#ffffff" stroke-width="0.328"/>
+      <line x1="33.52" y1="15.63" x2="34.48" y2="16.40" stroke="#ffffff" stroke-width="0.328"/>
+      <line x1="39" y1="17.40" x2="39" y2="13.40" stroke="#ffffff" stroke-width="0.4099"/>
     </g>
   </g>
   <text x="39" y="30.6" font-size="2.606" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">POLAR</text>
-  <g data-wcoast-param="twist" data-wcoast-cx="39" data-wcoast-cy="40.5" data-wcoast-angle-min="-150" data-wcoast-angle-max="150" data-wcoast-port="twistCv" data-wcoast-depth="twistDepth" data-wcoast-av="off">
-    <circle cx="39" cy="40.5" r="6.6" fill="#4a4e52" stroke="#ffffff" stroke-width="0.25" data-wcoast-role="rim"/>
-    <circle cx="39" cy="40.5" r="5.75" fill="none" stroke="#2b2e31" stroke-width="1.292" data-wcoast-role="gauge-track"/>
+  <g data-wcoast-param="twist" data-wcoast-cx="39" data-wcoast-cy="40.5" data-wcoast-angle-min="-150" data-wcoast-angle-max="150" data-wcoast-port="twistCv">
+    <circle cx="39" cy="40.5" r="6.6" fill="url(#blueRing)" stroke="#004b7a" stroke-width="0.2911"/>
     <circle cx="39" cy="40.5" r="4.9" fill="url(#knobCap)" stroke="#666666" stroke-width="0.194"/>
     <circle cx="39" cy="40.5" r="2.6" fill="#ff7300"/>
     <circle cx="39" cy="40.5" r="1.6" fill="#000000" data-wcoast-role="jackhole"/>
-    <g data-wcoast-role="indicator" data-wcoast-cap="4.9">
+    <g data-wcoast-role="indicator">
+      <line x1="39.00" y1="33.49" x2="39.00" y2="34.72" stroke="#ffffff" stroke-width="0.328"/>
+      <line x1="44.48" y1="36.13" x2="43.52" y2="36.90" stroke="#ffffff" stroke-width="0.328"/>
+      <line x1="45.83" y1="42.06" x2="44.64" y2="41.79" stroke="#ffffff" stroke-width="0.328"/>
+      <line x1="42.04" y1="46.82" x2="41.51" y2="45.71" stroke="#ffffff" stroke-width="0.328"/>
+      <line x1="35.96" y1="46.82" x2="36.49" y2="45.71" stroke="#ffffff" stroke-width="0.328"/>
+      <line x1="32.17" y1="42.06" x2="33.36" y2="41.79" stroke="#ffffff" stroke-width="0.328"/>
+      <line x1="33.52" y1="36.13" x2="34.48" y2="36.90" stroke="#ffffff" stroke-width="0.328"/>
+      <line x1="39" y1="37.90" x2="39" y2="33.90" stroke="#ffffff" stroke-width="0.4099"/>
     </g>
   </g>
   <g>
@@ -125,62 +170,83 @@
   <text x="39" y="51.1" font-size="2.606" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">TWIST</text>
   <text x="33.05" y="67.84160068989706" font-size="2.206" font-weight="700" font-style="italic" fill="#163a69" text-anchor="end" font-family="Arial Narrow, Helvetica, Arial, sans-serif">1</text>
   <text x="44.95" y="67.84160068989706" font-size="2.206" font-weight="700" font-style="italic" fill="#163a69" text-anchor="start" font-family="Arial Narrow, Helvetica, Arial, sans-serif">16</text>
-  <g data-wcoast-param="tile" data-wcoast-cx="39" data-wcoast-cy="61" data-wcoast-angle-min="-150" data-wcoast-angle-max="150" data-wcoast-port="tileCv" data-wcoast-depth="tileDepth" data-wcoast-av="off">
-    <circle cx="39" cy="61" r="6.6" fill="#4a4e52" stroke="#ffffff" stroke-width="0.25" data-wcoast-role="rim"/>
-    <circle cx="39" cy="61" r="5.75" fill="none" stroke="#2b2e31" stroke-width="1.292" data-wcoast-role="gauge-track"/>
+  <g data-wcoast-param="tile" data-wcoast-cx="39" data-wcoast-cy="61" data-wcoast-angle-min="-150" data-wcoast-angle-max="150" data-wcoast-port="tileCv">
+    <circle cx="39" cy="61" r="6.6" fill="url(#blueRing)" stroke="#004b7a" stroke-width="0.2911"/>
     <circle cx="39" cy="61" r="4.9" fill="url(#knobCap)" stroke="#666666" stroke-width="0.194"/>
     <line x1="35.45" y1="67.15" x2="35.05" y2="67.84" stroke="#163a69" stroke-width="0.355"/>
     <line x1="42.55" y1="67.15" x2="42.95" y2="67.84" stroke="#163a69" stroke-width="0.355"/>
     <circle cx="39" cy="61" r="2.6" fill="#ff7300"/>
     <circle cx="39" cy="61" r="1.6" fill="#000000" data-wcoast-role="jackhole"/>
-    <g data-wcoast-role="indicator" data-wcoast-cap="4.9">
+    <g data-wcoast-role="indicator">
+      <line x1="39.00" y1="53.99" x2="39.00" y2="55.22" stroke="#ffffff" stroke-width="0.328"/>
+      <line x1="44.48" y1="56.63" x2="43.52" y2="57.40" stroke="#ffffff" stroke-width="0.328"/>
+      <line x1="45.83" y1="62.56" x2="44.64" y2="62.29" stroke="#ffffff" stroke-width="0.328"/>
+      <line x1="42.04" y1="67.32" x2="41.51" y2="66.21" stroke="#ffffff" stroke-width="0.328"/>
+      <line x1="35.96" y1="67.32" x2="36.49" y2="66.21" stroke="#ffffff" stroke-width="0.328"/>
+      <line x1="32.17" y1="62.56" x2="33.36" y2="62.29" stroke="#ffffff" stroke-width="0.328"/>
+      <line x1="33.52" y1="56.63" x2="34.48" y2="57.40" stroke="#ffffff" stroke-width="0.328"/>
+      <line x1="39" y1="58.40" x2="39" y2="54.40" stroke="#ffffff" stroke-width="0.4099"/>
     </g>
   </g>
   <text x="39" y="71.6" font-size="2.606" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">TILE</text>
   <text x="33.05" y="88.34160068989706" font-size="2.206" font-weight="700" font-style="italic" fill="#163a69" text-anchor="end" font-family="Arial Narrow, Helvetica, Arial, sans-serif">off</text>
   <text x="44.95" y="88.34160068989706" font-size="2.206" font-weight="700" font-style="italic" fill="#163a69" text-anchor="start" font-family="Arial Narrow, Helvetica, Arial, sans-serif">32</text>
-  <g data-wcoast-param="quantise" data-wcoast-cx="39" data-wcoast-cy="81.5" data-wcoast-angle-min="-150" data-wcoast-angle-max="150" data-wcoast-port="quantiseCv" data-wcoast-depth="quantiseDepth" data-wcoast-av="off">
-    <circle cx="39" cy="81.5" r="6.6" fill="#4a4e52" stroke="#ffffff" stroke-width="0.25" data-wcoast-role="rim"/>
-    <circle cx="39" cy="81.5" r="5.75" fill="none" stroke="#2b2e31" stroke-width="1.292" data-wcoast-role="gauge-track"/>
+  <g data-wcoast-param="quantise" data-wcoast-cx="39" data-wcoast-cy="81.5" data-wcoast-angle-min="-150" data-wcoast-angle-max="150" data-wcoast-port="quantiseCv">
+    <circle cx="39" cy="81.5" r="6.6" fill="url(#blueRing)" stroke="#004b7a" stroke-width="0.2911"/>
     <circle cx="39" cy="81.5" r="4.9" fill="url(#knobCap)" stroke="#666666" stroke-width="0.194"/>
     <line x1="35.45" y1="87.65" x2="35.05" y2="88.34" stroke="#163a69" stroke-width="0.355"/>
     <line x1="42.55" y1="87.65" x2="42.95" y2="88.34" stroke="#163a69" stroke-width="0.355"/>
     <circle cx="39" cy="81.5" r="2.6" fill="#ff7300"/>
     <circle cx="39" cy="81.5" r="1.6" fill="#000000" data-wcoast-role="jackhole"/>
-    <g data-wcoast-role="indicator" data-wcoast-cap="4.9">
+    <g data-wcoast-role="indicator">
+      <line x1="39.00" y1="74.49" x2="39.00" y2="75.72" stroke="#ffffff" stroke-width="0.328"/>
+      <line x1="44.48" y1="77.13" x2="43.52" y2="77.90" stroke="#ffffff" stroke-width="0.328"/>
+      <line x1="45.83" y1="83.06" x2="44.64" y2="82.79" stroke="#ffffff" stroke-width="0.328"/>
+      <line x1="42.04" y1="87.82" x2="41.51" y2="86.71" stroke="#ffffff" stroke-width="0.328"/>
+      <line x1="35.96" y1="87.82" x2="36.49" y2="86.71" stroke="#ffffff" stroke-width="0.328"/>
+      <line x1="32.17" y1="83.06" x2="33.36" y2="82.79" stroke="#ffffff" stroke-width="0.328"/>
+      <line x1="33.52" y1="77.13" x2="34.48" y2="77.90" stroke="#ffffff" stroke-width="0.328"/>
+      <line x1="39" y1="78.90" x2="39" y2="74.90" stroke="#ffffff" stroke-width="0.4099"/>
     </g>
   </g>
   <text x="39" y="92.1" font-size="2.606" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">QUANT</text>
   <text x="39" y="99" font-size="2.806" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">MIRROR</text>
   <g data-wcoast-param="mirror">
     <circle cx="29.4" cy="105" r="1.9" fill="url(#greenLed)" stroke="#005c1e" stroke-width="0.2366" data-wcoast-role="step-indicator" data-wcoast-step="off" data-wcoast-led="green"/><circle cx="28.87" cy="104.47" r="0.57" fill="#b7ffc6" opacity="0.85" data-wcoast-role="led-gloss" pointer-events="none"/>
-      <text x="29.4" y="109.9" font-size="2.5060000000000002" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">OFF</text>
-    <circle cx="35.8" cy="105" r="1.9" fill="url(#greenLed)" stroke="#005c1e" stroke-width="0.2366" data-wcoast-role="step-indicator" data-wcoast-step="x" data-wcoast-led="green"/><circle cx="35.27" cy="104.47" r="0.57" fill="#b7ffc6" opacity="0.85" data-wcoast-role="led-gloss" pointer-events="none"/>
-      <text x="35.8" y="109.9" font-size="2.5060000000000002" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">X</text>
-    <circle cx="42.2" cy="105" r="1.9" fill="url(#greenLed)" stroke="#005c1e" stroke-width="0.2366" data-wcoast-role="step-indicator" data-wcoast-step="y" data-wcoast-led="green"/><circle cx="41.67" cy="104.47" r="0.57" fill="#b7ffc6" opacity="0.85" data-wcoast-role="led-gloss" pointer-events="none"/>
-      <text x="42.2" y="109.9" font-size="2.5060000000000002" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">Y</text>
-    <circle cx="48.6" cy="105" r="1.9" fill="url(#greenLed)" stroke="#005c1e" stroke-width="0.2366" data-wcoast-role="step-indicator" data-wcoast-step="both" data-wcoast-led="green"/><circle cx="48.07" cy="104.47" r="0.57" fill="#b7ffc6" opacity="0.85" data-wcoast-role="led-gloss" pointer-events="none"/>
-      <text x="48.6" y="109.9" font-size="2.5060000000000002" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">XY</text>
+      <text x="29.4" y="109.2" font-size="2.5060000000000002" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">OFF</text>
+    <circle cx="35.8" cy="105" r="1.9" fill="#505055" stroke="#4a4a4a" stroke-width="0.2366" data-wcoast-role="step-indicator" data-wcoast-step="x" data-wcoast-led="green"/><circle cx="35.27" cy="104.47" r="0.57" fill="#b7ffc6" opacity="0" data-wcoast-role="led-gloss" pointer-events="none"/>
+      <text x="35.8" y="109.2" font-size="2.5060000000000002" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">X</text>
+    <circle cx="42.2" cy="105" r="1.9" fill="#505055" stroke="#4a4a4a" stroke-width="0.2366" data-wcoast-role="step-indicator" data-wcoast-step="y" data-wcoast-led="green"/><circle cx="41.67" cy="104.47" r="0.57" fill="#b7ffc6" opacity="0" data-wcoast-role="led-gloss" pointer-events="none"/>
+      <text x="42.2" y="109.2" font-size="2.5060000000000002" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">Y</text>
+    <circle cx="48.6" cy="105" r="1.9" fill="#505055" stroke="#4a4a4a" stroke-width="0.2366" data-wcoast-role="step-indicator" data-wcoast-step="both" data-wcoast-led="green"/><circle cx="48.07" cy="104.47" r="0.57" fill="#b7ffc6" opacity="0" data-wcoast-role="led-gloss" pointer-events="none"/>
+      <text x="48.6" y="109.2" font-size="2.5060000000000002" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">XY</text>
   </g>
   <g data-wcoast-param="field">
     <circle cx="58" cy="13.600000000000001" r="2" fill="url(#greenLed)" stroke="#005c1e" stroke-width="0.2366" data-wcoast-role="step-indicator" data-wcoast-step="x" data-wcoast-led="green"/><circle cx="57.44" cy="13.04" r="0.60" fill="#b7ffc6" opacity="0.85" data-wcoast-role="led-gloss" pointer-events="none"/>
       <text x="61.3" y="14.3" font-size="2.706" font-weight="700" font-style="italic" fill="#163a69" text-anchor="start" font-family="Arial Narrow, Helvetica, Arial, sans-serif">X</text>
-    <circle cx="58" cy="21.8" r="2" fill="url(#greenLed)" stroke="#005c1e" stroke-width="0.2366" data-wcoast-role="step-indicator" data-wcoast-step="y" data-wcoast-led="green"/><circle cx="57.44" cy="21.24" r="0.60" fill="#b7ffc6" opacity="0.85" data-wcoast-role="led-gloss" pointer-events="none"/>
+    <circle cx="58" cy="21.8" r="2" fill="#505055" stroke="#4a4a4a" stroke-width="0.2366" data-wcoast-role="step-indicator" data-wcoast-step="y" data-wcoast-led="green"/><circle cx="57.44" cy="21.24" r="0.60" fill="#b7ffc6" opacity="0" data-wcoast-role="led-gloss" pointer-events="none"/>
       <text x="61.3" y="22.5" font-size="2.706" font-weight="700" font-style="italic" fill="#163a69" text-anchor="start" font-family="Arial Narrow, Helvetica, Arial, sans-serif">Y</text>
-    <circle cx="58" cy="30" r="2" fill="url(#greenLed)" stroke="#005c1e" stroke-width="0.2366" data-wcoast-role="step-indicator" data-wcoast-step="diag" data-wcoast-led="green"/><circle cx="57.44" cy="29.44" r="0.60" fill="#b7ffc6" opacity="0.85" data-wcoast-role="led-gloss" pointer-events="none"/>
+    <circle cx="58" cy="30" r="2" fill="#505055" stroke="#4a4a4a" stroke-width="0.2366" data-wcoast-role="step-indicator" data-wcoast-step="diag" data-wcoast-led="green"/><circle cx="57.44" cy="29.44" r="0.60" fill="#b7ffc6" opacity="0" data-wcoast-role="led-gloss" pointer-events="none"/>
       <text x="61.3" y="30.7" font-size="2.706" font-weight="700" font-style="italic" fill="#163a69" text-anchor="start" font-family="Arial Narrow, Helvetica, Arial, sans-serif">DIAG</text>
-    <circle cx="58" cy="38.2" r="2" fill="url(#greenLed)" stroke="#005c1e" stroke-width="0.2366" data-wcoast-role="step-indicator" data-wcoast-step="radius" data-wcoast-led="green"/><circle cx="57.44" cy="37.64" r="0.60" fill="#b7ffc6" opacity="0.85" data-wcoast-role="led-gloss" pointer-events="none"/>
+    <circle cx="58" cy="38.2" r="2" fill="#505055" stroke="#4a4a4a" stroke-width="0.2366" data-wcoast-role="step-indicator" data-wcoast-step="radius" data-wcoast-led="green"/><circle cx="57.44" cy="37.64" r="0.60" fill="#b7ffc6" opacity="0" data-wcoast-role="led-gloss" pointer-events="none"/>
       <text x="61.3" y="38.900000000000006" font-size="2.706" font-weight="700" font-style="italic" fill="#163a69" text-anchor="start" font-family="Arial Narrow, Helvetica, Arial, sans-serif">RADIUS</text>
-    <circle cx="58" cy="46.4" r="2" fill="url(#greenLed)" stroke="#005c1e" stroke-width="0.2366" data-wcoast-role="step-indicator" data-wcoast-step="angle" data-wcoast-led="green"/><circle cx="57.44" cy="45.84" r="0.60" fill="#b7ffc6" opacity="0.85" data-wcoast-role="led-gloss" pointer-events="none"/>
+    <circle cx="58" cy="46.4" r="2" fill="#505055" stroke="#4a4a4a" stroke-width="0.2366" data-wcoast-role="step-indicator" data-wcoast-step="angle" data-wcoast-led="green"/><circle cx="57.44" cy="45.84" r="0.60" fill="#b7ffc6" opacity="0" data-wcoast-role="led-gloss" pointer-events="none"/>
       <text x="61.3" y="47.1" font-size="2.706" font-weight="700" font-style="italic" fill="#163a69" text-anchor="start" font-family="Arial Narrow, Helvetica, Arial, sans-serif">ANGLE</text>
   </g>
-  <g data-wcoast-param="scroll" data-wcoast-cx="66" data-wcoast-cy="61" data-wcoast-angle-min="-150" data-wcoast-angle-max="150" data-wcoast-port="scrollCv" data-wcoast-depth="scrollDepth" data-wcoast-av="off">
-    <circle cx="66" cy="61" r="6.6" fill="#4a4e52" stroke="#ffffff" stroke-width="0.25" data-wcoast-role="rim"/>
-    <circle cx="66" cy="61" r="5.75" fill="none" stroke="#2b2e31" stroke-width="1.292" data-wcoast-role="gauge-track"/>
+  <g data-wcoast-param="scroll" data-wcoast-cx="66" data-wcoast-cy="61" data-wcoast-angle-min="-150" data-wcoast-angle-max="150" data-wcoast-port="scrollCv">
+    <circle cx="66" cy="61" r="6.6" fill="url(#blueRing)" stroke="#004b7a" stroke-width="0.2911"/>
     <circle cx="66" cy="61" r="4.9" fill="url(#knobCap)" stroke="#666666" stroke-width="0.194"/>
     <circle cx="66" cy="61" r="2.6" fill="#ff7300"/>
     <circle cx="66" cy="61" r="1.6" fill="#000000" data-wcoast-role="jackhole"/>
-    <g data-wcoast-role="indicator" data-wcoast-cap="4.9">
+    <g data-wcoast-role="indicator">
+      <line x1="66.00" y1="53.99" x2="66.00" y2="55.22" stroke="#ffffff" stroke-width="0.328"/>
+      <line x1="71.48" y1="56.63" x2="70.52" y2="57.40" stroke="#ffffff" stroke-width="0.328"/>
+      <line x1="72.83" y1="62.56" x2="71.64" y2="62.29" stroke="#ffffff" stroke-width="0.328"/>
+      <line x1="69.04" y1="67.32" x2="68.51" y2="66.21" stroke="#ffffff" stroke-width="0.328"/>
+      <line x1="62.96" y1="67.32" x2="63.49" y2="66.21" stroke="#ffffff" stroke-width="0.328"/>
+      <line x1="59.17" y1="62.56" x2="60.36" y2="62.29" stroke="#ffffff" stroke-width="0.328"/>
+      <line x1="60.52" y1="56.63" x2="61.48" y2="57.40" stroke="#ffffff" stroke-width="0.328"/>
+      <line x1="66" y1="58.40" x2="66" y2="54.40" stroke="#ffffff" stroke-width="0.4099"/>
     </g>
   </g>
   <g>
@@ -194,15 +260,22 @@
   <text x="66" y="71.6" font-size="2.606" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">SCROLL</text>
   <text x="60.05" y="88.34160068989706" font-size="2.206" font-weight="700" font-style="italic" fill="#163a69" text-anchor="end" font-family="Arial Narrow, Helvetica, Arial, sans-serif">0</text>
   <text x="71.95" y="88.34160068989706" font-size="2.206" font-weight="700" font-style="italic" fill="#163a69" text-anchor="start" font-family="Arial Narrow, Helvetica, Arial, sans-serif">1</text>
-  <g data-wcoast-param="phase" data-wcoast-cx="66" data-wcoast-cy="81.5" data-wcoast-angle-min="-150" data-wcoast-angle-max="150" data-wcoast-port="phaseCv" data-wcoast-depth="phaseDepth" data-wcoast-av="off">
-    <circle cx="66" cy="81.5" r="6.6" fill="#4a4e52" stroke="#ffffff" stroke-width="0.25" data-wcoast-role="rim"/>
-    <circle cx="66" cy="81.5" r="5.75" fill="none" stroke="#2b2e31" stroke-width="1.292" data-wcoast-role="gauge-track"/>
+  <g data-wcoast-param="phase" data-wcoast-cx="66" data-wcoast-cy="81.5" data-wcoast-angle-min="-150" data-wcoast-angle-max="150" data-wcoast-port="phaseCv">
+    <circle cx="66" cy="81.5" r="6.6" fill="url(#blueRing)" stroke="#004b7a" stroke-width="0.2911"/>
     <circle cx="66" cy="81.5" r="4.9" fill="url(#knobCap)" stroke="#666666" stroke-width="0.194"/>
     <line x1="62.45" y1="87.65" x2="62.05" y2="88.34" stroke="#163a69" stroke-width="0.355"/>
     <line x1="69.55" y1="87.65" x2="69.95" y2="88.34" stroke="#163a69" stroke-width="0.355"/>
     <circle cx="66" cy="81.5" r="2.6" fill="#ff7300"/>
     <circle cx="66" cy="81.5" r="1.6" fill="#000000" data-wcoast-role="jackhole"/>
-    <g data-wcoast-role="indicator" data-wcoast-cap="4.9">
+    <g data-wcoast-role="indicator">
+      <line x1="66.00" y1="74.49" x2="66.00" y2="75.72" stroke="#ffffff" stroke-width="0.328"/>
+      <line x1="71.48" y1="77.13" x2="70.52" y2="77.90" stroke="#ffffff" stroke-width="0.328"/>
+      <line x1="72.83" y1="83.06" x2="71.64" y2="82.79" stroke="#ffffff" stroke-width="0.328"/>
+      <line x1="69.04" y1="87.82" x2="68.51" y2="86.71" stroke="#ffffff" stroke-width="0.328"/>
+      <line x1="62.96" y1="87.82" x2="63.49" y2="86.71" stroke="#ffffff" stroke-width="0.328"/>
+      <line x1="59.17" y1="83.06" x2="60.36" y2="82.79" stroke="#ffffff" stroke-width="0.328"/>
+      <line x1="60.52" y1="77.13" x2="61.48" y2="77.90" stroke="#ffffff" stroke-width="0.328"/>
+      <line x1="66" y1="78.90" x2="66" y2="74.90" stroke="#ffffff" stroke-width="0.4099"/>
     </g>
   </g>
   <text x="66" y="92.1" font-size="2.606" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">PHASE</text>

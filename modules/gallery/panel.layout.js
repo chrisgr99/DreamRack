@@ -65,15 +65,15 @@ ink(170, 59, 'radio · vertical', { size: 1.9 });
 items.push({ t: 'button', id: 'btnStrike', x: 192, y: 44, opts: { r: 2.4, kind: 'white' } }); ink(192, 49.5, 'strike', { size: 1.8 });
 items.push({ t: 'button', id: 'btnTrig', x: 210, y: 44, opts: { r: 2.4, kind: 'white' } }); ink(210, 49.5, 'trig', { size: 1.8 });
 items.push({ t: 'button', id: 'btnToggle', x: 192, y: 60, opts: { r: 2.4, kind: 'white' } }); ink(192, 65.5, 'toggle', { size: 1.8 });
-items.push({ t: 'button', id: 'btnOn', x: 210, y: 60, opts: { r: 2.16, kind: 'red' } }); ink(210, 65, 'on', { size: 1.8 });
+items.push({ t: 'button', id: 'btnOn', x: 210, y: 60, opts: { r: 2.16, kind: 'red', on: true } }); ink(210, 65, 'on', { size: 1.8 });
 ink(201, 73, 'momentary (strike/trig) · toggle · lamp', { size: 1.8 });
 // LED COLOUR — the same radio and button primitives in the other two hues. Red is the
 // default and is shown by every other specimen here, so only the two new hues need a
 // sample. The caption is kept short: a wider one runs into the stepper's caption beside it.
 items.push({ t: 'radio', id: 'radioGreen', x: 200, y: 80, opts: { orientation: 'h', spacing: 5.2, ledR: 1.8, led: 'green', steps: [{ value: 1 }, { value: 2 }, { value: 3 }] } });
-items.push({ t: 'button', id: 'btnGreen', x: 214, y: 80, opts: { r: 2.16, kind: 'green' } });
+items.push({ t: 'button', id: 'btnGreen', x: 214, y: 80, opts: { r: 2.16, kind: 'green', on: true } });
 items.push({ t: 'radio', id: 'radioOrange', x: 200, y: 88, opts: { orientation: 'h', spacing: 5.2, ledR: 1.8, led: 'orange', steps: [{ value: 1 }, { value: 2 }, { value: 3 }] } });
-items.push({ t: 'button', id: 'btnOrange', x: 214, y: 88, opts: { r: 2.16, kind: 'orange' } });
+items.push({ t: 'button', id: 'btnOrange', x: 214, y: 88, opts: { r: 2.16, kind: 'orange', on: true } });
 ink(206, 95, 'LED colour · green · orange', { size: 1.7 });
 items.push({ t: 'stepButton', id: 'stepWave', x: 178, y: 84, opts: { orientation: 'v', steps: [{ value: 'sawtooth', glyph: 'sawtooth' }, { value: 'square', glyph: 'square' }, { value: 'triangle', glyph: 'triangle' }, { value: 'sustained', glyph: 'sustained' }] } });
 ink(178, 98, 'stepper · button above · glyphs', { size: 1.7 });
@@ -82,9 +82,20 @@ ink(178, 112, 'stepper · button left · text', { size: 1.7 });
 items.push({ t: 'slider', id: 'sliderLevel', x: 222, opts: { top: 30, bot: 84, valuePos: 0.7 } });
 ink(222, 90, 'slider', { size: 2.0 });
 
-// === FOURTH COLUMN: VU meters ===
-ink(250, 15.5, 'VU meter · length · count · v/h', { size: 2.2 });
-items.push({ t: 'vu', role: 'vu', x: 243, y: 78, opts: { length: 42, orientation: 'v', segments: 12, chan: 'A', lit: 8 } });
-items.push({ t: 'vu', role: 'vu', x: 237, y: 98, opts: { length: 26, orientation: 'h', segments: 9, chan: 'B', lit: 5 } });
+// === FOURTH COLUMN: trim knobs, then VU meters ===
+// The TRIM is the small knob — flat face, no ticks, no cap, and a pointer that runs the full radius
+// and out past the rim, which is what keeps it readable at this size. The third specimen wears the
+// centre mark: a single tick at twelve o'clock for a bipolar control, the one printed mark worth the
+// millimetre on an attenuverter. Off-centre defaults, so the pointer is visibly turned on load.
+ink(250, 15.5, 'trim · the small knob', { size: 2.2 });
+items.push({ t: 'trim', id: 'trimSmall', x: 237, y: 26, opts: { radius: 2.2, label: cap('r 2.2', 'below', 1.8) } });
+items.push({ t: 'trim', id: 'trimHouse', x: 249, y: 26, opts: { label: cap('r 2.8', 'below', 1.8) } });
+items.push({ t: 'trim', id: 'trimAv', x: 262, y: 26, opts: { centreMark: true, label: cap('AV', 'below', 1.8) } });
+ink(250, 38, 'no ticks · pointer past the rim', { size: 1.7 });
+items.push({ t: 'line', x1: 233, y1: 41.5, x2: 267, y2: 41.5, w: 0.355 });
+
+ink(250, 46.5, 'VU meter · length · count · v/h', { size: 2.2 });
+items.push({ t: 'vu', role: 'vu', x: 243, y: 94, opts: { length: 42, orientation: 'v', segments: 12, chan: 'A', lit: 8 } });
+items.push({ t: 'vu', role: 'vu', x: 237, y: 106, opts: { length: 26, orientation: 'h', segments: 9, chan: 'B', lit: 5 } });
 
 export default { faceW: FACE_W, faceH: FACE_H, faceLeft: 0, faceTop: 7.0994, wrap: true, wrapIndent: '', items };

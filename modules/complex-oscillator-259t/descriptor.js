@@ -89,18 +89,26 @@ export default {
   //   `target` back to this id).
   params: [
     // Modulation oscillator
+    // The RANGE switch divides this by 128 (see LOW_RANGE_DIVISOR in the processor), so the same
+    // knob position is 220 Hz in high range and 1.72 Hz in low. The printed scale cannot say both,
+    // but the readout can: `readout` gives the number the control is ACTUALLY producing.
     { id: "modFreq", signal: "audio",  section: "modOsc", name: "Frequency",
       min: 27.5, max: 7040, default: 220, unit: "Hz", curve: "exp",
+      readout: (v, values) => (values && values.get('modRange') === 'low' ? v / 128 : v),
       glideMs: 8, modulatable: true },
     { id: "modFine", signal: "audio",  section: "modOsc", name: "Fine Tune",
       min: -3.5, max: 3.5, default: 0, unit: "st", curve: "linear",
       glideMs: 8, modulatable: false },   // ~a fifth of range per manual
+    // THE SIX AMOUNT KNOBS GLIDE. They declared glideMs 0, so each wheel notch was applied in a
+    // single sample — audible as a click on anything that is currently sounding, which on an
+    // attenuverter riding an FM input is most of the time. The house default fills in only where a
+    // descriptor is silent, and these were not silent; they were wrong.
     { id: "modCvAmount", section: "modOsc", name: "CV Amount",
       min: -1, max: 1, default: 0, unit: "", curve: "linear",
-      glideMs: 0, modulatable: false },   // attenuverter for modCv input
+      glideMs: 10, modulatable: false },   // attenuverter for modCv input
     { id: "modFmAmount", section: "modOsc", name: "FM Amount",
       min: 0, max: 1, default: 0, unit: "", curve: "linear",
-      glideMs: 0, modulatable: false, needsPort: "modFmIn" },   // attenuator for modFm input (inert with nothing patched)
+      glideMs: 10, modulatable: false, needsPort: "modFmIn" },   // attenuator for modFm input (inert with nothing patched)
     { id: "modRange", section: "modOsc", name: "Range",
       curve: "stepped", default: "high", modulatable: false,
       steps: [
@@ -124,10 +132,10 @@ export default {
       glideMs: 8, modulatable: false },
     { id: "prinCvAmount", section: "prinOsc", name: "CV Amount",
       min: -1, max: 1, default: 0, unit: "", curve: "linear",
-      glideMs: 0, modulatable: false },   // attenuverter for prinCv input
+      glideMs: 10, modulatable: false },   // attenuverter for prinCv input
     { id: "prinFmAmount", section: "prinOsc", name: "FM Amount",
       min: 0, max: 1, default: 0, unit: "", curve: "linear",
-      glideMs: 0, modulatable: false, needsPort: "prinFmIn" },   // attenuator for prinFm input (inert with nothing patched)
+      glideMs: 10, modulatable: false, needsPort: "prinFmIn" },   // attenuator for prinFm input (inert with nothing patched)
 
     // Timbre / Harmonics (shapes the Principal's Final output). Panel legends:
     // Order runs low->high, Symmetry runs even->odd. Timbre's CV input has its
@@ -137,7 +145,7 @@ export default {
       glideMs: 20, modulatable: true },   // fold depth
     { id: "timbreCvAmount", section: "timbre", name: "Timbre CV Amount",
       min: -1, max: 1, default: 0, unit: "", curve: "linear",
-      glideMs: 0, modulatable: false },   // attenuverter for the timbre CV input
+      glideMs: 10, modulatable: false },   // attenuverter for the timbre CV input
     { id: "order", section: "timbre", name: "Order",
       min: 0, max: 1, default: 0, unit: "", curve: "linear",
       glideMs: 20, modulatable: true, minLabel: "low", maxLabel: "high" },
@@ -153,7 +161,7 @@ export default {
       glideMs: 10, modulatable: true },   // depth for the mod switches; CV-able
     { id: "modIndexCvAmount", section: "middle", name: "Mod Index CV Amount",
       min: -1, max: 1, default: 0, unit: "", curve: "linear",
-      glideMs: 0, modulatable: false },   // attenuverter for the mod-index CV input
+      glideMs: 10, modulatable: false },   // attenuverter for the mod-index CV input
     { id: "amplMod", section: "middle", name: "Amplitude Mod",
       curve: "stepped", default: "off", modulatable: false,
       steps: [ { value: "off", name: "Off" }, { value: "on", name: "On" } ] },

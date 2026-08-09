@@ -78,6 +78,9 @@ const LN2 = 0.6931471805599453;
 
 // Switch codes (stepped params arrive as messages; stored as ints).
 const RANGE_HIGH = 0, RANGE_LOW = 1;
+// How much LOW range divides the modulation oscillator by. The descriptor's `readout` for
+// modFreq divides by the same number, so what the chip says and what the oscillator does agree.
+const LOW_RANGE_DIVISOR = 128;
 const WAVE_TRI = 0, WAVE_SQUARE = 1, WAVE_SAW = 2;
 
 // Folder feel constants (empirical; tunable). TIMBRE_DRIVE is how hard Timbre
@@ -124,7 +127,7 @@ class ComplexOsc259t extends AudioWorkletProcessor {
     this._phaseLock = 0;   // phase-lock enable switch (middle column)
 
     this._trim = 0.4;
-    this._lowRangeFactor = 1 / 128;
+    this._lowRangeFactor = 1 / LOW_RANGE_DIVISOR;
 
     // Previous phase-lock input sample, for rising-edge (zero-cross) detection.
     this._plPrev = 0;

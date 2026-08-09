@@ -56,6 +56,14 @@ fork of the code. Designed open from the start, e.g.:
 - `knob` — `{ radius, angleMin, angleMax, ticks, scale? }`. `scale` is an optional
   set of range numbers the function positions at its corners (the .001/.03/.3/10
   markings are a knob-with-scale, not a separate control).
+- `trim` — `{ radius, angleMin, angleMax, overhang, centreMark? }`. THE TRIM KNOB:
+  the small knob, for attenuverters and for anything set by ear. Not a knob scaled
+  down — the ticks and the metal cap stop working below about 3mm, so it drops both
+  and spends everything on a pointer that runs the full radius and out past the rim,
+  where the tip is read against the faceplate rather than against the knob. It has no
+  printed scale and should not grow one; `centreMark` adds the one mark worth the
+  space, a tick at twelve o'clock for a bipolar control. The cost is that you set it
+  by ear, so anything you aim at a number wants a full `knob` however rarely you touch it.
 - `radio` — `{ count, orientation: 'h'|'v', spacing, options: [{ label|glyph }] }`.
   Covers the mode/range lamp rows and the waveshape selector.
 - `jack` — `{ kind? }`. Neutral by default (the loader repaints by port domain at

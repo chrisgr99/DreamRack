@@ -65,10 +65,15 @@ for (const L of CH) {
   items.push({ t: 'jack', id: `trig${L}`, x: X.trig, y, opts: { label: lab('TRIG') } });
   items.push({ t: 'knack', id: `level${L}`, x: X.level, y, opts: { radius: 7.2, port: `levelCv${L}`, depth: `levelDepth${L}`, av: 'on' } });
   items.push({ t: 'knack', id: `decay${L}`, x: X.decay, y, opts: { radius: 6.4, port: `decayCv${L}`, depth: `decayDepth${L}`, av: 'on' } });
-  items.push({ t: 'button', id: `vca${L}`, x: X.mode, y: y - 2.6, opts: { r: 1.9, kind: 'red' } });
-  ink(X.mode + 3.2, y - 2.6 + 0.9, 'VCA', { size: 1.9, anchor: 'start' });
-  items.push({ t: 'button', id: `lp${L}`, x: X.mode, y: y + 2.6, opts: { r: 1.9, kind: 'red' } });
-  ink(X.mode + 3.2, y + 2.6 + 0.9, 'LP', { size: 1.9, anchor: 'start' });
+  // VCA and LP are two independent buttons, not a radio pair, so each wears its own metal mounting.
+  // At the old 2.6 offset the two discs met exactly — 5.2mm apart with 2.6mm discs — and the pair read
+  // as one crammed object. 3.6 leaves 2mm of faceplate between them and still sits inside the level
+  // knob's own height.
+  const MODE_DY = 3.6;
+  items.push({ t: 'button', id: `vca${L}`, x: X.mode, y: y - MODE_DY, opts: { r: 1.9, kind: 'red' } });
+  ink(X.mode + 3.2, y - MODE_DY + 0.9, 'VCA', { size: 1.9, anchor: 'start' });
+  items.push({ t: 'button', id: `lp${L}`, x: X.mode, y: y + MODE_DY, opts: { r: 1.9, kind: 'red' } });
+  ink(X.mode + 3.2, y + MODE_DY + 0.9, 'LP', { size: 1.9, anchor: 'start' });
   items.push({ t: 'button', id: `strike${L}`, x: X.trig + 2.5, y: y - 6.3, opts: { r: 2.0, kind: 'red' } });
   ink(X.trig + 0.2, y - 6.3 + 0.6, 'STRIKE', { size: 1.7, anchor: 'end' });
   items.push({ t: 'knack', id: `div${L}`, x: X.div, y: y - 1.0, opts: {

@@ -42,11 +42,12 @@ const params = [
   { id: 'sustain', name: 'Sustain', section: 'shape', curve: 'linear', min: 0, max: 1, default: 0.6, glideMs: 10 },
   { id: 'release', name: 'Release', section: 'shape', curve: 'exp', min: 0.0005, max: 10, default: 0.4, unit: 's', glideMs: 0 },
 
-  // knAck attenuverter rings, one per time knob. Default 1 = the plain knAck, CV at full strength.
-  { id: 'attackDepth', name: 'Attack CV depth', section: 'shape', curve: 'linear', min: -1, max: 1, default: 1, glideMs: 10, subControl: true },
-  { id: 'decayDepth', name: 'Decay CV depth', section: 'shape', curve: 'linear', min: -1, max: 1, default: 1, glideMs: 10, subControl: true },
-  { id: 'sustainDepth', name: 'Sustain CV depth', section: 'shape', curve: 'linear', min: -1, max: 1, default: 1, glideMs: 10, subControl: true },
-  { id: 'releaseDepth', name: 'Release CV depth', section: 'shape', curve: 'linear', min: -1, max: 1, default: 1, glideMs: 10, subControl: true },
+  // NO CV DEPTHS. The four CV inputs land on their knobs at full strength. There were four
+  // attenuverter params here that nothing ever read — no `via` on the ports, no reference in the
+  // worklet — so they were inert from the day they were written, and once the knAck lost its
+  // attenuverter there was nothing to set them with either. The four knobs are PLACED as the shape
+  // of an envelope rising and falling; four trim knobs beside them would cost that picture to buy a
+  // setting you make once. An insert covers the rare case (design/inserts.md).
 
   // A momentary gate you can press by hand — the way to hear an envelope with nothing patched in.
   { id: 'gateBtn', name: 'Gate', section: 'in', curve: 'stepped', default: 'off', momentary: true,

@@ -14,7 +14,6 @@ const EXPECTED_WORKLET_INPUTS = ['gateIn', 'retrigIn'];
 
 const REALIZED_PARAMS = new Set(['attack', 'decay', 'sustain', 'release']);
 const REALIZED_SWITCHES = new Set(['gateBtn']);
-const REALIZED_HOST_ATTEN = new Set(['attackDepth', 'decayDepth', 'sustainDepth', 'releaseDepth']);
 
 function assertOrder(label, got, expected) {
   const g = got.map((p) => p.id);
@@ -96,7 +95,7 @@ export function create(ctx, services) {
     getInput: (portId) => { const i = inIndex.get(portId); return i === undefined ? null : { node, index: i }; },
     getParam: (paramId) => node.parameters.get(paramId) || null,
     setParam,
-    supports: (id) => REALIZED_PARAMS.has(id) || REALIZED_SWITCHES.has(id) || REALIZED_HOST_ATTEN.has(id),
+    supports: (id) => REALIZED_PARAMS.has(id) || REALIZED_SWITCHES.has(id),
     // Optional: the host subscribes to light the running stage on the drawn envelope.
     onStage(cb) { stageCb = typeof cb === 'function' ? cb : null; },
     dispose: () => {

@@ -48,6 +48,15 @@ async function regenerate(root, layoutFile, say) {
   say('regenerated ' + path.basename(dir) + ' panels');
 }
 
+// Every module that has a layout to regenerate from.
+function listLayouts(root) {
+  const dir = path.join(root, 'modules');
+  if (!fs.existsSync(dir)) return [];
+  return fs.readdirSync(dir)
+    .map((m) => path.join(dir, m, 'panel.layout.js'))
+    .filter((f) => fs.existsSync(f));
+}
+
 function start(root, onReload, log) {
   const say = log || ((m) => console.log('[dev] ' + m));
   let timer = null;
@@ -69,7 +78,16 @@ function start(root, onReload, log) {
       return;
     }
 
-    for (const f of files.filter((x) => x.endsWith('panel.layout.js'))) {
+    // EVERY panel depends on the shared drawing code, so a change there has to regenerate all of
+    // them, not just the module you happen to be editing. Without this, changing a knob's colour in
+    // panel/primitives.js reloaded the window against the panels as they were BEFORE the change —
+    // which looks exactly like the change not having worked, and cost an afternoon once.
+    const shared = files.some((f) => /^panel[\\/].+\.js$/.test(path.relative(root, f)));
+    const layouts = shared
+      ? listLayouts(root)
+      : files.filter((x) => x.endsWith('panel.layout.js'));
+    if (shared && layouts.length) say('shared panel code changed — regenerating all ' + layouts.length + ' panels');
+    for (const f of layouts) {
       try { await regenerate(root, f, say); }
       catch (e) { say('could not regenerate ' + path.relative(root, f) + ' — ' + e.message); }
     }

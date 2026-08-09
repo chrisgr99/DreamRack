@@ -45,12 +45,16 @@ class Lpg292 extends AudioWorkletProcessor {
       p.push({ name: `level${L}`, defaultValue: 0.8, minValue: 0, maxValue: 1, automationRate: 'k-rate' });
       p.push({ name: `decay${L}`, defaultValue: 0.4, minValue: 0, maxValue: 1, automationRate: 'k-rate' });
       // knAck CV-depth (attenuverter) per modulatable knob: value = base + depth × CV.
-      p.push({ name: `levelDepth${L}`, defaultValue: 0, minValue: -1, maxValue: 1, automationRate: 'k-rate' });
-      p.push({ name: `decayDepth${L}`, defaultValue: 0, minValue: -1, maxValue: 1, automationRate: 'k-rate' });
-      p.push({ name: `ratioDepth${L}`, defaultValue: 0, minValue: -1, maxValue: 1, automationRate: 'k-rate' });
+      // DEPTHS DEFAULT TO 1, matching the descriptor. They disagreed before — the descriptor said 0
+      // and so did this — and either way a patched CV did nothing. Keeping the two in step matters
+      // even though the host writes the descriptor's value at init: a worklet that starts somewhere
+      // else is a block of silence or of full modulation before the first message lands.
+      p.push({ name: `levelDepth${L}`, defaultValue: 1, minValue: -1, maxValue: 1, automationRate: 'k-rate' });
+      p.push({ name: `decayDepth${L}`, defaultValue: 1, minValue: -1, maxValue: 1, automationRate: 'k-rate' });
+      p.push({ name: `ratioDepth${L}`, defaultValue: 1, minValue: -1, maxValue: 1, automationRate: 'k-rate' });
     }
     p.push({ name: 'rate', defaultValue: 0.35, minValue: 0, maxValue: 1, automationRate: 'k-rate' });
-    p.push({ name: 'rateDepth', defaultValue: 0, minValue: -1, maxValue: 1, automationRate: 'k-rate' });
+    p.push({ name: 'rateDepth', defaultValue: 1, minValue: -1, maxValue: 1, automationRate: 'k-rate' });
     return p;
   }
 

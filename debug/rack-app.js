@@ -711,6 +711,13 @@ async function boot() {
   // (debounced) so a relaunch resumes exactly where you left off. Separate from
   // named File saves — this just remembers the last working state.
   const SESSION_KEY = 'wcoast.session';
+  // THE SESSION BEFORE THIS ONE, kept so a bad boot cannot silently eat a working patch. The session
+  // is overwritten by autosave a moment after startup, so if anything goes wrong while restoring — a
+  // thrown error, a module that fails to instantiate, cables that do not come back — the damaged
+  // result is written over the only copy and the original is gone. One generation of history costs a
+  // few kilobytes and turns that from data loss into an inconvenience. Rolled at BOOT, before the
+  // first autosave can run, so it always holds the state the app came up with.
+  const SESSION_PREV_KEY = 'wcoast.session.prev';
   let sessTimer = null;
   // Guarded by `booted`: the many addModule edits DURING boot must not overwrite the
   // session with a half-built (e.g. mixer-only) rack — only genuine post-boot edits save.
@@ -781,7 +788,7 @@ async function boot() {
     try { f = await storage.open(); } catch (e) { log(`open failed: ${e.message}`); return; }
     if (!f) return;
     try { await restore(JSON.parse(f.text), rack, mixerIO); setPatchName(f.name); markClean(); afterLoad(); }
-    catch (e) { log(`restore failed: ${e.message}`); window.alert(`Could not open patch: ${e.message}`); }
+    catch (e) { console.error('[wcoast] open failed: ' + ((e && e.stack) || e)); log(`restore failed: ${e.message}`); window.alert(`Could not open patch: ${e.message}`); }
   }
   async function savePatch() {
     try { const name = await storage.save(patchText()); if (name) { setPatchName(name); markClean(); } }
@@ -798,7 +805,7 @@ async function boot() {
     try { f = await storage.openRecent(id); } catch (e) { log(`open failed: ${e.message}`); return; }
     if (!f) { window.alert('That patch could not be opened — it may have been moved or renamed.'); return; }
     try { await restore(JSON.parse(f.text), rack, mixerIO); setPatchName(f.name); markClean(); afterLoad(); }
-    catch (e) { log(`restore failed: ${e.message}`); window.alert(`Could not open patch: ${e.message}`); }
+    catch (e) { console.error('[wcoast] open failed: ' + ((e && e.stack) || e)); log(`restore failed: ${e.message}`); window.alert(`Could not open patch: ${e.message}`); }
   }
 
   // The recent list is read when the menu OPENS, not cached at boot: the folder is the truth, and
@@ -812,7 +819,7 @@ async function boot() {
     try { f = await storage.reopenLast(); } catch (e) { log(`reopen failed: ${e.message}`); return; }
     if (!f) return;
     try { await restore(JSON.parse(f.text), rack, mixerIO); setPatchName(f.name); markClean(); afterLoad(); }
-    catch (e) { log(`restore failed: ${e.message}`); window.alert(`Could not open patch: ${e.message}`); }
+    catch (e) { console.error('[wcoast] open failed: ' + ((e && e.stack) || e)); log(`restore failed: ${e.message}`); window.alert(`Could not open patch: ${e.message}`); }
   }
 
   // Bundled example patches (examples/index.json), loaded once. Opening one loads it as a STARTING POINT:
@@ -824,7 +831,7 @@ async function boot() {
     try { const r = await fetch('examples/' + file); if (!r.ok) throw new Error('not found'); obj = await r.json(); }
     catch (e) { log(`example load failed: ${e.message}`); window.alert('Could not load that example.'); return; }
     try { await restore(obj, rack, mixerIO); storage.forget(); setPatchName(name); markClean(); afterLoad(); }
-    catch (e) { log(`restore failed: ${e.message}`); window.alert(`Could not open example: ${e.message}`); }
+    catch (e) { console.error('[wcoast] open failed: ' + ((e && e.stack) || e)); log(`restore failed: ${e.message}`); window.alert(`Could not open example: ${e.message}`); }
   }
   // Edit ▸ Create patch from clipboard — load a patch someone shared (e.g. copied from a GitHub post).
   async function createFromClipboard() {
@@ -1209,10 +1216,15 @@ async function boot() {
   // Resume the last session if one was saved; otherwise start with one of each so
   // there's something to patch.
   let resumed = false;
+  // `started` records that restore got far enough to put modules on the rack, whether or not it
+  // finished. It is the difference between "there is nothing here" and "there is a half-built rack
+  // here", and only the first of those wants the default modules placed on top of it.
+  let started = false;
   try {
     const saved = localStorage.getItem(SESSION_KEY);
     if (saved) {
       const obj = JSON.parse(saved);
+      started = true;   // from here a throw can leave modules behind
       const v = validate(obj, registry);
       // Require at least one module — a module-less session is boot-transient junk,
       // not a patch worth resuming; fall through to the default instead.
@@ -1221,13 +1233,33 @@ async function boot() {
         // say what was dropped — silently different knob positions are worse than noisy ones.
         for (const w of v.warnings || []) log(`session: ${w}`);
         await restore(obj, rack, mixerIO); syncMaster(); afterLoad(); resumed = true;
+        started = true;
         // Re-adopt the file this session was editing, so File > Save writes back to it (not a fresh prompt).
         try { const n = await storage.adoptLast(); if (n) patchName = n; } catch (_e) { /* fileless resume */ }
       }
       else if (!v.ok) log(`session ignored: ${v.error}`);
     }
-  } catch (e) { log(`session restore failed: ${e.message}`); }
-  if (!resumed) await placeDefaultModules();
+  } catch (e) {
+    // WITH A STACK. This used to log the message alone, and the message alone cannot tell you which
+    // of thirty lines in restore() gave up.
+    log(`session restore failed: ${e.message}`);
+    console.error('[wcoast] session restore failed: ' + ((e && e.stack) || e));
+  }
+  if (!resumed) {
+    // A HALF-RESTORED RACK IS CLEARED FIRST. If restore() threw after adding modules — a module that
+    // would not instantiate, a cable that would not reconnect — the rack was left holding them AND
+    // then had a full set of defaults placed on top, so every module appeared twice and none of the
+    // cables were there. Two symptoms, one cause, and the duplicate pass then autosaved itself over
+    // the only good copy of the patch.
+    if (started) { try { rack.clear(); } catch (_e) { /* nothing to clear */ } }
+    await placeDefaultModules();
+  }
+  // Roll the backup now: whatever we just read is the last known-good state, and from here the
+  // autosave is free to overwrite the live key.
+  try {
+    const prior = localStorage.getItem(SESSION_KEY);
+    if (prior) localStorage.setItem(SESSION_PREV_KEY, prior);
+  } catch (_e) { /* no storage */ }
   // Put the view back where it was left. AFTER the modules exist, since relayout resets the transform
   // as it fits the rows — restoring earlier would simply be overwritten.
   try {

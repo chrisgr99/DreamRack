@@ -30,7 +30,7 @@ const knack = (id, x, y, label, ends) => {
   ink(x - END_DX, y + END_DY, ends[0], { size: SC.size, anchor: 'end' });
   ink(x + END_DX, y + END_DY, ends[1], { size: SC.size, anchor: 'start' });
   items.push({ t: 'knack', id, x, y,
-    opts: { radius: R, cap: CAP, port: `${id}Cv`, depth: `${id}Depth`, av: 'off',
+    opts: { radius: R, cap: CAP, port: `${id}Cv`,
       scale: { ...SC, marks: [{ at: 0 }, { at: 1 }] } } });
   ink(x, y + R + NAME_DROP, label, { size: NAME_SIZE });
 };

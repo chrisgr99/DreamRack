@@ -10,18 +10,22 @@ the behaviour is taken from what is typical rather than copied from any particul
 
 ## The set
 
+Six of the eleven are built. The widths below are what each one ACTUALLY came out at, not what was
+estimated before it was drawn — the VCA, the Envelope and the Octave each needed a little more than
+the guess, which is the usual direction of travel and worth recording rather than quietly correcting.
+
 | Module | Controls | Ins | Outs | HP | State |
 |---|---|---|---|---|---|
 | **Oscillator** | Coarse, Fine, Lin FM, Exp FM, Pulse width, Feedback, sync mode | 1V/oct, sync, lin FM, exp FM, PW | sine, tri, saw, pulse | 10 | **built** |
 | **Noise** | none | — | violet, blue, white, pink, red | 5 | **built** |
-| **Filter** | Cutoff, Resonance, Drive | audio | low, high, band | 8 | |
-| **VCA** | Level, response | audio, CV | out | 4 | |
-| **Envelope** | Attack, Decay, Sustain, Release | gate, retrigger | env, inverted, end-of-cycle | 8 | |
+| **Filter** | Cutoff, Resonance, Drive | audio | low, high, band | 8 | **built** |
+| **VCA** | Level, response | audio, CV | out | 6 | **built** |
+| **Envelope** | Attack, Decay, Sustain, Release | gate, retrigger | env, inverted, end-of-cycle | 10 | **built** |
 | **Delay** | Time, Feedback, Tone, Mix | audio, clock | wet, mix | 8 | |
 | **Sample & Hold** | slew, manual sample | signal, trigger | out | 5 | |
 | **Shift Register** | stage count | signal, clock | one per stage | 6 | |
 | **Random** | Rate, Probability, Spread, Shape | trigger, offset | stepped, linear, exponential, smoothed | 8 | |
-| **Octave** | octave offset −4…+4 | 1V/oct | 1V/oct | 3 | |
+| **Octave** | octave offset −4…+4 | 1V/oct | 1V/oct | 4 | **built** |
 | **Wavetable Oscillator** | Coarse, Fine, Position, FM | 1V/oct, sync, position | four shapes | 12 | |
 
 Overlaps with what already exists are deliberate and were considered: Random beside the Source of

@@ -21,9 +21,9 @@
 
 // The knАck's proportions come from the CANONICAL control, not from a copy of its numbers: the same
 // fractions that draw the faceplate drive the runtime dress, so changing the control changes both.
-import { KNACK_GRIP_LEN, KNACK_GRIP_OUT, KNACK_GRIP_W, KNOB_GRIPS, KNOB_GRIP_COLOR } from '../panel/primitives.js';
-import { loadPanel, showValue, attachControlInteraction, knobRadiusPx, valueToPosition, positionToValue, FACE_H_MM, FACE_TOP_MM, FACE_LEFT_MM, TITLE_STRIP_MM, TITLE_BAR_MM } from './panel-loader.js';
-import { showReadout, formatParamValue } from './knob-readout.js';
+import { KNACK_GRIP_LEN, KNACK_GRIP_OUT, KNACK_GRIP_W } from '../panel/primitives.js';
+import { loadPanel, showValue, attachControlInteraction, knobRadiusPx, scrollScale, scrollScaleTag, controlOrigin, valueToPosition, positionToValue, FACE_H_MM, FACE_TOP_MM, FACE_LEFT_MM, TITLE_STRIP_MM, TITLE_BAR_MM } from './panel-loader.js';
+import { showReadout, refreshReadout, hideReadout, readoutPinned, formatParamValue } from './knob-readout.js';
 import { Patchbay } from './patchbay.js';
 import { VideoEngine } from './video-engine.js';
 
@@ -33,7 +33,7 @@ const GAP_MM = 4;               // horizontal margin at the right of the case, i
 const SVG_NS = 'http://www.w3.org/2000/svg';
 // The attenuverter's travel, each way from straight up: the same sweep a value knob has, so a
 // knАck's two rings read alike — seven o'clock, up through twelve, round to five.
-const AV_SPAN = 150;
+const POINTER_OVERHANG = 1.5;   // how far a knАck's pointer reaches past the knob's rim
 
 // A press on the DEMO TRANSPORT is that window's, not the rack's. A cord in hand listens on the
 // document in the CAPTURE phase and swallows every left click, so while a scripted demo was carrying
@@ -244,6 +244,7 @@ const GRAB_MAX_COS = Math.SQRT1_2;
 // drag is easier to land. 1.3mm is safe against the tightest jack pair (3mm apart → both
 // grow, meeting only past 1.5mm). Push buttons grow adaptively up to the same cap.
 const HIT_GROW_MM = 1.3;
+const JACK_PICK_HOLD_MS = 150;   // press-and-hold before a click on a jack picks a cord up
 // KnAck (a knob a cable plugs into): a lone left-click waits this long to see whether a
 // second click follows (a double-click = reset the knob). Only after the window passes does the
 // click commit to pulling a cable — the small lag is what keeps click-to-patch and double-click-
@@ -1067,7 +1068,9 @@ export class Rack {
     if (rec.descriptorId === 'mixer' && /^mute[A-Z]$/.test(id) && this._stubSvg) this._drawPageStubs();
   }
   // Connect two jacks by { key, portId }; returns the edge (for restoring bow).
-  connectPatch(from, to) { return this._tryConnect(from, to); }
+  // `opts.restoring` suppresses the side effects that belong to a patching GESTURE rather than to the
+  // connection itself — see the mixer auto-enable in _tryConnect.
+  connectPatch(from, to, opts) { return this._tryConnect(from, to, opts); }
   redrawCables() { this._drawCables(); }
   reconcileLinks() { this._reconcileLinks(); }   // public: patch-io calls this after restoring wiring
   // Open the shared pop-up menu at (x, y) — reused by the panel menu's app-menu item.
@@ -1629,7 +1632,7 @@ export class Rack {
 
   _drawCables() {
     if (!this.cables) return;
-    this._refreshDualKnacks();   // a cable in/out of a knAck centre splits/unsplits it
+    this._refreshKnacks();   // a cable in/out of a knAck centre splits/unsplits it
     // While isolating a subnet, the hover-driven net highlight is suppressed, and the
     // subnet itself is recomputed live so it tracks patch edits (a new feeding cord
     // joins at once; a removed one leaves). Rebuild the enlarged jacks only on a change.
@@ -2707,7 +2710,7 @@ export class Rack {
     if (e.button !== 0) return;
     e.preventDefault();
     if (this._tempCable) return;   // a cord is already in hand (click-carry) — its own handlers take this drop
-    const cx = e.clientX, cy = e.clientY;
+    const cx = e.clientX, cy = e.clientY, t0 = performance.now();
     const cleanup = () => { document.removeEventListener('pointermove', onMove, true); document.removeEventListener('pointerup', onUp, true); };
     // Two gestures share the press: DRAG (move while held) pulls a cord in drag-mode, dropped on release;
     // a plain CLICK (release without moving) starts click-to-carry, dropped by a later click.
@@ -2720,7 +2723,16 @@ export class Rack {
       else if (grab) this._startStickyRegrab(grab.edge, grab.grabbedEnd, ev.clientX, ev.clientY, true);
       else this._startStickyCable(key, portId, ev.clientX, ev.clientY, true);
     };
-    const onUp = (ev) => { cleanup(); this._armStickyPick(key, portId, ev.clientX, ev.clientY); };
+    // A TAP IS NOT A PICK. Click-to-carry used to arm on any release, and a stray brush of a trackpad
+    // over a jack is a release — you looked up with a cable in your hand that you never asked for.
+    // Holding for a moment is what separates "I meant this" from "my finger touched the pad", and at
+    // this length a deliberate click does not feel held at all. The DRAG gesture needs no such guard:
+    // it already asks for 6px of travel with the button down, which a tap cannot produce.
+    const onUp = (ev) => {
+      cleanup();
+      if (performance.now() - t0 < JACK_PICK_HOLD_MS) return;
+      this._armStickyPick(key, portId, ev.clientX, ev.clientY);
+    };
     document.addEventListener('pointermove', onMove, true);
     document.addEventListener('pointerup', onUp, true);
   }
@@ -2755,7 +2767,7 @@ export class Rack {
   }
 
   // (The prototype "single knAck" click/double-click wiring is gone — every knAck now goes
-  // through _setupDualKnack, terminal-only cable pick-up, and the right-click menu.)
+  // through _setupKnack, terminal-only cable pick-up, and the right-click menu.)
 
   // Click-to-pick-up, click-to-drop cabling — the ONE way a cord is pulled. A click on a
   // jack starts a cord that FOLLOWS the cursor with NO button held, so you can scroll, zoom
@@ -6154,13 +6166,13 @@ export class Rack {
     return this.patchbay.list().find((e) => e.dst.key === key && e.dst.portId === portId) || null;
   }
 
-  _tryConnect(jackA, jackB) {
+  _tryConnect(jackA, jackB, opts) {
     const A = this._ep(jackA.key, jackA.portId);
     const B = this._ep(jackB.key, jackB.portId);
     if (!A || !B) return;
     // INPUT-to-INPUT → a LINK (mult): the empty input picks up the fed input's signal. Exactly one
     // end must already carry a signal (the target); the other (empty) end becomes the shared input.
-    if (A.meta.dir === 'in' && B.meta.dir === 'in') return this._tryLink(A, B);
+    if (A.meta.dir === 'in' && B.meta.dir === 'in') return this._tryLink(A, B, opts);
     let src, dst;
     if (A.meta.dir === 'out' && B.meta.dir === 'in') { src = A; dst = B; }
     else if (A.meta.dir === 'in' && B.meta.dir === 'out') { src = B; dst = A; }
@@ -6170,7 +6182,7 @@ export class Rack {
     // input (moving a cord is done by grabbing its stub, not by dropping over it).
     // Through _connectResolved, which is the ONE place a cord is made — this used to carry its own
     // copy of the same call, so anything added to the shared one applied to mults and nothing else.
-    const edge = this._connectResolved(src, dst);
+    const edge = this._connectResolved(src, dst, opts);
     if (!edge) return null;
     this._reconcileLinks(); this._drawCables(); this.onChange();
     return edge;
@@ -6179,7 +6191,7 @@ export class Rack {
   // Create a LINK between two inputs — the empty one shares the fed one's signal. Under the hood
   // it's a normal fan-out from the shared SOURCE to the empty input, tagged so it draws off (and
   // lives and dies with) the target input.
-  _tryLink(A, B) {
+  _tryLink(A, B, opts) {
     const aFed = !!this._incomingEdge(A.key, A.portId);
     const bFed = !!this._incomingEdge(B.key, B.portId);
     if (aFed === bFed) return null;             // both fed, or both empty → no single signal to share
@@ -6188,7 +6200,7 @@ export class Rack {
     const feed = this._incomingEdge(target.key, target.portId);
     const src = this._ep(feed.src.key, feed.src.portId);
     if (!src) return null;
-    const edge = this._connectResolved(src, input);
+    const edge = this._connectResolved(src, input, opts);
     if (!edge) return null;
     edge.link = { key: target.key, portId: target.portId };   // draws off / depends on the target input
     edge.style = feed.style;                                    // and looks like the target's own cable
@@ -6199,7 +6211,7 @@ export class Rack {
   // Wire src-output → dst-input in the patchbay, returning the edge. EVERY cord is made here — an
   // ordinary drop, a mult, a restore, an undo — so it is the one place that gets a say in how a new
   // cord starts life.
-  _connectResolved(src, dst) {
+  _connectResolved(src, dst, opts) {
     const initialDepth = (dst.meta.via && dst.rec) ? dst.rec.values.get(dst.meta.via) : undefined;
     const res = this.patchbay.connect(
       { key: src.key, instance: src.instance, descriptorId: src.descriptorId, portId: src.portId },
@@ -6218,7 +6230,14 @@ export class Rack {
     // PATCHING A MIXER CHANNEL TURNS IT ON. You have just plugged something in; hearing nothing because
     // that channel happened to be muted from some earlier session is a puzzle with no clue in it. The
     // button grows to full size and lights, which is the same thing said visually.
-    if (dst.rec && dst.rec.descriptorId === 'mixer' && /^chan[A-Z]$/.test(dst.portId)
+    //
+    // NOT WHEN A PATCH IS BEING RESTORED. Restoring re-lays every saved cable through this same call,
+    // and settings are applied BEFORE wiring — they have to be, because a cord's attenuator is seeded
+    // from its destination knob's value as it connects. So every restored cable was re-enabling its own
+    // channel a moment after the saved value said otherwise, and a mixer came back with every channel
+    // on however it was left. The rule is about the GESTURE, not the connection.
+    if (!(opts && opts.restoring)
+        && dst.rec && dst.rec.descriptorId === 'mixer' && /^chan[A-Z]$/.test(dst.portId)
         && dst.rec.values.get(`mute${dst.portId.slice(4)}`) !== 'on') {
       this._setParam(dst.rec, `mute${dst.portId.slice(4)}`, 'on');
     }
@@ -6948,7 +6967,13 @@ export class Rack {
     for (const g of svg.querySelectorAll('[data-wcoast-port],[data-wcoast-param]')) {
       const isPort = g.hasAttribute('data-wcoast-port');
       const id = isPort ? g.getAttribute('data-wcoast-port') : g.getAttribute('data-wcoast-param');
+      // A BUTTON'S METAL MOUNTING IS NOT A SECOND CONTROL. It is a circle in the group like any other,
+      // and counting it took `sig.length` past one, which classified every push button on the rack as
+      // 'fixed' — the kind that gets no hit-pad growth at all. The buttons quietly lost their reach
+      // the moment they gained their mounting. The pad covers the metal by its own rule now
+      // (makeHitPad), so the mounting must not also be measured here.
       const sig = [...g.querySelectorAll('circle')]
+        .filter((c) => c.getAttribute('data-wcoast-role') !== 'button-metal')
         .map((c) => ({ cx: parseFloat(c.getAttribute('cx')), cy: parseFloat(c.getAttribute('cy')), r: parseFloat(c.getAttribute('r')) }))
         .filter((c) => isFinite(c.cx) && isFinite(c.cy) && c.r >= MINSIG);
       if (!sig.length) continue;
@@ -7004,19 +7029,37 @@ export class Rack {
       // A DUAL knAck (a knob that also names a depth param): its own interaction — scroll the top
       // half for the value, the bottom half for CV depth, split when a cable is patched into its
       // centre, right-click for its menu. It bypasses the standard knob wiring below.
-      if (b.kind === 'knob' && b.depthId) { this._setupDualKnack(rec, b); continue; }
+      // EVERY knАck, not only the ones that declared a CV depth. The dressing — the metal collar
+      // round the jack, the grips, the pointer — used to hang off `depthId`, so a knАck without one
+      // kept the faceplate's plain art and came out looking like a different control: the
+      // oscillator's two FM inputs, whose jacks are audio yellow, had no collar at all while every
+      // orange one did. There is no such thing as a dual knАck any more, so there is nothing left for
+      // the test to mean.
+      if (b.kind === 'knob' && b.group.hasAttribute('data-wcoast-port')) { this._setupKnack(rec, b); continue; }
       attachControlInteraction(b, {
         get: () => rec.values.get(b.id),
         set: (val) => this._setParam(rec, b.id, val),
+        values: rec.values,
       }, { hitGrowMm: btnGrow.get(b.id) || 0 });
       b.group.addEventListener('pointerdown', (e) => e.stopPropagation());
-      if (b.kind === 'knob' && !b.group.hasAttribute('data-wcoast-port')) {   // double-click a knob → its default
-        const dblSt = {};                                                      // (a knАck has its own zone-aware version)
+      if (b.kind === 'knob' && !b.group.hasAttribute('data-wcoast-port')) {
+        // ONE CLICK PINS THE NUMBER, two clicks reset the knob. They are told apart by waiting: a
+        // single press starts a short timer and only puts the number up if no second press arrives.
+        // The wait costs nothing, because the number takes two seconds to arrive anyway.
+        const dblSt = {};
+        let pend = 0;
         b.group.addEventListener('pointerdown', (e) => {
-          if (e.button !== 0 || !this._isDoublePress(e, dblSt)) return;
-          e.preventDefault();
-          const def = this._paramDefault(rec, b.id);
-          if (def !== undefined) this._setParam(rec, b.id, def);
+          if (e.button !== 0) return;
+          if (this._isDoublePress(e, dblSt)) {
+            clearTimeout(pend); pend = 0;
+            e.preventDefault();
+            const def = this._paramDefault(rec, b.id);
+            if (def !== undefined) this._setParam(rec, b.id, def);
+            return;
+          }
+          const x = e.clientX, y = e.clientY;
+          clearTimeout(pend);
+          pend = setTimeout(() => { pend = 0; this._togglePin(rec, b, 'value', x, y); }, DBL_MS);
         });
       }
     }
@@ -7024,19 +7067,21 @@ export class Rack {
     // a dropped cord hit-test the jack it lands on. stopPropagation (in the
     // handler) keeps a jack press from starting a module drag.
     for (const [portId, port] of panel.ports) {
-      const isDualKnack = port.element.hasAttribute('data-wcoast-depth');
+      // A knАck — a jack sharing its element with a knob. _setupKnack above already gave it its
+      // click, its wheel and its right-click menu, so the plain-jack wiring below would be a second
+      // set of handlers on the same element. This USED to test for data-wcoast-depth, on the
+      // assumption that every knАck named a depth param; that assumption died when the depths that
+      // nothing could set were removed, and the test would have quietly double-wired every knАck on
+      // the mixer and the video modules. Ask what the element IS, not what it happens to declare.
+      const isKnack = port.element.hasAttribute('data-wcoast-param');
       port.element.dataset.jackKey = rec.key;
       port.element.dataset.jackPort = portId;
       // Track the terminal under the pointer so the U / D shortcuts know which one they mean.
       port.element.addEventListener('pointerenter', () => { this._hoverJack = { key: rec.key, portId }; });
       port.element.addEventListener('pointerleave', () => { if (this._hoverJack && this._hoverJack.key === rec.key && this._hoverJack.portId === portId) this._hoverJack = null; });
-      // A DUAL knAck already owns its click (instant cable-carry) and right-click menu via
-      // _setupDualKnack; here it only needs to be a drop target (dataset set above).
-      if (isDualKnack) continue;
+      // It only needs to be a drop target here (dataset set above).
+      if (isKnack) continue;
       port.element.addEventListener('contextmenu', (e) => this._onJackContextMenu(e, rec.key, portId));
-      // (There is no separate "single knAck" path any more — every knAck carries a depth param
-      // and goes through _setupDualKnack above, with its AV shown or hidden per the designer's
-      // default and the user's right-click choice.)
       port.element.style.cursor = 'crosshair';
       port.element.addEventListener('pointerdown', (e) => this._onJackPointerDown(e, rec.key, portId));
       // An invisible hit-pad HIT_GROW_MM beyond the outer edge, appended LAST so the outer
@@ -7343,10 +7388,9 @@ export class Rack {
   // Scroll the top half for the value, the bottom for depth (radial fine/coarse preserved in each);
   // the base value is unchanged, only its visual sweep compresses. Reset / Disconnect / Quantize live
   // on the right-click menu — there is no double-click.
-  _setupDualKnack(rec, b) {
+  _setupKnack(rec, b) {
     const el = b.group;
     const portId = el.getAttribute('data-wcoast-port');
-    const depthMeta = this._paramMeta(rec, b.depthId) || { curve: 'linear', min: -1, max: 1 };
     const doc = el.ownerDocument;
     const cx = b.pivot ? b.pivot.x : 0, cy = b.pivot ? b.pivot.y : 0;
     const ring = el.querySelector('circle');
@@ -7370,13 +7414,13 @@ export class Rack {
       for (const ln of b.indicator.querySelectorAll('line')) ln.style.display = 'none';   // retire authored grips + the dark pointer
       // Grips are drawn as a shadow, in a blue darker than the ring, so the pointer stays the only
       // bright mark on the knob. See panel/primitives.js.
-      for (let i = 0; KNOB_GRIPS && i < 7; i++) {
+      for (let i = 0; i < 7; i++) {
         const t = i * (2 * Math.PI / 7) - Math.PI / 2;   // evenly round the circle, starting straight up
         const ux = Math.cos(t), uy = Math.sin(t);
         const ln = doc.createElementNS(SVG_NS, 'line');
         ln.setAttribute('x1', r2(cx + outR * ux)); ln.setAttribute('y1', r2(cy + outR * uy));
         ln.setAttribute('x2', r2(cx + inR * ux)); ln.setAttribute('y2', r2(cy + inR * uy));
-        ln.setAttribute('stroke', KNOB_GRIP_COLOR); ln.setAttribute('stroke-width', r2(R * KNACK_GRIP_W));
+        ln.setAttribute('stroke', '#ffffff'); ln.setAttribute('stroke-width', r2(R * KNACK_GRIP_W));
         ln.setAttribute('stroke-linecap', 'round');
         b.indicator.appendChild(ln);
       }
@@ -7435,22 +7479,44 @@ export class Rack {
     //
     // It replaces the metal knob-top while it shows, which is the same swap the old bottom-hemisphere
     // version did, without the clip path.
-    const avR = (ro + gOut) / 2, avW = Math.max(0.3, (gOut - ro) * (2 / 3));   // a third narrower than the
-    // gap it sits in, so body grey shows on both sides and it reads as a ring rather than a collar
-    const av = doc.createElementNS(SVG_NS, 'g'); av.setAttribute('class', 'knack-av'); av.style.display = 'none'; av.style.pointerEvents = 'none';
-    const avTrack = doc.createElementNS(SVG_NS, 'circle');
-    avTrack.setAttribute('cx', r2(cx)); avTrack.setAttribute('cy', r2(cy)); avTrack.setAttribute('r', r2(avR));
-    avTrack.setAttribute('fill', 'none'); avTrack.setAttribute('stroke', '#3c4044'); avTrack.setAttribute('stroke-width', r2(avW));
-    const avFill = doc.createElementNS(SVG_NS, 'circle');
-    avFill.setAttribute('cx', r2(cx)); avFill.setAttribute('cy', r2(cy)); avFill.setAttribute('r', r2(avR));
-    avFill.setAttribute('fill', 'none'); avFill.setAttribute('stroke', '#c3c9cf'); avFill.setAttribute('stroke-width', r2(avW));
-    av.appendChild(avTrack); av.appendChild(avFill);
-    el.appendChild(av);
-    // The hover mark lifts this ring while a scroll would move the DEPTH rather than the value —
-    // which is the only thing left telling a knАck's two controls apart now that the wedge is gone.
-    b.avRing = { track: avTrack, fill: avFill };
-    // The VALUE has no pointer any more — the gauge band on the faceplate is the reading. The
-    // indicator group stays (the drag and scroll code measures from it) and is simply empty.
+    // NO ATTENUVERTER HERE. A knАck is a knob with a jack in it, and that is all it is. Three ways of
+    // putting the CV depth on the same control were tried — a ring between the jack and the value, a
+    // pill hanging below the knob, a segment cut out of the bottom of the dial — and each one solved
+    // the last one's problem by making a new one, because the underlying trouble never moved: one
+    // control cannot carry two settings and a socket without one of the three getting in the way.
+    //
+    // Where a depth control is wanted it gets its own small knob on the panel, which is how a modular
+    // synthesiser has always done it. The depth PARAMETERS are untouched — they stay at their default
+    // of 1, so a patched CV arrives at full strength until a panel gives it a knob of its own.
+
+    // ---- THE VALUE POINTER ---------------------------------------------------------------------
+    //
+    // A white line from the jack's edge out to the rim, on a dark casing. It was deleted when the
+    // value became a coloured arc on the faceplate, and never came back when the arc did — which left
+    // a knАck with seven grips and nothing saying where it was set.
+    //
+    // FULL LENGTH, AND CASED. A short mark aliases into the seven grips: at detent steps of 42.9°
+    // against 51.4° grip spacing the knob looked like it wiggled in a 60° arc at the bottom. Running
+    // the pointer the whole way, with a darker line beneath it, makes it unmistakably THE pointer
+    // rather than an eighth grip.
+    // It runs PAST the knob's white rim, by 2mm, out onto the panel. A pointer that stops at the rim
+    // is read against the rim; one that crosses it is read against the panel, which is emptier.
+    const vOut = R + POINTER_OVERHANG;
+    const vcase = doc.createElementNS(SVG_NS, 'line');
+    vcase.setAttribute('x1', r2(cx)); vcase.setAttribute('y1', r2(cy - ro));
+    vcase.setAttribute('x2', r2(cx)); vcase.setAttribute('y2', r2(cy - vOut));
+    vcase.setAttribute('stroke', '#06253d'); vcase.setAttribute('stroke-width', 1.0); vcase.setAttribute('stroke-linecap', 'round');
+    const vline = doc.createElementNS(SVG_NS, 'line');
+    vline.setAttribute('x1', r2(cx)); vline.setAttribute('y1', r2(cy - ro));
+    vline.setAttribute('x2', r2(cx)); vline.setAttribute('y2', r2(cy - vOut));
+    vline.setAttribute('stroke', '#ffffff'); vline.setAttribute('stroke-width', 0.5); vline.setAttribute('stroke-linecap', 'round');
+    // Into the group the grips are in, so they turn together; and that group to the end of the
+    // element, so the pointer lies over the jack's band rather than under it.
+    if (b.indicator) { b.indicator.appendChild(vcase); b.indicator.appendChild(vline); el.appendChild(b.indicator); }
+    else {
+      const vg = doc.createElementNS(SVG_NS, 'g'); vg.setAttribute('data-wcoast-role', 'indicator');
+      vg.appendChild(vcase); vg.appendChild(vline); el.appendChild(vg); b.indicator = vg;
+    }
 
     // Faceplate ticks at the two travel extremes: short radial marks just outside the ring at the
     // value pointer's min and max angles (± full sweep from straight up), so the knob's range reads
@@ -7466,12 +7532,8 @@ export class Rack {
       el.appendChild(tk);
     }
 
-    const dk = { rec, b, el, portId, depthMeta, metal, clipId, av, avFill, avR, avW, cx, cy, R, greenOut: gOut, patched: false };
-    // Per-knob AV state: the designer's default (data-wcoast-av) unless the user flipped it from the
-    // right-click menu. Stored as a pseudo-param in rec.values, so it saves/loads with the patch.
-    dk.avKey = 'av.' + b.id;
-    dk.avOn = () => (rec.values.get(dk.avKey) || b.avDefault || 'on') !== 'off';
-    (this._dualKnacks || (this._dualKnacks = [])).push(dk);
+    const dk = { rec, b, el, portId, metal, clipId, cx, cy, R, greenOut: gOut, patched: false };
+    (this._knacks || (this._knacks = [])).push(dk);
     // Cabling: the STANDARD jack pointerdown — proven grab/drop, and it early-returns when a cable is
     // already in hand, so dropping onto the knAck no longer also grabs a fresh cable.
     const dblSt = {};
@@ -7480,27 +7542,25 @@ export class Rack {
       // knob BODY a single click does nothing (value/AV are scroll-only), but a DOUBLE click resets
       // whichever zone the pointer is over: the AV band resets the depth, anywhere else the value —
       // one or the other, never both. A cord already in hand drops via the document handler.
+      // THE SEGMENT COMES FIRST. A jack is hit-tested about 1.3mm wider than it is drawn, so without
+      // this the top of the segment would still be catching cables instead of setting the depth.
+      // Trimming the pad here rather than at the jack keeps the jack generous everywhere else.
       if (!this._tempCable && e.button === 0 && !this._onKnackTerminal(e, rec.key, portId)) {
         if (this._isDoublePress(e, dblSt)) {
+          clearTimeout(dk.pendPin); dk.pendPin = 0;
           e.preventDefault();
-          if (this._knackZone(e, dk).zone === 'av') { this._setParam(rec, b.depthId, 0); this._renderKnackSplit(dk, true); }
-          else { const d = this._paramDefault(rec, b.id); if (d !== undefined) this._setParam(rec, b.id, d); }
+          const d = this._paramDefault(rec, b.id); if (d !== undefined) this._setParam(rec, b.id, d);
+        } else {
+          const x = e.clientX, y = e.clientY;
+          clearTimeout(dk.pendPin);
+          dk.pendPin = setTimeout(() => { dk.pendPin = 0; this._togglePin(rec, b, 'value', x, y, dk); }, DBL_MS);
         }
         e.stopPropagation(); return;
       }
       this._onJackPointerDown(e, rec.key, portId);
     });
-    el.addEventListener('wheel', (e) => this._dualKnackWheel(e, dk), { passive: false });
-    b.hoverProbe = (e) => this._knackHoverProbe(e, dk);   // the hover mark follows the zone
-    // The jack in the middle is a TERMINAL: the hover readout keeps away from it.
-    b.onTerminal = (e) => this._onKnackTerminal(e, rec.key, portId);
-    // What the hover readout should say, for whichever zone the pointer is in.
-    b.readoutText = (zone) => (zone === 'av'
-      ? formatParamValue(dk.depthMeta, rec.values.get(b.depthId) || 0)
-      : formatParamValue(b.meta, rec.values.get(b.id)));
-    // Scrolling the AV band turns the AV POINTER, not the knob's value indicator, so the hover
-    // mark has to watch that element too or its bar sits still while the depth moves under it.
-    b.hoverWatch = avFill;
+    el.addEventListener('wheel', (e) => this._knackWheel(e, dk), { passive: false });
+    // One control, one thing it turns: the hover mark and the readout have nothing to choose between.
     // RIGHT-CLICK IS TWO MENUS, split by the same test the cable drop uses. On the CENTRE JACK it
     // is the terminal's menu — scope, monitor, upstream — because that centre IS a terminal and
     // was otherwise the only jack in the rack you could not probe. Anywhere else on the knob it
@@ -7510,20 +7570,10 @@ export class Rack {
     // region it can be dropped onto, and the menu now agrees with both.
     el.addEventListener('contextmenu', (e) => {
       if (this._onKnackTerminal(e, rec.key, portId)) { this._onJackContextMenu(e, rec.key, portId); return; }
-      this._dualKnackMenu(e, dk);
+      this._knackMenu(e, dk);
     });
-    const val = rec.values.get(b.id); if (val !== undefined) showValue(b, val);   // position the new triangle
-    this._renderKnackSplit(dk, this._isKnackPatched(rec.key, portId));
-  }
-
-  _knackRadialFactor(b, e) {
-    const ctm = b.group.getScreenCTM && b.group.getScreenCTM();
-    if (!ctm || !b.pivot) return 1;
-    const sx = ctm.a * b.pivot.x + ctm.c * b.pivot.y + ctm.e;
-    const sy = ctm.b * b.pivot.x + ctm.d * b.pivot.y + ctm.f;
-    const R = knobRadiusPx(b.group);   // the dial, not the group box (which carries the legend)
-    const r = Math.hypot(e.clientX - sx, e.clientY - sy);
-    return Math.max(0.25, 1 - 0.75 * Math.min(1, r / R));
+    const val = rec.values.get(b.id); if (val !== undefined) showValue(b, val);
+    dk.patched = this._isKnackPatched(rec.key, portId);
   }
 
   // What would a scroll HERE actually do? On a knАck that depends on where the pointer is:
@@ -7531,35 +7581,12 @@ export class Rack {
   // travel and on its own speed curve, not the value. The hover mark asks this so it can draw
   // the control the scroll would really move — otherwise it would sit on the knob's rim
   // describing the value while the wheel moved depth.
-  _knackHoverProbe(e, dk) {
-    const { zone, frac, greenFrac } = this._knackZone(e, dk);
-    if (zone === 'av') {
-      // The AV's own angle, in the hover mark's convention (zero up, clockwise): depth 0 points
-      // straight up, +1 round to five o'clock, -1 back to seven — the same sweep a value knob has.
-      const depth = Math.max(-1, Math.min(1, Number(dk.rec.values.get(dk.b.depthId)) || 0));
-      return { mode: 'av', avOuter: dk.greenOut, knobR: dk.R, avAngle: depth * AV_SPAN,
-        factor: Math.max(0.2, 1 - 0.8 * Math.min(1, frac / greenFrac)) };
-    }
-    return { mode: 'value', factor: this._knackRadialFactor(dk.b, e) };
-  }
-
-  _dualKnackWheel(e, dk) {
+  _knackWheel(e, dk) {
     if (e.ctrlKey) return;   // ctrl+wheel is the rack pinch-zoom
     e.preventDefault();
     const raw = e.deltaMode === 1 ? e.deltaY * 16 : e.deltaMode === 2 ? e.deltaY * 400 : e.deltaY;
-    // Route by ZONE: the BOTTOM band (patched, AV on) → depth; everything else → value.
-    const { zone, frac, greenFrac } = this._knackZone(e, dk);
-    if (zone === 'av') {
-      // AV: nearer the centre scrolls faster, nearer the green edge slower/finer
-      const f = Math.max(0.2, 1 - 0.8 * Math.min(1, frac / greenFrac));
-      const step = (-raw / 100) * 0.05 * f;
-      const np = Math.max(0, Math.min(1, valueToPosition(dk.depthMeta, dk.rec.values.get(dk.b.depthId) || 0) + step));
-      this._setParam(dk.rec, dk.b.depthId, positionToValue(dk.depthMeta, np));
-      this._renderKnackSplit(dk, true);
-      // In this zone a scroll moves the DEPTH, so that is the number to show.
-      showReadout(formatParamValue(dk.depthMeta, dk.rec.values.get(dk.b.depthId) || 0), e.clientX, e.clientY, true, { sticky: true });
-    } else if (dk.b.meta.curve === 'detent') {
-      // detented value (the clock ratio): accumulate scroll, step one whole detent per threshold
+    if (dk.b.meta.curve === 'detent') {
+      // a detented value (the clock ratio): accumulate scroll, step one whole detent per threshold
       dk.acc = (dk.acc || 0) - raw;
       let guard = 0;
       while (Math.abs(dk.acc) >= 100 && guard++ < 8) {
@@ -7568,14 +7595,14 @@ export class Rack {
         const nv = Math.max(dk.b.meta.min, Math.min(dk.b.meta.max, cur + dir));
         if (nv !== cur) this._setParam(dk.rec, dk.b.id, nv);
       }
-      showReadout(formatParamValue(dk.b.meta, dk.rec.values.get(dk.b.id)), e.clientX, e.clientY, true, { sticky: true });
-    } else {
-      // continuous value: position-based speed over the blue ring
-      const step = (-raw / 100) * 0.05 * this._knackRadialFactor(dk.b, e);
-      const np = Math.max(0, Math.min(1, valueToPosition(dk.b.meta, dk.rec.values.get(dk.b.id)) + step));
-      this._setParam(dk.rec, dk.b.id, positionToValue(dk.b.meta, np));   // _setParam → showValue moves the value pointer
-      showReadout(formatParamValue(dk.b.meta, dk.rec.values.get(dk.b.id)), e.clientX, e.clientY, true, { sticky: true });
+      refreshReadout(formatParamValue(dk.b.meta, dk.rec.values.get(dk.b.id), dk.rec.values), e.clientX, e.clientY, { name: dk.b.meta && dk.b.meta.name, region: 'value' });
+      return;
     }
+    const f = scrollScale(e);
+    const step = (-raw / 100) * 0.05 * f;
+    const np = Math.max(0, Math.min(1, valueToPosition(dk.b.meta, dk.rec.values.get(dk.b.id)) + step));
+    this._setParam(dk.rec, dk.b.id, positionToValue(dk.b.meta, np));
+    refreshReadout(formatParamValue(dk.b.meta, dk.rec.values.get(dk.b.id), dk.rec.values) + scrollScaleTag(f), e.clientX, e.clientY, { name: dk.b.meta && dk.b.meta.name, region: 'value' });
   }
 
   // Two presses within DBL_MS, near the same spot = a double. Manual rather than the native dblclick
@@ -7589,22 +7616,32 @@ export class Rack {
   // Which half of a knАck is the pointer over? 'av' = the bottom band while patched with the AV on
   // (its depth zone); 'value' = everything else. Also returns the radial fraction, which the wheel
   // uses for its fine/coarse speed.
+  // A click on a control's scrollable region puts its number up, or takes it down if that same one is
+  // already up. The binding identifies the control and the zone identifies which of a knАck's two.
+  _togglePin(rec, b, zone, x, y) {
+    if (readoutPinned(b, zone)) { hideReadout(); return; }
+    const text = formatParamValue(b.meta, rec.values.get(b.id), rec.values);
+    if (text == null) return;
+    showReadout(text, x, y, false, {
+      sticky: true, pin: true, token: b, region: 'value',
+      name: b.meta && b.meta.name, origin: () => controlOrigin(b),
+    });
+  }
+
+  // WHICH OF A KNАCK'S TWO CONTROLS IS UNDER THE POINTER. The depth has its own pill below the knob,
+  // so this is a straight hit test on that pill rather than a radius on the dial — the whole knob
+  // turns the value, as it does when nothing is patched.
+  // WHICH CONTROL IS UNDER THE POINTER: only ever the value now. The zone survives as one word
+  // because the readout and the hover mark both ask, and both would rather ask than know.
   _knackZone(e, dk) {
-    let frac = 1, belowCentre = false;
+    let frac = 1;
     const ctm = dk.b.group.getScreenCTM();
     if (ctm && dk.b.pivot) {
       const sx = ctm.a * dk.b.pivot.x + ctm.c * dk.b.pivot.y + ctm.e;
       const sy = ctm.b * dk.b.pivot.x + ctm.d * dk.b.pivot.y + ctm.f;
-      const Rpx = knobRadiusPx(dk.b.group);
-      frac = Math.hypot(e.clientX - sx, e.clientY - sy) / Rpx;
-      belowCentre = e.clientY > sy;
+      frac = Math.hypot(e.clientX - sx, e.clientY - sy) / knobRadiusPx(dk.b.group);
     }
-    const greenFrac = dk.greenOut / dk.R;
-    // The attenuverter is an inner RING now, not a bottom hemisphere, so the zone is radial: inside
-    // the ring is depth, the gauge band outside it is the value. (`belowCentre` is still measured
-    // because the hover mark reads it.)
-    const zone = (dk.patched && dk.avOn() && frac <= greenFrac) ? 'av' : 'value';
-    return { zone, frac, greenFrac };
+    return { zone: 'value', frac, greenFrac: 1 };
   }
 
   // Would a cable dropped here land on this knАck's terminal? The SAME test the drop uses (_jackNear),
@@ -7618,50 +7655,23 @@ export class Rack {
     return this.patchbay.edgesAtJack(key, portId).some((edge) => edge.dst && edge.dst.key === key && edge.dst.portId === portId);
   }
 
-  _refreshDualKnacks() {
-    if (!this._dualKnacks) return;
-    for (const dk of this._dualKnacks) {
+  _refreshKnacks() {
+    if (!this._knacks) return;
+    for (const dk of this._knacks) {
       const patched = this._isKnackPatched(dk.rec.key, dk.portId);
-      if (patched !== dk.patched) this._renderKnackSplit(dk, patched);
+      dk.patched = patched;
     }
   }
 
   // Show or hide the attenuverter ring on patch, and fill it to the current depth. The value gauge is
   // independent — full range, always — and nothing about it changes here.
-  _renderKnackSplit(dk, patched) {
-    dk.patched = patched;
-    const split = patched && dk.avOn();   // AV off = a plain knАck: never splits, whatever is patched
-    dk.av.style.display = split ? '' : 'none';
-    dk.metal.style.display = split ? 'none' : '';   // the ring takes the metal knob-top's place
-    if (!split) return;
-    // Bipolar, from twelve o'clock: +1 fills clockwise to three o'clock, −1 anticlockwise to nine.
-    // Same dash-around-a-circle trick the value gauge uses (see panel-loader showGauge).
-    const depth = Math.max(-1, Math.min(1, dk.rec.values.get(dk.b.depthId) || 0));
-    const a = depth * AV_SPAN;
-    let lo = Math.min(0, a), hi = Math.max(0, a);
-    if (hi - lo < 3) { const mid = (lo + hi) / 2; lo = mid - 1.5; hi = mid + 1.5; }
-    const c = 2 * Math.PI * dk.avR;
-    dk.avFill.setAttribute('stroke-dasharray', `${r2(c * (hi - lo) / 360)} ${r2(c)}`);
-    dk.avFill.setAttribute('transform', `rotate(${r2(lo - 90)} ${r2(dk.cx)} ${r2(dk.cy)})`);
-  }
-
-  _dualKnackMenu(e, dk) {
+  _knackMenu(e, dk) {
     e.preventDefault(); e.stopPropagation();
     const { rec, b } = dk;
     const items = [];   // resetting is a double-click on the zone you want — not a menu item
     if (b.quantizeId) {
       const on = rec.values.get(b.quantizeId) === 'on';
       items.push({ label: (on ? '✓ ' : '    ') + 'Quantize', action: () => this._setParam(rec, b.quantizeId, on ? 'off' : 'on') });
-    }
-    // The AV capability itself: designer default (data-wcoast-av), user-flippable here, saved in the
-    // patch. Turning it OFF pins depth to 1 — the CV then sums at full strength, a plain knАck.
-    if (b.depthId) {
-      const avNow = dk.avOn();
-      items.push({ label: (avNow ? '✓ ' : '    ') + 'Attenuverter (AV)', action: () => {
-        this._setParam(rec, dk.avKey, avNow ? 'off' : 'on');
-        if (avNow) this._setParam(rec, b.depthId, 1);
-        this._renderKnackSplit(dk, this._isKnackPatched(rec.key, dk.portId));
-      } });
     }
     if (dk.patched) items.push({ label: 'Disconnect', action: () => { for (const edge of this.patchbay.edgesAtJack(rec.key, dk.portId)) this.patchbay.disconnect(edge); this._reconcileLinks(); this._drawCables(); this.onChange(); } });
     this._openMenu(e.clientX, e.clientY, items);

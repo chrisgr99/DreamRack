@@ -13,7 +13,13 @@
 
 const ports = [
   { id: 'audioIn', name: 'In', section: 'in', domain: 'audio', dir: 'in' },
-  { id: 'cutoffCv', name: 'Cutoff CV', section: 'shape', domain: 'control', dir: 'in', target: 'cutoff' },
+  // `via` is what MAKES the depth work: the patchbay puts the cord through an attenuator gain it
+  // owns and drives from that param. Without it the depth was declared, drawn and inert — which is
+  // what it was here until the trim knob gave it a control.
+  { id: 'cutoffCv', name: 'Cutoff CV', section: 'shape', domain: 'control', dir: 'in', target: 'cutoff', via: 'cutoffDepth' },
+  // NO DEPTH on these two. Three trims do not fit across 8 HP — the resonance/drive row overflowed by
+  // 6mm — and of the three, cutoff is the one you reach for while playing. Res and drive take an
+  // insert if they ever need taming (design/inserts.md).
   { id: 'resCv', name: 'Resonance CV', section: 'shape', domain: 'control', dir: 'in', target: 'resonance' },
   { id: 'driveCv', name: 'Drive CV', section: 'shape', domain: 'control', dir: 'in', target: 'drive' },
   { id: 'lowOut', name: 'Low pass out', section: 'out', domain: 'audio', dir: 'out' },
@@ -27,9 +33,9 @@ const params = [
   { id: 'cutoff', signal: 'audio', name: 'Cutoff', section: 'shape', curve: 'exp', min: 20, max: 20000, default: 1000, unit: 'Hz' },
   { id: 'resonance', name: 'Resonance', section: 'shape', curve: 'linear', min: 0, max: 1, default: 0, glideMs: 8 },
   { id: 'drive', name: 'Drive', section: 'shape', curve: 'linear', min: 0, max: 1, default: 0, glideMs: 8 },
-  { id: 'cutoffDepth', name: 'Cutoff CV depth', section: 'shape', curve: 'linear', min: -1, max: 1, default: 1, glideMs: 10, subControl: true },
-  { id: 'resDepth', name: 'Resonance CV depth', section: 'shape', curve: 'linear', min: -1, max: 1, default: 1, glideMs: 10, subControl: true },
-  { id: 'driveDepth', name: 'Drive CV depth', section: 'shape', curve: 'linear', min: -1, max: 1, default: 1, glideMs: 10, subControl: true },
+  // The TRIM in the cutoff knob's lower right. Not a subControl: it has its own element on the
+  // faceplate, so the panel-coverage check should hold it to the same standard as any knob.
+  { id: 'cutoffDepth', name: 'Cutoff CV depth', section: 'shape', curve: 'linear', min: -1, max: 1, default: 1, glideMs: 10 },
   // Two poles keeps some of what it removes; four is the sound most people mean by a filter sweep.
   { id: 'poles', name: 'Slope', section: 'shape', curve: 'stepped', default: '4', modulatable: false,
     steps: [{ value: '2', name: '12 dB/oct' }, { value: '4', name: '24 dB/oct' }] },

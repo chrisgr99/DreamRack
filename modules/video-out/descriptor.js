@@ -33,8 +33,9 @@ params.push({ id: 'window', name: 'Window', section: 'out', curve: 'stepped',
 // whole image from an envelope is the video equivalent of a master fader. A knАck, so the
 // cable and the knob share one control.
 params.push({ id: 'bright', signal: 'rgb', name: 'Brightness', section: 'out', curve: 'linear', min: 0, max: 1, default: 1, glideMs: 0 });
-params.push({ id: 'brightDepth', name: 'Brightness depth', section: 'out', curve: 'linear', min: -1, max: 1, default: 1, glideMs: 0, subControl: true });
-ports.push({ id: 'brightCv', name: 'Brightness', section: 'out', domain: 'control', dir: 'in', target: 'bright', via: 'brightDepth' });
+// NO DEPTH PARAM — the CV drives brightness at full strength. It carried an attenuverter that
+// defaulted to unity and had no way to be set; an insert covers the rare case (design/inserts.md).
+ports.push({ id: 'brightCv', name: 'Brightness', section: 'out', domain: 'control', dir: 'in', target: 'bright' });
 
 // LIMIT — a ceiling on output brightness. A plain knob, set and forget. It is here BEFORE
 // feedback arrives rather than after: feedback runs away to white, and a full-screen white

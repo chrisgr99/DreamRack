@@ -56,7 +56,7 @@ for (const k of K) {
   ink(k.x - END_DX, k.y + END_DY, '0', { size: SC.size, anchor: 'end' });
   ink(k.x + END_DX, k.y + END_DY, '1', { size: SC.size, anchor: 'start' });
   items.push({ t: 'knack', id: k.id, x: k.x, y: k.y,
-    opts: { radius: R, cap: CAP, port: `${k.id}Cv`, depth: `${k.id}Depth`, av: 'off',
+    opts: { radius: R, cap: CAP, port: `${k.id}Cv`,
       scale: { ...SC, marks: [{ at: 0 }, { at: 1 }] } } });
   ink(k.x, k.y + R + 3.4, k.id.toUpperCase(), { size: 1.8 });
 }

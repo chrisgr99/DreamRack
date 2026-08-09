@@ -88,7 +88,7 @@ ink(ENGINE_X, Y_ENGINE_LABEL, 'ENGINE', { size: 2.1 });
 // be given an attenuverter from its right-click menu if it ever needs scaling.
 for (const L of CH) {
   items.push({ t: 'knack', id: `pan${L}`, x: MID_X(L), y: Y_PAN,
-    opts: { radius: KNACK_R, port: `panCv${L}`, depth: `panDepth${L}`, av: 'off' } });
+    opts: { radius: KNACK_R, port: `panCv${L}` } });
 }
 
 // left-margin row labels, right-aligned. x is overridable so each label can hug its own
@@ -133,9 +133,9 @@ for (const L of CH) {
   // knAcks like the pan below them: a send amount is exactly the sort of thing you want an envelope
   // on, and giving each a jack of its own would have cost two more rows the panel does not have.
   items.push({ t: 'knack', id: `send1${L}`, x: MID_X(L), y: Y_SEND1,
-    opts: { radius: KNACK_R, port: `send1Cv${L}`, depth: `send1Depth${L}`, av: 'off' } });
+    opts: { radius: KNACK_R, port: `send1Cv${L}` } });
   items.push({ t: 'knack', id: `send2${L}`, x: MID_X(L), y: Y_SEND2,
-    opts: { radius: KNACK_R, port: `send2Cv${L}`, depth: `send2Depth${L}`, av: 'off' } });
+    opts: { radius: KNACK_R, port: `send2Cv${L}` } });
   vu('vu', CH_X[L], L);
 }
 
@@ -155,7 +155,7 @@ items.push({ t: 'button', id: 'masterEnable', x: MSTR_X, y: Y_MUTE, opts: { r: M
 for (const [B, X] of [['Master', MSTR_X]]) {
   items.push({ t: 'jack', id: `ampCv${B}`, x: X, y: Y_AMPCV });
   items.push({ t: 'knack', id: `pan${B}`, x: X, y: Y_PAN,
-    opts: { radius: KNACK_R, port: `panCv${B}`, depth: `panDepth${B}`, av: 'off' } });
+    opts: { radius: KNACK_R, port: `panCv${B}` } });
 }
 // Where each bus leaves: its own column at the right end, behind its own divider, each jack level
 // with the row of taps that feeds it. So a send row reads as one thing across the whole panel — ten

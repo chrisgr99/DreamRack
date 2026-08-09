@@ -91,6 +91,25 @@ export function validateDescriptor(descriptor) {
   return true;
 }
 
+// A CONTINUOUS PARAMETER THAT DOES NOT SAY OTHERWISE GLIDES. Every factory already honours `glideMs`
+// — it ramps with setTargetAtTime rather than jumping — but a parameter that never declared one got
+// zero, which is a step. You hear that: run the filter's cutoff up with a mouse wheel and each notch
+// is a click, because a wheel notch is a big jump applied in a single sample. A trackpad hides it
+// only because its steps are smaller.
+//
+// Filled in HERE, once, rather than in eleven factories, and only where the descriptor is SILENT. An
+// explicit `glideMs: 0` is a statement — a sequencer's stage voltage or a video parameter is meant to
+// step — and is left alone. Detented parameters are left alone too: a knob that clicks to whole
+// numbers should arrive at them.
+const GLIDE_DEFAULT_MS = 12;   // enough to smooth a wheel notch, short enough to feel immediate
+function withGlideDefaults(descriptor) {
+  const params = descriptor.params || [];
+  if (!params.some((p) => p.glideMs === undefined && p.curve !== 'stepped' && p.curve !== 'detent')) return descriptor;
+  return { ...descriptor, params: params.map((p) => (
+    p.glideMs === undefined && p.curve !== 'stepped' && p.curve !== 'detent'
+      ? { ...p, glideMs: GLIDE_DEFAULT_MS } : p)) };
+}
+
 export class ModuleRegistry {
   constructor() {
     // id -> { descriptor, create }. create may be null for a data-only
@@ -114,7 +133,7 @@ export class ModuleRegistry {
     if (this._modules.has(descriptor.id)) {
       throw new Error(`Module "${descriptor.id}" is already registered.`);
     }
-    this._modules.set(descriptor.id, { descriptor, create: create || null });
+    this._modules.set(descriptor.id, { descriptor: withGlideDefaults(descriptor), create: create || null });
     return descriptor.id;
   }
 

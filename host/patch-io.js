@@ -246,9 +246,12 @@ export async function restore(obj, rack, mixer, opts = {}) {
     const fromKey = idToKey.get(w.from.module);
     const toKey = idToKey.get(w.to.module);
     if (!fromKey || !toKey) continue;
+    // `restoring` — this is a saved cable being re-laid, not someone plugging one in. It suppresses
+    // the side effects that belong to the gesture, currently the mixer's auto-enable on patch.
     const edge = rack.connectPatch(
       { key: fromKey, portId: w.from.port },
       { key: toKey, portId: w.to.port },
+      { restoring: true },
     );
     // A cable that silently fails to come back is the worst kind of restore bug: the
     // patch looks restored and isn't. Say so.

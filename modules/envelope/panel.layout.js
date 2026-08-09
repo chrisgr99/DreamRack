@@ -42,10 +42,10 @@ export default panel({ hp: 10, tight: true, pad: 1.4 }, [
   ]),
   band(null, [
     placed([
-      { c: knack('decay', null, 'decayCv', { depth: 'decayDepth', size: 'big', letter: 'D', at: 10 }), x: MID - SPREAD, y: TOP },
-      { c: knack('sustain', null, 'sustainCv', { depth: 'sustainDepth', size: 'big', letter: 'S', at: 2 }), x: MID + SPREAD, y: TOP },
-      { c: knack('attack', null, 'attackCv', { depth: 'attackDepth', size: 'big', letter: 'A', at: 11 }), x: EDGE, y: BOT },
-      { c: knack('release', null, 'releaseCv', { depth: 'releaseDepth', size: 'big', letter: 'R', at: 1 }), x: 50.8 - EDGE, y: BOT },
+      { c: knack('decay', null, 'decayCv', { size: 'big', letter: 'D', at: 10 }), x: MID - SPREAD, y: TOP },
+      { c: knack('sustain', null, 'sustainCv', { size: 'big', letter: 'S', at: 2 }), x: MID + SPREAD, y: TOP },
+      { c: knack('attack', null, 'attackCv', { size: 'big', letter: 'A', at: 11 }), x: EDGE, y: BOT },
+      { c: knack('release', null, 'releaseCv', { size: 'big', letter: 'R', at: 1 }), x: 50.8 - EDGE, y: BOT },
     ], BOT + R + 2.6),
   ]),
   // No header on this row: PUSH, gate and retrig say what they are, and a header costs 5.4mm of

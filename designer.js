@@ -12,7 +12,7 @@ import { renderPanel } from './panel/render.js';
 import { loadPanel } from './host/panel-loader.js';
 import { applyOverrides } from './panel/overrides.js';
 import { THEME } from './panel/theme.js';
-import { defs, jack, knob, knack, radioGroup, button, slider, label } from './panel/primitives.js';   // control-gallery thumbnails
+import { defs, jack, knob, knack, trim, radioGroup, button, slider, label } from './panel/primitives.js';   // control-gallery thumbnails
 
 import oscLayout from './modules/complex-oscillator-259t/panel.layout.js';
 import oscDesc from './modules/complex-oscillator-259t/descriptor.js';
@@ -272,6 +272,7 @@ function anchor(it, layout) {
   switch (it.t) {
     case 'knob':
     case 'knack':      return { x: it.x, y: it.y, axes: 'xy', r: Math.max(3, (it.opts && it.opts.radius || 4.6) * 0.5) };
+    case 'trim':       return { x: it.x, y: it.y, axes: 'xy', r: 3.0 };
     case 'jack':       return { x: it.x, y: it.y, axes: 'xy', r: 3.0 };
     case 'button':     return { x: it.x, y: it.y, axes: 'xy', r: 3.0 };
     case 'radio':      return { x: it.x, y: it.y, axes: 'xy', r: 3.4 };
@@ -1023,6 +1024,10 @@ function buildSettingsBody(id) {
     if (a0.axes === 'xy') addP('y (mm)', numberInput(p0.y, (v) => setPos(id, 'y', v)));
   }
   if (it.t === 'knob' || it.t === 'knack') addP('radius', numberInput(optVal(id, 'radius', 4.6), (v) => setKnobRadiusAll(id, v)));
+  if (it.t === 'trim') {
+    addP('radius', numberInput(optVal(id, 'radius', 2.8), (v) => setKnobRadiusAll(id, v)));
+    addP('centre mark', selectInput(String(optVal(id, 'centreMark', false)), [['false', 'off'], ['true', 'on — bipolar, zero at 12 o’clock']], (v) => setOptAll(id, 'centreMark', v === 'true')));
+  }
   if (it.t === 'knack') addP('AV default', selectInput(optVal(id, 'av', 'on'), [['on', 'on — attenuverter shows when patched'], ['off', 'off — plain knAck']], (v) => setOptAll(id, 'av', v)));
   if (it.opts && it.opts.label && typeof it.opts.label === 'object') {
     addP('label text', textInput(optVal(id, 'label.text', ''), (v) => setOpt(id, 'label.text', v)));   // text stays per-control
@@ -1171,7 +1176,7 @@ function openModuleSettings() {
 
 // ---- control gallery (a floating palette; drag a control onto the panel) --
 const TOOLS = [
-  { type: 'jack', label: 'Jack' }, { type: 'knob', label: 'Knob' }, { type: 'knack', label: 'knAck' },
+  { type: 'jack', label: 'Jack' }, { type: 'knob', label: 'Knob' }, { type: 'knack', label: 'knAck' }, { type: 'trim', label: 'Trim' },
   { type: 'radio', label: 'Radio' }, { type: 'button', label: 'Button' }, { type: 'slider', label: 'Slider' },
   { type: 'label', label: 'Label', structure: true }, { type: 'divider', label: 'Divider', structure: true },
 ];
@@ -1192,6 +1197,7 @@ function thumbSVG(type) {
   if (type === 'jack') { inner = jack('t', 4, 4, {}); vb = '0 0 8 8'; }
   else if (type === 'knob') { inner = knob('t', 6, 6, { radius: 4.6, theme: th }); vb = '0 0 12 12'; }
   else if (type === 'knack') { inner = knack('t', 6, 6, { radius: 4.6, theme: th }); vb = '0 0 12 12'; }
+  else if (type === 'trim') { inner = trim('t', 6, 6, { theme: th }); vb = '0 0 12 12'; }
   else if (type === 'radio') { inner = radioGroup('t', 2.4, 3, { orientation: 'h', spacing: 3.6, ledR: 1.5, steps: [{ value: 'a' }, { value: 'b' }, { value: 'c' }], theme: th }); vb = '0 0 11 6'; }
   else if (type === 'button') { inner = button('t', 4, 4, { r: 3, kind: 'red' }); vb = '0 0 8 8'; }
   else if (type === 'slider') { inner = slider('t', 4, { top: 1, bot: 12, valuePos: 0.6, theme: th }); vb = '0 0 8 14'; }
@@ -1321,6 +1327,9 @@ function makeControl(type, id, x, y) {
       { kind: 'port', entry: { id: `${id}Cv`, name: 'CV', domain: 'control', dir: 'in' } },
       { kind: 'param', entry: { id: `${id}Depth`, name: 'CV depth', min: -1, max: 1, default: 0, unit: '', curve: 'linear', subControl: true } },
     ] };
+    // The trim knob: the same plain param as a knob, drawn small. `centreMark` off by default —
+    // it is for a bipolar control, and the inspector turns it on.
+    case 'trim':   return { item: { t: 'trim', id, x, y, opts: { label: lbl('trim') } }, entry: { id, name: 'Trim', min: 0, max: 1, default: 0, unit: '', curve: 'linear' }, kind: 'param' };
     case 'radio':  return { item: { t: 'radio', id, x, y, opts: { orientation: 'v', spacing: 5.6, ledR: 2.16, steps: [{ value: 'a', label: 'A' }, { value: 'b', label: 'B' }] } }, entry: { id, name: 'Switch', curve: 'stepped', default: 'a', steps: [{ value: 'a', name: 'A' }, { value: 'b', name: 'B' }] }, kind: 'param' };
     case 'button': return { item: { t: 'button', id, x, y, opts: { r: 2.0, kind: 'red' } }, entry: { id, name: 'Button', curve: 'stepped', default: 'off', steps: [{ value: 'off', name: 'Off' }, { value: 'on', name: 'On' }] }, kind: 'param' };
     case 'slider': return { item: { t: 'slider', id, x, opts: {} }, entry: { id, name: 'Level', min: 0, max: 1, default: 0.8, unit: '', curve: 'linear' }, kind: 'param' };

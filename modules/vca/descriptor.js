@@ -9,13 +9,18 @@
 
 const ports = [
   { id: 'audioIn', name: 'In', section: 'io', domain: 'audio', dir: 'in' },
-  { id: 'levelCv', name: 'Level CV', section: 'io', domain: 'control', dir: 'in', target: 'level' },
+  // `via` is what MAKES the depth work: the patchbay puts the cord through an attenuator gain it
+  // owns and drives from that param. Without it the depth was declared, drawn and inert — which is
+  // what it was here until the trim knob gave it a control.
+  { id: 'levelCv', name: 'Level CV', section: 'io', domain: 'control', dir: 'in', target: 'level', via: 'levelDepth' },
   { id: 'out', name: 'Out', section: 'out', domain: 'audio', dir: 'out' },
 ];
 
 const params = [
   { id: 'level', signal: 'audio', name: 'Level', section: 'io', curve: 'linear', min: 0, max: 1, default: 0, glideMs: 8 },
-  { id: 'levelDepth', name: 'Level CV depth', section: 'io', curve: 'linear', min: -1, max: 1, default: 1, glideMs: 10, subControl: true },
+  // The TRIM in the level knob's lower right. Not a subControl any more: it has its own element on
+  // the faceplate, so the panel-coverage check should hold it to the same standard as any knob.
+  { id: 'levelDepth', name: 'Level CV depth', section: 'io', curve: 'linear', min: -1, max: 1, default: 1, glideMs: 10 },
   // Linear for shaping a sound, exponential for riding a level you are listening to — see the
   // processor for why both are worth having.
   { id: 'response', name: 'Response', section: 'io', curve: 'stepped', default: 'lin', modulatable: false,

@@ -22,10 +22,31 @@
 import { evenScale } from '../../panel/primitives.js';
 
 const CH = ['A', 'B', 'C', 'D'];
-const FACE_W = 91, FACE_H = 113.5912, FACE_LEFT = 3.9, FACE_TOP = 7.0994;
-const COL_TRIG = 10, COL_CYCLE = 19, COL_ATK = 34, COL_DEC = 52, COL_OUT = 66;
-const DIVIDER_X = 72, Q_KNOB_X = 82;
+// 95mm, UP FROM 91, to pay for the two attenuverter trims. The four millimetres are not spread
+// evenly: nearly all of them go into the gap between attack and decay, which was the tightest place on
+// the panel before anything was added — the two time scales had already been drawn with tightened
+// gaps and smaller type to stop them running into each other. Attack's trim sits at four o'clock, so
+// it lands squarely in that gap, and decay's lands in the gap before the output jacks.
+//
+//   cycle -> attack   15.0 -> 15.2      (+0.2, it was never the problem)
+//   attack -> decay   18.0 -> 20.8      (+2.8, the trim needs 20.7 to clear decay's ".001")
+//   decay -> out      14.0 -> 17.5      (+3.5: the CV-out JACK needs 16.9, but its label is wider
+//                                        than the jack and needs the extra half)
+//
+// The left-hand columns move in a little to help pay for it; trig's jack still leaves 3mm to the
+// panel rule, and the quadrature knob keeps the margin it had.
+const FACE_W = 95, FACE_H = 113.5912, FACE_LEFT = 3.9, FACE_TOP = 7.0994;
+const COL_TRIG = 9, COL_CYCLE = 17.5, COL_ATK = 32.7, COL_DEC = 53.5, COL_OUT = 71;
+const DIVIDER_X = 77, Q_KNOB_X = 86.8;
 const KNACK_R = 6.4;
+// The trim's offset from its knАck's centre — four o'clock, at the distance that clears this knob's
+// own calibration. Same rule the grammar applies for panels laid out by band and row; this panel
+// places by hand, so the numbers are here.
+const TRIM_DX = 10.28, TRIM_DY = 6.93;
+// The mode lamps sit a millimetre right of the cycle jack above them rather than sharing its centre
+// line. Their row is wider than the jack, so centring the two on each other left the lamps hanging
+// further into the gap on the left than on the right.
+const COL_MODE = COL_CYCLE + 1;
 // Attack and decay stand 18mm apart with 6.4mm knobs, so a calibration drawn at the usual distance
 // puts the two scales into each other. Kept OUTSIDE the rim, where a calibration belongs, but with the
 // gaps and the type tightened until the neighbouring scales clear.
@@ -56,17 +77,19 @@ for (let ci = 0; ci < CH.length; ci++) {
   items.push({ t: 'button', id: `trigBtn${L}`, x: COL_TRIG, y: cy + 6.5, opts: { r: 2.2, kind: 'white' } });
   items.push({ t: 'jack', id: `cycleIn${L}`, x: COL_CYCLE, y: cy - 5 });
   ink(COL_CYCLE, cy - 0.3, 'cycle', 2.0);
-  items.push({ t: 'radio', id: `mode${L}`, x: COL_CYCLE, y: cy + 4, opts: { orientation: 'h', spacing: 4.2, ledR: 1.3, steps: MODE } });
+  items.push({ t: 'radio', id: `mode${L}`, x: COL_MODE, y: cy + 4, opts: { orientation: 'h', spacing: 4.2, ledR: 1.3, steps: MODE } });
   // Attack and decay are knАcks: the CV jack sits in the knob's centre, with an attenuverter, so the
   // separate 'c.v. in' columns this panel used to carry are gone.
   items.push({ t: 'knack', id: `attack${L}`, x: COL_ATK, y: cy - 1,
-    opts: { radius: KNACK_R, port: `attackCv${L}`, depth: `attackDepth${L}`,
-      scale: SCALE(evenScale(TIME_SCALE)) } });
+    opts: { radius: KNACK_R, port: `attackCv${L}`, scale: SCALE(evenScale(TIME_SCALE)) } });
   ink(COL_ATK, cy + 11, 'attack', 2.2);
+  items.push({ t: 'trim', id: `attackDepth${L}`, x: +(COL_ATK + TRIM_DX).toFixed(2), y: +(cy - 1 + TRIM_DY).toFixed(2),
+    opts: { centreMark: true, accentPort: `attackCv${L}` } });
   items.push({ t: 'knack', id: `decay${L}`, x: COL_DEC, y: cy - 1,
-    opts: { radius: KNACK_R, port: `decayCv${L}`, depth: `decayDepth${L}`,
-      scale: SCALE(evenScale(TIME_SCALE)) } });
+    opts: { radius: KNACK_R, port: `decayCv${L}`, scale: SCALE(evenScale(TIME_SCALE)) } });
   ink(COL_DEC, cy + 11, 'decay', 2.2);
+  items.push({ t: 'trim', id: `decayDepth${L}`, x: +(COL_DEC + TRIM_DX).toFixed(2), y: +(cy - 1 + TRIM_DY).toFixed(2),
+    opts: { centreMark: true, accentPort: `decayCv${L}` } });
   ink(COL_OUT, cy - 9, 'pulse out', 2.1);
   items.push({ t: 'jack', id: `pulse${L}`, x: COL_OUT, y: cy - 5 });
   items.push({ t: 'jack', id: `fn${L}`, x: COL_OUT, y: cy + 5 });
@@ -79,7 +102,13 @@ function quadRegion(knobId, portId, enId, cy, nm) {
   items.push({ t: 'label', x: Q_KNOB_X, y: cy - 18, text: 'QUAD- RATURE', opts: { size: 2.0, maxWidth: 9 } });
   items.push({ t: 'button', id: enId, x: Q_KNOB_X, y: cy - 9.25, opts: { r: 1.65, kind: 'red' } });
   ink(Q_KNOB_X, cy - 12, 'on', 1.9);
-  items.push({ t: 'knob', id: knobId, x: Q_KNOB_X, y: cy, opts: { radius: 6.4, angleMin: -215, angleMax: 35, ticks: 11 } });
+  // THE HOUSE SWEEP. This knob carried angleMin -215, angleMax 35: a 250-degree travel centred on
+  // NINE O'CLOCK, so its ticks ran round the bottom, up the left and over the top with nothing on the
+  // right, and — worse than the art — a parameter sitting at its 0.5 default pointed left instead of
+  // up. It is a plain linear 0..1 like any other knob and there is nothing about it that wanted its
+  // own geometry; the angles are a leftover from the hand-drawn faceplate this file was resynced
+  // from, where the knob art had been rotated. Every other knob on the rack is symmetric about twelve.
+  items.push({ t: 'knob', id: knobId, x: Q_KNOB_X, y: cy, opts: { radius: 6.4, ticks: 11 } });
   ink(Q_KNOB_X - 6.5, cy - 5.1, up, 2.6);
   ink(Q_KNOB_X - 6.5, cy + 6.9, dn, 2.6);
   ink(Q_KNOB_X, cy + 9.5, 'mix', 2.0);

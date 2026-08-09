@@ -15,12 +15,15 @@
 const params = [];
 const ports = [];
 
+// NO DEPTH PARAM. Every CV input here used to carry an attenuverter that came free with this
+// helper rather than because anyone asked for one. They all defaulted to unity, so they never
+// did anything; and once the knAck lost its attenuverter there was no way to set them either.
+// The CV lands on its target at full strength. Where one genuinely needs taming, that is an
+// insert's job — see design/inserts.md.
 const knack = (id, name, def) => {
   params.push({ id, name, section: 'formula', curve: 'linear', min: 0, max: 1, default: def, glideMs: 0 });
-  params.push({ id: `${id}Depth`, name: `${name} depth`, section: 'formula', curve: 'linear',
-    min: -1, max: 1, default: 1, glideMs: 0, subControl: true });
   ports.push({ id: `${id}Cv`, name, section: 'formula', domain: 'control', dir: 'in',
-    target: id, via: `${id}Depth` });
+    target: id });
 };
 
 // Four knobs, named as they are written in the expression. They are not "amount" or "depth" —

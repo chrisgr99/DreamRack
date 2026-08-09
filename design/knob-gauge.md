@@ -18,7 +18,12 @@ at every size on the rack.
 On a two-tier knob — the complex oscillator's two big ones — the gauge goes on the OUTER tier. Those
 are the largest controls on the rack and their reading should be the easiest one on it.
 
-- **Empty** is the body grey, a shade darker than the cap.
+- **Empty** is a dark grey channel, drawn ONLY over the control's own sweep, on a BLACK ring. So an
+  untouched knob still shows where its travel is and which way it runs: grey where the value can go,
+  black where it cannot. A full circle at near-black, which is what it was, read as two concentric
+  black rings on a knob turned right down and said nothing at all — and leaving the dead sector as
+  bare knob face was worse, because the body is a mid grey, so the part that can never be reached came
+  out lighter than the travel and the whole thing read inside out.
 - **Filled** is the signal colour, at full saturation, filling the whole width of the band.
 - The fill starts at the knob's own declared minimum angle — usually seven o'clock — and runs
   clockwise to the setting. It does not start at a fixed clock position, because a few controls have
@@ -86,8 +91,23 @@ The blue knob body goes. It has to: light blue is one of the five gauge colours,
 a blue body would be the one setting you cannot read. The body becomes a neutral dark grey, so all
 five colours read equally on it.
 
-The greys have to separate by value: the panel behind, the body, the attenuverter ring, and the metal
-cap are four steps, dark to light, with a hairline edge round the body so it stands off the panel.
+The greys have to separate by value: the panel behind, the body, and the attenuverter ring are three
+steps, dark to light, with a hairline edge round the body so it stands off the panel.
+
+## The centre is black
+
+A plain knob's cap is black inside a white ring; a knАck's centre is its jack. That is the first thing
+you can see about a control, before reading anything: black disc, you turn it — orange jack, you turn
+it and you can plug into it.
+
+It used to be metal grey, which stopped working once the gauge track lit up on hover: the cap's edge
+and the lit track were within a few percent of each other, so a hovered knob's middle and its ring
+merged into one grey mass. Green was tried in between and brought its own problems — it is the 1V/oct
+colour, and it shouted.
+
+Black cannot be confused with anything else here and has no brightness to tune. What separates it
+from the track is the white ring around it, which is a line rather than a value, so nothing about it
+changes when the track lights.
 
 ## Where you can scroll
 
@@ -107,20 +127,56 @@ It is white at low opacity — colour means signal on these panels, so the affor
 vocabulary — and it is the only thing drawn. There is no wedge and no marker: the gauge already shows
 the sweep and the value.
 
-A knАck is the one case that needs more, because it has two controls under one pointer. Nothing extra
-is drawn for it either. Whichever of the two your scroll would move is the one that lights up — the
-ring outside the knob for the value, or the attenuverter's own ring, a shade lighter in place, for
-the depth.
+Whichever ring your scroll would move LIGHTS UP — not the arc, the empty track it travels in. The
+arcs have almost no room to say it: audio yellow can only go a quarter brighter before it is cream,
+and the attenuverter's arc is already a light grey. The unfilled track is where the reserve is, at
+three percent of the knob body's brightness, so lifting it to a mid grey is a seventeen-fold change.
+The arc keeps exactly the colour it had — that colour carries meaning — and the ring around it glows.
+
+That is what tells a knАck's two controls apart, since it has two under one pointer.
+
+## How fast a scroll turns something
+
+One rate, and a ladder of held keys off it:
+
+| Held | Rate |
+| --- | --- |
+| nothing | 1× |
+| Shift | 4× |
+| Cmd | 0.1× |
+| Cmd + Shift | 0.01× |
+
+**Not Ctrl.** Ctrl+wheel is the rack's pinch-zoom and a trackpad pinch arrives as exactly that, so
+Cmd carries the slow tiers.
+
+This replaced a law where the rate depended on where the pointer sat on the knob — full at the
+centre, a quarter at the rim. Nobody could see it, it could not be aimed for deliberately, and the
+same gesture did different things depending on where your hand had landed. A held key is explicit,
+repeatable, and the readout shows the rate while you hold it — `220 Hz ↕0.1` — so it is
+discoverable the first time you press one by accident. An arrow rather than a times sign: `×0.1`
+sits an operator next to a number and reads as a tenth of the value.
+
+Detented controls — the clock ratios, the octave, the repeat counts — ignore the ladder. One notch is
+one step, and a whole number is already as precise as it gets.
 
 ## The number
 
 The gauge says where a control sits in its travel. It cannot say that the frequency is 246 Hz, and on
-a knob whose printed scale is six numbers wide that is what you want. So while you scroll, a small
-chip follows the pointer with the value in it and the real cursor is hidden under it — the pointer
-becomes the readout. It also fades in after a second of resting on a knob without scrolling, so a
-patch can be read by pointing at it. Never over a knАck's jack: that part is a terminal, and a number
-appearing there answers a question you did not ask. Scrolling there still reports — and reports the
-DEPTH, since that is what a scroll moves in that zone.
+a knob whose printed scale is six numbers wide that is what you want. So turning a control puts a
+small chip on the pointer with the name of the control and its value.
+
+ONLY WHEN YOU TURN SOMETHING. Not on hover. Every version that appeared on hover — after a second,
+after a settling pause, after a longer pause — put numbers over the panel while the pointer was on
+its way somewhere else, and a knАck's jack made it worse: crossing one to drop a cable in flashed a
+number up and took it away again. That also means the jack needs no special case. Point at it and
+nothing happens; scroll on it and you get whatever that scroll moved — the depth on a patched knАck,
+the value otherwise.
+
+It emerges over two seconds from the moving end of the arc it is about, follows the pointer while you
+stay on that part of the control, and flies back into the arc over one second — when you leave that
+part, when you move to the other ring of a knАck (where nothing new appears until you turn that one),
+or half a second after you stop turning, whether or not the pointer is still on it. Carrying the pointer
+about does not keep it up: the number is about the turning.
 
 What a number means comes from the descriptor, so the readout and the control are derived from one
 declaration rather than two that can drift:

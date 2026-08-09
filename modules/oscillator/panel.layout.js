@@ -46,7 +46,10 @@ items.push({ t: 'knob', id: 'coarse', x: 16, y: 22, opts: {
 items.push({ t: 'knob', id: 'fine', x: 38, y: 15.5, opts: { radius: 5.2, label: lab('FINE', 1.95) } });
 
 items.push({ t: 'jack', id: 'pitchIn', x: 28, y: 31.5, opts: { label: lab('1V/oct', 1.8) } });
-items.push({ t: 'jack', id: 'syncIn', x: 39.5, y: 31.5, opts: { label: lab('sync', 1.8) } });
+// The sync jack's label goes ABOVE it. Below, it is trapped between the jack and the soft/hard lamps
+// with nowhere to go — it overlapped them by 0.9mm — and above it reads better anyway: the lamps then
+// belong unambiguously to the jack rather than competing with its name.
+items.push({ t: 'jack', id: 'syncIn', x: 39.5, y: 31.5, opts: { label: { ...lab('sync', 1.8), placement: 'above' } } });
 rule(40.5);
 
 // ---- MODULATION -------------------------------------------------------------
@@ -54,25 +57,32 @@ rule(40.5);
 // they were the only thing holding the module two HP wider than everything else needed. They still
 // sit directly under that jack, so the two read as one control.
 //
-// role 'step-indicator' is what makes a lamp CLICKABLE. Without it the lamps render perfectly, never
-// light, and cannot be pressed — a silent dead control, which is exactly what happened first time.
+// A REAL RADIO GROUP, not a hand-built pair of lamps. It was a `lampGroup`: two lamps with 'soft' set
+// to the LEFT of the first and 'hard' to the RIGHT of the last, which is the flanking arrangement the
+// house does not use — a label beside a lamp it may or may not belong to — and being hand-built it
+// also missed the metal stem that says two lamps are one control. Both faults came from the same
+// cause: a third implementation of a control the primitives already draw. Labels go underneath, which
+// is where a horizontal group's labels go, and there is room: the LIN FM knob's rim is 2mm below them.
 ink(14, 46.4, 'MODULATION', { size: 2.4 });
-items.push({ t: 'lampGroup', param: 'syncMode', children: [
-  { kind: 'label', x: 30, y: 47, text: 'soft', size: 1.7 },
-  { kind: 'lamp', x: 34, y: 46.4, r: 1.5, role: 'step-indicator', step: 'soft' },
-  { kind: 'lamp', x: 39, y: 46.4, r: 1.5, role: 'step-indicator', step: 'hard' },
-  { kind: 'label', x: 43, y: 47, text: 'hard', size: 1.7 },
-] });
+items.push({ t: 'radio', id: 'syncMode', x: 36.5, y: 46.4, opts: {
+  orientation: 'h', spacing: 5, ledR: 1.5, size: 1.7,
+  steps: [{ value: 'soft', label: 'soft' }, { value: 'hard', label: 'hard' }],
+} });
 items.push({ t: 'knack', id: 'linFm', x: 15, y: 60, opts: { radius: 7.2, port: 'linFmIn', label: lab('LIN FM') } });
 ink(15, 73.4, 'through zero', { size: 1.6 });
 items.push({ t: 'knack', id: 'expFm', x: 37, y: 60, opts: { radius: 7.2, port: 'expFmIn', label: lab('EXP FM') } });
 rule(77);
 
 // ---- shape, and self-modulation ---------------------------------------------
-items.push({ t: 'knack', id: 'pulseWidth', x: 15, y: 88, opts: {
+// 86, not 88: at 88 both labels sat with their baseline a quarter of a millimetre BELOW the rule at
+// 98, so the line ran straight through the words. Two millimetres up clears it by 1.7 and leaves 4.2
+// above the knobs' rims to the rule at 77 — more room above than below, which is the right way round
+// for a row whose labels hang underneath it.
+const SHAPE_Y = 86;
+items.push({ t: 'knack', id: 'pulseWidth', x: 15, y: SHAPE_Y, opts: {
   radius: 6.8, port: 'pwIn', depth: 'pwDepth', av: 'on', label: lab('PULSE WIDTH', 1.9),
 } });
-items.push({ t: 'knob', id: 'feedback', x: 37, y: 88, opts: { radius: 6.8, label: lab('FEEDBACK', 1.9) } });
+items.push({ t: 'knob', id: 'feedback', x: 37, y: SHAPE_Y, opts: { radius: 6.8, label: lab('FEEDBACK', 1.9) } });
 rule(98);
 
 // ---- outputs ----------------------------------------------------------------

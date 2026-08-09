@@ -52,7 +52,7 @@ rule(58);
 const Y_KNOB = 70, R_BRIGHT = 7.9, R_LIMIT = 6.5;
 const LBL2 = Y_KNOB + R_BRIGHT + 3.6;
 items.push({ t: 'knack', id: 'bright', x: 15.5, y: Y_KNOB,
-  opts: { radius: R_BRIGHT, cap: 5.7, port: 'brightCv', depth: 'brightDepth' } });
+  opts: { radius: R_BRIGHT, cap: 5.7, port: 'brightCv' } });
 ink(15.5, LBL2, 'BRIGHT', { size: 2.3 });
 items.push({ t: 'knob', id: 'limit', x: 38, y: Y_KNOB, opts: { radius: R_LIMIT, cap: 4.7 } });
 ink(38, LBL2, 'LIMIT', { size: 2.3 });

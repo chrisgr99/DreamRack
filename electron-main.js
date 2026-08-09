@@ -594,6 +594,12 @@ function createWindow() {
   // screen pointer, and the two zooms desync enough to warp the pointer on zoom-out. We never bind
   // Control ourselves; this hands the gesture entirely back to the OS. Re-applied on every load
   // because the limits reset with the page.
+  // Renderer console -> the terminal, so a boot failure is visible where the app was launched from.
+  // Without this a thrown error during session restore is invisible outside DevTools, and the symptom
+  // (a patch that comes back with no cables) looks like a data-loss bug rather than an exception.
+  mainWindow.webContents.on('console-message', (_e, level, message, line, source) => {
+    if (level >= 2) console.error(`[renderer] ${message}  (${source}:${line})`);
+  });
   mainWindow.webContents.on('did-finish-load', () => {
     mainWindow.webContents.setVisualZoomLevelLimits(1, 1);
   });
