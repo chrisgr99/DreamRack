@@ -1,0 +1,118 @@
+{
+  "format": "wcoast-patch",
+  "version": 1,
+  "rack": {
+    "rows": 2
+  },
+  "modules": [
+    {
+      "id": "m0",
+      "type": "wcoast.complexOsc259t",
+      "row": 0,
+      "x": 0
+    },
+    {
+      "id": "m1",
+      "type": "lpg-292",
+      "row": 1,
+      "x": 0
+    }
+  ],
+  "wiring": [
+    {
+      "from": {
+        "module": "m1",
+        "port": "outA"
+      },
+      "to": {
+        "module": "mixer",
+        "port": "chanA"
+      }
+    },
+    {
+      "from": {
+        "module": "m0",
+        "port": "prinSquareOut"
+      },
+      "to": {
+        "module": "m1",
+        "port": "inA"
+      }
+    }
+  ],
+  "settings": {
+    "params": {
+      "m0": {
+        "modFreq": 220,
+        "modFine": 0,
+        "modCvAmount": 0,
+        "modFmAmount": 0,
+        "modRange": "high",
+        "modWave": "triangle",
+        "prinFreq": 110,
+        "prinFine": 0,
+        "prinCvAmount": 0,
+        "prinFmAmount": 0,
+        "timbre": 0.2,
+        "timbreCvAmount": 0,
+        "order": 0,
+        "symmetry": 0,
+        "modIndex": 0,
+        "modIndexCvAmount": 0,
+        "amplMod": "off",
+        "pitchMod": "off",
+        "timbreMod": "off",
+        "phaseLock": "off",
+        "phaseLockAmount": 0
+      },
+      "m1": {
+        "levelA": 0.8,
+        "decayA": 0.4,
+        "lpA": "on",
+        "vcaA": "on",
+        "strikeA": "off",
+        "divA": 0,
+        "clkOnA": "on",
+        "levelB": 0.8,
+        "decayB": 0.4,
+        "lpB": "on",
+        "vcaB": "on",
+        "strikeB": "off",
+        "divB": 0,
+        "clkOnB": "off",
+        "levelC": 0.8,
+        "decayC": 0.4,
+        "lpC": "on",
+        "vcaC": "on",
+        "strikeC": "off",
+        "divC": 0,
+        "clkOnC": "off",
+        "levelD": 0.8,
+        "decayD": 0.4,
+        "lpD": "on",
+        "vcaD": "on",
+        "strikeD": "off",
+        "divD": 0,
+        "clkOnD": "off",
+        "rate": 0.5789097180132882,
+        "run": "on"
+      },
+      "mixer": {
+        "levelA": 0.8,
+        "levelB": 0.8,
+        "levelC": 0.8,
+        "levelD": 0.8,
+        "master": 0.7,
+        "panA": 0,
+        "panB": 0,
+        "panC": 0,
+        "panD": 0,
+        "muteA": "off",
+        "muteB": "off",
+        "muteC": "off",
+        "muteD": "off",
+        "masterMute": "off"
+      }
+    }
+  }
+}

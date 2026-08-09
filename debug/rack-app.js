@@ -790,6 +790,41 @@ async function boot() {
     try { await restore(JSON.parse(f.text), rack, mixerIO); setPatchName(f.name); markClean(); afterLoad(); }
     catch (e) { console.error('[wcoast] open failed: ' + ((e && e.stack) || e)); log(`restore failed: ${e.message}`); window.alert(`Could not open patch: ${e.message}`); }
   }
+  // ---- WORK STATE, CARRIED BY THE REPOSITORY ---------------------------------------------------
+  // CAPTURE before leaving a machine, RESTORE after cloning on the next one. The transport is git:
+  // the app runs from its own checkout, so `patches/` beside it travels with a commit and a push.
+  //
+  // The saved patches are ordinary files and the main process copies them itself. The two things that
+  // are NOT files — the live session and the view transform — live in this window's storage, so they
+  // are handed over from here.
+  async function captureWork() {
+    if (!(window.wcoast && window.wcoast.captureWork)) { log('capture: Electron only'); return; }
+    flushSession();   // whatever is on the rack right now, not what it was 400ms ago
+    let view = null;
+    try { view = JSON.parse(localStorage.getItem(VIEW_KEY) || 'null'); } catch (_e) { /* none */ }
+    const r = await window.wcoast.captureWork({ session: patchText(), view });
+    if (!r || r.error) { log(`capture failed: ${(r && r.error) || 'unknown'}`); return; }
+    log(`captured ${r.copied} patches + session to patches/ — commit and push to carry them`);
+  }
+  async function restoreWork() {
+    if (!(window.wcoast && window.wcoast.restoreWork)) { log('restore: Electron only'); return; }
+    if (!okToDiscard()) return;   // it replaces the rack you are looking at
+    const r = await window.wcoast.restoreWork();
+    if (!r || r.error) { log(`restore failed: ${(r && r.error) || 'unknown'}`); return; }
+    if (r.session) {
+      try {
+        await restore(JSON.parse(r.session), rack, mixerIO);
+        setPatchName(null); markClean(); afterLoad();
+      } catch (e) {
+        console.error('[wcoast] work restore failed: ' + ((e && e.stack) || e));
+        log(`restore failed: ${e.message}`);
+      }
+    }
+    // The view goes back AFTER the modules, since laying them out resets the transform.
+    if (r.view) { try { rack.setViewState(r.view); localStorage.setItem(VIEW_KEY, JSON.stringify(r.view)); } catch (_e) { /* ignore */ } }
+    log(`restored ${r.added} patches to Documents (${r.kept} already there, left alone)`);
+  }
+
   async function savePatch() {
     try { const name = await storage.save(patchText()); if (name) { setPatchName(name); markClean(); } }
     catch (e) { log(`save failed: ${e.message}`); window.alert(`Could not save: ${e.message}`); }
@@ -914,6 +949,8 @@ async function boot() {
       toggleDark: () => toggleDark(),
       setRows: (n) => setRows(n),
       fitToWindow: () => rack.resetZoom(),
+      captureWork: () => captureWork(),
+      restoreWork: () => restoreWork(),
       toggleEngine: () => { rack.toggleEngine(); pushMenuState(); },
       addModule: (id) => rack.addModuleFromMenu(id, null),
       resetToDefault: () => resetToDefault(),
@@ -1506,6 +1543,9 @@ async function boot() {
     onClose: leaveDemo,
   });
   // The DEV menu opens it as an AUTHOR tool — picker, Play and Reload — and closing it just closes it.
+  // The same two commands the native menu bar carries — see developerMenuItems.
+  rack.onCaptureWork = () => captureWork();
+  rack.onRestoreWork = () => restoreWork();
   rack.openDemoPanel = () => { cameFromTutorial = null; demoPanel.setMode('author'); demoPanel.setExitLabel('Close'); demoPanel.open(); };
 
   window.addEventListener('keydown', (e) => {

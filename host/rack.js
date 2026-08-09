@@ -8436,6 +8436,14 @@ export class Rack {
     }
     // The scripted-demo transport: an author tool for now, so it lives here rather than in Help.
     if (this.openDemoPanel) items.push({ label: 'Demos…', action: () => this.openDemoPanel() });
+    // Carrying a working shelf between machines by committing it. Here as well as in the native menu
+    // bar because this is the menu the app is actually driven from — the bar is the one macOS puts at
+    // the top of the screen, and an item that exists in only one of the two may as well not exist.
+    if (this.onCaptureWork || this.onRestoreWork) {
+      items.push({ separator: true });
+      if (this.onCaptureWork) items.push({ label: 'Capture work state to repo', action: () => this.onCaptureWork() });
+      if (this.onRestoreWork) items.push({ label: 'Restore work state from repo', action: () => this.onRestoreWork() });
+    }
     return items;
   }
   // The Engine menu item's glyph: the same reddish push-button as the mixer's master lamp

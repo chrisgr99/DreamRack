@@ -1,0 +1,240 @@
+{
+  "format": "wcoast-patch",
+  "version": 1,
+  "rack": {
+    "rows": 2
+  },
+  "mixerPos": {
+    "row": 1,
+    "x": 0
+  },
+  "modules": [
+    {
+      "id": "m0",
+      "type": "wcoast.complexOsc259t",
+      "row": 0,
+      "x": 0
+    },
+    {
+      "id": "m1",
+      "type": "wcoast.quadFn281t",
+      "row": 0,
+      "x": 171.33
+    },
+    {
+      "id": "m2",
+      "type": "lpg-292",
+      "row": 1,
+      "x": 114
+    }
+  ],
+  "wiring": [
+    {
+      "from": {
+        "module": "m1",
+        "port": "fnA"
+      },
+      "to": {
+        "module": "m0",
+        "port": "timbreCvIn"
+      }
+    },
+    {
+      "from": {
+        "module": "m1",
+        "port": "fnB"
+      },
+      "to": {
+        "module": "m0",
+        "port": "orderCvIn"
+      }
+    },
+    {
+      "from": {
+        "module": "m0",
+        "port": "prinFinalOut"
+      },
+      "to": {
+        "module": "mixer",
+        "port": "chanA"
+      }
+    }
+  ],
+  "settings": {
+    "params": {
+      "m0": {
+        "modFreq": 104.5924805321796,
+        "modFine": 0.21058685649696018,
+        "modCvAmount": 0,
+        "modFmAmount": 0,
+        "modRange": "high",
+        "modWave": "triangle",
+        "prinFreq": 74.95153260425181,
+        "prinFine": 0.40953898926738885,
+        "prinCvAmount": 0,
+        "prinFmAmount": 0,
+        "timbre": 0.20415204410074436,
+        "timbreCvAmount": 0.45356458034323954,
+        "order": 0.29771427976607695,
+        "symmetry": 0.18782896267438165,
+        "modIndex": -0.34019797498144655,
+        "modIndexCvAmount": 0,
+        "amplMod": "on",
+        "pitchMod": "on",
+        "timbreMod": "off",
+        "phaseLock": "off",
+        "phaseLockAmount": 0
+      },
+      "m1": {
+        "attackA": 0.7175892908682369,
+        "decayA": 0.43524708774006904,
+        "trigBtnA": "off",
+        "modeA": "cyclic",
+        "attackB": 0.07641957966137097,
+        "decayB": 0.013179659923523025,
+        "trigBtnB": "off",
+        "modeB": "transient",
+        "attackC": 0.05,
+        "decayC": 0.2,
+        "trigBtnC": "off",
+        "modeC": "transient",
+        "attackD": 0.05,
+        "decayD": 0.2,
+        "trigBtnD": "off",
+        "modeD": "transient",
+        "quadTimeAB": 0.5,
+        "quadTimeCD": 0.5,
+        "quadEnAB": "on",
+        "quadEnCD": "off"
+      },
+      "m2": {
+        "levelA": 0.8,
+        "decayA": 0.4,
+        "lpA": "on",
+        "vcaA": "on",
+        "strikeA": "off",
+        "divA": 1,
+        "clkModeA": "div",
+        "clkOnA": "off",
+        "levelB": 0.8,
+        "decayB": 0.4,
+        "lpB": "on",
+        "vcaB": "on",
+        "strikeB": "off",
+        "divB": 1,
+        "clkModeB": "div",
+        "clkOnB": "off",
+        "levelC": 0.8,
+        "decayC": 0.4,
+        "lpC": "on",
+        "vcaC": "on",
+        "strikeC": "off",
+        "divC": 1,
+        "clkModeC": "div",
+        "clkOnC": "off",
+        "levelD": 0.8,
+        "decayD": 0.4,
+        "lpD": "on",
+        "vcaD": "on",
+        "strikeD": "off",
+        "divD": 1,
+        "clkModeD": "div",
+        "clkOnD": "off",
+        "rate": 0.35,
+        "run": "off"
+      },
+      "mixer": {
+        "levelA": 0.5,
+        "panA": 0,
+        "muteA": "on",
+        "levelB": 0.2310979944125954,
+        "panB": 0,
+        "muteB": "off",
+        "levelC": 0.29,
+        "panC": 0,
+        "muteC": "on",
+        "levelD": 0.4362069570671589,
+        "panD": 0,
+        "muteD": "on",
+        "levelE": 0.29153257636397095,
+        "panE": 0,
+        "muteE": "on",
+        "levelF": 0.29,
+        "panF": 0,
+        "muteF": "on",
+        "master": 0.02862139750558655,
+        "monitorLevel": 0.10164276894684646,
+        "masterEnable": "on",
+        "monitorEnable": "off"
+      }
+    }
+  },
+  "probes": [
+    {
+      "kind": "scope",
+      "module": "m1",
+      "port": "fnA",
+      "offX": 27.89,
+      "offY": -16.95,
+      "w": 124,
+      "h": 46,
+      "vIdx": 9,
+      "tIdx": 9,
+      "vOffset": 0,
+      "hOffset": 0,
+      "grid": 1,
+      "trigger": true,
+      "trigLevel": 0.29,
+      "frozen": false,
+      "hidden": false,
+      "minimized": true,
+      "homeX": 27.89,
+      "homeY": -16.95,
+      "displaced": false
+    },
+    {
+      "kind": "scope",
+      "module": "m1",
+      "port": "fnB",
+      "offX": 27.46,
+      "offY": -12.41,
+      "w": 120,
+      "h": 48,
+      "vIdx": 8,
+      "tIdx": 9,
+      "vOffset": 0.47,
+      "hOffset": 0,
+      "grid": 1,
+      "trigger": true,
+      "trigLevel": 0.47,
+      "frozen": false,
+      "hidden": false,
+      "minimized": true,
+      "homeX": 27.46,
+      "homeY": -12.41,
+      "displaced": false
+    },
+    {
+      "kind": "scope",
+      "module": "m0",
+      "port": "prinSquareOut",
+      "offX": 18.59,
+      "offY": -14.64,
+      "w": 120,
+      "h": 48,
+      "vIdx": 8,
+      "tIdx": 3,
+      "vOffset": 0,
+      "hOffset": 0,
+      "grid": 1,
+      "trigger": true,
+      "trigLevel": 0,
+      "frozen": false,
+      "hidden": false,
+      "minimized": false,
+      "homeX": 18.59,
+      "homeY": -14.64,
+      "displaced": false
+    }
+  ]
+}

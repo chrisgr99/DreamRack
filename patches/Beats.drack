@@ -1,0 +1,280 @@
+{
+  "format": "wcoast-patch",
+  "version": 1,
+  "app": "DreamRack",
+  "appVersion": "0.1",
+  "rack": {
+    "rows": 2
+  },
+  "mixerPos": {
+    "row": 1,
+    "x": 0
+  },
+  "modules": [
+    {
+      "id": "m0",
+      "type": "wcoast.complexOsc259t",
+      "row": 0,
+      "x": 0
+    },
+    {
+      "id": "m1",
+      "type": "wcoast.quadFn281t",
+      "row": 0,
+      "x": 164.13
+    },
+    {
+      "id": "m2",
+      "type": "programmer-8",
+      "row": 0,
+      "x": 255.13
+    },
+    {
+      "id": "m3",
+      "type": "lpg-292",
+      "row": 1,
+      "x": 114
+    }
+  ],
+  "wiring": [
+    {
+      "from": {
+        "module": "m0",
+        "port": "prinFinalOut"
+      },
+      "to": {
+        "module": "mixer",
+        "port": "chanA"
+      }
+    },
+    {
+      "from": {
+        "module": "m3",
+        "port": "clkOutA"
+      },
+      "to": {
+        "module": "m3",
+        "port": "levelCvA"
+      }
+    },
+    {
+      "from": {
+        "module": "m1",
+        "port": "fnB"
+      },
+      "to": {
+        "module": "m0",
+        "port": "modFmIn"
+      }
+    },
+    {
+      "from": {
+        "module": "m1",
+        "port": "fnC"
+      },
+      "to": {
+        "module": "m0",
+        "port": "modCvIn"
+      }
+    },
+    {
+      "from": {
+        "module": "m1",
+        "port": "fnA"
+      },
+      "to": {
+        "module": "m0",
+        "port": "timbreCvIn"
+      }
+    }
+  ],
+  "settings": {
+    "params": {
+      "m0": {
+        "modFreq": 132.91957361510484,
+        "modFine": -0.12556082780919597,
+        "modCvAmount": 0.7763364561785229,
+        "modFmAmount": 0.8057923112290247,
+        "modRange": "low",
+        "modWave": "sawtooth",
+        "prinFreq": 66.04670602842353,
+        "prinFine": 0,
+        "prinCvAmount": -0.3327654866033639,
+        "prinFmAmount": 0.19142853546235317,
+        "timbre": 0.48208905981119,
+        "timbreCvAmount": 0.5432496514867324,
+        "order": 0.680700979139448,
+        "symmetry": 0.38803967230059344,
+        "modIndex": 0.4302211024272842,
+        "modIndexCvAmount": 0.006876196430577686,
+        "amplMod": "off",
+        "pitchMod": "off",
+        "timbreMod": "on",
+        "phaseLock": "off",
+        "phaseLockAmount": 0
+      },
+      "m1": {
+        "attackA": 0.02036724999879377,
+        "decayA": 0.315476550877127,
+        "trigBtnA": "off",
+        "modeA": "cyclic",
+        "attackDepthA": 1,
+        "decayDepthA": 1,
+        "attackB": 0.03500766776996655,
+        "decayB": 0.04338100184050909,
+        "trigBtnB": "off",
+        "modeB": "cyclic",
+        "attackDepthB": 1,
+        "decayDepthB": 1,
+        "attackC": 0.11171274828049384,
+        "decayC": 0.7143202403767698,
+        "trigBtnC": "off",
+        "modeC": "cyclic",
+        "attackDepthC": 1,
+        "decayDepthC": 1,
+        "attackD": 0.060955606554539986,
+        "decayD": 0.2,
+        "trigBtnD": "off",
+        "modeD": "transient",
+        "attackDepthD": 1,
+        "decayDepthD": 1,
+        "quadTimeAB": 0.5,
+        "quadTimeCD": 0.5,
+        "quadEnAB": "off",
+        "quadEnCD": "off"
+      },
+      "m2": {
+        "a1": 0.5,
+        "b1": 0.5,
+        "play1": "off",
+        "rpt1": 1,
+        "a2": 0.5,
+        "b2": 0.5,
+        "play2": "off",
+        "rpt2": 1,
+        "a3": 0.5,
+        "b3": 0.5,
+        "play3": "off",
+        "rpt3": 1,
+        "a4": 0.5,
+        "b4": 0.5,
+        "play4": "off",
+        "rpt4": 1,
+        "a5": 0.5,
+        "b5": 0.5,
+        "play5": "off",
+        "rpt5": 1,
+        "a6": 0.5,
+        "b6": 0.5,
+        "play6": "off",
+        "rpt6": 1,
+        "a7": 0.5,
+        "b7": 0.5,
+        "play7": "off",
+        "rpt7": 1,
+        "a8": 0.5,
+        "b8": 0.5,
+        "play8": "off",
+        "rpt8": 1,
+        "start": 1,
+        "end": 8,
+        "run": "off",
+        "presetMode": "off"
+      },
+      "m3": {
+        "levelA": 0.5686262744501125,
+        "decayA": 0.4091474986220573,
+        "lpA": "on",
+        "vcaA": "on",
+        "strikeA": "off",
+        "divA": 5,
+        "clkModeA": "div",
+        "clkOnA": "off",
+        "levelDepthA": -0.29678116238328933,
+        "decayDepthA": 0,
+        "ratioDepthA": 0,
+        "ratioQuantA": "on",
+        "levelB": 0.8096265476102942,
+        "decayB": 0,
+        "lpB": "on",
+        "vcaB": "on",
+        "strikeB": "off",
+        "divB": 1,
+        "clkModeB": "div",
+        "clkOnB": "off",
+        "levelDepthB": 0,
+        "decayDepthB": 0,
+        "ratioDepthB": 0,
+        "ratioQuantB": "on",
+        "levelC": 0.5881679440956203,
+        "decayC": 0.23888034242061226,
+        "lpC": "on",
+        "vcaC": "on",
+        "strikeC": "off",
+        "divC": 1,
+        "clkModeC": "div",
+        "clkOnC": "off",
+        "levelDepthC": 0,
+        "decayDepthC": 0,
+        "ratioDepthC": 0,
+        "ratioQuantC": "on",
+        "levelD": 0.8,
+        "decayD": 0.4,
+        "lpD": "on",
+        "vcaD": "on",
+        "strikeD": "off",
+        "divD": 1,
+        "clkModeD": "div",
+        "clkOnD": "off",
+        "levelDepthD": 0,
+        "decayDepthD": 0,
+        "ratioDepthD": 0,
+        "ratioQuantD": "on",
+        "rate": 0.35,
+        "rateDepth": 0,
+        "run": "off"
+      },
+      "mixer": {
+        "levelA": 0.29,
+        "panA": 0,
+        "panDepthA": 1,
+        "muteA": "on",
+        "levelB": 0.29,
+        "panB": 0,
+        "panDepthB": 1,
+        "muteB": "on",
+        "levelC": 0.29,
+        "panC": 0,
+        "panDepthC": 1,
+        "muteC": "on",
+        "levelD": 0.29,
+        "panD": 0.014239952170726156,
+        "panDepthD": 1,
+        "muteD": "on",
+        "levelE": 0.29,
+        "panE": 0,
+        "panDepthE": 1,
+        "muteE": "on",
+        "levelF": 0.29,
+        "panF": -0.15659658394031228,
+        "panDepthF": 1,
+        "muteF": "on",
+        "master": 0.43932004989868273,
+        "monitorLevel": 0.29,
+        "panMaster": 0,
+        "panDepthMaster": 1,
+        "panMonitor": 0,
+        "panDepthMonitor": 1
+      }
+    }
+  },
+  "probes": [],
+  "build": {
+    "commit": "54833f9d626fc2c2586f0825b92344339d35cc83",
+    "short": "54833f9",
+    "branch": "main",
+    "describe": "54833f9-dirty",
+    "dirty": true,
+    "committedAt": "2026-07-29T08:36:16-07:00"
+  }
+}

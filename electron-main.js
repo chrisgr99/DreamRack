@@ -181,6 +181,54 @@ function registerPatchIpc() {
   // Open the panel editor (developer tool) as its own window. opts: { moduleId?, scale? }.
   ipcMain.handle('open-panel-editor', (_e, opts) => openPanelEditor(opts || {}));
   // The panel editor's save: write a module's files and regenerate its panels on disk.
+  // ---- WORK STATE, CARRIED BY THE REPOSITORY -------------------------------------------------
+  // The app runs from its own checked-out folder, so `patches/` beside it is already synchronised
+  // between machines by git — no cloud service, no accounts, nothing to keep signed in. Capture
+  // before leaving, commit and push, clone and restore on the other side.
+  //
+  // It is deliberately NOT the Examples mechanism. Examples are a curated few, shipped for anyone
+  // who installs; this is one person's whole working shelf, restored on purpose. Sharing a folder
+  // between them would mean either publishing scratch files as examples or losing them.
+  ipcMain.handle('work:capture', async (_e, msg) => {
+    try {
+      const dir = await patchesDir();
+      const repo = path.join(__dirname, 'patches');
+      await fs.promises.mkdir(repo, { recursive: true });
+      let copied = 0;
+      for (const f of await fs.promises.readdir(dir)) {
+        if (!isPatchFile(f)) continue;
+        await fs.promises.copyFile(path.join(dir, f), path.join(repo, f));
+        copied++;
+      }
+      // The live session and the view transform are not files — they live in the app's own storage —
+      // so they are handed in by the renderer and written here alongside the saved patches.
+      if (msg && typeof msg.session === 'string') await fs.promises.writeFile(path.join(repo, 'session-latest.drack'), msg.session);
+      if (msg && msg.view) await fs.promises.writeFile(path.join(repo, 'view-state.json'), JSON.stringify(msg.view, null, 2) + '\n');
+      return { ok: true, copied };
+    } catch (e) { return { error: String((e && e.message) || e) }; }
+  });
+  ipcMain.handle('work:restore', async () => {
+    try {
+      const dir = await patchesDir();
+      const repo = path.join(__dirname, 'patches');
+      if (!fs.existsSync(repo)) return { error: 'no patches/ folder in this checkout' };
+      let added = 0, kept = 0;
+      for (const f of await fs.promises.readdir(repo)) {
+        if (!isPatchFile(f) || f === 'session-latest.drack') continue;
+        const dst = path.join(dir, f);
+        // NEVER OVERWRITE. A file already in Documents is this machine's work, and the whole point of
+        // restoring is to get your shelf back, not to lose whatever you did here since.
+        if (fs.existsSync(dst)) { kept++; continue; }
+        await fs.promises.copyFile(path.join(repo, f), dst);
+        added++;
+      }
+      const sPath = path.join(repo, 'session-latest.drack'), vPath = path.join(repo, 'view-state.json');
+      const session = fs.existsSync(sPath) ? await fs.promises.readFile(sPath, 'utf8') : null;
+      let view = null;
+      try { if (fs.existsSync(vPath)) view = JSON.parse(await fs.promises.readFile(vPath, 'utf8')); } catch (_e) { /* ignore */ }
+      return { ok: true, added, kept, session, view };
+    } catch (e) { return { error: String((e && e.message) || e) }; }
+  });
   ipcMain.handle('designer:save', (_e, msg) => savePanel(__dirname, msg));
   ipcMain.handle('designer:list-modules', () => listModules(__dirname));
   // The source revision, for stamping into saved patches (null from a packaged, git-less build).
@@ -356,6 +404,9 @@ function applyAppMenu() {
       submenu: [
         { label: 'Developer Guide', click: () => menuSend('reference') },
         { label: 'Open Panel Editor', click: () => openPanelEditor() },
+        { type: 'separator' },
+        { label: 'Capture Work State to Repo', accelerator: 'CmdOrCtrl+Alt+S', click: () => menuSend('captureWork') },
+        { label: 'Restore Work State from Repo', accelerator: 'CmdOrCtrl+Alt+R', click: () => menuSend('restoreWork') },
       ],
     },
     { role: 'windowMenu' },

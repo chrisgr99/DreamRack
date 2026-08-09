@@ -1,0 +1,206 @@
+{
+  "format": "wcoast-patch",
+  "version": 1,
+  "rack": {
+    "rows": 2
+  },
+  "modules": [
+    {
+      "id": "m0",
+      "type": "wcoast.complexOsc259t",
+      "row": 0,
+      "x": 0
+    },
+    {
+      "id": "m1",
+      "type": "lpg-292",
+      "row": 1,
+      "x": 103
+    },
+    {
+      "id": "m2",
+      "type": "wcoast.quadFn281t",
+      "row": 0,
+      "x": 171.33
+    }
+  ],
+  "wiring": [
+    {
+      "from": {
+        "module": "m1",
+        "port": "outA"
+      },
+      "to": {
+        "module": "mixer",
+        "port": "chanA"
+      },
+      "bow": {
+        "along": 0.502106860232927,
+        "perp": -22.165534751529037
+      }
+    },
+    {
+      "from": {
+        "module": "m2",
+        "port": "fnA"
+      },
+      "to": {
+        "module": "mixer",
+        "port": "chanF"
+      }
+    },
+    {
+      "from": {
+        "module": "m0",
+        "port": "prinSquareOut"
+      },
+      "to": {
+        "module": "m2",
+        "port": "cycleInA"
+      }
+    }
+  ],
+  "settings": {
+    "params": {
+      "m0": {
+        "modFreq": 114.33359704989367,
+        "modFine": -1.439218380716298,
+        "modCvAmount": 0,
+        "modFmAmount": 0,
+        "modRange": "high",
+        "modWave": "sawtooth",
+        "prinFreq": 100.53844215177647,
+        "prinFine": 0.474890332016912,
+        "prinCvAmount": 0,
+        "prinFmAmount": 0,
+        "timbre": 0.3702849756120952,
+        "timbreCvAmount": 0,
+        "order": 0,
+        "symmetry": 0,
+        "modIndex": 0.33957350117841867,
+        "modIndexCvAmount": 0,
+        "amplMod": "off",
+        "pitchMod": "on",
+        "timbreMod": "off",
+        "phaseLock": "off",
+        "phaseLockAmount": 0.048756060714293004
+      },
+      "m1": {
+        "levelA": 0.9009937603096504,
+        "decayA": 0.4398466124220468,
+        "lpA": "on",
+        "vcaA": "on",
+        "strikeA": "off",
+        "divA": 0,
+        "clkOnA": "on",
+        "levelB": 0.8,
+        "decayB": 0.4,
+        "lpB": "on",
+        "vcaB": "on",
+        "strikeB": "off",
+        "divB": 0,
+        "clkOnB": "off",
+        "levelC": 0.8,
+        "decayC": 0.4,
+        "lpC": "on",
+        "vcaC": "on",
+        "strikeC": "off",
+        "divC": 0,
+        "clkOnC": "off",
+        "levelD": 0.8,
+        "decayD": 0.4,
+        "lpD": "on",
+        "vcaD": "on",
+        "strikeD": "off",
+        "divD": 0,
+        "clkOnD": "off",
+        "rate": 0.7385394124698943,
+        "run": "on"
+      },
+      "m2": {
+        "attackA": 0.004136809566798008,
+        "decayA": 0.01049926869823912,
+        "trigBtnA": "off",
+        "modeA": "transient",
+        "attackB": 0.009492403805632372,
+        "decayB": 0.1752872574352679,
+        "trigBtnB": "off",
+        "modeB": "cyclic",
+        "attackC": 0.0010272818439327187,
+        "decayC": 0.001,
+        "trigBtnC": "off",
+        "modeC": "cyclic",
+        "attackD": 0.05,
+        "decayD": 0.2,
+        "trigBtnD": "off",
+        "modeD": "transient",
+        "quadTimeAB": 0.5,
+        "quadTimeCD": 0.5,
+        "quadEnAB": "off",
+        "quadEnCD": "off"
+      },
+      "mixer": {
+        "levelA": 0.23374470748595153,
+        "panA": 0,
+        "muteA": "on",
+        "levelB": 0.45681519563205036,
+        "panB": 0,
+        "muteB": "off",
+        "levelC": 0.8,
+        "panC": 0,
+        "muteC": "on",
+        "levelD": 0.8,
+        "panD": 0,
+        "muteD": "on",
+        "levelE": 0.8,
+        "panE": 0,
+        "muteE": "on",
+        "levelF": 0.8,
+        "panF": 0,
+        "muteF": "on",
+        "master": 0.4147911212900649
+      }
+    }
+  },
+  "probes": [
+    {
+      "kind": "scope",
+      "module": "mixer",
+      "port": "chanF",
+      "x": 250,
+      "y": 285,
+      "w": 135,
+      "h": 42,
+      "gainMul": 1,
+      "timeMul": 1,
+      "trigger": true,
+      "frozen": false
+    },
+    {
+      "kind": "scope",
+      "module": "m2",
+      "port": "cycleInA",
+      "x": 380,
+      "y": 73,
+      "w": 120,
+      "h": 37,
+      "gainMul": 1,
+      "timeMul": 1,
+      "trigger": true,
+      "frozen": false
+    },
+    {
+      "kind": "scope",
+      "module": "m2",
+      "port": "pulseA",
+      "x": 613,
+      "y": 50,
+      "w": 120,
+      "h": 37,
+      "gainMul": 1,
+      "timeMul": 1,
+      "trigger": true,
+      "frozen": true
+    }
+  ]
+}

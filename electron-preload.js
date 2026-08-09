@@ -18,6 +18,8 @@ contextBridge.exposeInMainWorld('wcoast', {
   openPanelEditor: (opts) => ipcRenderer.invoke('open-panel-editor', opts),
   // The panel editor page uses these: write a module's files, and be told which module to focus.
   designerSave: (msg) => ipcRenderer.invoke('designer:save', msg),
+  captureWork: (msg) => ipcRenderer.invoke('work:capture', msg),
+  restoreWork: () => ipcRenderer.invoke('work:restore'),
   listModules: () => ipcRenderer.invoke('designer:list-modules'),
   onSelectModule: (cb) => ipcRenderer.on('designer:select-module', (_e, id) => cb(id)),
   // The source revision this app was built from ({ commit, short, branch, describe, dirty,
