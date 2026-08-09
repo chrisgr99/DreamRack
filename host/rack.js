@@ -173,7 +173,6 @@ const CABLE_FADE_TAU = 0.3;      // opacity easing time constant — cables brig
 // How far a cord may set off from the straight line between its two jacks. Beyond this it would be
 // heading away from where it is going, and would have to loop back over the port to arrive.
 const CORD_DEPART_MAX_DEG = 72;
-const CABLE_DIM = 0.3;           // the others while ONE cable is held — far enough back that the held one is unmistakable
 const CABLE_BRIGHT = 0.9;        // opacity of a fully-highlighted cable — a touch under full so it reads bright without dazzling
 const SCOPE_FADE_TAU = 0.3;      // scopes/monitors fade IN over ~1s in the loop (OUT via a 1s CSS transition), so they don't pop
 // Scope calibrated scales (1-2-5). Vertical = signal amplitude per division; time = seconds
@@ -397,20 +396,6 @@ export class Rack {
     // DISMISSES it — that click must not also nudge a control. Capture phase +
     // stopPropagation keeps it from reaching the faceplate/jack/knob handlers;
     // `_swallowClick` blocks the trailing click.
-    // A press anywhere that is not the cable's own grab stretch puts a held cable out: you have arrived
-    // and started work, which is the end of needing it held.
-    //
-    // Three exemptions, and they are all the same exemption: pressing something whose whole purpose is
-    // FOLLOWING the held cable must not extinguish it. The cable's grab stretch, a stub's hover strip,
-    // and the tab bar — because a cable held on one page and then followed through its tab to the next
-    // is exactly the journey the hold exists for, and arriving to find it dark defeats the point.
-    document.addEventListener('pointerdown', (e) => {
-      if (!this._litEdgeId) return;
-      if (e.target && e.target.closest && (e.target.closest('.cable-grab')
-        || e.target.closest('.stub-grab') || e.target.closest('.rack-tabbar'))) return;
-      this._litEdgeId = null;
-      this._drawCables();
-    }, true);
     document.addEventListener('pointerdown', (e) => {
       // A MENU BAR TITLE is not "outside": pressing one is how you move from menu to menu. Left to
       // the rule below it would preventDefault the press — which, per the pointer-events spec,
@@ -563,7 +548,6 @@ export class Rack {
       // Escape puts out a held cable. Only Escape: Control is a key too, and Control is how the macOS
       // accessibility zoom is driven — any-key would extinguish the cable at the moment you magnified
       // to look at where it went.
-      if (e.key === 'Escape' && this._litEdgeId) { this._litEdgeId = null; this._drawCables(); return; }
       // DIGITS SELECT PAGES: 1-8 the audio pages in bar order, then 9 and 0 for the two that always
       // exist — IN THE ORDER THEY SIT IN THE BAR, read from the page list rather than written down,
       // so re-ordering the bar re-orders the keys and the two can never disagree.
@@ -1787,10 +1771,7 @@ export class Rack {
         // either side of black — and next to the solid stub the hover preview just showed you, that
         // reads as the cable shrinking to the dash. Held, the colour should dominate and the dash
         // should be a fine line through it saying which way the signal runs.
-        // Its direction dash is drawn FINER, though — the only concession. At the usual half-width the
-        // black takes so much of the cable that what is left reads as a thin line rather than a bright
-        // cable. Finer dash, same overall width, more colour.
-        const dashW = e.id === this._litEdgeId ? wmm * 0.28 : wmm / 2;
+        const dashW = wmm / 2;
         const fd = mk(bodyD, '#000', dashW, dashOp, null);
         fd.setAttribute('class', 'flow-dash');
         fd.dataset.edge = e.id;
@@ -1863,9 +1844,14 @@ export class Rack {
             this._grabOver = null; this._grabShown = null;
             paint(liveEl(), false);
           });
-          // THIS STRETCH IS HOW A CABLE COMES OFF. Press it and move and you are pulling THIS end of
-          // THIS cord — no timing, no direction, no guess about which of several you meant. Press and
-          // release without moving and it toggles the cable bright instead.
+          // THIS STRETCH IS HOW A CABLE COMES OFF, and either gesture does it: press and move and you
+          // are pulling THIS end of THIS cord, or click it and the end comes away into your hand to be
+          // dropped by a second click. No timing, no direction, no guess about which of several you
+          // meant — and no drag required, which is the point of the click.
+          //
+          // Clicking used to hold the cable bright and dim every other one. That went: it was not worth
+          // its keep, and picking one cable out of a bundle is what the upstream and downstream commands
+          // are for.
           //
           // The listeners go on the DOCUMENT, not on this element: the cable layer redraws on almost
           // every pointer move, and a listener bound to the stretch would be listening from a corpse
@@ -1889,7 +1875,15 @@ export class Rack {
               if (live.link) this._startLinkRegrab(live, atA ? 'anchor' : 'dst', m.clientX, m.clientY, true);
               else this._startStickyRegrab(live, atA ? 'src' : 'dst', m.clientX, m.clientY, true);
             };
-            const up = () => { off(); this._litEdgeId = this._litEdgeId === id ? null : id; this._drawCables(); };
+            const up = (u) => {
+              off();
+              const live = this.patchbay.list().find((x) => x.id === id);
+              if (!live) return;
+              // Click-carry, the same as clicking a terminal: no button held, so you can scroll, zoom and
+              // roam to find where it goes, and a second click drops it.
+              if (live.link) this._startLinkRegrab(live, atA ? 'anchor' : 'dst', u.clientX, u.clientY);
+              else this._startStickyRegrab(live, atA ? 'src' : 'dst', u.clientX, u.clientY);
+            };
             document.addEventListener('pointermove', mv, true);
             document.addEventListener('pointerup', up, true);
           });
@@ -2396,7 +2390,6 @@ export class Rack {
         }
         const jx = rect.left + this._tx + jack.x * s, jy = rect.top + this._ty + jack.y * s;
         const color = STYLE_COLOR[item.e.style] || STYLE_COLOR.control;
-        const held = item.e.id === this._litEdgeId;
         // HOW A STUB LEAVES THE BAR. It drops STRAIGHT DOWN out of the tab for a fixed distance, and
         // then swoops away toward its jack — TANGENT to that drop, which is the whole trick. Aiming
         // the curve's first control point at the cable's belly instead put a corner exactly where the
@@ -2430,7 +2423,7 @@ export class Rack {
         const d = item.nearIsSrc
           ? `M${xy(Je)} C${xy(cJ)} ${xy(cT)} ${xy(T)} L${xy(anchor)}`
           : `M${xy(anchor)} L${xy(T)} C${xy(cT)} ${xy(cJ)} ${xy(Je)}`;
-        const op = String(!this._litEdgeId || held ? CABLE_BRIGHT : CABLE_DIM);
+        const op = String(CABLE_BRIGHT);
         const p = document.createElementNS(SVG_NS, 'path');
         p.setAttribute('d', d);
         p.setAttribute('fill', 'none');
@@ -2521,8 +2514,10 @@ export class Rack {
             if (ev.button !== 0) return;
             ev.preventDefault(); ev.stopPropagation();
             clearTimeout(this._stubJackTimer);
-            this._litEdgeId = this._litEdgeId === item.e.id ? null : item.e.id;
-            this._drawCables();
+            // The NEAR end — the jack in front of you — comes away into your hand. (The strip along the
+            // stub takes the far one; see below.)
+            this._setStubMark(null);
+            this._startStickyRegrab(item.e, item.nearIsSrc ? 'src' : 'dst', ev.clientX, ev.clientY);
           });
           svg.appendChild(jh);
         }
@@ -2580,10 +2575,10 @@ export class Rack {
           if (!hit.isConnected) return;   // removed by a redraw, not left by the pointer
           this._hideFlag();
         });
-        // PRESS AND RELEASE HOLDS IT BRIGHT; PRESS AND MOVE PULLS IT OFF. A stub is not a terminal, so
-        // it does not have to behave like one — but the far end of a crossing cable has to be
-        // detachable from somewhere, and the stub is where that cable is reachable. The threshold is
-        // what keeps a slightly unsteady click from lifting a cable you only meant to trace.
+        // EITHER GESTURE TAKES THE FAR END OFF: press and move pulls it, or click and it comes away
+        // into your hand for a second click to drop. A stub is not a terminal, but the far end of a
+        // crossing cable has to be detachable from somewhere and the stub is where that cable is
+        // reachable — so it answers to the same two gestures the cord's own grab stretch does.
         hit.addEventListener('pointerdown', (ev) => {
           if (ev.button !== 0) return;
           ev.preventDefault(); ev.stopPropagation();
@@ -2601,16 +2596,13 @@ export class Rack {
             // The FAR end is the one being taken off — the near end is the jack you can see.
             this._startStickyRegrab(item.e, item.nearIsSrc ? 'dst' : 'src', e2.clientX, e2.clientY, true);
           };
-          const onUp = () => {
+          const onUp = (u) => {
             done();
             if (lifted) return;
-            this._litEdgeId = this._litEdgeId === item.e.id ? null : item.e.id;
-            // Redrawing rebuilds this very strip under the pointer, and a strip that vanishes fires
-            // pointerleave — which would snatch the chip away the instant you clicked the thing it was
-            // naming. Pin it across the redraw; the replacement lands in exactly the same place.
-            this._flagSticky = true;
-            this._drawCables();
-            setTimeout(() => { this._flagSticky = false; }, 0);
+            // The strip goes with the cable it names, so the chip has to go too — same reason the drag
+            // path hides it: it would otherwise hang there naming a cord that no longer lands anywhere.
+            this._flagSticky = false; this._hideFlag();
+            this._startStickyRegrab(item.e, item.nearIsSrc ? 'dst' : 'src', u.clientX, u.clientY);
           };
           const done = () => {
             document.removeEventListener('pointermove', onMove, true);
@@ -2637,13 +2629,11 @@ export class Rack {
   // pointer keeps crossing modules that are not part of that chain, so the cable you were tracing
   // dimmed exactly when you were looking at it. A cable is easier to see when it is simply bright.
   //
-  // What remains dims on purpose and stays put: ONE HELD CABLE (click its grab stretch or its stub),
-  // and ISOLATE, which you ask for by name from the menu.
+  // What remains dims on purpose and stays put: ISOLATE, which you ask for by name from the menu.
   _cableOpacity(e) {
     // The dimmed level was chosen when cables RESTED at 0.5, so 0.25 was one step down. Against the
     // new 0.9 resting brightness the same number reads as the others almost vanishing, which is more
     // than tracing one cable asks for — you still want to see where the rest go.
-    if (this._litEdgeId) return e.id === this._litEdgeId ? CABLE_BRIGHT : CABLE_DIM;
     if (this._isolateNet) return this._isolateNet.has(e.id) ? CABLE_BRIGHT : 0.25;    // isolate: a deliberate mode, and deeper on purpose
     return CABLE_BRIGHT;
   }
@@ -6548,9 +6538,8 @@ export class Rack {
         // cable is CABLE_PX of base px — so every cable thinned out the moment the view froze, which is
         // exactly when you are following one and least want it to. Scaling by cS keeps it honest at any
         // rasterising scale, including the small overview picture.
-        const held = this._litEdgeId ? e.id === this._litEdgeId : null;
         cx.lineWidth = CABLE_PX * cS;
-        cx.globalAlpha = held === false ? 0.28 : 1;
+        cx.globalAlpha = 1;
         cx.strokeStyle = STYLE_COLOR[e.style] || STYLE_COLOR.control;
         cx.beginPath();
         cx.moveTo(g.pA.x * mmC, g.pA.y * mmC);
@@ -6598,7 +6587,7 @@ export class Rack {
   _ovSignature() {
     let sig = this.page + '|' + (this.container.clientWidth || 0) + 'x' + (this.container.clientHeight || 0) + '|';
     for (const rec of this.records.values()) sig += rec.key + ':' + rec.x + ',' + rec.row + ',' + (rec.panelWmm || 0) + ';';
-    sig += 'c' + (this.patchbay ? this.patchbay.list().length : 0) + '|L' + (this._litEdgeId || '-') + '|';
+    sig += 'c' + (this.patchbay ? this.patchbay.list().length : 0) + '|';
     for (const sc of this._scopes) if (this._probeOnPage(sc)) sig += 's' + Math.round(sc.ax || 0) + ',' + Math.round(sc.ay || 0) + ',' + (sc.el ? sc.el.offsetWidth : 0) + ';';
     for (const m of this._monitors) if (this._probeOnPage(m)) sig += 'm' + Math.round(m.ax || 0) + ',' + Math.round(m.ay || 0) + ';';
     return sig;
