@@ -444,10 +444,19 @@
        easier to find over a rack full of panels than a hairline was — but the accent stays as a solid
        edge, since that edge is what shows the slot the module is about to take. Slightly transparent
        and lifted on a shadow, so it reads as held above the rack rather than already part of it. */
+    /* Pinned to the WINDOW, not to a row: a carried module follows the pointer wherever it goes —
+       past the end of a row, between rows, over the tab bar — and nothing snaps until it is dropped. */
+    /* WHITE, NOT ACCENT, for both of these. The accent is the cables' colour, and a rack with a dozen
+       cords across it gave the held module and its landing place nothing to stand out against. White
+       belongs to neither the panels nor the patching, so it reads as something the app is telling you
+       rather than something in the rack. Dashed for the module — a boundary that is not there yet. */
     .rack-ghost.carrying {
-      border: 2px solid var(--accent); background: none; opacity: 0.92; overflow: hidden;
-      box-shadow: 0 6px 18px rgba(0,0,0,0.45);
+      position: fixed; z-index: 1500; border: 2px dashed #fff; background: none;
+      opacity: 0.92; overflow: hidden; box-shadow: 0 6px 18px rgba(0,0,0,0.55);
     }
+    /* ...and solid for where it will land, since that IS a place. */
+    .rack-insert-mark { position: fixed; z-index: 1499; width: 4px; border-radius: 2px;
+      background: #fff; box-shadow: 0 0 7px rgba(255,255,255,0.9), 0 0 2px rgba(0,0,0,0.6); pointer-events: none; }
 
     /* ---- context menu ---- */
     .rack-menu {

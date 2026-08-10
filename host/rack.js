@@ -1535,6 +1535,35 @@ export class Rack {
     return true;
   }
 
+  // A LAYOUT CHANGE THAT SLIDES INSTEAD OF JUMPING. `apply` does the real work — lifting a module out,
+  // dropping one in — and every module whose position that changed then eases from where it was to
+  // where it now is, over `ms`.
+  //
+  // Animated in JS rather than by a CSS transition because the CABLES have to come too: a cord is
+  // drawn from its module's position, so a panel gliding while its cords are already at the
+  // destination reads as the cable being detached. Redrawing each frame is the same work a carry
+  // already does on every pointer move.
+  _settleLayout(apply, ms = 1000) {
+    if (this._settleRaf) { cancelAnimationFrame(this._settleRaf); this._settleRaf = null; }
+    const before = new Map();
+    for (const rec of this.records.values()) if (this._onPage(rec)) before.set(rec, rec.x);
+    apply();
+    const anim = [];
+    for (const [rec, x0] of before) if (!rec.lifted && Math.abs(rec.x - x0) > 0.01) anim.push({ rec, x0, x1: rec.x });
+    if (!anim.length) return;
+    const t0 = performance.now();
+    const step = () => {
+      const t = Math.min(1, (performance.now() - t0) / ms);
+      const k = 1 - Math.pow(1 - t, 3);   // ease out: quick to start, settling gently
+      for (const a of anim) { a.rec.x = a.x0 + (a.x1 - a.x0) * k; this._placeEl(a.rec); }
+      this._drawCables();
+      this._settleRaf = t < 1 ? requestAnimationFrame(step) : null;
+      if (t >= 1) for (const a of anim) a.rec.x = a.x1;
+    };
+    for (const a of anim) { a.rec.x = a.x0; this._placeEl(a.rec); }   // start from where they were
+    this._settleRaf = requestAnimationFrame(step);
+  }
+
   _placeEl(rec) {
     const s = this.pxPerMm;
     rec.el.style.left = (rec.x * s) + 'px';
@@ -7322,12 +7351,25 @@ export class Rack {
   }
   // The permanent scopes/monitors clipped to a module's terminals.
   _probesOnModule(key) { return [...this._scopes, ...this._monitors].filter((v) => v.key === key && v.showCallout !== false); }
+  // `index` and `page` are what put it BACK where it stood. x alone stopped being enough once rows
+  // packed: delete the middle module of three and the row closes, so re-adding it at its old x ties
+  // with whichever module slid into that place — and a tie breaks on insertion order, which put it
+  // back on the wrong side of its neighbour. The index is unambiguous.
   _moduleSnap(rec) {
-    return { key: rec.key, descriptorId: rec.descriptorId, row: rec.row, x: rec.x, params: new Map(rec.values), cables: this._cablesOf(rec.key),
+    return { key: rec.key, descriptorId: rec.descriptorId, row: rec.row, x: rec.x,
+      page: this.pageOf(rec), index: this._indexOf(rec),
+      params: new Map(rec.values), cables: this._cablesOf(rec.key),
       probes: this._probesOnModule(rec.key).map((v) => ({ uid: v.uid, snap: this._snapProbe(v) })) };   // its scopes/monitors ride along, so deleting/undoing a module carries them
   }
   async _reAddModule(snap) {
-    const re = await this.addModule(snap.descriptorId, snap.row, snap.x, { key: snap.key });
+    let x = snap.x;
+    if (snap.index != null && snap.page) {
+      const list = this._rowOccupants(snap.row, snap.page);
+      x = snap.index >= list.length
+        ? (list.length ? list[list.length - 1].x + 0.001 : 0)
+        : list[snap.index].x - 0.001;
+    }
+    const re = await this.addModule(snap.descriptorId, snap.row, x, { key: snap.key, page: snap.page });
     if (re) for (const [id, v] of snap.params) this._setParam(re, id, v);
     // Real cables before links, so a link's target input is already fed when it restores.
     for (const c of [...snap.cables].sort((a, b) => (a.link ? 1 : 0) - (b.link ? 1 : 0))) this._restoreCable(c);
@@ -7366,6 +7408,35 @@ export class Rack {
       redo: async () => { if (snap) await this._reAddModule(snap); },
     });
     return rec;
+  }
+
+  // Where a module stands in its row, counting from the left. This — not its x — is what a move has
+  // to record: x is only an ordering and the row repacks around whatever else has happened, so
+  // "put it back at 240mm" is wrong the moment a neighbour has changed width. "Put it back third"
+  // always means the same thing.
+  _indexOf(rec) { return this._rowOccupants(rec.row, this.pageOf(rec)).indexOf(rec); }
+
+  _placeAtIndex(key, row, page, index) {
+    const rec = this.records.get(key);
+    if (!rec) return;
+    if (this.pageOf(rec) !== page) rec.page = page;
+    const list = this._rowOccupants(row, page).filter((r) => r !== rec);
+    const x = index >= list.length
+      ? (list.length ? list[list.length - 1].x + 0.001 : 0)
+      : list[index].x - 0.001;
+    this._settleLayout(() => this._moveModule(rec, row, x));
+  }
+
+  // Moving a module is an edit like any other, so it goes on the undo stack — by index at both ends,
+  // and only if it actually went somewhere.
+  _recordMove(rec, from) {
+    const key = rec.key;
+    const to = { row: rec.row, page: this.pageOf(rec), index: this._indexOf(rec) };
+    if (from.row === to.row && from.page === to.page && from.index === to.index) return;
+    this._pushUR({
+      undo: () => this._placeAtIndex(key, from.row, from.page, from.index),
+      redo: () => this._placeAtIndex(key, to.row, to.page, to.index),
+    });
   }
 
   // ---- control (knob/switch) reset, used by the clear-patch command ----
@@ -7830,82 +7901,41 @@ export class Rack {
     document.addEventListener('pointerup', onUp);
   }
 
-  // ---- drag (left button, from the faceplate background) ----
+  // ---- picking a module up (left button, from its title strip) ----
+  // A MODULE IS TAKEN IN HAND BY A CLICK, NOT A DRAG. Click its title strip and it comes off the rack
+  // and follows the pointer with no button held; click again to put it down. Holding the button and
+  // dragging deliberately does NOTHING: one model, the one cabling already uses, and it is the model
+  // that works when you need to scroll or zoom to reach where the module is going — a hand that has to
+  // stay pressed cannot do either.
+  //
+  // Waiting for the RELEASE, and only if the pointer stayed put, is what leaves a press-and-drag
+  // meaning nothing rather than meaning something surprising.
   _startDrag(e, rec) {
     if (e.button !== 0) return;
     this._hideAllScopeValues();   // a click on a panel background also dismisses any open scope settings box
-    // A panel moves ONLY by its top title strip; pressing anywhere else on the faceplate does not
-    // drag it. (Controls stop their own pointerdown, so this only ever sees faceplate/title presses.)
+    // A panel is taken ONLY by its top title strip; pressing anywhere else on the faceplate does not
+    // move it. (Controls stop their own pointerdown, so this only ever sees faceplate/title presses.)
     if ((e.clientY - rec.el.getBoundingClientRect().top) > TITLE_BAND_MM * this.pxPerMm) {
-      this._startPan(e);   // drag the panel background to pan the window; a plain click still leaves isolate
+      this._startPan(e);   // a plain click on the faceplate still leaves isolate
       return;
     }
     e.preventDefault();
-    const s = this.pxPerMm, sz = s * this.zoom;   // s = base px/mm (for content children); sz = SCREEN px/mm (for client coords)
     const startX = e.clientX, startY = e.clientY;
-    const rect0 = this._rowEls[rec.row].getBoundingClientRect();
-    const grabDx = e.clientX - (rect0.left + rec.x * sz);
-    // Was the menu already up when this press started? The document-level dismiss handler will
-    // have closed it before pointerup arrives, so without remembering this a second click would
-    // close and immediately reopen it. A menu should toggle, like every other menu here.
-    const barWasOpen = !!this._menuBarEl;
-    let moved = false, yielded = false;
-    let dropRow = rec.row, dropX = rec.x;
-    const homeRow = rec.row, homeX = rec.x;
-    const ghost = this._ensureGhost();
-
-    const onMove = (ev) => {
-      // A CABLE BEING BENT BEATS THIS, and the question is asked as soon as the press lands: if a cord
-      // was under it, this drag is the cable's and the module never starts. Waiting to ask until the
-      // reshape was under way let the module mark itself as dragging first — the dashes appeared and
-      // then the module sat still, which reads as a fault rather than as a decision. Yielding also
-      // covers the drop, or letting go would move the module to wherever its ghost had reached.
-      if (this._reshaping || this._cableDragCand) { yielded = true; return; }
-      if (yielded) return;
-      if (!moved && Math.abs(ev.clientX - startX) + Math.abs(ev.clientY - startY) < 4) return;
-      // THE FIRST MOVE LIFTS IT OUT OF THE ROW, and the row closes up behind it. You are holding the
-      // module, not dragging a marker around while it sits there — so the drawing comes with you and
-      // the space it occupied is gone until you put it down. Its cables go quiet meanwhile: they have
-      // nowhere to land while it is in the air (see _drawCables).
-      if (!moved) {
-        rec.lifted = true;
-        rec.el.style.display = 'none';
-        void this._dressGhost(rec.descriptorId, rec);
-        this.relayout();
-        this._drawCables();
-      }
-      moved = true;
-      dropRow = this._rowFromY(ev.clientY);
-      const rEl = this._rowEls[dropRow];
-      const rRect = rEl.getBoundingClientRect();
-      const mmX = (ev.clientX - rRect.left - grabDx) / sz;
-      dropX = this._dropOrderX(dropRow, this.page, mmX);
-      rEl.appendChild(ghost);
-      ghost.style.display = 'block';
-      ghost.style.left = (this._packedXAt(dropRow, this.page, mmX) * s) + 'px';
-      ghost.style.width = (rec.panelWmm * s) + 'px';
-      ghost.style.height = (PANEL_H_MM * s) + 'px';
-    };
     const onUp = (ev) => {
-      document.removeEventListener('pointermove', onMove);
-      document.removeEventListener('pointerup', onUp);
-      rec.el.classList.remove('dragging');
-      rec.el.style.display = '';
-      const wasLifted = rec.lifted;
-      rec.lifted = false;
-      this._undressGhost();
-      // A cable took the gesture over after the module was already in the air — put it back where it
-      // came from, or letting go would drop it wherever the pointer happened to be.
-      if (yielded) { if (wasLifted) { this._moveModule(rec, homeRow, homeX); } return; }
-      if (moved) { this._moveModule(rec, dropRow, dropX); return; }
-      if (this._isolateNet) { this._exitIsolate(); }   // a left click on empty faceplate leaves isolate mode
-      // A plain click on the title bar does NOTHING beyond that. It used to open the application
-      // menu, with the hamburger as its visible sign; the menu now lives on a right-click of the
-      // faceplate, so an invisible left-click target on the module's own drag handle would only be
-      // a way to summon a menu by accident.
+      document.removeEventListener('pointerup', onUp, true);
+      // A cable being bent beats this outright, and a press that travelled was not a click.
+      if (this._reshaping || this._cableDragCand) return;
+      if (Math.hypot(ev.clientX - startX, ev.clientY - startY) > 4) return;
+      if (this._isolateNet) this._exitIsolate();
+      const r = rec.el.getBoundingClientRect();
+      const sz = this.pxPerMm * this.zoom;
+      // Held at the point you touched, as a FRACTION of the face rather than a distance — the same
+      // number the library sends when you click a thumbnail, and it survives the panel's true width
+      // arriving a moment later.
+      this._carryModule({ rec, atX: ev.clientX, atY: ev.clientY,
+        offFrac: { x: (ev.clientX - r.left) / (rec.panelWmm * sz), y: (ev.clientY - r.top) / (PANEL_H_MM * sz) } });
     };
-    document.addEventListener('pointermove', onMove);
-    document.addEventListener('pointerup', onUp);
+    document.addEventListener('pointerup', onUp, true);
   }
 
   _rowFromY(y) {
@@ -7970,6 +8000,21 @@ export class Rack {
     g.textContent = '';
     g.classList.remove('carrying');
     g.style.display = 'none';
+    g.style.left = ''; g.style.top = '';
+  }
+
+  // THE INSERTION LINE: a slim accent bar standing where the carried module would land. With the
+  // module following the pointer freely there is nothing else to say where it is going, and this says
+  // it without moving the rack around or making the module jump between slots.
+  _ensureInsertMark() {
+    if (!this._insertMark) {
+      const m = document.createElement('div');
+      m.className = 'rack-insert-mark';
+      m.style.display = 'none';
+      document.body.appendChild(m);
+      this._insertMark = m;
+    }
+    return this._insertMark;
   }
 
   // ---- context menus ----
@@ -8002,30 +8047,99 @@ export class Rack {
   // can be taken to a page you were not on and dropped somewhere you could not initially see.
   // `onDone` fires however the carry ends, which is what brings the library back.
   startCarryModule(descriptorId, onDone, opts = {}) {
+    this._carryModule({ ...opts, descriptorId, onDone });
+  }
+
+  // The carry itself, for a module off the RACK (opts.rec) or a new one from the library
+  // (opts.descriptorId). `offMm` is where in the module your hand is, from its top-left corner, in
+  // millimetres — so the point you touched stays under the pointer through any zoom.
+  _carryModule(opts = {}) {
     if (this._carryingModule) return;
+    const rec = opts.rec || null;
+    const descriptorId = rec ? rec.descriptorId : opts.descriptorId;
     const type = (this.moduleTypes || []).find((t) => t.descriptorId === descriptorId);
-    if (!type) { if (onDone) onDone(); return; }
+    if (!type) { if (opts.onDone) opts.onDone(); return; }
     this._carryingModule = descriptorId;
-    let wmm = (this._wmmByType && this._wmmByType.get(descriptorId)) || (type.hp || 20) * 5.08;
+    let wmm = rec ? rec.panelWmm
+      : (this._wmmByType && this._wmmByType.get(descriptorId)) || (type.hp || 20) * 5.08;
+    // Where in the module your hand is, as a fraction of its face. Middle of the title strip if the
+    // caller had no point to give (a scripted carry).
+    const frac = opts.offFrac || { x: 0.5, y: (TITLE_BAND_MM / 2) / PANEL_H_MM };
+    const home = rec ? { row: rec.row, x: rec.x, page: this.pageOf(rec), index: this._indexOf(rec) } : null;
+    // LIFTED OUT OF THE ROW the instant it is picked up, and the row closes behind it. You are holding
+    // the module, not dragging a marker while it sits there. Its cables go quiet meanwhile — they have
+    // nowhere to land while it is in the air (see _drawCables).
+    // THE ROW WAITS FOR THE MODULE TO ACTUALLY LEAVE. Closing the gap on the click itself made the rack
+    // rearrange under a hand that had not gone anywhere yet — and a click you immediately think better
+    // of should cost nothing. So the module stays put, with the carried drawing sitting exactly over it,
+    // until the pointer has travelled far enough to mean it.
+    //
+    // relayout() PLACES; it does not pack — that is _resolveRow's job, and leaving it out meant the row
+    // never closed at all. Everything to the right kept its old position, so the insertion line was
+    // computed against a row that no longer existed and pointed at the wrong gap.
+    const LIFT_PX = 6;
+    let lifted = false;
+    const lift = () => {
+      lifted = true;
+      this._settleLayout(() => {
+        rec.lifted = true;
+        rec.el.style.display = 'none';
+        this._resolveRow(this.rows[rec.row]);
+        this.relayout();
+        this._drawCables();
+      });
+    };
     const ghost = this._ensureGhost();
-    // The drawing arrives a beat later when the panel has to be fetched; until then the outline
-    // stands in at its estimated width, and the true width replaces both when it lands.
-    this._dressGhost(descriptorId, opts.fromRec || null, opts.fresh).then((w) => { if (w && this._carryingModule === descriptorId) { wmm = w; track(lastX, lastY); } });
+    document.body.appendChild(ghost);   // window-pinned: it must be free of the rack's rows and transform
+    // The drawing arrives a beat later when the panel has to be fetched; until then the outline stands
+    // in at its estimated width, and the true width replaces both when it lands.
+    this._dressGhost(descriptorId, rec || opts.fromRec || null, opts.fresh).then((w) => {
+      if (w && this._carryingModule === descriptorId) { wmm = w; track(lastX, lastY); }
+    });
     document.body.classList.add('grabbing-module');
     let slot = null;   // { row, xOrder } — where a drop would put it, recomputed as the pointer moves
-    let lastX = 0, lastY = 0;
+    let lastX = opts.atX || 0, lastY = opts.atY || 0;
+
+    // WHICH ROW IT IS IN, by where MOST OF THE MODULE is — not by where the pointer is. The title strip
+    // is at the module's top, so a hand there sits within a few millimetres of the row above: judging by
+    // the pointer sent a module into its neighbour on the smallest movement, which is no way to decide
+    // something you did not ask for.
+    const rowUnder = (top, bottom) => {
+      let best = 0, bestOverlap = -Infinity;
+      for (let i = 0; i < this._rowEls.length; i++) {
+        const r = this._rowEls[i].getBoundingClientRect();
+        const overlap = Math.min(bottom, r.bottom) - Math.max(top, r.top);
+        if (overlap > bestOverlap) { bestOverlap = overlap; best = i; }
+      }
+      return best;
+    };
 
     const track = (clientX, clientY) => {
       lastX = clientX; lastY = clientY;
-      const row = this._rowFromY(clientY);
-      const mm = this._clientToMm(clientX, clientY);
-      slot = { row, xOrder: this._dropOrderX(row, this.page, mm.x) };
-      const s = this.pxPerMm;
+      const sz = this.pxPerMm * this.zoom;
+      const w = wmm * sz, h = PANEL_H_MM * sz;
+      const left = clientX - frac.x * w, top = clientY - frac.y * h;
+      // FREE FOLLOWING. The module goes exactly where your hand goes — off the end of a row, between
+      // rows, over the tab bar — and nothing snaps until you let go. What tells you where it will land
+      // is the insertion line, not the module jumping about.
       ghost.style.display = 'block';
-      ghost.style.left = (this._packedXAt(row, this.page, mm.x) * s) + 'px';
-      ghost.style.width = (wmm * s) + 'px';
-      ghost.style.height = (PANEL_H_MM * s) + 'px';
-      this._rowEls[row].appendChild(ghost);
+      ghost.style.left = Math.round(left) + 'px';
+      ghost.style.top = Math.round(top) + 'px';
+      ghost.style.width = Math.round(w) + 'px';
+      ghost.style.height = Math.round(h) + 'px';
+      if (rec && !lifted) {
+        if (Math.hypot(clientX - (opts.atX || clientX), clientY - (opts.atY || clientY)) > LIFT_PX) lift();
+        else { const m0 = this._ensureInsertMark(); m0.style.display = 'none'; slot = null; return; }
+      }
+      const row = rowUnder(top, top + h);
+      const rRect = this._rowEls[row].getBoundingClientRect();
+      const mmX = (left - rRect.left) / sz;   // the module's own left edge, in the row's millimetres
+      slot = { row, xOrder: this._dropOrderX(row, this.page, mmX), freeMm: mmX };
+      const mark = this._ensureInsertMark();
+      mark.style.display = 'block';
+      mark.style.left = Math.round(rRect.left + this._packedXAt(row, this.page, mmX) * sz) + 'px';
+      mark.style.top = Math.round(rRect.top) + 'px';
+      mark.style.height = Math.round(h) + 'px';
     };
 
     let placed = false;
@@ -8038,21 +8152,48 @@ export class Rack {
       document.removeEventListener('contextmenu', onCtx, true);
       document.removeEventListener('keydown', onKey, true);
       this._undressGhost();
+      const mark = this._ensureInsertMark(); mark.style.display = 'none';
       document.body.classList.remove('grabbing-module');
-      if (onDone) onDone(placed);
+      // Abandoned with a module in hand: it goes back exactly where it came from, page and all.
+      if (rec && !placed && lifted) {
+        rec.lifted = false; rec.el.style.display = '';
+        this._placeAtIndex(rec.key, home.row, home.page, home.index);
+      }
+      if (opts.onDone) opts.onDone(placed);
     };
 
     const drop = async () => {
       const at = slot;
+      // Picked up and put straight back down without moving: it never left, so there is nothing to do.
+      if (!at || (rec && !lifted)) { finish(); return; }
       placed = true;
+      if (rec) {
+        rec.lifted = false;
+        rec.el.style.display = '';
+        // ...and it lands on the page you are LOOKING at, which is how a module crosses pages at all:
+        // pick it up here, click a tab, put it down there.
+        rec.page = this.page;
+        finish();
+        // IT STARTS WHERE YOUR HAND LET GO and eases from there into its slot — so a module dropped
+        // past the end of a row is seen to travel back and nestle against the last one, rather than
+        // appearing there. The element joins its row first, or that slide would begin from wherever it
+        // happened to be sitting in the row it came from.
+        // The ELEMENT joins the target row; the RECORD does not — _moveModule has to find it in the row
+        // it came from to take it out of that one's list, and setting rec.row here left it in both.
+        if (rec.el.parentElement !== this._rowEls[at.row]) this._rowEls[at.row].appendChild(rec.el);
+        rec.x = at.freeMm;
+        this._placeEl(rec);
+        this._settleLayout(() => this._moveModule(rec, at.row, at.xOrder));
+        this._recordMove(rec, home);
+        return;
+      }
       finish();
-      if (!at) return;
-      const rec = await this._addModuleWithUndo(descriptorId, at.row, at.xOrder);
-      if (!rec) return;
+      const made = await this._addModuleWithUndo(descriptorId, at.row, at.xOrder);
+      if (!made) return;
       // A DUPLICATE arrives carrying the original's settings. Its cables do not come with it: an
       // input already fed by the module you copied is not what anyone means by a second one.
-      if (opts.params) for (const [id, v] of opts.params) this._setParam(rec, id, v);
-      this._panToModule(rec);
+      if (opts.params) for (const [id, v] of opts.params) this._setParam(made, id, v);
+      this._panToModule(made);
     };
 
     // A press may be a DROP (a click) or a PAN (a drag on the rack): decided on release, exactly as a
@@ -8080,11 +8221,11 @@ export class Rack {
     document.addEventListener('pointerup', onUp, true);
     document.addEventListener('contextmenu', onCtx, true);
     document.addEventListener('keydown', onKey, true);
-    // The view can move with a module in hand, and the ghost is anchored in rack space — so re-aim it
-    // at the last pointer position whenever the transform changes.
+    // The view can move with a module in hand — the module itself is pinned to the pointer, but the
+    // insertion line is anchored in the rack, so re-aim both whenever the transform changes.
     this._viewMovedHook = () => track(lastX, lastY);
-    const c = this.container.getBoundingClientRect();
-    track(c.left + c.width / 2, c.top + c.height / 2);
+    if (!opts.atX && !opts.atY) { const c = this.container.getBoundingClientRect(); lastX = c.left + c.width / 2; lastY = c.top + c.height / 2; }
+    track(lastX, lastY);
   }
 
   // ---- the two title-bar modes ----
@@ -8135,7 +8276,14 @@ export class Rack {
       this._endModuleMode();
       // One duplicate per invocation: you asked for A copy, and staying armed would make the next
       // click somewhere harmless into another module you did not ask for.
-      this.startCarryModule(rec.descriptorId, null, { params, fromRec: opts.withSettings ? rec : null, fresh: !opts.withSettings });
+      // The copy appears held at the point on the original you clicked, so it comes off the module
+      // rather than out of nowhere.
+      const rr = rec.el.getBoundingClientRect();
+      this.startCarryModule(rec.descriptorId, null, {
+        params, fromRec: opts.withSettings ? rec : null, fresh: !opts.withSettings,
+        atX: ev.clientX, atY: ev.clientY,
+        offFrac: { x: (ev.clientX - rr.left) / (rr.width || 1), y: (ev.clientY - rr.top) / (rr.height || 1) },
+      });
     };
     const onCtx = (ev) => { ev.preventDefault(); ev.stopPropagation(); this._endModuleMode(); };
     const onKey = (ev) => { if (ev.key === 'Escape') { ev.preventDefault(); this._endModuleMode(); } };

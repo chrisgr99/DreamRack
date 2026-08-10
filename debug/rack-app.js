@@ -1071,7 +1071,7 @@ async function boot() {
     types: MODULE_TYPES,
     isTaken: (id) => rack.hasModule(id),
     isDark: () => rack.isDark(),
-    onChoose: (id, done) => rack.startCarryModule(id, done),
+    onChoose: (id, at, done) => rack.startCarryModule(id, done, at),
   });
   rack.onLibrary = () => library.show();
   libraryTheme = library.refreshTheme;

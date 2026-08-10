@@ -273,14 +273,24 @@ export function createLibrary(opts = {}) {
       // Choosing a module puts it in your HAND, not on the rack — so the library gets out of the way
       // and comes back when you have placed it. It floats over the rack, and the place you want to
       // drop is as likely as not underneath it.
-      card.addEventListener('click', () => {
+      card.addEventListener('click', (ev) => {
         if (card.classList.contains('taken')) return;
+        // WHERE ON THE MODULE YOU TOUCHED IT, as a fraction of its drawing — the module then hangs from
+        // that same point on its real face, whatever size the thumbnails are set to. On the rack you
+        // take a module by its title strip; here any part of it is fair, so the grab point has to come
+        // from the click. The NAME sits below the drawing, so a click there is clamped into the box
+        // rather than special-cased: it holds the module by its bottom edge at that position across.
+        const art = card.querySelector('canvas, .lib-plain');
+        const r = art ? art.getBoundingClientRect() : card.getBoundingClientRect();
+        const clamp01 = (v) => Math.max(0, Math.min(1, v));
+        const at = { atX: ev.clientX, atY: ev.clientY,
+          offFrac: { x: clamp01((ev.clientX - r.left) / (r.width || 1)), y: clamp01((ev.clientY - r.top) / (r.height || 1)) } };
         hide();
         // THE LIBRARY WAITS BEFORE COMING BACK. A module that lands and is instantly covered by the
         // window you chose it from is a placement you never got to see. Only after a real drop,
         // though: cancelling placed nothing, so there is nothing to look at and it returns at once.
         // Any later show/hide cancels the pending return, so it can never ambush you.
-        onChoose(t.descriptorId, (placed) => {
+        onChoose(t.descriptorId, at, (placed) => {
           clearTimeout(backTimer);
           if (!placed) { show(); return; }
           backTimer = setTimeout(() => { backTimer = null; show(); }, RETURN_MS);
