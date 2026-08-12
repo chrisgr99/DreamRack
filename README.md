@@ -2,7 +2,7 @@
 
 DreamRack is a modular synthesizer that runs in a web browser, built on Web Audio. You place modules on a rack, wire their jacks with virtual cables, turn the knobs, and listen — the feel of a hardware modular, with a few things a screen can do that hardware can't.
 
-More than that, it's an exploration. It began as an attempt to build the modular I've always wished I could patch on, and to try out ideas for making one easier to use and more powerful. It's a personal project: free, with source code available on GitHub, for non-commercial use with attribution, and shared in the hope that others enjoy it as much as I do. Your mileage may vary. 😌
+More than that, it's an exploration. It began as an attempt to build the modular I've always wished I could patch on, and to try out ideas for making one easier to use and more powerful. It's a personal project: free software, source on GitHub under the GNU General Public License v3, and shared in the hope that others enjoy it as much as I do. Your mileage may vary. 😌
 
 ## My goals — the dream list
 
@@ -41,3 +41,14 @@ A desktop version, built on Electron, is fully running now. A packaged, one-clic
 It works in most browsers — Chrome, Edge, Firefox, or Safari. Saving and loading patches as files relies on the browser's File System Access feature, which today is only in Chrome and Edge, so use one of those if you want to keep your patches; everything else works the same everywhere.
 
 **One caveat — turn off page-recolouring extensions.** If you use an add-on that changes how pages look (Dark Reader, or any dark-mode or colour-adjusting extension), disable it for DreamRack. The app has its own light and dark modes, and these extensions distort the panels and lettering — the most likely culprit if anything ever looks wrong.
+
+## License
+
+DreamRack is free software under the **GNU General Public License, version 3** — see [LICENSE](LICENSE).
+
+Version 3 only, not "or later". Some of the DSP here is derived from VCV Rack plugins, and
+[FrozenWasteland](https://github.com/almostEric/FrozenWasteland) is GPL-3.0-only — so version 3 is
+the licence the combined work has to carry. [Fundamental](https://github.com/VCVRack/Fundamental)
+is GPL-3.0-or-later, which is satisfied by using it under version 3.
+
+A module whose DSP is derived from either names its source in that module's folder.
