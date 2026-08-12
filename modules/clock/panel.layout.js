@@ -48,7 +48,11 @@ const clockRow = (n) => row([
   button('lamp' + n, null, { r: 1.15, kind: 'orange' }),
   knob('swing' + n, 'SWING ' + n, { size: KNOB_R, tint: 'orange' }),
   knob('pw' + n, 'PW ' + n, { size: KNOB_R, tint: 'green' }),
-  knob('delay' + n, 'DELAY ' + n, { size: KNOB_R, tint: 'purple' }),
+  // THE DELAY IS EIGHT NAMED FRACTIONS — 0, a sixteenth, an eighth, a quarter, a third, a half, two
+  // thirds, three quarters — and a knob pointing at one of eight things is a position you have to
+  // interpret. The window says which, and opens the whole list when you scroll it. It is the same
+  // trade the ratios made: the number IS the setting, so the number is the control.
+  readout('delay' + n, 'DELAY ' + n, { widest: '1/16', pad: 0.5, width: 8.48, value: '0', menu: true }),
   jack('clk' + n + 'Out', 'CLK ' + n),
 ]);
 

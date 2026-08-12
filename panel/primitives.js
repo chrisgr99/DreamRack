@@ -768,15 +768,29 @@ function stepButton(id, cx, cy, { steps = [], orientation = 'v', btnR = 2.2, led
 // millimetres across, which is a hard target under magnification; the pad is the size of a jack.
 const READOUT_H = 6.2;                 // window height; the digits fill most of it
 const READOUT_CH = 2.55;               // width per character, at the size the digits are set
-const READOUT_PAD = 1.5;               // left and right padding inside the window
+// LEFT AND RIGHT PADDING INSIDE THE WINDOW. A millimetre and a half each side suits a window sized by
+// a character count, where the count is already generous and the air is what stops the digits touching
+// the frame. A window measured to an exact string can spend less: `pad` is how much, per control.
+const READOUT_PAD = 1.5;
 const READOUT_ARROW_GAP = 1.1;         // window edge to the chevrons
 const READOUT_GREEN = '#4ee37a';
 
-function readout(id, cx, cy, { chars = 3, value = '', label: lb = null, theme = {}, menu = false, digits = READOUT_GREEN } = {}) {
+function readout(id, cx, cy, { chars = 3, value = '', label: lb = null, theme = {}, menu = false, digits = READOUT_GREEN, widest = null, pad = READOUT_PAD, width = 0 } = {}) {
   // This file rounds inline everywhere else; one local helper keeps the path data readable.
   const r2 = (v) => (+v).toFixed(2);
-  const w = +(chars * READOUT_CH + READOUT_PAD * 2).toFixed(2);
   const h = READOUT_H;
+  // MEASURED, WHEN THE WIDEST VALUE IS KNOWN. A character count has to assume every character is as
+  // wide as the widest one, which for digits is nearly true and for '1/16' is not — a slash and two
+  // ones are half the width of two eights, so the delay windows were a third wider than anything they
+  // would ever hold. `widest` is the longest string the control can show; the window is set to it.
+  // A WIDTH ASKED FOR, or a width measured. Given one, the digits are set to whatever size makes the
+  // widest value fit it — because a window told to be eight and a half millimetres wide and left with
+  // type sized for ten is a window with its number hanging out of both ends. Text width is linear in
+  // size, so the size that fits is a division.
+  const digitH = width && widest
+    ? Math.min(h * 0.78, (width - pad * 2) / textWidth(widest, 1))
+    : h * 0.78;
+  const w = +(width || (widest ? textWidth(widest, digitH) + pad * 2 : chars * READOUT_CH + pad * 2)).toFixed(2);
   const x = +(cx - w / 2).toFixed(2), y = +(cy - h / 2).toFixed(2);
   const dark = (theme && theme.face || '').toLowerCase() !== '#cfcfcf';
   const field = dark ? '#101216' : '#15171c';   // the window is a dark field in both themes, as a display is
@@ -784,7 +798,7 @@ function readout(id, cx, cy, { chars = 3, value = '', label: lb = null, theme = 
   g += `\n    <rect x="${x}" y="${y}" width="${w}" height="${h}" rx="1.2" fill="${field}" stroke="${theme.frame || '#8a8a90'}" stroke-width="0.3"/>`;
   // The digits. data-wcoast-role="readout-text" is what the loader repaints; the value baked in here
   // is only what the SVG shows before anything is bound.
-  g += `\n    <text x="${r2(cx)}" y="${r2(cy + h * 0.31)}" data-wcoast-role="readout-text" font-size="${r2(h * 0.78)}" font-weight="700" fill="${digits}" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">${value}</text>`;
+  g += `\n    <text x="${r2(cx)}" y="${r2(cy + h * 0.31)}" data-wcoast-role="readout-text" font-size="${r2(digitH)}" font-weight="700" fill="${digits}" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">${value}</text>`;
   // The chevrons, outside the right edge.
   // Bigger and further apart than they first were: at working size two 0.85mm chevrons half a
   // millimetre apart read as one small glyph rather than as up and down.

@@ -9243,17 +9243,29 @@ export class Rack {
     // in any colour and the list has to be the same one, or the value appears to change colour on its
     // way into the control.
     const GREEN = (b.text && b.text.getAttribute('fill')) || '#4ee37a';
-    const digitPx = Math.max(9, Math.round(box.height * 0.78));
+    // THE WINDOW'S OWN DIGIT SIZE, read off its text rather than guessed from its height — a window
+    // sized to an exact string sets its type to fit, so the height no longer implies the size.
+    const svgPx = b.text ? parseFloat(getComputedStyle(b.text).fontSize) : 0;
+    const digitPx = Math.max(9, Math.round(svgPx || box.height * 0.78));
     // THE WINDOW'S OWN STROKE, read off the panel rather than named again here, so a theme that
     // repaints the faceplate repaints the list and its mark with it. It draws both the list's border
     // and the rule round the value on the line.
     const strokeAttr = win.getAttribute('stroke') || getComputedStyle(win).stroke;
     const markEdge = (strokeAttr && strokeAttr !== 'none') ? strokeAttr : '';
 
+    // HIGHEST AT THE TOP. A value list is a vertical axis, and on a vertical axis more is up — a fader,
+    // a meter, a knob's own sweep. Drawn from the minimum down, the values you were raising the control
+    // towards sat BELOW the line, so the whole thing read as though down meant more.
+    //
+    // The list is drawn in that order; nothing else knows about it. `vals` stays ascending, because it
+    // is what the value at an index MEANS, and stepping through it is arithmetic that should not have
+    // to think about which way a column happens to be printed. rowOf() is the one place the two meet.
+    const shown = vals.slice().reverse();
+    const rowOf = (i) => vals.length - 1 - i;
     // EVERY VALUE IN THE READOUT'S GREEN, at the readout's size. The list is not a menu with one row
     // dressed up as the control — it is a column of the control's own values, and the one you will get
     // is the one your pointer is beside. Position IS the indication, which is what a scale is.
-    const rows = vals.map((v) => {
+    const rows = shown.map((v) => {
       const item = document.createElement('div');
       item.className = 'rack-menu-item';
       item.style.textAlign = 'center';    // the numbers stack under one another, over the window's own
@@ -9277,7 +9289,7 @@ export class Rack {
     const midY = box.top + box.height / 2;
     const place = () => {
       const first = rows[0].offsetTop;   // the padding above the first row, so the line lands on the ROW
-      menu.style.top = Math.round(midY - first - (idx + 0.5) * rowH) + 'px';
+      menu.style.top = Math.round(midY - first - (rowOf(idx) + 0.5) * rowH) + 'px';
     };
     // A THIN RULE ROUND THE ONE YOU WILL GET, and nothing else — no fill, no accent, no change of
     // colour, because every row is already the colour the value will be. IN THE LIST'S OWN EDGE
@@ -9285,7 +9297,7 @@ export class Rack {
     // than as a second green thing competing with the numbers inside it. Drawn INSET, so it takes no
     // space and cannot shift the row it is marking off the line.
     const mark = () => {
-      for (let k = 0; k < rows.length; k++) rows[k].style.boxShadow = k === idx ? 'inset 0 0 0 1px ' + markEdge : '';
+      for (let k = 0; k < rows.length; k++) rows[k].style.boxShadow = k === rowOf(idx) ? 'inset 0 0 0 1px ' + markEdge : '';
     };
     mark();
     // OVER THE CONTROL, NOT BESIDE IT. The row on the line is already level with the window and set in
@@ -9311,17 +9323,20 @@ export class Rack {
     place();
     menu.style.visibility = '';
 
-    // The window shows where you are while you are moving; the engine is told when you settle — which
-    // is also when the list goes. Every notch through sixty-nine ratios would be sixty-nine settings
-    // and sixty-nine undo steps for one decision, so the number under the list is a preview and the
-    // value is committed once, on the way out.
+    // EVERY VALUE YOU PASS IS SET, as it is passed. The list was a preview that only landed when you
+    // settled, which was the wrong trade: this is a knob's scale, and a knob you cannot hear until you
+    // let go of it is not one you can tune by ear. Raising the tempo should raise the tempo.
+    //
+    // The reason for waiting was to spend one undo step on a decision rather than sixty-nine — and
+    // parameter changes are not on the undo stack at all, so it was buying nothing. If they ever are,
+    // the coalescing belongs there, in one place, not in each control that might move quickly.
     const REST_MS = 3000;
-    const preview = () => { if (b.text) b.text.textContent = readoutText(b, vals[idx]); };
-    const commit = () => {
-      clearTimeout(this._scrollerCommit); this._scrollerCommit = null;
+    const apply = () => {
       const v = vals[idx];
       if (String(v) !== String(rec.values.get(b.id))) this._setParam(rec, b.id, v);
     };
+    // Nothing is left owing when the list goes; kept so the close path has one name to call.
+    const commit = () => { clearTimeout(this._scrollerCommit); this._scrollerCommit = null; apply(); };
     this._scrollerCommitNow = commit;
 
     // HOW MANY ROWS ONE NOTCH IS WORTH, from the param. Six for a ratio: one turn of the original's
@@ -9334,7 +9349,7 @@ export class Rack {
     const step = (dir) => {
       const ni = Math.max(0, Math.min(vals.length - 1, idx + dir));
       if (ni === idx) return;
-      idx = ni; mark(); place(); preview();
+      idx = ni; mark(); place(); apply();
     };
     this._scrollerWheel = (e) => {
       if (e.ctrlKey) return;

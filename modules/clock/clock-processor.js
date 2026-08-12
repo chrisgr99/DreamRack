@@ -80,7 +80,27 @@ class Clock {
   // SWING LENGTHENS ONE PERIOD AND SHORTENS THE NEXT by the same amount, so a pair of pulses still
   // occupies the time two straight ones would. That is what makes swing a feel rather than a tempo
   // change, and it is why the pair is the unit rather than the beat.
-  get effLength() { return this.length * (this.odd ? 1 - this.swing : 1 + this.swing); }
+  //
+  // ONLY THE MASTER SWINGS ITS PERIOD, because only the master owns one. A sub-clock's frame belongs
+  // to the master — it runs a whole number of periods inside it and then waits in the guard region for
+  // the master to come round, which is the entire anti-drift mechanism. Stretching a sub-clock's
+  // period fought that: at ×1 the lengthened period never reached the guard before the master reset,
+  // so the channel missed a frame altogether and ran at half speed, and at ×2 and ×4 the pairs landed
+  // in the wrong order. A sub-clock swings by DISPLACEMENT instead — see isHigh — which moves the pulse
+  // within a frame it is not allowed to resize, and comes to the same feel by the only road open to it.
+  get effLength() { return this.sync ? this.length : this.length * (this.odd ? 1 - this.swing : 1 + this.swing); }
+  // How far into its period this pulse is dragged: every second one, by the swing's share of it. Zero
+  // for the master, which swings by length instead.
+  //
+  // NEGATIVE SWING DRAGS THE OTHER ONE. A displacement cannot be negative — a pulse cannot start before
+  // its own period does, and asking for it simply put every pulse at zero, which is no swing at all.
+  // Dragging the even pulse instead is the same shape seen from the other foot, and is what the knob
+  // below the middle has always meant.
+  get swingOffset() {
+    if (!this.sync || !this.swing) return 0;
+    const late = this.swing > 0 ? this.odd : !this.odd;
+    return late ? this.length * Math.abs(this.swing) : 0;
+  }
   setup(length, iterations) { this.length = length; this.iterations = iterations; }
 
   advance(sampleTime) {
@@ -92,7 +112,11 @@ class Clock {
     // THE SYNC WAIT. On its last iteration, once inside the guard region, a sub-clock stops advancing
     // its frame and simply waits for the master to reset. This is the whole mechanism.
     if (this.sync && this.iterations === 1 && this.step > this.effLength - GUARD) {
-      if (this.sync.isReset()) this.reset();
+      // THE WAIT ENDS A PERIOD TOO. This is the last iteration's boundary — it simply arrives when the
+      // master says so rather than when the count runs out — so the swing phase has to turn here as it
+      // does at any other wrap. Without it a sub-clock at ×1 never turned at all (its every period ends
+      // this way), so every pulse was the same one of the pair and the swing knob did nothing.
+      if (this.sync.isReset()) { this.odd = !this.odd; this.reset(); }
       return;
     }
     if (this.step >= this.effLength) {
@@ -105,7 +129,17 @@ class Clock {
       if (this.iterations <= 0) this.reset(this.sync ? 0 : this.step);
     }
   }
-  isHigh() { return this.delayLeft <= 0 && this.step >= 0 && this.step < this.effLength * this.pw; }
+  isHigh() {
+    if (this.delayLeft > 0 || this.step < 0) return false;
+    const off = this.swingOffset;
+    // A DRAGGED PULSE STILL HAS TO FALL before its frame ends. Displaced by a quarter of the period at
+    // full swing and held for half of one, its gate ran to the very end of the frame and touched the
+    // start of the next — two pulses with no edge between them, which reads as one long one and halved
+    // the apparent rate. The tail is trimmed so there is always a moment of low: what swing costs is
+    // gate length, never a pulse.
+    const end = Math.min(off + this.effLength * this.pw, this.effLength - Math.max(0.001, this.effLength * 0.02));
+    return this.step >= off && this.step < end;
+  }
   stretch(factor) { if (this.step !== -1) this.step *= factor; this.length *= factor; }
 }
 

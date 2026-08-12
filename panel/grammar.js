@@ -175,6 +175,7 @@ export const display = (id, w, h) => ({ kind: 'display', id, w, h, label: null }
 // before anything is bound — the param's default, in words.
 export const readout = (id, label, opts = {}) =>
   ({ kind: 'readout', id, label, chars: opts.chars || 3, value: opts.value || '', menu: !!opts.menu, digits: opts.digits || null,
+    widest: opts.widest || null, pad: opts.pad == null ? null : opts.pad, width: opts.width || 0,
     side: opts.side || null, labelSize: opts.labelSize || null });
 
 // Free space in a row, in mm, for when even gaps are not what you want.
@@ -300,7 +301,10 @@ function extent(c) {
   return { l: w, r: w };
 }
 
-function readoutHalf(c) { return (c.chars * READOUT_CH + READOUT_PAD * 2) / 2; }
+// The same width the primitive draws — measured off the widest value when the layout names it.
+function readoutHalf(c) { const pad = c.pad == null ? READOUT_PAD : c.pad;
+  if (c.width) return c.width / 2;
+  return (c.widest ? textWidth(c.widest, READOUT_H * 0.78) + pad * 2 : c.chars * READOUT_CH + pad * 2) / 2; }
 
 function halfWidth(c) {
   if (c.kind === 'readout') return readoutHalf(c);
@@ -456,7 +460,7 @@ function emit(items, c, x, y) {
       } });
       break;
     case 'readout':
-      items.push({ t: 'readout', id: c.id, x, y, opts: { chars: c.chars, value: c.value, ...(c.menu ? { menu: true } : {}), ...(c.digits ? { digits: c.digits } : {}), ...(lab ? { label: lab } : {}) } });
+      items.push({ t: 'readout', id: c.id, x, y, opts: { chars: c.chars, value: c.value, ...(c.menu ? { menu: true } : {}), ...(c.digits ? { digits: c.digits } : {}), ...(c.widest ? { widest: c.widest } : {}), ...(c.pad == null ? {} : { pad: c.pad }), ...(c.width ? { width: c.width } : {}), ...(lab ? { label: lab } : {}) } });
       break;
     case 'display': {
       // A recessed well: the frame line, and a group the host fills. The group carries the id so the

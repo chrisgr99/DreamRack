@@ -219,7 +219,18 @@ export async function restore(obj, rack, mixer, opts = {}) {
   const idToKey = new Map([[mixer.key, mixer.key]]);
   if (rack.restorePages) rack.restorePages(obj.pages);
   const legacy = !!obj.__sortOntoPages;   // set by the 'pages' migration; see MIGRATIONS
-  for (const m of obj.modules || []) {
+  // RECREATED IN THE ORDER THEY STAND IN, not the order they were made in. A module's saved x is an
+  // ORDERING within its row, and the row PACKS — every arrival rewrites everyone's x to the packed
+  // positions of whoever is present so far. Restoring in file order therefore compares each saved x
+  // against a scale that has been shrinking as the row filled, so anything created after it had been
+  // moved landed a slot or two off: rearrange a rack, restart, and it came back not as you left it but
+  // as some blend of that and the order you built it in.
+  //
+  // Sorting a COPY, and only for placement: the wiring is remapped by id, which does not care what
+  // order anything was made in.
+  const inOrder = (obj.modules || []).slice().sort((a2, b2) =>
+    (a2.page || 'a1').localeCompare(b2.page || 'a1') || (a2.row - b2.row) || (a2.x - b2.x));
+  for (const m of inOrder) {
     const page = m.page || (legacy ? homePage(rack, m.type) : 'a1');
     const rec = await rack.addModule(m.type, m.row, m.x, opts.keepKeys ? { page, key: m.id } : { page });
     if (rec) { idToKey.set(m.id, rec.key); if (opts.keepKeys && rack.reserveKey) rack.reserveKey(rec.key); }
