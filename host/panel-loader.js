@@ -688,13 +688,11 @@ export function attachControlInteraction(binding, hooks, opts = {}) {
   binding.readValue = hooks.get;   // the hover readout asks for the number a second later
   if (hooks.values) binding.values = hooks.values;   // ...and the module's other values, for the
                                                      // parameters whose number depends on a switch
-  if (binding.kind === 'readout') {
-    // DOUBLE CLICK RESTORES THE DEFAULT, as it does on every knob. A window whose values you reach by
-    // scrolling can be a long way from where it started, and walking back to a hundred and twenty by
-    // hand is not the point of a default.
-    //
-    // TIMED ON THE PRESS rather than taken from a dblclick event: the press handler below stops the
-    // event so the panel does not drag under it, and a stopped press does not always become a click.
+  if (binding.kind === 'readout' && !binding.menu) {
+    // DOUBLE CLICK RESTORES THE DEFAULT, as it does on every knob. (A menu readout has its own, in the
+    // branch below, because there it has to race the menu.) Timed on the press rather than taken from
+    // a dblclick event: the press handler stops the event so the panel does not drag under it, and a
+    // stopped press does not always become a click.
     let lastDown = 0;
     el.addEventListener('pointerdown', (e) => {
       const t = e.timeStamp || 0;
@@ -703,25 +701,52 @@ export function attachControlInteraction(binding, hooks, opts = {}) {
     }, true);
   }
   if (binding.kind === 'readout' && binding.menu && hooks.menu) {
-    // A MENU READOUT. Some settings have more values than a wheel is worth walking through — a clock
-    // ratio has sixty-nine, and reaching ×32 from ÷32 is sixty-odd notches during which the number
-    // under your hand is never the one you want. So the window LISTS them: click it or scroll it and
-    // the list opens with the current value marked, you pick one, it closes.
+    // A MENU READOUT: click the window and every value it can take opens over it; click one to choose.
+    // An ordinary pop-up menu, which is the gesture nobody has to be taught.
     //
-    // SCROLL, AND ONLY SCROLL — the gesture the knob this replaced answered to. The list that appears
-    // is not a chooser you click; it is the knob's scale, shown beside the window for as long as your
-    // hand is there. A click on the window does nothing, deliberately: a lit rectangle that responded
-    // to a click would be the button it is drawn not to be.
+    // AND THE WHEEL NUDGES IT, on the controls that ask for it — `listStep` in the descriptor. A menu
+    // is the right way to reach ×32 from ÷32; it is a poor way to go from 119 to 120, which is a nudge
+    // and wants a nudge's gesture. So a tempo answers to both, and a ratio to neither, and which is
+    // which is a property of the setting rather than a rule about windows.
     //
-    // THE OPENING NOTCH GOES WITH IT. The list listens on the document once it is up, so the notch that
-    // opened it has already passed that stage — without handing it over, the first notch of a flick
-    // opens the list without moving it and the value trails your hand by one from then on.
-    el.addEventListener('pointerdown', (e) => { e.stopPropagation(); e.preventDefault(); });
-    el.addEventListener('wheel', (e) => {
-      if (e.ctrlKey) return;   // ctrl+wheel is the rack pinch-zoom
-      e.preventDefault(); e.stopPropagation();
-      hooks.menu(e);
-    }, { passive: false });
+    // THE MENU WAITS FOR THE DOUBLE-CLICK WINDOW TO PASS. Two presses mean "back to the default", and
+    // a menu that opened on the first of them would be standing in the way of the second — so the open
+    // is scheduled and a second press cancels it. The cost is a fifth of a second before the list
+    // appears, which is the price of the same window meaning two things.
+    const DBL_MS = 260;
+    let lastDown = 0, openTimer = 0;
+    el.style.cursor = 'pointer';
+    el.addEventListener('pointerdown', (e) => {
+      e.stopPropagation(); e.preventDefault();
+      const t = e.timeStamp || 0;
+      if (t - lastDown < DBL_MS) {
+        clearTimeout(openTimer); openTimer = 0; lastDown = 0;
+        if (binding.meta.default !== undefined) hooks.set(binding.meta.default);
+        return;
+      }
+      lastDown = t;
+      clearTimeout(openTimer);
+      openTimer = setTimeout(() => { openTimer = 0; hooks.menu(); }, DBL_MS);
+    });
+    if (binding.meta.listStep) {
+      const min = binding.meta.min, max = binding.meta.max;
+      const THRESH = Math.max(4, (binding.meta.detentThresh || 100) / binding.meta.listStep);
+      let acc = 0;
+      const nudge = (dir) => {
+        const cur = Math.round(Number(hooks.get()));
+        const nv = Math.max(min, Math.min(max, cur + dir));
+        if (nv !== cur) hooks.set(nv);
+      };
+      el.addEventListener('wheel', (e) => {
+        if (e.ctrlKey) return;   // ctrl+wheel is the rack pinch-zoom
+        e.preventDefault(); e.stopPropagation();
+        const d = e.deltaMode === 1 ? e.deltaY * 16 : e.deltaMode === 2 ? e.deltaY * 400 : e.deltaY;
+        acc += -d;
+        let guard = 0;
+        while (acc >= THRESH && guard++ < 16) { acc -= THRESH; nudge(+1); }
+        while (acc <= -THRESH && guard++ < 16) { acc += THRESH; nudge(-1); }
+      }, { passive: false });
+    }
     return;
   }
   if (binding.kind === 'readout') {

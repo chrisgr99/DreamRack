@@ -86,6 +86,8 @@ export default {
     // something you are told rather than something you set, and the list will not open.
     { id: 'bpm', name: 'Tempo', section: 'master', curve: 'detent', min: 30, max: 300, default: 120, unit: 'BPM',
       listRate: 4, overriddenBy: 'bpmIn', glideMs: 0,
+      // listStep: the wheel nudges this one as well as listing it — see attachControlInteraction.
+      listStep: 4,
       // The window and its list print the NUMBER; the unit is painted once on the panel beside them.
       readoutText: (v) => String(Math.round(v)) },
     // A RATIO KNOB HOLDS AN INDEX AND MEANS A MUSICAL FACT. Reading '12' off it tells you nothing —

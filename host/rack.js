@@ -7577,7 +7577,7 @@ export class Rack {
         get: () => rec.values.get(b.id),
         set: (val) => this._setParam(rec, b.id, val),
         values: rec.values,
-        menu: (ev) => this._openValueScroller(rec, b, ev),
+        menu: () => this._openValueList(rec, b),
       }, { hitGrowMm: btnGrow.get(b.id) || 0 });
       b.group.addEventListener('pointerdown', (e) => e.stopPropagation());
       if (b.kind === 'knob' && !b.group.hasAttribute('data-wcoast-port')) {
@@ -9183,26 +9183,25 @@ export class Rack {
 
   // items: { label, action } clickable rows, plus optional { header:true } group
   // labels and optional { checked, dim } for the connect menu's checkmark/dimming.
-  // EVERY VALUE A CONTROL CAN TAKE, BESIDE THE CONTROL, FOR AS LONG AS YOUR HAND IS THERE. Used by
-  // the readouts that list rather than step: the clock's three ratios and Marbles' loop length.
+  // EVERY VALUE A CONTROL CAN TAKE, AS A POP-UP MENU. Used by the readouts that list rather than
+  // step: the clock's ratios, delays, tempo and ppqn, and Marbles' loop length.
   //
-  // IT IS THE KNOB'S SCALE, NOT A CHOOSER. Scroll on the window and the list appears with the current
-  // value level with the window, the rest running up and down from it — off the top or bottom of the
-  // screen if that is where they fall, because the row that must be in the right place is the one you
-  // are on, not the first or the last. Keep scrolling and the whole list slides past that line. Move
-  // away and it goes. There is nothing to click: this is the gesture the knob answered to, given the
-  // one thing the knob could not do, which is show you what is coming.
+  // AN ORDINARY MENU, deliberately. Click the window, click a value, done — the gesture nobody has to
+  // be taught and the one every other list in this app uses. It was a scrolled scale for a while,
+  // which reads beautifully and asks you to know it is there.
   //
-  // THE WINDOW UPDATES AS YOU SCROLL, but the ENGINE waits. Every notch through sixty-nine ratios
-  // would be sixty-nine settings and sixty-nine undo steps for one decision, so the number under the
-  // list is a preview and the value is committed once — when you rest, which is also when the list
-  // goes, or when you move away, since where you stopped is what you chose either way.
+  // IT OPENS OVER THE CONTROL, with the row for the current value lying exactly on the window and the
+  // rest running up and down from it — off the screen if that is where they fall, because the row
+  // that must be in the right place is the one you are on, not the first or the last. So the list
+  // opens without anything appearing to move, and what you are choosing between stands where you were
+  // already reading.
   //
   // THE WORDS ARE THE CONTROL'S OWN, through readoutText: the same formatter that paints the window
   // and the hover bubble, so the list cannot call a setting something the panel calls something else.
-  _openValueScroller(rec, b, ev) {
-    if (this._scrollerFor === b) { if (this._scrollerWheel) this._scrollerWheel(ev); return; }
-    this._closeValueScroller();
+  _openValueList(rec, b) {
+    // Clicking the window a second time puts the list away, as pressing an open menu's own title does.
+    if (this._valueListFor === b) { this._closeValueList(); return; }
+    this._closeValueList();
     this._closeMenu();
     const meta = b.meta || {};
     // A CABLE CAN TAKE THE SETTING AWAY. With something patched to the port named by overriddenBy, the
@@ -9271,6 +9270,11 @@ export class Rack {
       item.style.textAlign = 'center';    // the numbers stack under one another, over the window's own
       item.style.padding = '2px 0';       // the full width is for the value — see the list's padding
       item.style.color = GREEN;
+      // NO HOVER FILL. A menu row paints itself in the accent colour when you point at it, which is
+      // right for a list of names and wrong here: the rule is the indicator, and an orange ground
+      // behind a green numeral is a second one arguing with it. Set inline, which beats the rule in
+      // the stylesheet without giving every menu in the app an exception to carry.
+      item.style.background = 'transparent';
       item.style.fontSize = digitPx + 'px';
       item.style.fontWeight = '700';
       item.style.fontFamily = '"Arial Narrow", Helvetica, Arial, sans-serif';
@@ -9279,8 +9283,8 @@ export class Rack {
       return item;
     });
     document.body.appendChild(menu);
-    this._scrollerEl = menu;
-    this._scrollerFor = b;
+    this._valueListEl = menu;
+    this._valueListFor = b;
 
     // LEVEL WITH THE WINDOW'S MIDDLE — not with the pointer. Anchoring on the pointer put the list a few
     // pixels higher or lower depending on where in the window you happened to be, so the same control
@@ -9296,8 +9300,13 @@ export class Rack {
     // COLOUR, which is the window's: the mark then reads as the window drawn around that row rather
     // than as a second green thing competing with the numbers inside it. Drawn INSET, so it takes no
     // space and cannot shift the row it is marking off the line.
-    const mark = () => {
-      for (let k = 0; k < rows.length; k++) rows[k].style.boxShadow = k === rowOf(idx) ? 'inset 0 0 0 1px ' + markEdge : '';
+    // THE RULE FOLLOWS THE POINTER, as a menu's highlight does — it says what a click would choose,
+    // which while you are in the list is the row under your hand and not the one you arrived on. Off
+    // the list it falls back to the current value, so a list you are only looking at still says where
+    // you are. One indicator, not two: the row's own tint went with this, or the eye had to decide
+    // which of them meant "this one".
+    const mark = (k = rowOf(idx)) => {
+      for (let n = 0; n < rows.length; n++) rows[n].style.boxShadow = n === k ? 'inset 0 0 0 1px ' + markEdge : '';
     };
     mark();
     // OVER THE CONTROL, NOT BESIDE IT. The row on the line is already level with the window and set in
@@ -9323,77 +9332,54 @@ export class Rack {
     place();
     menu.style.visibility = '';
 
-    // EVERY VALUE YOU PASS IS SET, as it is passed. The list was a preview that only landed when you
-    // settled, which was the wrong trade: this is a knob's scale, and a knob you cannot hear until you
-    // let go of it is not one you can tune by ear. Raising the tempo should raise the tempo.
-    //
-    // The reason for waiting was to spend one undo step on a decision rather than sixty-nine — and
-    // parameter changes are not on the undo stack at all, so it was buying nothing. If they ever are,
-    // the coalescing belongs there, in one place, not in each control that might move quickly.
-    const REST_MS = 3000;
+    // CHOOSING SETS IT, at once and only then. A row's click is the whole gesture: there is no preview
+    // to reconcile and nothing owing when the list closes.
     const apply = () => {
       const v = vals[idx];
       if (String(v) !== String(rec.values.get(b.id))) this._setParam(rec, b.id, v);
     };
-    // Nothing is left owing when the list goes; kept so the close path has one name to call.
-    const commit = () => { clearTimeout(this._scrollerCommit); this._scrollerCommit = null; apply(); };
-    this._scrollerCommitNow = commit;
 
     // HOW MANY ROWS ONE NOTCH IS WORTH, from the param. Six for a ratio: one turn of the original's
     // knob covers all sixty-nine and a notch worth one value made that a chore, and this is a list you
     // fly through to a region and then settle in. One for a tempo, because landing on a hundred and
     // twenty-one has to be possible and no rate that skips can do it.
-    const RATE = meta.listRate || 6;
-    const THRESH = Math.max(4, (meta.detentThresh || 100) / RATE);
-    let acc = 0;
-    const step = (dir) => {
-      const ni = Math.max(0, Math.min(vals.length - 1, idx + dir));
-      if (ni === idx) return;
-      idx = ni; mark(); place(); apply();
-    };
-    this._scrollerWheel = (e) => {
-      if (e.ctrlKey) return;
-      e.preventDefault(); e.stopPropagation();
-      const d = e.deltaMode === 1 ? e.deltaY * 16 : e.deltaMode === 2 ? e.deltaY * 400 : e.deltaY;
-      acc += -d;
-      let guard = 0;
-      while (acc >= THRESH && guard++ < 8) { acc -= THRESH; step(+1); }
-      while (acc <= -THRESH && guard++ < 8) { acc += THRESH; step(-1); }
-      // REST AND IT GOES. Half a second without a notch means you have arrived — the list has done its
-      // job and the window can have its own face back. Closing commits, so resting IS choosing and the
-      // value lands the moment the list leaves.
-      clearTimeout(this._scrollerCommit);
-      this._scrollerCommit = setTimeout(() => this._closeValueScroller(), REST_MS);
-    };
-    document.addEventListener('wheel', this._scrollerWheel, { capture: true, passive: false });
+    // EVERY ROW IS A TARGET, and pointing at one lights it — the same two things any menu row does.
+    // The row for the value you are already on keeps its rule, so you can see where you started even
+    // while your pointer is somewhere else in the list.
+    menu.style.pointerEvents = 'auto';
+    rows.forEach((row, k) => {
+      row.style.cursor = 'pointer';
+      row.addEventListener('pointerenter', () => mark(k));
+      row.addEventListener('pointerdown', (e) => { e.preventDefault(); e.stopPropagation(); });
+      row.addEventListener('click', (e) => {
+        e.preventDefault(); e.stopPropagation();
+        idx = vals.length - 1 - k;   // the list is drawn highest first; see rowOf
+        apply();
+        this._closeValueList();
+      });
+    });
 
-    // IT LEAVES WHEN YOU DO — off the window AND off the list. By coordinates rather than by hit test,
-    // because the list is a sibling of everything else on screen and hovering a row must not read as
-    // having left the control it belongs to.
-    this._scrollerMove = (e) => {
-      const inBox = e.clientX >= box.left - 2 && e.clientX <= box.right + 2 && e.clientY >= box.top - 2 && e.clientY <= box.bottom + 2;
-      if (inBox) return;
-      const m = menu.getBoundingClientRect();
-      const inMenu = e.clientX >= m.left && e.clientX <= m.right && e.clientY >= m.top && e.clientY <= m.bottom;
-      if (!inMenu) this._closeValueScroller();
-    };
-    document.addEventListener('pointermove', this._scrollerMove, true);
-    this._scrollerKey = (e) => { if (e.key === 'Escape') { e.stopPropagation(); this._closeValueScroller(); } };
-    document.addEventListener('keydown', this._scrollerKey, true);
+    menu.addEventListener('pointerleave', () => mark());   // back to the value you are actually on
 
-    if (ev && ev.type === 'wheel') this._scrollerWheel(ev);
+    // CLICK AWAY OR PRESS ESCAPE TO PUT IT AWAY WITH NOTHING CHOSEN, which is what every other menu
+    // here does. There is no hover timer and no rest timer: a menu that opens on a click closes on
+    // one, and until then it stays where you can read it.
+    this._valueListAway = (e) => {
+      if (menu.contains(e.target)) return;
+      if (b.group && b.group.contains && b.group.contains(e.target)) return;   // the window itself toggles
+      this._closeValueList();
+    };
+    document.addEventListener('pointerdown', this._valueListAway, true);
+    this._valueListKey = (e) => { if (e.key === 'Escape') { e.stopPropagation(); this._closeValueList(); } };
+    document.addEventListener('keydown', this._valueListKey, true);
   }
 
-  _closeValueScroller() {
-    if (!this._scrollerEl) return;
-    // WHERE YOU STOPPED IS WHAT YOU CHOSE. Leaving before the commit timer has run is not a cancel —
-    // you scrolled to a value and walked away from it, which is the same decision made faster.
-    if (this._scrollerCommitNow) this._scrollerCommitNow();
-    clearTimeout(this._scrollerCommit); this._scrollerCommit = null; this._scrollerCommitNow = null;
-    if (this._scrollerWheel) { document.removeEventListener('wheel', this._scrollerWheel, { capture: true }); this._scrollerWheel = null; }
-    if (this._scrollerMove) { document.removeEventListener('pointermove', this._scrollerMove, true); this._scrollerMove = null; }
-    if (this._scrollerKey) { document.removeEventListener('keydown', this._scrollerKey, true); this._scrollerKey = null; }
-    this._scrollerEl.remove(); this._scrollerEl = null; this._scrollerFor = null;
+  _closeValueList() {
+    if (!this._valueListEl) return;
+    // NOTHING IS OWED. The value was set the moment its row was clicked; closing is only closing.
+    if (this._valueListAway) { document.removeEventListener('pointerdown', this._valueListAway, true); this._valueListAway = null; }
+    if (this._valueListKey) { document.removeEventListener('keydown', this._valueListKey, true); this._valueListKey = null; }
+    this._valueListEl.remove(); this._valueListEl = null; this._valueListFor = null;
   }
 
   _openMenu(x, y, items, opts = {}) {

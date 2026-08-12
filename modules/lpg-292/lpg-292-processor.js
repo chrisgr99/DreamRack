@@ -33,6 +33,17 @@ const CUT_LO = 40, CUT_SPAN = 350;         // cutoff 40 Hz .. 14 kHz (40 * 350)
 const RATE_LO = 0.15, RATE_SPAN = 133;     // clock 0.15 .. ~20 Hz
 const DEC_LO = 0.02, DEC_SPAN = 90;        // release tau 20 ms .. 1.8 s
 const ATTACK_TAU = 0.0025;                 // vactrol attack (fast, fixed)
+// HOW LONG A STRIKE HOLDS THE GATE OPEN WHILE THE VACTROL CATCHES UP. A strike used to assign the
+// envelope straight to 1, which is a step — in the VCA's gain and in the filter's cutoff — and a step
+// is a click. Measured: a trigger moved the output 0.35 in one sample with a tone running through it,
+// twenty-four times the largest step that tone can make on its own. A CV gate never did, because the
+// CV path CHASES its target through the attack.
+//
+// So a strike does the same thing: it asks for 1 and lets the same attack get there. The hold is
+// capped rather than run to completion so a strike cannot outlast a short decay, and it ends early
+// once the envelope has effectively arrived.
+const STRIKE_CAP_TAU = 5;                  // at most five attack time constants
+const STRIKE_DONE = 0.995;                 // ...or as soon as the vactrol is this close to open
 const CLK_PULSE_S = 0.004;                 // clock-out / strike pulse width
 
 const clamp01 = (x) => (x < 0 ? 0 : x > 1 ? 1 : x);
@@ -64,6 +75,9 @@ class Lpg292 extends AudioWorkletProcessor {
     this.s1 = new Float32Array(NCH);
     this.s2 = new Float32Array(NCH);
     this.prevTrig = new Float32Array(NCH);
+    // Samples of "hold the target at 1" still owed to a strike — see the strike method.
+    this.strikeLeft = new Int32Array(NCH);
+    this.strikeSamples = Math.max(1, Math.round(ATTACK_TAU * STRIKE_CAP_TAU * sampleRate));
     this.lp = [true, true, true, true];
     this.vca = [true, true, true, true];
     this.clkOn = [false, false, false, false];
@@ -98,12 +112,16 @@ class Lpg292 extends AudioWorkletProcessor {
         else if (m.id.startsWith('clkOn')) this.clkOn[ch] = m.value === 'on';
         else if (m.id.startsWith('ratioQuant')) this.quant[ch] = m.value === 'on';
       } else if (m.type === 'strike') {
-        if (m.ch >= 0 && m.ch < NCH) this.v[m.ch] = 1;
+        if (m.ch >= 0 && m.ch < NCH) this.strike(m.ch);
       } else if (m.type === 'clk') {
         if (m.ch >= 0 && m.ch < NCH) { this.baseDiv[m.ch] = Math.max(1, m.baseDiv | 0); this.mul[m.ch] = !!m.mul; }
       }
     };
   }
+
+  // FIRED BY ALL THREE: the panel's STRIKE button, a rising edge on the trigger input, and the
+  // internal clock. One road in, so none of them can click while the others do not.
+  strike(ch) { this.strikeLeft[ch] = this.strikeSamples; }
 
   process(inputs, outputs, parameters) {
     const sr = sampleRate;
@@ -156,7 +174,7 @@ class Lpg292 extends AudioWorkletProcessor {
           if (this.chPhase[ch] >= 1) {
             this.chPhase[ch] -= 1;
             this.chPulse[ch] = pulseLen;
-            if (this.clkOn[ch]) this.v[ch] = 1;
+            if (this.clkOn[ch]) this.strike(ch);
           }
         }
       }
@@ -172,13 +190,20 @@ class Lpg292 extends AudioWorkletProcessor {
         // strike on rising trigger edge
         const trigIn = inputs[8 + ch];
         const t = (trigIn && trigIn.length) ? trigIn[0][i] : 0;
-        if (t > 0.5 && this.prevTrig[ch] <= 0.5) this.v[ch] = 1;
+        if (t > 0.5 && this.prevTrig[ch] <= 0.5) this.strike(ch);
         this.prevTrig[ch] = t;
 
         // vactrol chases the CV level: fast up, slow (level-dependent) down
         const cvIn = inputs[4 + ch];
-        const target = clamp01((cvIn && cvIn.length) ? cvIn[0][i] : 0);
+        let target = clamp01((cvIn && cvIn.length) ? cvIn[0][i] : 0);
         let v = this.v[ch];
+        // A STRUCK GATE IS A GATE ASKING FOR ALL OF IT, until it has essentially got there. The same
+        // attack, the same road: nothing here can move the envelope faster than the vactrol does.
+        if (this.strikeLeft[ch] > 0) {
+          this.strikeLeft[ch]--;
+          if (v >= STRIKE_DONE) this.strikeLeft[ch] = 0;
+          if (target < 1) target = 1;
+        }
         if (target > v) {
           v += (target - v) * attackCoef;
         } else {
