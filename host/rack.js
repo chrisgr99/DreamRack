@@ -168,6 +168,11 @@ const LIT_GRAB_GAP_MM = 2.0;
 const LIT_GRAB_W = 2.2;      // hit width, in cord widths
 const LIT_GRAB_SHOW = 2.2;   // ...and the width it is drawn at once you have dwelt on it
 const LIT_HOVER_MS = 300;    // dwell before the stretch reveals itself
+// ...and the longer dwell before a BEND handle appears anywhere along a cord. Longer than the ends
+// on purpose: the ends are a small target you had to aim at, so arriving there is already a
+// statement of intent, while the body of a cord is most of the rack and is crossed constantly on
+// the way to somewhere else. A second of staying put is what separates meaning it from passing over.
+const BEND_HOVER_MS = 1000;
 const CABLE_HOVER_FADE = 0.28;   // opacity a cable drops to while it obscures a control you're hovering
 const CABLE_FADE_TAU = 0.3;      // opacity easing time constant — cables brighten/dim over ~1s so quick sweeps don't flash
 // How far a cord may set off from the straight line between its two jacks. Beyond this it would be
@@ -391,7 +396,9 @@ export class Rack {
     // run on their own elements first (and preventDefault themselves); this is the
     // catch-all for areas without one (controls, empty space).
     document.addEventListener('contextmenu', (e) => e.preventDefault());
-    this._watchCableDrag();   // press ON a cord and move → bend it; see _watchCableDrag
+    this._watchCableHover();  // rest on a cord and a bend handle appears; see _watchCableHover
+    this._watchStubHover();   // ...and the same for a cord that crosses to a tab
+    this._watchCableDrag();   // ...and only then does a press on it bend it; see _watchCableDrag
     // A press outside an open pop-up menu (the app/File menu, a scope menu) just
     // DISMISSES it — that click must not also nudge a control. Capture phase +
     // stopPropagation keeps it from reaching the faceplate/jack/knob handlers;
@@ -1581,9 +1588,15 @@ export class Rack {
     const port = rec.panel.ports.get(portId);
     if (!port || !port.anchor) return null;
     const hole = port.holeR || 0;
+    // A MODULE IN YOUR HAND REPORTS THE POSITION IT IS BEING HELD AT, not the one it left. Its record
+    // still says where it came from — the row it belongs to has closed over that spot — so a carry
+    // publishes where the panel is actually being drawn, and every cord attached to it follows the
+    // module about. That is worth having: the shortest patching is a thing you can see while you
+    // choose where to put the module, and could not see at all while its cables were hidden.
+    const base = rec.carryMm || { x: rec.x, y: rec.row * (PANEL_H_MM + ROW_GAP_MM) };
     return {
-      x: rec.x + (port.anchor.x - FACE_LEFT_MM),
-      y: rec.row * (PANEL_H_MM + ROW_GAP_MM) + (port.anchor.y - FACE_TOP_MM + TITLE_STRIP_MM),
+      x: base.x + (port.anchor.x - FACE_LEFT_MM),
+      y: base.y + (port.anchor.y - FACE_TOP_MM + TITLE_STRIP_MM),
       r: hole,
       // Mid-ring radius: the middle of the coloured band. Kept because other things measure by it;
       // the cord itself now ends by the HOLE's rim — see _cordGeom.
@@ -1646,11 +1659,12 @@ export class Rack {
     return !!a && !!b && this._onPage(a) && this._onPage(b);
   }
 
-  // Either end on a module currently being held? Then this cord is not drawn — see _drawCables.
+  // A cord whose module is in the air but has not yet said where it is being held — the one frame
+  // between the lift and the first track. Drawing it then would send it to the hole the module left.
   _edgeIsLifted(e) {
     const srcRef = e.link || e.src;
     const a = this.records.get(srcRef.key), b = this.records.get(e.dst.key);
-    return !!(a && a.lifted) || !!(b && b.lifted);
+    return !!(a && a.lifted && !a.carryMm) || !!(b && b.lifted && !b.carryMm);
   }
 
   _cordGeom(e) {
@@ -1725,6 +1739,42 @@ export class Rack {
     };
     const STEPS = 8;
     const out = [];
+    for (let i = 0; i <= STEPS; i++) out.push(atLen(lo + (hi - lo) * (i / STEPS)));
+    return 'M' + out.map((q) => `${r2(q.x)},${r2(q.y)}`).join(' L');
+  }
+
+  // A pill of the cord CENTRED on a point, rather than measured in from an end — the bend handle's
+  // shape. Same sampling as _cordSegment; the point is snapped to the nearest place on the curve, so
+  // the handle sits on the cord however roughly you aimed at it.
+  _cordPillAt(g, m, lenMm) {
+    const P = [g.pA, g.c1, g.c2, g.pB];
+    const at = (t) => {
+      const u = 1 - t, a = u * u * u, b = 3 * u * u * t, c = 3 * u * t * t, d = t * t * t;
+      return { x: a * P[0].x + b * P[1].x + c * P[2].x + d * P[3].x,
+        y: a * P[0].y + b * P[1].y + c * P[2].y + d * P[3].y };
+    };
+    const N = 48, pts = [];
+    let prev = at(0), total = 0, bestI = 0, bestD = Infinity;
+    pts.push({ p: prev, len: 0 });
+    for (let i = 1; i <= N; i++) {
+      const p = at(i / N);
+      total += Math.hypot(p.x - prev.x, p.y - prev.y);
+      pts.push({ p, len: total }); prev = p;
+    }
+    for (let i = 0; i < pts.length; i++) {
+      const d = Math.hypot(pts[i].p.x - m.x, pts[i].p.y - m.y);
+      if (d < bestD) { bestD = d; bestI = i; }
+    }
+    if (total < lenMm) return null;
+    const centre = Math.max(lenMm / 2, Math.min(total - lenMm / 2, pts[bestI].len));
+    const atLen = (want) => {
+      let i = 1;
+      while (i < pts.length - 1 && pts[i].len < want) i++;
+      const p0 = pts[i - 1], p1 = pts[i];
+      const f = p1.len > p0.len ? (want - p0.len) / (p1.len - p0.len) : 0;
+      return { x: p0.p.x + (p1.p.x - p0.p.x) * f, y: p0.p.y + (p1.p.y - p0.p.y) * f };
+    };
+    const lo = centre - lenMm / 2, hi = centre + lenMm / 2, STEPS = 8, out = [];
     for (let i = 0; i <= STEPS; i++) out.push(atLen(lo + (hi - lo) * (i / STEPS)));
     return 'M' + out.map((q) => `${r2(q.x)},${r2(q.y)}`).join(' L');
   }
@@ -1808,6 +1858,18 @@ export class Rack {
         fd.setAttribute('stroke-linecap', 'butt');
         fd.setAttribute('stroke-dasharray', `${r2((FLOW_DASH[e.style] || FLOW_DASH.control) * wmm)} ${r2(FLOW_GAP * wmm)}`);
         fd.setAttribute('stroke-dashoffset', r2(this._flowOffset()));
+      }
+      // THE BEND HANDLE, if this is the cord you have been resting on. Drawn from rack state for the
+      // same reason the end stretches are: this layer is rebuilt on nearly every pointer move, so an
+      // element holding its own shown-ness would be replaced by a fresh, unlit one mid-hover.
+      if (this._bendShown && this._bendShown.id === e.id && this._bendShown.at) {
+        const ring = (g.a.ring || 2.3);
+        const pill = this._cordPillAt(g, this._bendShown.at, ring * (LIT_GRAB_TO_R - LIT_GRAB_FROM_R));
+        if (pill) {
+          const bh = mk(pill, color, wmm * LIT_GRAB_SHOW, 0.9, null);
+          bh.setAttribute('stroke-linecap', 'round');
+          bh.setAttribute('class', 'cable-bend');
+        }
       }
       // A short GRAB STRETCH just off each terminal: click it and this cable stays bright while you
       // follow it. Only a stretch, and only near the ends, so it sits over panel face rather than over
@@ -2348,6 +2410,29 @@ export class Rack {
     }
   }
 
+  // A STUB'S BOW, stored on the edge as a place on the chord from the jack end (a) to the foot of the
+  // tab's drop (b): `along` a fraction of that chord, `perp` a fraction of its LENGTH rather than a
+  // distance. Fractions on both axes because a stub spans two coordinate systems — the rack end zooms
+  // and pans, the tab end does not — so any stored pixel measurement would be wrong the moment you
+  // scrolled. As a pair of fractions the bend keeps its shape relative to the cord it belongs to.
+  _stubBelly(edge, a, b) {
+    const bow = edge && edge.stubBow;
+    if (!bow) return null;
+    const vx = b.x - a.x, vy = b.y - a.y;
+    const len = Math.hypot(vx, vy) || 1;
+    const nx = -vy / len, ny = vx / len;
+    return { x: a.x + bow.along * vx + bow.perp * len * nx, y: a.y + bow.along * vy + bow.perp * len * ny };
+  }
+
+  _stubBowFrom(a, b, m) {
+    const vx = b.x - a.x, vy = b.y - a.y;
+    const len2 = vx * vx + vy * vy || 1;
+    const len = Math.sqrt(len2);
+    const nx = -vy / len, ny = vx / len;
+    const dx = m.x - a.x, dy = m.y - a.y;
+    return { along: (dx * vx + dy * vy) / len2, perp: (dx * nx + dy * ny) / len };
+  }
+
   _drawPageStubs() {
     // Expire the slide here as well as in its own loop: that loop runs on animation frames, which a
     // backgrounded window suspends, and a morph left flagged as running would still be flagged when
@@ -2355,6 +2440,7 @@ export class Rack {
     if (this._stubMorph && performance.now() - this._stubMorph.t0 >= CARRY_MORPH_MS) this._stubMorph = null;
     const svg = this._ensureStubLayer();
     svg.textContent = '';
+    this._stubCurves = [];   // rebuilt every draw; what the bend dwell measures against
     if (!this._tabBarEl) return;
     // Group the crossing cables by the page they are bound for, so each tab's stubs can be spread
     // evenly along it and each one knows its place in that group.
@@ -2448,10 +2534,22 @@ export class Rack {
         // CENTRE, straight over the plug.
         const endPx = (jack.r || 0) * s + w / 2;
         const Je = { x: J.x + uJ.x * endPx, y: J.y + uJ.y * endPx };
+        // BENT BY HAND, if you have bent it. The drop out of the tab and its tangent are left exactly
+        // as they were — they are what makes a stub read as "this cable goes to that tab", and they are
+        // not yours to move. Everything below them is: the stored bow is a point the swoop must pass
+        // through, and the control nearest the JACK is solved so that it does.
+        //
+        // For a cubic, B(0.5) = (P0 + 3c1 + 3c2 + P3) / 8. Holding P0, P3 and the tab-side control c2,
+        // that rearranges to c1 = (8M - P0 - 3c2 - P3) / 3 — exact, so the cord goes where you put it
+        // rather than merely leaning that way.
+        const bent = this._stubBelly(item.e, Je, T);
+        const cJb = bent
+          ? { x: (8 * bent.x - Je.x - 3 * cT.x - T.x) / 3, y: (8 * bent.y - Je.y - 3 * cT.y - T.y) / 3 }
+          : cJ;
         const xy = (q) => `${r2(q.x)},${r2(q.y)}`;
         const d = item.nearIsSrc
-          ? `M${xy(Je)} C${xy(cJ)} ${xy(cT)} ${xy(T)} L${xy(anchor)}`
-          : `M${xy(anchor)} L${xy(T)} C${xy(cT)} ${xy(cJ)} ${xy(Je)}`;
+          ? `M${xy(Je)} C${xy(cJb)} ${xy(cT)} ${xy(T)} L${xy(anchor)}`
+          : `M${xy(anchor)} L${xy(T)} C${xy(cT)} ${xy(cJb)} ${xy(Je)}`;
         const op = String(CABLE_BRIGHT);
         const p = document.createElementNS(SVG_NS, 'path');
         p.setAttribute('d', d);
@@ -2462,6 +2560,16 @@ export class Rack {
         p.style.opacity = op;
         p.dataset.edge = item.e.id;
         svg.appendChild(p);
+        // BENDING THE SWOOP. A crossing cable is as much in the way as any other, and it was the one
+        // kind that could not be moved aside — its shape was computed from the tab and consulted
+        // nothing. Same rule as a cord on the rack: rest on it, a handle appears, drag the handle.
+        // Only the curve takes this. The straight drop out of the tab is left alone.
+        // The swoop is recorded rather than given its own hit element, and the dwell is measured against
+        // this geometry (see _watchStubHover) — the way an on-page cord's already is. A permanent hit
+        // element sat on top of the near-jack grab along most of its length, so a press meant to take
+        // hold of the cable reached the bend layer instead and did one of two things depending on
+        // whether the second had elapsed. Nothing intercepts a press now until the handle is up.
+        this._stubCurves.push({ id: item.e.id, Je: { ...Je }, cJb: { ...cJb }, cT: { ...cT }, T: { ...T }, w, color });
         // The same crawling dashes every other cord wears — a stub is a cable, and it should say which
         // way the signal runs as plainly as the rest of it does. The path is built source-end first, so
         // the crawl goes the right way whichever end of the cable is on this page.
@@ -2643,9 +2751,119 @@ export class Rack {
         svg.appendChild(hit);
       });
     }
+    // THE BEND HANDLE, after every stub is drawn — over the cable and its dash, the way a cord's own
+    // handle sits over its cord. Put in with the stub it belongs to, it went UNDER the flow dash that
+    // was appended next, which is a handle you can see but cannot quite believe in.
+    //
+    // Its drag target comes with it and exists only while it is showing. That is what keeps a press
+    // unambiguous: no handle, and the press reaches the pick-up handlers underneath exactly as it
+    // always did; handle, and the press is a bend — pressed, moved, released. Never a click-carry.
+    this._drawStubBendHandle(svg);
     // LAST, so they sit OVER the stubs. Drawn first, the lower half of every button was really the
     // stub underneath it, and pressing there traced the cable instead of toggling the channel.
     this._drawMixerButtons(svg);
+  }
+
+  _drawStubBendHandle(svg) {
+    const st = this._stubBend;
+    if (!st || !st.at) return;
+    const c = this._stubCurves.find((x) => x.id === st.id);
+    if (!c) return;
+    const g = { pA: c.Je, c1: c.cJb, c2: c.cT, pB: c.T };
+    const pill = this._cordPillAt(g, st.at, c.w * 1.2);
+    if (pill) {
+      const bh = document.createElementNS(SVG_NS, 'path');
+      bh.setAttribute('d', pill);
+      bh.setAttribute('fill', 'none');
+      bh.setAttribute('stroke', c.color);
+      bh.setAttribute('stroke-width', r2(c.w * LIT_GRAB_SHOW));
+      bh.setAttribute('stroke-linecap', 'round');
+      bh.style.opacity = '0.9';
+      bh.style.pointerEvents = 'none';
+      svg.appendChild(bh);
+    }
+    const xy = (q) => `${r2(q.x)},${r2(q.y)}`;
+    const bhit = document.createElementNS(SVG_NS, 'path');
+    bhit.setAttribute('d', `M${xy(c.Je)} C${xy(c.cJb)} ${xy(c.cT)} ${xy(c.T)}`);
+    bhit.setAttribute('fill', 'none');
+    bhit.setAttribute('stroke', 'transparent');
+    bhit.setAttribute('stroke-width', r2(c.w * LIT_GRAB_W));
+    bhit.setAttribute('stroke-linecap', 'round');
+    bhit.setAttribute('class', 'stub-bend');
+    bhit.style.pointerEvents = 'stroke';
+    bhit.style.cursor = 'pointer';
+    const id = st.id, a = { ...c.Je }, b = { ...c.T };
+    bhit.addEventListener('pointerdown', (ev) => {
+      if (ev.button !== 0) return;
+      ev.preventDefault(); ev.stopPropagation();
+      clearTimeout(this._stubBendTimer);
+      this._stubBending = true;
+      const onMove = (m) => {
+        const live = this.patchbay.list().find((x) => x.id === id);
+        if (!live) return;
+        live.stubBow = this._stubBowFrom(a, b, { x: m.clientX, y: m.clientY });
+        this._stubBend = { id, at: { x: m.clientX, y: m.clientY } };
+        this._drawPageStubs();
+      };
+      const onUp = () => {
+        document.removeEventListener('pointermove', onMove, true);
+        document.removeEventListener('pointerup', onUp, true);
+        this._stubBending = false;
+        this.onChange();   // the shape is part of the patch
+      };
+      document.addEventListener('pointermove', onMove, true);
+      document.addEventListener('pointerup', onUp, true);
+    });
+    svg.appendChild(bhit);
+  }
+
+  // The dwell that reveals a stub's bend handle, measured against the recorded swoops rather than by
+  // hovering an element — so nothing has to exist over the cable for the dwell to run, and nothing
+  // intercepts a press before the handle is up.
+  _watchStubHover() {
+    document.addEventListener('pointermove', (e) => {
+      if (this._stubBending) return;   // the drag owns the pointer; leave the handle where it is
+      if (this._tempCable || this._reshaping || this._optDown || this._carryingModule) { this._clearStubBend(); return; }
+      const hit = this._stubCurveAt(e.clientX, e.clientY);
+      if (!hit) { this._clearStubBend(); return; }
+      const at = { x: e.clientX, y: e.clientY };
+      if (this._stubBend && this._stubBend.id === hit.id) { this._stubBend.at = at; this._drawPageStubs(); return; }
+      if (this._stubArm && this._stubArm.id === hit.id) { this._stubArm.at = at; return; }
+      clearTimeout(this._stubBendTimer);
+      this._stubArm = { id: hit.id, at };
+      if (this._stubBend) { this._stubBend = null; this._drawPageStubs(); }
+      this._stubBendTimer = setTimeout(() => {
+        if (!this._stubArm) return;
+        this._stubBend = { id: this._stubArm.id, at: this._stubArm.at };
+        this._drawPageStubs();
+      }, BEND_HOVER_MS);
+    }, true);
+  }
+
+  _clearStubBend() {
+    clearTimeout(this._stubBendTimer); this._stubBendTimer = null; this._stubArm = null;
+    if (this._stubBend) { this._stubBend = null; this._drawPageStubs(); }
+  }
+
+  // Which recorded swoop, if any, lies under this point. Client pixels throughout: the stub layer is
+  // pinned to the window, so its geometry is already in that space.
+  _stubCurveAt(clientX, clientY) {
+    const m = { x: clientX, y: clientY };
+    for (const c of (this._stubCurves || [])) {
+      const half = (c.w * LIT_GRAB_W) / 2;
+      const P = [c.Je, c.cJb, c.cT, c.T];
+      let prev = P[0];
+      for (let i = 1; i <= 24; i++) {
+        const t = i / 24, u = 1 - t;
+        const cur = {
+          x: u * u * u * P[0].x + 3 * u * u * t * P[1].x + 3 * u * t * t * P[2].x + t * t * t * P[3].x,
+          y: u * u * u * P[0].y + 3 * u * u * t * P[1].y + 3 * u * t * t * P[2].y + t * t * t * P[3].y,
+        };
+        if (this._distToSeg(m, prev, cur) <= half) return c;
+        prev = cur;
+      }
+    }
+    return null;
   }
 
   // A cable is faint (one-third opaque) by default; the cables of the module
@@ -2762,6 +2980,42 @@ export class Rack {
   // the module could pass its threshold first, mark itself as dragging, and only then find the cable
   // taking over. It had already drawn its held-and-moving dashes by that point. Knowing at the press
   // that this drag belongs to a cable removes the race rather than tidying up after it.
+  // THE BEND HANDLE, and the dwell that reveals it. Hovering anywhere along a cord for BEND_HOVER_MS
+  // puts a handle on it — the same pill the ends wear — and only then will a press bend the cord.
+  // Before that a press goes straight through to whatever is behind, which is what makes bending
+  // distinguishable from every other thing a press on the rack can mean.
+  //
+  // Once shown it FOLLOWS you along the cord rather than staying pinned where it first appeared: it
+  // marks where the bend would be taken, and having to go back to a fixed spot to use it is the fault
+  // the old midpoint handle had.
+  _watchCableHover() {
+    document.addEventListener('pointermove', (e) => {
+      if (this._tempCable || this._reshaping || this._optDown || this._carryingModule) { this._clearBend(); return; }
+      const edge = this._cordAtPoint(this._clientToMm(e.clientX, e.clientY));
+      if (!edge) { this._clearBend(); return; }
+      const mm = this._clientToMm(e.clientX, e.clientY);
+      if (this._bendShown && this._bendShown.id === edge.id) {
+        this._bendShown.at = mm;   // shown already: it travels with you along this cord
+        this._drawCables();
+        return;
+      }
+      if (this._bendArm && this._bendArm.id === edge.id) { this._bendArm.at = mm; return; }   // still counting
+      clearTimeout(this._bendTimer);
+      this._bendArm = { id: edge.id, at: mm };
+      if (this._bendShown) { this._bendShown = null; this._drawCables(); }
+      this._bendTimer = setTimeout(() => {
+        if (!this._bendArm) return;
+        this._bendShown = { id: this._bendArm.id, at: this._bendArm.at };
+        this._drawCables();
+      }, BEND_HOVER_MS);
+    }, true);
+  }
+
+  _clearBend() {
+    clearTimeout(this._bendTimer); this._bendTimer = null; this._bendArm = null;
+    if (this._bendShown) { this._bendShown = null; this._drawCables(); }
+  }
+
   _watchCableDrag() {
     let sx = 0, sy = 0;
     document.addEventListener('pointerdown', (e) => {
@@ -2769,7 +3023,11 @@ export class Rack {
       if (e.button !== 0 || this._tempCable || this._reshaping || this._optDown) return;
       if (e.target && e.target.closest && e.target.closest('.cable-grab')) return;   // the ends unplug, not bend
       sx = e.clientX; sy = e.clientY;
-      this._cableDragCand = this._cordAtPoint(this._clientToMm(e.clientX, e.clientY));
+      const edge = this._cordAtPoint(this._clientToMm(e.clientX, e.clientY));
+      // ONLY THE CORD WEARING THE HANDLE CAN BE BENT. Without this a press anywhere on any cable took
+      // the drag, which is the ambiguity the dwell exists to remove.
+      if (!edge || !this._bendShown || this._bendShown.id !== edge.id) return;
+      this._cableDragCand = edge;
     }, true);
     document.addEventListener('pointermove', (e) => {
       const edge = this._cableDragCand;
@@ -2777,6 +3035,7 @@ export class Rack {
       if (Math.hypot(e.clientX - sx, e.clientY - sy) < 4) return;
       this._cableDragCand = null;
       if (!this.patchbay.list().some((x) => x.id === edge.id)) return;
+      this._clearBend();
       this._startReshape(e, edge);
     }, true);
     document.addEventListener('pointerup', () => { this._cableDragCand = null; }, true);
@@ -4159,6 +4418,7 @@ export class Rack {
       valEls: {}, valMode: 'scale',
       gridOn: true,   // the G button toggles the grid on/off
       trigger: true, trigLevel: 0, frozen: false, forceMode: 'auto',
+      tapTime: (this.host.ctx && this.host.ctx.currentTime) || 0,   // when this tap began — see _autosetScope
       armed: false, recFrames: 0, prevPeak: null, showCallout, fade: 0,
       ring: document.createElementNS(SVG_NS, 'circle'), line: document.createElementNS(SVG_NS, 'line'),
       dot: document.createElement('div'),
@@ -4503,7 +4763,20 @@ export class Rack {
     let cross = 0, prev = buf[0] - mean;
     for (let i = 1; i < n; i++) { const d = buf[i] - mean; if ((d >= 0) !== (prev >= 0)) cross++; prev = d; }
     if (!sc.frozen) {
-      sc.fastVotes = Math.max(-8, Math.min(8, sc.fastVotes + (cross >= 2 ? 1 : -1)));   // at least one full cycle → triggerable waveform; else roll
+      // CAN IT BE TRIGGERED? — which is a question about the RING, not about the analyser window. The
+      // window holds 341ms and the ring holds four seconds, so a 2 Hz clock cannot show two cycles in
+      // the window but shows eight in the ring. Judging by the window alone sent every clock to the
+      // roll display, where it cannot be triggered at all and must scroll — and a steady signal that
+      // will not stand still is the one thing a scope must not do.
+      //
+      // So: the window's own count when it has one, and otherwise the period measured from the history.
+      // Anything whose cycle fits comfortably inside the ring gets the triggered view.
+      let triggerable = cross >= 4;
+      if (!triggerable) {
+        const hp = this._scopeHistPeriod(sc);
+        triggerable = hp > 0 && hp <= SCOPE_RING_SEC / 2;
+      }
+      sc.fastVotes = Math.max(-8, Math.min(8, sc.fastVotes + (triggerable ? 1 : -1)));
     }
     const fast = sc.forceMode === 'wave' ? true : sc.forceMode === 'roll' ? false : sc.fastVotes > 0;
     // One-shot: armed, wait for the level to rise through an auto threshold, capture
@@ -4544,9 +4817,24 @@ export class Rack {
       const base = (sc.ringPos - filled + RL) % RL;      // logical 0 = oldest available, filled-1 = newest
       const at = (j) => R[(base + j) % RL];
       let start = Math.max(0, filled - need);            // default: window ends at the newest sample
-      if (sc.trigger && need > 0) {                      // walk back to the most recent rising crossing (stable phase)
-        const L = sc.trigLevel || 0, lo2 = Math.max(1, start - need);
-        for (let i = start; i > lo2; i--) { if (at(i - 1) < L && at(i) >= L) { start = i; break; } }
+      if (sc.trigger && filled > 2) {
+        const L = sc.trigLevel || 0;
+        if (start > 0) {
+          // The usual case: a whole sweep is available, so walk back from its start to the most recent
+          // rising crossing and lock the phase there.
+          for (let i = start, lo2 = Math.max(1, start - need); i > lo2; i--) {
+            if (at(i - 1) < L && at(i) >= L) { start = i; break; }
+          }
+        } else {
+          // NOT ENOUGH SAMPLES FOR A WHOLE SWEEP — a slow time base, or a scope only just connected.
+          // need is capped at filled, so start is zero and the old search ran from 0 backwards,
+          // which is no iterations at all: the trace was never triggered. It began at the oldest
+          // sample, and since that advances every frame it crawled sideways for ever and never locked.
+          //
+          // Lock to the EARLIEST rising edge instead. The trace then stands still — it shows less than
+          // a full sweep, which is honest, rather than showing a full one that will not stop moving.
+          for (let i = 1; i < filled; i++) { if (at(i - 1) < L && at(i) >= L) { start = i; break; } }
+        }
       }
       const step = Math.max(1, Math.round(0.5 / pxPerSamp));       // decimate to ~2 pts/px
       // Horizontal pan: the trigger sample sits at x = off (0 = left edge). Draw around it, i<0
@@ -4561,7 +4849,15 @@ export class Rack {
         const y = yOf(at(start + i)); if (first) { g.moveTo(x, y); first = false; } else g.lineTo(x, y);
       }
     } else {
-      if (!sc.frozen) { const peak = Math.abs(hi) >= Math.abs(lo) ? hi : lo; sc.hist[sc.histIdx] = peak; sc.histIdx = (sc.histIdx + 1) % sc.hist.length; }
+      // THE CURRENT VALUE, NOT THE WINDOW'S PEAK. Each frame summarises 341ms of signal into one point.
+      // Taking the extreme of that window suits an envelope, which barely moves inside it — and destroys
+      // a gate, which does not: a 2 Hz pulse is high somewhere inside almost every window, so the peak
+      // is 1.0 in three hundred frames out of three hundred and the roll trace is a flat line at the
+      // top. Which is what was on screen: zero while the history was empty, then maximum for ever.
+      //
+      // The last sample is the signal's value now, so the roll becomes a 60 Hz sampler — which is what
+      // a chart recorder is. An envelope reads the same as before; a gate reads as a gate.
+      if (!sc.frozen) { sc.hist[sc.histIdx] = buf[n - 1]; sc.histIdx = (sc.histIdx + 1) % sc.hist.length; }
       const L = sc.hist.length, pxPerFrame = SCOPE_DIV_PX / (SCOPE_TDIV[sc.tIdx] * SCOPE_ROLL_FPS);
       const show = Math.max(2, Math.min(L, Math.ceil(W / pxPerFrame) + 1));
       const off = sc.hOffset || 0;
@@ -4636,14 +4932,18 @@ export class Rack {
     for (let i = 0; i < n; i++) { const v = buf[i]; if (v < lo) lo = v; if (v > hi) hi = v; sum += v; }
     const peak = Math.max(Math.abs(hi), Math.abs(lo));
     if (peak < 1e-4) return false;   // silence — keep waiting
-    // The analyser's window (~340ms) fills only after the tap connects: until then its FRONT is
-    // still zeros while only the tail carries signal. Framing on that half-filled window mis-reads
-    // the period (the zero front adds no crossings ⇒ a far-too-slow time base) and locks it in. So
-    // wait until the signal has filled the whole window — the front carries signal too — which is
-    // exactly the full-buffer state that pressing Autoset (A) sees, so the two frame identically.
-    let fLo = Infinity, fHi = -Infinity; const fN = n >> 2;   // first quarter of the window
-    for (let i = 0; i < fN; i++) { const v = buf[i]; if (v < fLo) fLo = v; if (v > fHi) fHi = v; }
-    if (Math.max(Math.abs(fHi), Math.abs(fLo)) < 0.25 * peak) return false;   // window not yet full — keep waiting
+    // WAIT UNTIL THE ANALYSER'S WINDOW HAS FILLED. It holds ~340ms and starts as zeros, so framing on
+    // a half-filled one mis-reads the period — the zero front adds no crossings — and locks that in.
+    //
+    // MEASURED BY THE CLOCK, NOT BY THE SIGNAL. This used to ask "does the first quarter of the window
+    // carry a quarter of the peak?", which is true of audio and false of a slow gate: at 2 Hz the first
+    // 85ms of the window is very often entirely inside the low half of the pulse, so the test failed
+    // every time and autoset simply returned — pressing A did nothing at all, for ever. How long the
+    // tap has been connected is the thing that was actually being asked about, so ask that.
+    const ctxNow = (this.host.ctx && this.host.ctx.currentTime) || 0;
+    if (sc.tapTime == null) sc.tapTime = ctxNow;
+    const winSec = n / ((this.host.ctx && this.host.ctx.sampleRate) || 48000);
+    if (ctxNow - sc.tapTime < winSec) return false;   // window not yet full — keep waiting
     const mid = (lo + hi) / 2, halfSpan = Math.max(1e-4, (hi - lo) / 2);
     sc.hOffset = 0;   // reframing re-centres the trace horizontally too
     // Centre the display on the signal's midpoint — a unipolar envelope (0..1) or any DC-offset
@@ -4651,18 +4951,82 @@ export class Rack {
     sc.vOffset = mid;
     // Trigger at the midpoint — the steepest, most repeatable crossing, so the trace locks stably.
     sc.trigLevel = mid;
+    // ...and ARM it. Autoset means "give me a useful view of this", and an untriggered trace of a
+    // periodic signal slides sideways for ever however well it is scaled. The scope in the mirror had
+    // trigger off, and nothing in autoset could put it back — so pressing A could never fix the one
+    // thing most obviously wrong with the picture.
+    sc.trigger = true;
     // Vertical: fit the peak-to-peak into ~80% of the FULL height (halfSpan into 80% of a half-screen).
     const halfRows = (sc.cssH / SCOPE_DIV_PX) / 2;
     sc.vIdx = this._nearestStep(SCOPE_VDIV, (halfSpan / 0.8) / halfRows, 'up');
-    const mean = sum / n; let cross = 0, prev = buf[0] - mean;
-    for (let i = 1; i < n; i++) { const d = buf[i] - mean; if ((d >= 0) !== (prev >= 0)) cross++; prev = d; }
-    if (cross >= 2) {
-      const sr = (this.host.ctx && this.host.ctx.sampleRate) || 48000;
-      const period = (n / (cross / 2)) / sr;                       // seconds per cycle
-      sc.tIdx = this._nearestStep(SCOPE_TDIV, period / 2, 'near');  // ~2 divisions per cycle
+    // THE PERIOD, AND WHY THE WINDOW ALONE CANNOT ALWAYS FIND IT. The analyser holds 16384 samples —
+    // about 341ms at 48k — so anything slower than about 3 Hz does not fit a single cycle in it. A
+    // clock at 120 BPM is 2 Hz: counting crossings in that window returns one or two whatever the real
+    // period is, and the arithmetic then reports the WINDOW's length as the period. The time base came
+    // out at a third of a second per division and the trace showed a fraction of one pulse.
+    //
+    // So: trust the window only when it holds at least TWO full cycles, and otherwise measure from the
+    // roll history, which is a peak per animation frame over about three seconds — six cycles of a
+    // 2 Hz clock, and the record the slow display is already keeping anyway.
+    const sr = (this.host.ctx && this.host.ctx.sampleRate) || 48000;
+    // WHEN IN DOUBT, GO SLOWER. Several cycles on the face — even drifting, even unsynchronised — say
+    // what a signal is doing; one cycle stretched across the whole window says almost nothing and looks
+    // broken when it will not stand still.
+    //
+    // FOUR CYCLES, ROUNDING TO SLOWER. Aiming at 0.4 of a period per division puts about four cycles on
+    // a ten-division face, and taking the next step UP from there means the count can only ever go up.
+    // Simply rounding up from half a period looked like the same idea and was not: it doubled the count
+    // to eight or ten, which on a scope this size is a picket fence.
+    const period = this._scopePeriod(sc, buf, n, sum / n, sr);
+    if (period > 0) {
+      sc.tIdx = this._nearestStep(SCOPE_TDIV, period * 0.4, 'up');
+      // ...but never a sweep longer than the ring holds. The raw ring is SCOPE_RING_SEC of samples;
+      // ask for more than that across the face and the sweep can NEVER fill, so the trace is always a
+      // partial one and the empty part reads as a fault. Step down until the sweep fits.
+      const faceDivs0 = Math.max(1, (sc.cssW || 120) / SCOPE_DIV_PX);
+      while (sc.tIdx > 0 && SCOPE_TDIV[sc.tIdx] * faceDivs0 > SCOPE_RING_SEC) sc.tIdx--;
+    } else {
+      // NOT MEASURABLE — slower than three seconds of history can pin down. Leaving the time base alone
+      // was the wrong answer: whatever it was set to before is unrelated to this signal, and if it was
+      // fast the face holds a sliver of one edge. Show the whole history instead. That is the most a
+      // scope can know about a signal this slow, and several cycles of it will be on the face.
+      const faceDivs = Math.max(1, (sc.cssW || 120) / SCOPE_DIV_PX);
+      sc.tIdx = this._nearestStep(SCOPE_TDIV, (sc.hist.length / SCOPE_ROLL_FPS) / faceDivs, 'near');
+      // The roll display draws from the history and can show all of it; the triggered one draws from
+      // the raw ring and cannot. Keep the sweep inside the ring either way.
+      while (sc.tIdx > 0 && SCOPE_TDIV[sc.tIdx] * faceDivs > SCOPE_RING_SEC) sc.tIdx--;
     }
     this._refreshScopeValues(sc);   // keep the values panel current after a re-frame
     return true;
+  }
+
+  // Seconds per cycle, or 0 if nothing can measure it. Mean-crossings in the analyser window when it
+  // holds enough of them; otherwise the same count over the roll history.
+  //
+  // FOUR CROSSINGS, NOT TWO. Two crossings is one cycle, and one cycle that merely FITS tells you the
+  // period is no longer than the window — not what it is. Two full cycles is the least that pins it.
+  _scopePeriod(sc, buf, n, mean, sr) {
+    let cross = 0, prev = buf[0] - mean;
+    for (let i = 1; i < n; i++) { const d = buf[i] - mean; if ((d >= 0) !== (prev >= 0)) cross++; prev = d; }
+    if (cross >= 4) return (n / (cross / 2)) / sr;
+    return this._scopeHistPeriod(sc);
+  }
+
+  // The roll history: one peak per animation frame, oldest first. Gaps are null — a scope that has not
+  // been running long enough — and a gap breaks the run rather than counting as a crossing.
+  _scopeHistPeriod(sc) {
+    const L = sc.hist.length;
+    const vals = [];
+    for (let i = 0; i < L; i++) { const v = sc.hist[((sc.histIdx + i) % L + L) % L]; if (v != null) vals.push(v); }
+    if (vals.length < 30) return 0;   // too little history to say anything
+    let lo = Infinity, hi = -Infinity, sum = 0;
+    for (const v of vals) { if (v < lo) lo = v; if (v > hi) hi = v; sum += v; }
+    if (hi - lo < 1e-4) return 0;     // flat: no period to find
+    const mean = sum / vals.length;
+    let cross = 0, prev = vals[0] - mean;
+    for (let i = 1; i < vals.length; i++) { const d = vals[i] - mean; if ((d >= 0) !== (prev >= 0)) cross++; prev = d; }
+    if (cross < 4) return 0;
+    return (vals.length / (cross / 2)) / SCOPE_ROLL_FPS;
   }
 
   // Index into a 1-2-5 table: 'up' = the first step at or above `want` (so the signal fits);
@@ -5566,12 +5930,64 @@ export class Rack {
   // fixed plateau; the three times share the rest of the width by their cube roots, which keeps a
   // 1ms attack visible beside a 10s release. A true timeline would be unreadable at the ends of the
   // knobs, which is why no ADSR display has ever been one.
+  // A NUMERIC READOUT in a display box — a module reporting one number about itself, large enough to
+  // read across the room. Declared by `graph: 'readout'`, and filled by the module through its optional
+  // onReadoutText hook; a module that has none simply shows nothing.
+  //
+  // It shows what the ENGINE is doing, not what a knob was set to. On the clock those differ the moment
+  // a cable lands in the BPM input: the tempo is then the cable's, and a display echoing the knob would
+  // be reporting a number nothing is running at.
+  // NOT _attachReadout — that name is taken, by the hook every module uses to paint its own controls
+  // from engine state. A second method of the same name simply replaces the first, silently, and every
+  // module on the rack then ran this one with a descriptor where it expected a display element.
+  _attachTextReadout(rec, svg) {
+    // EVERY display box on the panel, keyed by the id the layout gave it. A module with one readout is
+    // the simple case; a clock has four — its tempo and a ratio per sub-clock — and they are the whole
+    // reason that panel can be read at a glance rather than one control at a time.
+    const set = new Map();
+    for (const host of svg.querySelectorAll('[data-wcoast-display]')) {
+      const id = host.getAttribute('data-wcoast-display');
+      const t = this._makeReadoutText(host);
+      if (t) set.set(id, t);
+    }
+    if (!set.size) return;
+    rec.repaintGraph = () => { /* nothing here follows a knob — see onReadoutText */ };
+    const inst = rec.instance;
+    if (inst && typeof inst.onReadoutText === 'function') {
+      inst.onReadoutText((id, s) => { const t = set.get(id); if (t) t.textContent = s == null ? '' : String(s); });
+    }
+  }
+
+  _makeReadoutText(host) {
+    const g = { x: +host.dataset.x, y: +host.dataset.y, w: +host.dataset.w, h: +host.dataset.h };
+    if (!Number.isFinite(g.x) || !Number.isFinite(g.w)) return null;
+    while (host.firstChild) host.removeChild(host.firstChild);
+    const t = document.createElementNS(SVG_NS, 'text');
+    t.setAttribute('x', r2(g.x + g.w / 2));
+    // Baseline, not centre: the box is short and the glyphs sit better set from the bottom with a
+    // little lift than centred on a box that includes its own border.
+    t.setAttribute('y', r2(g.y + g.h * 0.82));
+    t.setAttribute('text-anchor', 'middle');
+    // NEARLY THE FULL HEIGHT OF THE BOX. The box is sized to the widest number it will ever hold — three
+    // digits — so the glyphs may as well fill it. A number set small in a large box is a number you have
+    // to go and look at rather than one you can see.
+    t.setAttribute('font-size', r2(g.h * 0.95));
+    t.setAttribute('font-weight', '700');
+    t.setAttribute('letter-spacing', '0.3');
+    t.setAttribute('fill', this.dark ? '#d8d8dc' : '#1b1b1f');
+    t.style.pointerEvents = 'none';
+    t.textContent = '';
+    host.appendChild(t);
+    return t;
+  }
+
   _attachGraph(rec, desc) {
     if (!desc || !desc.graph) return;
     const svg = rec.el && rec.el.querySelector('svg');
     if (!svg) return;
     const host = svg.querySelector('[data-wcoast-display]');
     if (!host) return;
+    if (desc.graph === 'readout') { this._attachTextReadout(rec, svg); return; }
     // The box comes from the PANEL, which is where it was drawn, rather than from a second copy of
     // the numbers in the descriptor. Two copies drift the moment a layout moves, and the drawing
     // would then sit outside its own frame with nothing to say so.
@@ -7323,7 +7739,7 @@ export class Rack {
   async redo() { const e = this._redoStack.pop(); if (!e) return; await e.redo(); this._undoStack.push(e); }
 
   _edgeSnapshot(e) {
-    return { src: { key: e.src.key, portId: e.src.portId }, dst: { key: e.dst.key, portId: e.dst.portId }, bow: e.bow, link: e.link ? { key: e.link.key, portId: e.link.portId } : null };
+    return { src: { key: e.src.key, portId: e.src.portId }, dst: { key: e.dst.key, portId: e.dst.portId }, bow: e.bow, stubBow: e.stubBow, link: e.link ? { key: e.link.key, portId: e.link.portId } : null };
   }
   // Reconnect a snapshotted cable. Its depth follows the destination knob (untouched
   // by undo/redo); the bow is carried back. A link snap re-tags the edge and reconciles.
@@ -7332,6 +7748,7 @@ export class Rack {
     if (e) {
       if (snap.link) { e.link = { ...snap.link }; this._reconcileLinks(); }
       if (snap.bow != null) e.bow = snap.bow;
+      if (snap.stubBow != null) e.stubBow = snap.stubBow;
       this._drawCables();
     }
     return e;
@@ -8131,6 +8548,8 @@ export class Rack {
         if (Math.hypot(clientX - (opts.atX || clientX), clientY - (opts.atY || clientY)) > LIFT_PX) lift();
         else { const m0 = this._ensureInsertMark(); m0.style.display = 'none'; slot = null; return; }
       }
+      // ...and the cords come too: where the panel is being drawn, in content millimetres.
+      if (rec && lifted) { rec.carryMm = this._clientToMm(left, top); this._drawCables(); }
       const row = rowUnder(top, top + h);
       const rRect = this._rowEls[row].getBoundingClientRect();
       const mmX = (left - rRect.left) / sz;   // the module's own left edge, in the row's millimetres
@@ -8151,6 +8570,7 @@ export class Rack {
       document.removeEventListener('pointerup', onUp, true);
       document.removeEventListener('contextmenu', onCtx, true);
       document.removeEventListener('keydown', onKey, true);
+      if (rec) rec.carryMm = null;
       this._undressGhost();
       const mark = this._ensureInsertMark(); mark.style.display = 'none';
       document.body.classList.remove('grabbing-module');

@@ -32,7 +32,7 @@
 'use strict';
 
 import { evenScale, textWidth, scaleBox, scaleMarkBoxes, LAMP_PAD, LAMP_LABEL_GAP,
-  TRIM_MARK_IN, TRIM_MARK_OUT, TRIM_SIGN_R, TRIM_SIGN_X, TRIM_SIGN_OUT } from './primitives.js';
+  TRIM_MARK_IN, TRIM_MARK_OUT, TRIM_SIGN_R, TRIM_SIGN_X, TRIM_SIGN_OUT, READOUT_H, READOUT_CH, READOUT_PAD, READOUT_ARROW_GAP } from './primitives.js';
 
 const HP_MM = 5.08;
 export const FACE_H = 113.5912;
@@ -114,7 +114,7 @@ const BAND_PAD = 3.4;        // band content to the rule below it
 // of the height a row of words underneath does, which on a full panel is the whole point.
 export const knob = (id, label, opts = {}) =>
   ({ kind: 'knob', id, label, size: opts.size || 'medium', scale: opts.scale || null, sub: opts.sub || null,
-     above: !!opts.above, letter: opts.letter || null, at: opts.at || 12 });
+     above: !!opts.above, letter: opts.letter || null, at: opts.at || 12, trim: opts.trim || null });
 
 // A knAck: the ring is the value, the centre is `port`. Pass `depth` to hang a TRIM KNOB in its lower
 // right for that param — the one to use whenever the jack carries ordinary modulation rather than a
@@ -154,7 +154,7 @@ export const button = (id, label, opts = {}) => ({ kind: 'button', id, label, r:
 // group on the rack goes through the primitive and always had its labels perpendicular. It now does
 // too, so there is one radio group in the codebase instead of two.
 export const lamps = (param, steps, opts = {}) =>
-  ({ kind: 'lamps', param, steps, dir: opts.dir === 'h' ? 'h' : 'v', ledR: opts.ledR || LAMP_R, spacing: opts.spacing || (opts.dir === 'h' ? 5.6 : 5.2) });
+  ({ kind: 'lamps', param, steps, dir: opts.dir === 'h' ? 'h' : 'v', ledR: opts.ledR || LAMP_R, spacing: opts.spacing || (opts.dir === 'h' ? 5.6 : 5.2), labelLeft: !!opts.labelLeft });
 
 // A DISPLAY: a bordered rectangle the host draws into — an envelope's shape, a wavetable, a scope.
 // The grammar reserves the space and draws the surround; what goes inside is the host's, because it
@@ -163,6 +163,12 @@ export const lamps = (param, steps, opts = {}) =>
 // leaves. A drawing is the one element that is always better bigger, and making it the slack-taker
 // means the knobs can pack tight without anyone doing arithmetic.
 export const display = (id, w, h) => ({ kind: 'display', id, w, h, label: null });
+
+// A READOUT: a lit window showing its own value, stepped with the wheel. `chars` is the widest value
+// it will ever hold, so the window is sized to its contents. `value` is what the static SVG shows
+// before anything is bound — the param's default, in words.
+export const readout = (id, label, opts = {}) =>
+  ({ kind: 'readout', id, label, chars: opts.chars || 3, value: opts.value || '' });
 
 // Free space in a row, in mm, for when even gaps are not what you want.
 export const gap = (mm) => ({ kind: 'gap', mm });
@@ -251,12 +257,23 @@ function trimDistance(c) {
 
 function extent(c) {
   const w = halfWidth(c);
+  // The chevrons sit OUTSIDE the window on the right, so a readout reaches further that way than the
+  // box alone suggests — measure it or the next control lands on them.
+  if (c.kind === 'readout') {
+    const half = readoutHalf(c);
+    return { l: half, r: half + READOUT_ARROW_GAP + 2.6 };
+  }
   if (c.kind === 'lamps' && c.dir !== 'h') {
     const tH = c.ledR + LAMP_PAD;
     const widest = Math.max(0, ...c.steps.map(([, t]) => textWidth(t || '', LAMP_LABEL)));
-    return { l: tH, r: tH + LAMP_LABEL_GAP + widest };
+    // A left-labelled stack reaches LEFT, so the row has to measure it that way or it is placed as
+    // though its labels were somewhere else entirely.
+    const reach = tH + LAMP_LABEL_GAP + widest;
+    return c.labelLeft ? { l: reach, r: tH } : { l: tH, r: reach };
   }
-  if (c.kind === 'knack' && c.depth && !c.trimBelow) {
+  // A knob with a trim measures the same way a knAck with a depth does — the satellite is the same
+  // satellite, and a row that does not count it puts the next control on top of it.
+  if ((c.kind === 'knack' && c.depth && !c.trimBelow) || (c.kind === 'knob' && c.trim)) {
     // The trim's RIM, not its pointer's tip. The tip is a half-millimetre hairline that only reaches
     // that far when the pointer happens to point straight at the panel edge, and what it reaches into
     // is blank margin. Counting it cost every trimmed knob 1.2mm of row on both sides to protect
@@ -268,7 +285,10 @@ function extent(c) {
   return { l: w, r: w };
 }
 
+function readoutHalf(c) { return (c.chars * READOUT_CH + READOUT_PAD * 2) / 2; }
+
 function halfWidth(c) {
+  if (c.kind === 'readout') return readoutHalf(c);
   if (c.kind === 'gap') return c.mm / 2;
   let art = 0;
   if (c.kind === 'knob' || c.kind === 'knack') {
@@ -304,6 +324,7 @@ function rowHeight(r) {
   for (const c of r.controls) {
     if (c.kind === 'knob' || c.kind === 'knack') h = Math.max(h, (SIZE[c.size] + (c.scale ? SCALE_RING + SCALE_LINE : 0)) * 2);
     else if (c.kind === 'display') h = Math.max(h, c.h);
+    else if (c.kind === 'readout') h = Math.max(h, READOUT_H);
     else if (c.kind === 'jack') h = Math.max(h, c.r * 2);
     else if (c.kind === 'button') h = Math.max(h, c.r * 2);
     else if (c.kind === 'lamps') {
@@ -318,7 +339,8 @@ function rowHeight(r) {
   // A trim hangs below its knob's centre line. On a big knob that is still inside the label's own
   // reach and costs nothing; on a small one it is not, so measure rather than assume.
   for (const c of r.controls) {
-    if (c.kind !== 'knack' || !c.depth) continue;
+    // A knob with a trim hangs one just as a knAck does, and the row has to reserve the same room.
+    if (!((c.kind === 'knack' && c.depth) || (c.kind === 'knob' && c.trim))) continue;
     // FROM THE ROW'S TOP, NOT THE KNOB'S CENTRE. A trim's offset is measured from the centre of the
     // knob it belongs to, and the knob's centre sits half the art's height down the row — so adding
     // the offset to nothing reserved half a knob too little, and the filter's below-the-label trim
@@ -333,20 +355,38 @@ function rowHeight(r) {
 // ---------------------------------------------------------------------------
 // Placing a row: equal visual gaps between extents, centred in the available width.
 
-function placeRow(r, faceW) {
+// PACKED ROWS cap the gap between neighbours instead of sharing all the slack out between them, and
+// then centre what is left over. Spreading is right on a panel with three controls on it, where the
+// air IS the layout; on a dense one it pushes a display away from the knob it belongs to and makes
+// the module wider than its contents. A capped gap keeps things that belong together together, and
+// gives the panel back the width.
+//
+// TWO CAPS, because two jacks side by side read as a group at a distance that would look cramped for
+// knobs — a jack is small and its label is under it, a knob is large and reaches further.
+const GAP_KNOB = 3, GAP_JACK = 2;
+const isJack = (c) => c.kind === 'jack';
+
+function placeRow(r, faceW, pack) {
   const hw = r.controls.map(extent);
   const span = hw.reduce((s, w) => s + w.l + w.r, 0);
   const MARGIN = marginFor(faceW);
   const x0 = MARGIN, x1 = faceW - MARGIN;
   const n = r.controls.length;
   const slack = (x1 - x0) - span;
-  // One control centres; several share the slack equally between them. Negative slack means the row
-  // is wider than the panel — allowed, and reported by the caller, because the honest fix is a wider
-  // module or fewer controls, not silent overlap.
-  const g = n > 1 ? slack / (n - 1) : 0;
+  // One control centres; several share the slack equally between them, or — packed — take no more
+  // than the cap for that pair. Negative slack means the row is wider than the panel: allowed, and
+  // reported by the caller, because the honest fix is a wider module or fewer controls, not silent
+  // overlap.
+  const even = n > 1 ? slack / (n - 1) : 0;
+  const gaps = [];
+  for (let i = 0; i < n - 1; i++) {
+    const cap = isJack(r.controls[i]) && isJack(r.controls[i + 1]) ? GAP_JACK : GAP_KNOB;
+    gaps.push(pack ? Math.min(even, cap) : even);
+  }
+  const lead = pack ? Math.max(0, slack - gaps.reduce((t, v) => t + v, 0)) / 2 : 0;
   const xs = [];
-  let cur = n > 1 ? x0 : x0 + (x1 - x0) / 2 - (hw[0].l + hw[0].r) / 2;
-  for (let i = 0; i < n; i++) { xs.push(+(cur + hw[i].l).toFixed(2)); cur += hw[i].l + hw[i].r + g; }
+  let cur = n > 1 ? x0 + lead : x0 + (x1 - x0) / 2 - (hw[0].l + hw[0].r) / 2;
+  for (let i = 0; i < n; i++) { xs.push(+(cur + hw[i].l).toFixed(2)); cur += hw[i].l + hw[i].r + (gaps[i] || 0); }
   return { xs, overflow: slack < 0 ? +(-slack).toFixed(2) : 0 };
 }
 
@@ -362,6 +402,15 @@ function emit(items, c, x, y) {
         radius: SIZE[c.size], label: lab,
         ...(c.scale ? { scale: { marks: evenScale(c.scale), size: SCALE_SIZE, labelGap: 1.1 } } : {}),
       } });
+      // A TRIM ON A PLAIN KNOB. The satellite was built for a knAck's depth, but the shape says
+      // something more general than that: a second, smaller setting belonging to the knob it hangs
+      // off. A fine tempo beside a coarse one is exactly that, and drawing it as anything else would
+      // make the rack's smallest control mean two different things.
+      if (c.trim) {
+        const p = trimOffset(c);
+        items.push({ t: 'trim', id: c.trim, x: +(x + p.dx).toFixed(2), y: +(y + p.dy).toFixed(2),
+          opts: { radius: TRIM_R, centreMark: true } });
+      }
       break;
     case 'knack':
       items.push({ t: 'knack', id: c.id, x, y, opts: {
@@ -382,9 +431,12 @@ function emit(items, c, x, y) {
       break;
     case 'lamps':
       items.push({ t: 'radio', id: c.param, x, y, opts: {
-        orientation: c.dir, spacing: c.spacing, ledR: c.ledR, size: LAMP_LABEL,
+        orientation: c.dir, spacing: c.spacing, ledR: c.ledR, size: LAMP_LABEL, labelLeft: !!c.labelLeft,
         steps: c.steps.map(([value, label]) => ({ value, label })),
       } });
+      break;
+    case 'readout':
+      items.push({ t: 'readout', id: c.id, x, y, opts: { chars: c.chars, value: c.value, ...(lab ? { label: lab } : {}) } });
       break;
     case 'display': {
       // A recessed well: the frame line, and a group the host fills. The group carries the id so the
@@ -485,7 +537,7 @@ export function panel(opts, bands) {
         ry += h + (ri < b.rows.length - 1 ? ROW_PAD + extra : 0);
         return;
       }
-      const { xs, overflow } = placeRow(r, faceW);
+      const { xs, overflow } = placeRow(r, faceW, !!opts.pack);
       if (overflow) warnings.push(`row ${bi}.${ri} overflows the panel by ${overflow}mm`);
       // the row's controls are centred on their art, so the y is the art's centre
       // The art's height, which decides where its CENTRE line falls. It must count a printed scale for

@@ -622,7 +622,7 @@ const lampReach = (ledR) => ledR + LAMP_PAD;
 // so a dark region with nothing sliding in it read as the odd thing out on every panel. And short
 // connectors between adjacent lamps: on a tight group like the filter's those are 1.2mm stubs, and
 // being broken they say "linked in pairs" where the truth is "one control".
-function radioGroup(id, cx, cy, { steps = [], orientation = 'v', spacing = 5.6, ledR = 2.16, size = 2.1, outline = true, value = null, led = 'red', theme = {} } = {}) {
+function radioGroup(id, cx, cy, { steps = [], orientation = 'v', spacing = 5.6, ledR = 2.16, size = 2.1, outline = true, value = null, led = 'red', theme = {}, labelLeft = false } = {}) {
   const ink = theme.ink || '#163a69', n = steps.length;
   const tHalf = lampReach(ledR);
   let g = `  <g data-wcoast-param="${id}">`;
@@ -654,8 +654,12 @@ function radioGroup(id, cx, cy, { steps = [], orientation = 'v', spacing = 5.6, 
     if (s.label) {
       // PERPENDICULAR TO THE LAMP AXIS, always: beside a vertical stack, beneath a horizontal row.
       // Never in line with the lamps — a label between two lamps belongs to neither of them.
-      const tx = orientation === 'h' ? lx : lx + tHalf + LAMP_LABEL_GAP, ty = orientation === 'h' ? ly + tHalf + 2.3 : ly + size * 0.35;
-      g += `\n    ${label(tx, ty, s.label, { size, fill: ink, anchor: orientation === 'h' ? 'middle' : 'start' })}`;
+      // LABELS MAY SIT TO THE LEFT of a vertical stack. A mirrored panel carries a radio each side of
+      // its centre line, and the right-hand one has its neighbour on the right — labels running that
+      // way land on top of it. Reading right to left costs nothing; landing on a knob costs the knob.
+      const side = labelLeft && orientation !== 'h' ? -1 : 1;
+      const tx = orientation === 'h' ? lx : lx + side * (tHalf + LAMP_LABEL_GAP), ty = orientation === 'h' ? ly + tHalf + 2.3 : ly + size * 0.35;
+      g += `\n    ${label(tx, ty, s.label, { size, fill: ink, anchor: orientation === 'h' ? 'middle' : (side < 0 ? 'end' : 'start') })}`;
     }
   });
   return g + `\n  </g>`;
@@ -689,6 +693,65 @@ function stepButton(id, cx, cy, { steps = [], orientation = 'v', btnR = 2.2, led
 
 // Vertical fader — a track with a handle riding top..bot; the host translates the
 // handle by value. `valuePos` 0..1 sets the authored (rendered) position.
+
+// ---- readout --------------------------------------------------------------------------------
+// A LIT WINDOW YOU SCROLL. It shows its own value in green digits and steps through the setting's
+// values under the wheel — a control and its own indication in one object.
+//
+// WHY IT EXISTS. A knob shows a POSITION. Ask one "am I on 8 or on 10?" and you have to turn it and
+// watch something else to find out. Where the values are a short discrete list and the number is what
+// matters — a clock ratio, a loop length, a delay of 1/16 — the number itself is the better control,
+// and it takes about a third of the panel a knob and its separate display took between them.
+//
+// GREEN SAYS YOU CAN CHANGE IT. The engine-driven windows on the same panel — a tempo that is being
+// told to you — stay in the panel's ink. Green is this control's colour and means the wheel does
+// something here.
+//
+// IT IS A SPIN CONTROL. The chevrons outside the right edge are pressable: up for the next value, down
+// for the previous, and the wheel does the same thing anywhere on the window. They began as a legend —
+// marks that said "scroll me" without being targets — but a mark that looks like a button and is not
+// one is worse than a button, and one click is cheaper than finding the wheel for a single step.
+//
+// EACH CARRIES AN INVISIBLE HIT PAD wider than the mark it wraps. The chevrons are about two
+// millimetres across, which is a hard target under magnification; the pad is the size of a jack.
+const READOUT_H = 6.2;                 // window height; the digits fill most of it
+const READOUT_CH = 2.55;               // width per character, at the size the digits are set
+const READOUT_PAD = 1.5;               // left and right padding inside the window
+const READOUT_ARROW_GAP = 1.1;         // window edge to the chevrons
+const READOUT_GREEN = '#4ee37a';
+
+function readout(id, cx, cy, { chars = 3, value = '', label: lb = null, theme = {} } = {}) {
+  // This file rounds inline everywhere else; one local helper keeps the path data readable.
+  const r2 = (v) => (+v).toFixed(2);
+  const w = +(chars * READOUT_CH + READOUT_PAD * 2).toFixed(2);
+  const h = READOUT_H;
+  const x = +(cx - w / 2).toFixed(2), y = +(cy - h / 2).toFixed(2);
+  const dark = (theme && theme.face || '').toLowerCase() !== '#cfcfcf';
+  const field = dark ? '#101216' : '#15171c';   // the window is a dark field in both themes, as a display is
+  let g = `  <g data-wcoast-param="${id}" data-wcoast-role="readout" data-wcoast-cx="${r2(cx)}" data-wcoast-cy="${r2(cy)}" data-wcoast-w="${w}">`;
+  g += `\n    <rect x="${x}" y="${y}" width="${w}" height="${h}" rx="1.2" fill="${field}" stroke="${theme.frame || '#8a8a90'}" stroke-width="0.3"/>`;
+  // The digits. data-wcoast-role="readout-text" is what the loader repaints; the value baked in here
+  // is only what the SVG shows before anything is bound.
+  g += `\n    <text x="${r2(cx)}" y="${r2(cy + h * 0.31)}" data-wcoast-role="readout-text" font-size="${r2(h * 0.78)}" font-weight="700" fill="${READOUT_GREEN}" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">${value}</text>`;
+  // The chevrons, outside the right edge.
+  // Bigger and further apart than they first were: at working size two 0.85mm chevrons half a
+  // millimetre apart read as one small glyph rather than as up and down.
+  const ax = x + w + READOUT_ARROW_GAP, half = 1.2, rise = 1.05, gap = 0.8;
+  const up = `M ${r2(ax - half)} ${r2(cy - gap)} L ${r2(ax)} ${r2(cy - gap - rise)} L ${r2(ax + half)} ${r2(cy - gap)}`;
+  const dn = `M ${r2(ax - half)} ${r2(cy + gap)} L ${r2(ax)} ${r2(cy + gap + rise)} L ${r2(ax + half)} ${r2(cy + gap)}`;
+  const arrow = (d, role, cyPad) =>
+    `\n    <g data-wcoast-role="${role}">` +
+    `\n      <rect x="${r2(ax - 2.1)}" y="${r2(cyPad - 1.9)}" width="4.2" height="3.8" fill="none" pointer-events="all"/>` +
+    `\n      <path d="${d}" fill="none" stroke="${theme.ink || '#888'}" stroke-width="0.4" stroke-linecap="round" stroke-linejoin="round" opacity="0.75"/>` +
+    `\n    </g>`;
+  g += arrow(up, 'readout-up', cy - gap - rise / 2);
+  g += arrow(dn, 'readout-down', cy + gap + rise / 2);
+  // The name, beneath, exactly as a knob or a jack wears it — measured from the window's half-height
+  // so it clears the box rather than the text inside it.
+  if (lb) g += '\n    ' + attachedLabel(cx, cy, w / 2, h / 2, { fill: theme.ink || '#163a69', ...lb });
+  return g + `\n  </g>`;
+}
+
 function slider(id, cx, { top = 24, bot = 78, valuePos = 0.5, theme = {} } = {}) {
   const track = theme.track || '#3a3d43', trackEdge = theme.trackEdge || '#222222';
   const handle = theme.handle || '#e9e9ec', handleEdge = theme.handleEdge || '#8a8a8e', handleLine = theme.handleLine || '#555555';
@@ -769,4 +832,5 @@ function bipolarMark(kx, ky, kr, { gap = 2.0, spanDeg = 23, r = 1.27, color = '#
 export { KNACK_GRIP_LEN, KNACK_GRIP_OUT, KNACK_GRIP_W, KNACK_POINTER_W, LAMP_PAD, LAMP_LABEL_GAP, lampReach, BUTTON_METAL };
 export { scaleBox, scaleMarkBoxes, labelClear };
 export { TRIM_R, TRIM_OVERHANG, TRIM_MARK_IN, TRIM_MARK_OUT, TRIM_SIGN_R, TRIM_SIGN_X, TRIM_SIGN_OUT };
-export { defs, jack, vjack, knob, knack, trim, label, attachedLabel, evenScale, bipolarMark, ledLamp, waveGlyph, button, radioGroup, stepButton, slider, vuMeter, textWidth, wrapLines };
+export { defs, jack, vjack, knob, knack, trim, label, attachedLabel, evenScale, bipolarMark, ledLamp, waveGlyph, button, radioGroup, stepButton, slider, readout, vuMeter, textWidth, wrapLines };
+export { READOUT_H, READOUT_CH, READOUT_PAD, READOUT_ARROW_GAP };

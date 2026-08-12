@@ -7,10 +7,11 @@ and a second trace — while keeping its small, glanceable footprint.
 
 ## 1. Principles
 
-- **Compact for monitoring, menu for setup.** The resting scope stays small (a readout you
-  glance at). Everything configurable lives in the **right-click menu**, so no gesture is
-  ever *required* — this matters for a mouse-first, screen-magnified workflow. A handful of
-  frequent adjustments are *also* promoted to gestures.
+- **Compact for monitoring.** The resting scope stays small — a readout you glance at.
+  Frequent adjustments sit on the face; fuller setup lives in the right-click menu.
+  **There is no rule that every control must also appear in the menu.** An earlier draft
+  said so and justified it on accessibility grounds; that was an assumption that hardened
+  into doc text, not a requirement. Access routes are decided per control.
 - **Autoset is a one-shot, not a background process.** The old continuous auto-scale hides
   the very thing you want to watch — the trace breathing as amplitude and rate change. It
   runs **once** (on open, or on demand) and then **holds**, so those dynamics stay visible.
@@ -94,7 +95,8 @@ replacing the old continuous multipliers. Adjusted three ways, all equivalent:
 | Gesture | Action |
 | --- | --- |
 | Plain drag on face | Move the scope |
-| Click on face | Freeze / run |
+| Click on face | Show / hide the values box (§9a) |
+| Lower-left transport button | Run (right-pointing triangle) / pause (two vertical bars) |
 | Vertical scroll | Vertical scale (1-2-5) |
 | Horizontal scroll / cmd-drag | Time base (1-2-5) |
 | Right-click | The scope menu (everything) |
@@ -103,7 +105,18 @@ replacing the old continuous multipliers. Adjusted three ways, all equivalent:
 | Edge loop's dot | Re-probe (drag) / close (×) |
 | Add-trace drag | Drop a second coloured loop |
 
-Everything reachable by gesture is also in the menu; no gesture is mandatory.
+Note that a click on the face does **not** freeze the scope. Pausing and running is the
+lower-left transport button: a right-pointing triangle runs it, two vertical bars pause it.
+An earlier draft had freeze on the face click, which was misleading.
+
+## 9a. The values box
+
+A click on the face toggles a rectangle below the scope. It is a readout, not a settings
+panel, and it cycles through three modes — **scale**, then **frequency**, then
+**min / mean / max** — stepped by clicking anywhere in the box or its top-edge triangle. It
+always opens in scale mode, because you clicked the wave to inspect it, and stays up with no
+auto-hide until you click the face again, cycle past the end, or click a panel background.
+
 
 ## 8. Menu structure
 

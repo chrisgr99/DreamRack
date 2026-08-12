@@ -327,6 +327,13 @@ export function formatParamValue(meta, value, values) {
   if (meta == null || value == null) return null;
   let v = Number(value);
   if (!isFinite(v)) return String(value);
+  // A PARAM WHOSE VALUE IS NOT A NUMBER TO THE PLAYER. A clock ratio knob holds an index — 12 — and
+  // means a musical fact: ×11. Showing the index is showing the implementation. `readout` cannot help,
+  // since it maps a number to another number; this maps it to whatever the control actually says.
+  if (typeof meta.readoutText === 'function') {
+    const t = meta.readoutText(v);
+    if (t != null) return String(t);
+  }
   if (typeof meta.readout === 'function') {
     const eff = Number(meta.readout(v, values));
     if (isFinite(eff)) v = eff;
@@ -344,8 +351,9 @@ export function formatParamValue(meta, value, values) {
     return `${db > 0.05 ? '+' : ''}${db.toFixed(1)} dB`;   // unity is 0.0 dB, not +0.0
   }
 
-  // Whole steps: octaves, clock ratios, repeat counts.
-  if (meta.curve === 'detent') return plus(String(Math.round(v)));
+  // Whole steps: octaves, clock ratios, repeat counts. The unit comes along if the param declared one
+  // — a tempo reading '120' says less than '120 BPM', and costs three characters to say it.
+  if (meta.curve === 'detent') return plus(String(Math.round(v))) + (unit ? ' ' + unit : '');
 
   if (unit === 'Hz') {
     return v >= 1000 ? `${sig(v / 1000, 3)} kHz` : `${sig(v, 3)} Hz`;

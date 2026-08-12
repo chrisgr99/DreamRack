@@ -16,7 +16,7 @@ the guess, which is the usual direction of travel and worth recording rather tha
 
 | Module | Controls | Ins | Outs | HP | State |
 |---|---|---|---|---|---|
-| **Oscillator** | Coarse, Fine, Lin FM, Exp FM, Pulse width, Feedback, sync mode | 1V/oct, sync, lin FM, exp FM, PW | sine, tri, saw, pulse | 10 | **built** |
+| **VCO** | Coarse, Fine, Lin FM, Exp FM, Pulse width, Feedback, sync mode | 1V/oct, sync, lin FM, exp FM, PW | sine, tri, saw, pulse | 10 | **built** |
 | **Noise** | none | — | violet, blue, white, pink, red | 5 | **built** |
 | **Filter** | Cutoff, Resonance, Drive | audio | low, high, band | 8 | **built** |
 | **VCA** | Level, response | audio, CV | out | 6 | **built** |

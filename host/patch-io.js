@@ -154,6 +154,9 @@ export function serialize(rack, mixer) {
       to: { module: e.dst.key, port: e.dst.portId },
     };
     if (e.bow) w.bow = { along: e.bow.along, perp: e.bow.perp };
+    // The bend of a CROSSING cable's swoop, which is a different curve from the on-page one and so a
+    // separate shape. Both are fractions, so both survive a reopen at any zoom.
+    if (e.stubBow) w.stubBow = { along: e.stubBow.along, perp: e.stubBow.perp };
     // A LINK (mult) records the input it taps, so it round-trips as the short cord you drew.
     if (e.link) w.link = { module: e.link.key, port: e.link.portId };
     return w;
@@ -257,6 +260,7 @@ export async function restore(obj, rack, mixer, opts = {}) {
     // patch looks restored and isn't. Say so.
     if (!edge) console.warn(`[wcoast] cable not restored: ${w.from.module}.${w.from.port} -> ${w.to.module}.${w.to.port}`);
     if (edge && w.bow) edge.bow = w.bow;
+    if (edge && w.stubBow) edge.stubBow = w.stubBow;
     // Re-tag a link with its (remapped) anchor input; reconciled after all wiring exists.
     if (edge && w.link && idToKey.has(w.link.module)) edge.link = { key: idToKey.get(w.link.module), portId: w.link.port };
   }

@@ -292,9 +292,27 @@ export function showSlider(binding, pos) {
 
 // Set a control from a raw descriptor value (dispatches on kind/curve).
 export function showValue(binding, value) {
+  // A readout paints the value as WORDS, through the same formatter the hover bubble uses — so the
+  // window and the bubble can never disagree about what the setting is called.
+  if (binding.kind === 'readout') { if (binding.text) binding.text.textContent = readoutText(binding, value); return; }
   if (binding.kind === 'slider') showSlider(binding, valueToPosition(binding.meta, value));
   else if (binding.meta.curve === 'stepped') showStep(binding, value);
   else showPosition(binding, valueToPosition(binding.meta, value));
+}
+
+// What a readout prints. A stepped param shows the step's own short label if it has one, so a value
+// of 'div4' reads as the ÷4 it means; anything else goes through the shared formatter, which already
+// knows about units, detents and each param's readoutText hook.
+export function readoutText(binding, value) {
+  const meta = binding.meta;
+  if (meta.curve === 'stepped') {
+    const step = (meta.steps || []).find((st) => st.value === value);
+    if (step && step.short) return step.short;
+    if (step && step.name) return step.name;
+    return String(value);
+  }
+  const t = formatParamValue(meta, value, binding.values);
+  return t == null ? '' : String(t);
 }
 
 // ---- parsing / validation -----------------------------------------------
@@ -319,6 +337,17 @@ export function parsePanel(svg, descriptor) {
     // "slider" and holds a data-wcoast-role "handle" child that rides a vertical
     // track spanning data-wcoast-top..bot (group-local y). Drag moves the handle;
     // unlike a knob it has no rotating indicator or pivot.
+    // A READOUT: a lit window that shows its own value and steps under the wheel. It has no
+    // indicator to rotate and no lamps to light — the text IS the indication — so it is its own kind
+    // rather than a knob that happens to be drawn as a rectangle.
+    if (el.getAttribute('data-wcoast-role') === 'readout') {
+      const text = el.querySelector('[data-wcoast-role="readout-text"]');
+      if (!text) warnings.push(`readout "${id}" has no text element`);
+      controls.set(id, { id, meta, group: el, kind: 'readout', text,
+        up: el.querySelector('[data-wcoast-role="readout-up"]'),
+        down: el.querySelector('[data-wcoast-role="readout-down"]') });
+      continue;
+    }
     if (el.getAttribute('data-wcoast-role') === 'slider') {
       const handle = el.querySelector('[data-wcoast-role="handle"]');
       const top = numAttr(el, 'data-wcoast-top');
@@ -652,28 +681,88 @@ export function attachControlInteraction(binding, hooks, opts = {}) {
   binding.readValue = hooks.get;   // the hover readout asks for the number a second later
   if (hooks.values) binding.values = hooks.values;   // ...and the module's other values, for the
                                                      // parameters whose number depends on a switch
+  if (binding.kind === 'readout') {
+    // SCROLL ONLY, and one value per notch. There is no spin control and no click target: a click on a
+    // readout does nothing, deliberately, because a lit rectangle that responded to a click would be
+    // the button it is drawn not to be. The chevrons beside it are a legend, not a pair of buttons.
+    const stepped = binding.meta.curve === 'stepped';
+    const values = stepped ? (binding.meta.steps || []).map((st) => st.value) : null;
+    const min = binding.meta.min, max = binding.meta.max;
+    const THRESH = Math.max(10, binding.meta.detentThresh || 100);
+    let acc = 0;
+    const step = (dir) => {
+      const cur = hooks.get();
+      if (stepped) {
+        const i = values.indexOf(cur);
+        const ni = Math.max(0, Math.min(values.length - 1, (i < 0 ? 0 : i) + dir));
+        if (values[ni] !== cur) hooks.set(values[ni]);
+        return;
+      }
+      const nv = Math.max(min, Math.min(max, Math.round(Number(cur)) + dir));
+      if (nv !== Number(cur)) hooks.set(nv);
+    };
+    // NO CURSOR CHANGE over the window itself. The wheel works there, but a resize cursor on a panel
+    // control says the wrong thing — nothing here is being dragged or resized.
+    for (const [node, dir] of [[binding.up, +1], [binding.down, -1]]) {
+      if (!node) continue;
+      node.style.cursor = 'pointer';
+      node.addEventListener('pointerdown', (e) => { e.stopPropagation(); e.preventDefault(); });
+      node.addEventListener('click', (e) => { e.stopPropagation(); step(dir); });
+    }
+    el.addEventListener('wheel', (e) => {
+      if (e.ctrlKey) return;   // ctrl+wheel is the rack pinch-zoom
+      e.preventDefault();
+      const d = e.deltaMode === 1 ? e.deltaY * 16 : e.deltaMode === 2 ? e.deltaY * 400 : e.deltaY;
+      acc += -d;
+      let guard = 0;
+      while (acc >= THRESH && guard++ < 8) { acc -= THRESH; step(+1); }
+      while (acc <= -THRESH && guard++ < 8) { acc += THRESH; step(-1); }
+      // No hover bubble: the window is already showing the value, and a second copy of it floating
+      // beside your hand is the thing this control exists to make unnecessary.
+    }, { passive: false });
+    return;
+  }
   if (binding.kind === 'knob' && binding.meta.curve === 'detent') {
     // A DETENT knob steps by whole integers. Momentum integration would move the
     // position by less than one detent per gentle notch and round straight back, so
     // it never leaves its mark — scroll must advance discrete detents instead. Scroll
     // deltas accumulate; each time they cross a threshold the value steps one detent.
     if (!binding.indicator || !binding.pivot) return;
-    const min = binding.meta.min, max = binding.meta.max, THRESH = 100;
+    const min = binding.meta.min, max = binding.meta.max;
+    // HOW MUCH SCROLL ONE DETENT COSTS. A hundred is one mouse notch, which is the right default: one
+    // click, one detent, and the control cannot run away from you. A knob with a long range wants the
+    // notch to be worth more without the STEP being worth more — a tempo that moved 30 BPM a click
+    // would be unusable to settle with — so this makes the travel cheaper rather than the step bigger.
+    const THRESH = Math.max(10, binding.meta.detentThresh || 100);
+    // HOW FAR ONE NOTCH GOES. One detent per notch is right for a knob with a handful of positions —
+    // an octave shifter, a sync mode — and unusable on one with hundreds: a tempo spanning 30 to 300
+    // took 270 notches end to end, which does not read as a fine control, it reads as a stuck one.
+    // `detentStep` lets such a param say how far a notch should carry it; everything else is
+    // unaffected, because the default is still one.
+    const stepBy = Math.max(1, Math.round(binding.meta.detentStep || 1));
     let acc = 0;
-    const step = (dir) => {
+    const step = (dir, by) => {
       const cur = Math.round(Number(hooks.get()));
-      const nv = Math.max(min, Math.min(max, cur + dir));
+      // Land on multiples of the step from the range's start, so a coarse sweep passes through the
+      // same values every time rather than wherever it happened to begin.
+      let nv = cur + dir * by;
+      if (by > 1) nv = min + Math.round((nv - min) / by) * by;
+      nv = Math.max(min, Math.min(max, nv));
       if (nv !== cur) hooks.set(nv);
     };
     el.addEventListener('wheel', (e) => {
       if (e.ctrlKey) return;   // ctrl+wheel is the rack pinch-zoom
       e.preventDefault();
+      // The same modifier ladder the continuous knobs use, so it is one thing to learn: Shift for
+      // coarse, Command for fine — and on a stepped knob "fine" can only ever mean one detent.
+      const scale = scrollScale(e);
+      const by = scale >= 1 ? Math.max(1, Math.round(stepBy * scale)) : 1;
       const d = e.deltaMode === 1 ? e.deltaY * 16 : e.deltaMode === 2 ? e.deltaY * 400 : e.deltaY;
       acc += -d;   // up (negative delta) raises the value
       let guard = 0;
-      while (acc >= THRESH && guard++ < 8) { acc -= THRESH; step(+1); }
-      while (acc <= -THRESH && guard++ < 8) { acc += THRESH; step(-1); }
-      refreshReadout(formatParamValue(binding.meta, hooks.get(), binding.values), e.clientX, e.clientY, { name: binding.meta && binding.meta.name, region: 'value' });
+      while (acc >= THRESH && guard++ < 8) { acc -= THRESH; step(+1, by); }
+      while (acc <= -THRESH && guard++ < 8) { acc += THRESH; step(-1, by); }
+      refreshReadout(formatParamValue(binding.meta, hooks.get(), binding.values) + scrollScaleTag(scale), e.clientX, e.clientY, { name: binding.meta && binding.meta.name, region: 'value' });
     }, { passive: false });
     return;
   }
@@ -792,6 +881,10 @@ export function attachControlInteraction(binding, hooks, opts = {}) {
       if (vel > KNOB_MAXV) vel = KNOB_MAXV; else if (vel < -KNOB_MAXV) vel = -KNOB_MAXV;
       if (!raf) { last = performance.now(); raf = requestAnimationFrame(tick); }
     }, { passive: false });
+  } else if (binding.meta.readOnly) {
+    // A PARAM THE ENGINE OWNS. It is painted like any other — the host's readout map finds it by id and
+    // lights it — but nothing here binds a click to it. A lamp reporting what the clock is doing must
+    // not also look like a switch you can throw, or the first thing anyone does is throw it.
   } else if (binding.kind === 'switch' && binding.stepCount > 1) {
     // Operate a switch by clicking its LAMPS. A multi-position switch (Range,
     // Waveshape) jumps to whichever lamp you click; a single-lamp on/off switch

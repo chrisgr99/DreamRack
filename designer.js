@@ -36,6 +36,24 @@ import vcaLayout from './modules/vca/panel.layout.js';
 import vcaDesc from './modules/vca/descriptor.js';
 import filterLayout from './modules/filter/panel.layout.js';
 import filterDesc from './modules/filter/descriptor.js';
+import clockLayout from './modules/clock/panel.layout.js';
+import clockDesc from './modules/clock/descriptor.js';
+import marblesLayout from './modules/marbles/panel.layout.js';
+import marblesDesc from './modules/marbles/descriptor.js';
+import sineLayout from './modules/sine-source/panel.layout.js';
+import sineDesc from './modules/sine-source/descriptor.js';
+import fieldLayout from './modules/coordinate-field/panel.layout.js';
+import fieldDesc from './modules/coordinate-field/descriptor.js';
+import formulaLayout from './modules/formula/panel.layout.js';
+import formulaDesc from './modules/formula/descriptor.js';
+import shapesLayout from './modules/shapes/panel.layout.js';
+import shapesDesc from './modules/shapes/descriptor.js';
+import timeLayout from './modules/time-machine/panel.layout.js';
+import timeDesc from './modules/time-machine/descriptor.js';
+import vmathsLayout from './modules/video-maths/panel.layout.js';
+import vmathsDesc from './modules/video-maths/descriptor.js';
+import vidoutLayout from './modules/video-out/panel.layout.js';
+import vidoutDesc from './modules/video-out/descriptor.js';
 import octLayout from './modules/octave/panel.layout.js';
 import octDesc from './modules/octave/descriptor.js';
 
@@ -43,6 +61,10 @@ const NS = 'http://www.w3.org/2000/svg';
 const clone = (o) => JSON.parse(JSON.stringify(o));
 const round3 = (n) => Math.round(n * 1000) / 1000;
 
+// EVERY MODULE WITH A LAYOUT BELONGS HERE, and this list is hand-kept because the editor runs in a
+// browser and cannot read a directory. So it falls behind silently: a module missing from it is simply
+// not editable, with nothing to say why. Nine were missing when this was last checked — every video
+// module, the sine source, and both of the newest ones.
 const MODULES = [
   { name: 'Complex Oscillator', dir: 'complex-oscillator-259t', base: oscLayout, desc: oscDesc },
   { name: 'Quad Low Pass Gate', dir: 'lpg-292', base: lpgLayout, desc: lpgDesc },
@@ -50,12 +72,21 @@ const MODULES = [
   { name: 'Mixer / Output', dir: 'mixer', base: mixerLayout, desc: mixerDesc },
   { name: 'Control Gallery', dir: 'gallery', base: galleryLayout, desc: galleryDesc },
   { name: 'Sequencer / Programmer Eight', dir: 'programmer-8', base: progLayout, desc: progDesc },
-  { name: 'Oscillator', dir: 'oscillator', base: vcoLayout, desc: vcoDesc },
+  { name: 'VCO', dir: 'oscillator', base: vcoLayout, desc: vcoDesc },
   { name: 'Noise', dir: 'noise', base: noiseLayout, desc: noiseDesc },
   { name: 'ADSR', dir: 'envelope', base: envLayout, desc: envDesc },
   { name: 'VCA', dir: 'vca', base: vcaLayout, desc: vcaDesc },
   { name: 'Filter', dir: 'filter', base: filterLayout, desc: filterDesc },
   { name: 'Octave', dir: 'octave', base: octLayout, desc: octDesc },
+  { name: 'drClckd', dir: 'clock', base: clockLayout, desc: clockDesc },
+  { name: 'Marbles', dir: 'marbles', base: marblesLayout, desc: marblesDesc },
+  { name: 'Sine Source', dir: 'sine-source', base: sineLayout, desc: sineDesc },
+  { name: 'Coordinate Field', dir: 'coordinate-field', base: fieldLayout, desc: fieldDesc },
+  { name: 'Formula', dir: 'formula', base: formulaLayout, desc: formulaDesc },
+  { name: 'Shapes', dir: 'shapes', base: shapesLayout, desc: shapesDesc },
+  { name: 'Time Machine', dir: 'time-machine', base: timeLayout, desc: timeDesc },
+  { name: 'Video Maths', dir: 'video-maths', base: vmathsLayout, desc: vmathsDesc },
+  { name: 'Video Output', dir: 'video-out', base: vidoutLayout, desc: vidoutDesc },
 ];
 
 const stage = document.getElementById('stage');

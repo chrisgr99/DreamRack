@@ -72,9 +72,9 @@ const params = [
 export default {
   apiVersion: 1,
   id: 'wcoast.oscillator',
-  name: 'Oscillator',
+  name: 'VCO',
   category: 'source',   // module library grouping
-  abbreviation: 'OSC',
+  abbreviation: 'VCO',
   scope: 'voice',
   hp: 10,
   worklets: ['modules/oscillator/oscillator-processor.js'],

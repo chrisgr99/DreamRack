@@ -37,6 +37,10 @@ import filterDescriptor from '../modules/filter/descriptor.js';
 import { create as filterCreate } from '../modules/filter/factory.js';
 import octDescriptor from '../modules/octave/descriptor.js';
 import { create as octCreate } from '../modules/octave/factory.js';
+import clockDescriptor from '../modules/clock/descriptor.js';
+import marblesDescriptor from '../modules/marbles/descriptor.js';
+import { create as marblesCreate } from '../modules/marbles/factory.js';
+import { create as clockCreate } from '../modules/clock/factory.js';
 import progDescriptor from '../modules/programmer-8/descriptor.js';
 import { create as progCreate } from '../modules/programmer-8/factory.js';
 import vidDescriptor from '../modules/video-out/descriptor.js';
@@ -79,6 +83,8 @@ registry.register({ descriptor: envDescriptor, create: envCreate });
 registry.register({ descriptor: vcaDescriptor, create: vcaCreate });
 registry.register({ descriptor: filterDescriptor, create: filterCreate });
 registry.register({ descriptor: octDescriptor, create: octCreate });
+registry.register({ descriptor: clockDescriptor, create: clockCreate });
+registry.register({ descriptor: marblesDescriptor, create: marblesCreate });
 registry.register({ descriptor: progDescriptor, create: progCreate });
 registry.register({ descriptor: vidDescriptor, create: vidCreate });
 registry.register({ descriptor: fieldDescriptor, create: fieldCreate });
@@ -118,7 +124,7 @@ const MODULE_TYPES = [{
   // with it: one oscillator, four phase-coherent shapes, through-zero linear FM, and a feedback knob
   // that modulates its own phase. 13 HP.
   descriptorId: vcoDescriptor.id,
-  name: 'Oscillator',
+  name: 'VCO',
   hp: 10,
   panelUrl: 'modules/oscillator/panel.svg',
   descriptor: vcoDescriptor,
@@ -149,6 +155,18 @@ const MODULE_TYPES = [{
 }, {
   // Octave — a 1V/oct signal moved whole octaves. No worklet: on 1V/oct an octave is exactly one, so
   // it is a sum the audio graph does for free. 4 HP.
+  descriptorId: marblesDescriptor.id,
+  name: 'Marbles',
+  hp: 15,
+  panelUrl: 'modules/marbles/panel.svg',
+  descriptor: marblesDescriptor,
+}, {
+  descriptorId: clockDescriptor.id,
+  name: 'drClckd',
+  hp: 12,
+  panelUrl: 'modules/clock/panel.svg',
+  descriptor: clockDescriptor,
+}, {
   descriptorId: octDescriptor.id,
   name: 'Octave',
   hp: 4,
@@ -1554,5 +1572,5 @@ window.addEventListener('DOMContentLoaded', () => {
   if (window.wcoast && window.wcoast.isElectron) {
     log(`Electron — Chromium ${window.wcoast.versions.chrome}, Node ${window.wcoast.versions.node}.`);
   }
-  boot().catch((e) => log(`BOOT ERROR: ${e.message}`));
+  boot().catch((e) => { console.error(`[wcoast] BOOT ERROR`, (e && e.stack) || e); log(`BOOT ERROR: ${e.message}`); });
 });
