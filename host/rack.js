@@ -9468,6 +9468,7 @@ export class Rack {
     // Open just to the RIGHT of the pointer, so clicking the same terminal again
     // (without moving) lands off the menu's left edge and toggles it shut rather
     // than selecting the row under the cursor.
+    const GAP = 8;
     let left;
     if (opts.centred) {           // (x, y) is where the menu's MIDDLE should sit — it has no pointer to dodge
       left = Math.round(x - mw / 2);
