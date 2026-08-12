@@ -93,7 +93,11 @@ const TAB_X_ROOM = 11;   // px a closable tab gains for its × — about 3mm on 
 // A stub's HOVER STRIP: as wide as a slot, so the strips of one bundle sit shoulder to shoulder and
 // scanning along them never falls into a gap between two, and deep enough to hover well clear of the
 // bar. A stub is a four-pixel line — far too fine to aim at, especially under magnification.
-const STRIP_H = 30;   // halved with the drop: it hung far enough down to sit over the panels below
+// SHORT, AND AGAINST THE BAR. At thirty pixels it reached eight millimetres down the stub, so the
+// chip came up while the pointer was nowhere near the tab — and then followed the pointer further
+// down as you moved. Both are the same mistake: this control belongs to the tab, and a thing that
+// appears a centimetre away from what it is about has to be explained rather than read.
+const STRIP_H = 14;
 // Tooltip timing, and it is a toolbar's timing: a real pause before the FIRST flag, so crossing the
 // bundle on the way somewhere else does not throw labels up; then a warm period in which moving to
 // the next stub shows its flag at once, because by then you are plainly reading them.
@@ -398,6 +402,16 @@ export class Rack {
     document.addEventListener('contextmenu', (e) => e.preventDefault());
     this._watchCableHover();  // rest on a cord and a bend handle appears; see _watchCableHover
     this._watchStubHover();   // ...and the same for a cord that crosses to a tab
+    // A CHIP CAN ALWAYS BE PUT AWAY BY CLICKING OFF IT. It normally goes when the pointer leaves the
+    // strip that raised it — but a redraw can detach that strip while the pointer is still inside it,
+    // and then the leave it was waiting for never comes and the chip stands there for ever. Pressing
+    // anywhere that is not a stub strip clears it, which is what anyone would try first anyway.
+    document.addEventListener('pointerdown', (e) => {
+      if (!this._flagEl || this._flagEl.style.display !== 'block') return;
+      if (e.target && e.target.closest && e.target.closest('.stub-grab, .stub-flag')) return;
+      this._flagSticky = false;
+      this._hideFlag();
+    }, true);
     this._watchCableDrag();   // ...and only then does a press on it bend it; see _watchCableDrag
     // A press outside an open pop-up menu (the app/File menu, a scope menu) just
     // DISMISSES it — that click must not also nudge a control. Capture phase +
@@ -2235,7 +2249,30 @@ export class Rack {
     el.className = 'stub-flag';
     document.body.appendChild(el);
     this._flagEl = el;
+    // ON THE CHIP ITSELF. The fader it is showing is the one the meter is already running against, so
+    // there is nothing to look up and no way for the two to disagree about which channel is turning.
+    el.addEventListener('wheel', (ev) => {
+      if (ev.ctrlKey) return;   // ctrl+wheel is the rack's pinch-zoom
+      const f = this._flagMeterFader;
+      if (!f) return;
+      ev.preventDefault(); ev.stopPropagation();
+      const raw = ev.deltaMode === 1 ? ev.deltaY * 16 : ev.deltaMode === 2 ? ev.deltaY * 400 : ev.deltaY;
+      const np = Math.max(0, Math.min(1, this._faderPos(f) + (-raw / 100) * 0.05));
+      this._setParam(f.rec, f.id, positionToValue(f.meta, np));
+      this._setFlagLevel(this._faderPos(f));
+    }, { passive: false });
+    // Being on the chip counts as being on the stub: the strip's own leave schedules the hide rather
+    // than doing it, and arriving here calls that off.
+    el.addEventListener('pointerenter', () => { clearTimeout(this._flagGoTimer); this._flagGoTimer = 0; });
+    el.addEventListener('pointerleave', () => this._hideFlagSoon());
     return el;
+  }
+
+  // A BEAT'S GRACE. The chip sits just under the strip, so crossing from one to the other passes over
+  // a boundary — without the delay the chip would go out the instant you set off towards it.
+  _hideFlagSoon(ms = 140) {
+    clearTimeout(this._flagGoTimer);
+    this._flagGoTimer = setTimeout(() => { this._flagGoTimer = 0; this._hideFlag(); }, ms);
   }
 
   // Show (or move) the flag for one stub. CENTRED ON THE POINTER, not hung off the stub: a screen
@@ -2243,6 +2280,7 @@ export class Rack {
   // magnified view, while one aligned to the line beside it sits off toward the edge — or outside it.
   // It rides a few pixels clear of the tip so a sliver of the cable shows between the two.
   _showFlag(text, color, px, py, fader) {
+    clearTimeout(this._flagGoTimer); this._flagGoTimer = 0;
     const el = this._ensureFlag();
     // BLACK INSIDE, the colour on the border. Lettering on a coloured ground is hard to read whatever
     // the letters are — we tried black on the colour and white on the colour — and white on black is
@@ -2290,10 +2328,11 @@ export class Rack {
     // Top edge ON the pointer. Clamped at the bottom for symmetry, though it is the top edge that was
     // ever the problem — the stubs live on the tab bar and the tab bar lives at the very top.
     el.style.top = Math.round(Math.max(2, Math.min(py, window.innerHeight - 4 - h))) + 'px';
+    el.style.pointerEvents = fader ? 'auto' : 'none';
     el.style.visibility = 'visible';
     // The chip is the pointer now, so take the system one away. Only while the chip is actually up —
     // hiding it during the dwell would leave you with no pointer at all for half a second.
-    if (this._flagStrip) this._flagStrip.style.cursor = 'none';
+    if (this._flagStrip) this._flagStrip.style.cursor = fader ? '' : 'none';
     this._flagWarm = true;
   }
 
@@ -2378,9 +2417,13 @@ export class Rack {
       const a = this._stubAnchor(page, i);
       if (!a) return null;
       const live = patched.has(c.portId);
-      // The HIT radius is the full button either way, so an empty input is no harder to drop on for
-      // being drawn small.
-      return { ...c, x: a.x, y: a.y, live, r: (live ? MIXER_BTN_PX : MIXER_DOT_PX) / 2, hitR: MIXER_BTN_PX / 2 };
+      // THE HIT AREA IS THE BUTTON'S WIDTH AS A RADIUS — twice the button, and the same for an empty
+      // input as for a patched one, so a small placeholder is no harder to reach for being drawn
+      // small. It was the button's own radius, which is three millimetres across on a bar you are
+      // aiming at while carrying a cable: miss it and you land on the tab (which changes page) or on
+      // the module beside it. The target is now the one thing on that bar you can afford to be sloppy
+      // about, because everything around it does something you did not ask for.
+      return { ...c, x: a.x, y: a.y, live, r: (live ? MIXER_BTN_PX : MIXER_DOT_PX) / 2, hitR: MIXER_BTN_PX };
     }).filter(Boolean);
   }
 
@@ -2397,15 +2440,28 @@ export class Rack {
       c.dataset.chan = b.L;
       c.style.pointerEvents = 'auto';
       c.style.cursor = 'pointer';
-      // A CLICK TOGGLES, and that is all a button ever does — a cable is never pulled OFF it, only
-      // off the stub hanging below it. That is what keeps the press unambiguous.
-      c.addEventListener('pointerdown', (ev) => {
+      // AN INVISIBLE PAD, the size of the drop target, sitting under the button and carrying its
+      // presses. Drawn first so the button paints over it; transparent rather than absent so a click
+      // that misses the ink by two millimetres still toggles the channel instead of switching page.
+      const pad = document.createElementNS(SVG_NS, 'circle');
+      pad.setAttribute('cx', r2(b.x)); pad.setAttribute('cy', r2(b.y)); pad.setAttribute('r', r2(b.hitR));
+      pad.setAttribute('fill', 'transparent');
+      pad.style.pointerEvents = 'auto';
+      pad.style.cursor = 'pointer';
+      // ONE ACT, SHARED BY BOTH — rather than a synthetic event aimed at the circle, which would have
+      // arrived as a click at a handler that only listens for a press. A CLICK TOGGLES, and that is all
+      // a button ever does: a cable is never pulled OFF it, only off the stub hanging below it, which
+      // is what keeps the press unambiguous.
+      const toggle = (ev) => {
         if (ev.button !== 0) return;
         if (this._tempCable) return;   // a cord in hand is dropping, not toggling — see _jackNear
         ev.preventDefault(); ev.stopPropagation();
         this._setParam(b.rec, b.enableId, on ? 'off' : 'on');
         this._drawPageStubs();
-      });
+      };
+      pad.addEventListener('pointerdown', toggle);
+      svg.appendChild(pad);
+      c.addEventListener('pointerdown', toggle);
       svg.appendChild(c);
     }
   }
@@ -2671,15 +2727,26 @@ export class Rack {
         hit.style.pointerEvents = 'auto';
         const label = () => this._stubLabel(item.e, item.nearIsSrc);
         const fader = () => this._stubFader(item.e, item.nearIsSrc);
-        const place = (ev) => { this._showFlag(label(), color, ev.clientX, ev.clientY, fader()); this._setStubMark(item.e.id, 'tab'); };
+        // PLACED FROM THE STUB'S OWN GEOMETRY, not from the pointer and not from the element: at the
+        // top of the stub, just below the strip, under the button it feeds. It used to ride the
+        // pointer, so the same chip about the same channel stood somewhere different every time and
+        // wandered away from the tab as you moved down.
+        //
+        // FROM NUMBERS RATHER THAN FROM `hit`: showing the chip marks the stub, which redraws this
+        // layer, which detaches the very element a measurement would be taken from — and a detached
+        // element measures as a zero-sized box at the window's corner.
+        //
+        // BELOW THE STRIP, never over it. The chip hangs from the y it is given, so a y inside the
+        // strip lays it across the target the pointer has to stay on.
+        const chipX = anchor.x, chipY = anchor.y + STRIP_H;
+        const place = () => { this._showFlag(label(), color, chipX, chipY, fader()); this._setStubMark(item.e.id, 'tab'); };
         hit.addEventListener('pointerenter', (ev) => {
           this._flagStrip = hit;
           clearTimeout(this._flagTimer);
           clearTimeout(this._flagWarmTimer);
           // Warm, so straight away: you are reading the bundle, not passing through it.
-          if (this._flagWarm) { place(ev); return; }
-          const x = ev.clientX, y = ev.clientY;
-          this._flagTimer = setTimeout(() => { this._showFlag(label(), color, x, y, fader()); this._setStubMark(item.e.id, 'tab'); }, FLAG_DWELL_MS);
+          if (this._flagWarm) { place(); return; }
+          this._flagTimer = setTimeout(place, FLAG_DWELL_MS);
         });
         // SCROLL THE STUB, TURN THAT CHANNEL. The cable running off to the mixer is already the handle
         // for the channel it lands in — it is on the page you are working on, it knows which channel it
@@ -2702,15 +2769,13 @@ export class Rack {
           // moves too, and undo and the autosave see one kind of change, not two.
           this._setParam(f.rec, f.id, positionToValue(f.meta, np));
           clearTimeout(this._flagTimer);
-          this._showFlag(label(), color, ev.clientX, ev.clientY, f);
+          this._showFlag(label(), color, chipX, chipY, f);
         }, { passive: false });
-        // The chip rides the pointer along the stub, staying centred over the tip.
-        hit.addEventListener('pointermove', (ev) => {
-          if (this._flagEl && this._flagEl.style.display === 'block') place(ev);
-        });
+        // IT DOES NOT RIDE THE POINTER. Moving within the strip leaves the chip where it is — over the
+        // stub it belongs to — so reading it does not mean chasing it.
         hit.addEventListener('pointerleave', () => {
           if (!hit.isConnected) return;   // removed by a redraw, not left by the pointer
-          this._hideFlag();
+          this._hideFlagSoon();
         });
         // EITHER GESTURE TAKES THE FAR END OFF: press and move pulls it, or click and it comes away
         // into your hand for a second click to drop. A stub is not a terminal, but the far end of a
@@ -8349,21 +8414,52 @@ export class Rack {
     }
     e.preventDefault();
     const startX = e.clientX, startY = e.clientY;
-    const onUp = (ev) => {
+    // PRESS AND HOLD FOR A SECOND. A click used to lift it, and a click is what you do to a module for
+    // a dozen other reasons — so a patch could rearrange itself under a hand that meant to select, or
+    // to leave isolate, or had simply landed a few pixels high. A second of stillness cannot be done
+    // by accident and costs nothing when you meant it: the module is in your hand before you have
+    // started to move.
+    //
+    // MOVEMENT CANCELS IT, because a press that travelled is a pan of the view, not a grab.
+    const HOLD_MS = 1000, SLOP_PX = 4;
+    let at = { x: startX, y: startY };
+    let timer = 0;
+    const stop = () => {
+      clearTimeout(timer); timer = 0;
+      document.removeEventListener('pointermove', onHoldMove, true);
       document.removeEventListener('pointerup', onUp, true);
-      // A cable being bent beats this outright, and a press that travelled was not a click.
+      document.removeEventListener('pointercancel', onUp, true);
+    };
+    const onHoldMove = (ev) => {
+      at = { x: ev.clientX, y: ev.clientY };
+      if (Math.hypot(ev.clientX - startX, ev.clientY - startY) > SLOP_PX) stop();
+    };
+    const onUp = (ev) => {
+      stop();
+      // A plain click still leaves isolate — that was always this gesture's other job.
       if (this._reshaping || this._cableDragCand) return;
-      if (Math.hypot(ev.clientX - startX, ev.clientY - startY) > 4) return;
+      if (Math.hypot(ev.clientX - startX, ev.clientY - startY) > SLOP_PX) return;
+      if (this._isolateNet) this._exitIsolate();
+    };
+    timer = setTimeout(() => {
+      stop();
+      if (this._reshaping || this._cableDragCand) return;
       if (this._isolateNet) this._exitIsolate();
       const r = rec.el.getBoundingClientRect();
       const sz = this.pxPerMm * this.zoom;
       // Held at the point you touched, as a FRACTION of the face rather than a distance — the same
       // number the library sends when you click a thumbnail, and it survives the panel's true width
       // arriving a moment later.
-      this._carryModule({ rec, atX: ev.clientX, atY: ev.clientY,
-        offFrac: { x: (ev.clientX - r.left) / (rec.panelWmm * sz), y: (ev.clientY - r.top) / (PANEL_H_MM * sz) } });
-    };
+      //
+      // THE BUTTON IS STILL DOWN when this fires, and that is fine: the carry places on a full click,
+      // and its pointerup handler wants a press it saw itself. The release that ends this hold is not
+      // one, so the module stays in hand until you click to put it down.
+      this._carryModule({ rec, atX: at.x, atY: at.y,
+        offFrac: { x: (at.x - r.left) / (rec.panelWmm * sz), y: (at.y - r.top) / (PANEL_H_MM * sz) } });
+    }, HOLD_MS);
+    document.addEventListener('pointermove', onHoldMove, true);
     document.addEventListener('pointerup', onUp, true);
+    document.addEventListener('pointercancel', onUp, true);
   }
 
   _rowFromY(y) {
