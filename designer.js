@@ -307,6 +307,7 @@ function anchor(it, layout) {
     case 'jack':       return { x: it.x, y: it.y, axes: 'xy', r: 3.0 };
     case 'button':     return { x: it.x, y: it.y, axes: 'xy', r: 3.0 };
     case 'radio':      return { x: it.x, y: it.y, axes: 'xy', r: 3.4 };
+    case 'readout':    return { x: it.x, y: it.y, axes: 'xy', r: 3.2 };
     case 'stepButton': return { x: it.x, y: it.y, axes: 'xy', r: 3.4 };
     case 'vu':         return { x: it.x, y: it.y, axes: 'xy', r: 3.2 };
     case 'slider':     return { x: it.x, y: (layout.faceH || 113.5912) / 2, axes: 'x', r: 4.0 };
@@ -359,7 +360,7 @@ async function renderOnce() {
 // Controls made of several elements (a whole radio row, a lamp group): the hit target
 // and the selection highlight should cover the WHOLE control, so we size them from the
 // rendered element's bounds. Point controls (knob, jack, button) stay a centred circle.
-const GROUP_TYPES = new Set(['radio', 'stepButton', 'lampGroup', 'vu']);
+const GROUP_TYPES = new Set(['radio', 'stepButton', 'lampGroup', 'vu', 'readout']);
 // A bound control still carrying its auto-generated placeholder id (knob1, jack2…) hasn't
 // had its identity defined — the id is the binding contract, so this flags "needs setup".
 function isUnconfigured(it, cid) { return !STRUCTURE_TYPES.has(it.t) && new RegExp('^' + it.t + '\\d+$').test(cid || ''); }
@@ -375,7 +376,7 @@ function buildOverlay(svg, layout) {
     let box = null;
     if (GROUP_TYPES.has(it.t)) {
       const rendered = svg.querySelector(`[data-wcoast-param="${cid}"]`) || svg.querySelector(`[data-wcoast-port="${cid}"]`);
-      if (rendered) { try { const b = rendered.getBBox(); box = { x: b.x - 0.8, y: b.y - 0.8, w: b.width + 1.6, h: b.height + 1.6 }; } catch (_e) { /* not measurable */ } }
+      if (rendered) { try { const b = rendered.getBBox(); box = { x: off.x + b.x - 0.8, y: off.y + b.y - 0.8, w: b.width + 1.6, h: b.height + 1.6 }; } catch (_e) { /* not measurable */ } }
     }
     if (box) {
       handle = document.createElementNS(NS, 'rect');
@@ -536,7 +537,7 @@ function startDrag(e, id) {
     for (const mv of movers) {
       const nx = mv.a.axes.includes('x') ? round3(mv.p.x + dx) : mv.p.x;
       const ny = mv.a.axes === 'xy' ? round3(mv.p.y + dy) : mv.p.y;
-      m.overrides[mv.id] = mv.a.axes === 'x' ? { x: nx } : { x: nx, y: ny };
+      setOverridePos(mv.id, mv.a.axes, nx, ny);
     }
     moved = true;
     scheduleRender();
@@ -561,7 +562,7 @@ function nudge(dx, dy) {
     const p = curPos(id);
     const nx = round3(p.x + (a.axes.includes('x') ? dx : 0));
     const ny = round3(p.y + (a.axes === 'xy' ? dy : 0));
-    m.overrides[id] = a.axes === 'x' ? { x: nx } : { x: nx, y: ny };
+    setOverridePos(id, a.axes, nx, ny);
   }
   scheduleRender();
 }
@@ -819,6 +820,16 @@ function setItemFieldAll(id, key, value) { for (const sid of peers(id)) setItemF
 
 // Move a control to an exact panel position (the numeric x/y fields), through the same
 // overrides layer that drag and nudge use.
+// Where a control has been moved to, merged into whatever else its override already says. Every path
+// that moves something — drag, nudge, the numeric fields — writes through here.
+function setOverridePos(id, axes, x, y) {
+  const m = MODULES[idx];
+  const prev = m.overrides[id] || {};
+  const next = { ...prev, x };
+  if (axes === 'x') delete next.y; else next.y = y;
+  m.overrides[id] = next;
+}
+
 function setPos(id, axis, v) {
   if (!Number.isFinite(v)) return;
   const m = MODULES[idx];
@@ -828,7 +839,7 @@ function setPos(id, axis, v) {
   const p = curPos(id);
   const nx = axis === 'x' ? round3(v) : p.x;
   const ny = axis === 'y' ? round3(v) : p.y;
-  m.overrides[id] = a.axes === 'x' ? { x: nx } : { x: nx, y: ny };
+  setOverridePos(id, a.axes, nx, ny);
   scheduleRender(); refreshStatus();
 }
 

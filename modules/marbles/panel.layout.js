@@ -56,6 +56,8 @@ const JACK_LABEL = { placement: 'below', size: 1.9, gap: 1.5 };
 // knobs, and at 15 HP they sit with 2.1mm between them and 6.6mm across the centre line — which is the
 // gap that says the two halves are two halves. The output jacks end up 2mm apart, which is as close as
 // a cable will let them be.
+const COL_EXT = 22.81;             // EXT, under the X mode radio rather than under the knob itself
+const Y_EXT = 44.98;
 const COL_EDGE = 11.1;             // bias, and the clock beneath it
 const COL_BIG = 22.1;              // rate and spread, the two knobs you play
 const COL_INNER = 27.6;            // jitter and steps, closing on the centre
@@ -92,8 +94,8 @@ const jack = (id, x, y, label) =>
 // A MENU READOUT: click or scroll it and its values open as a list. See rack._openValueMenu.
  const readout = (id, x, y, chars, label, value) =>
   items.push({ t: 'readout', id, x, y, opts: { chars, value: value || '', menu: true, ...(label ? { label: { text: label, ...LABEL } } : {}) } });
-const button = (id, x, y, label) =>
-  items.push({ t: 'button', id, x, y, opts: { r: BTN_R, kind: 'white', ...(label ? { label: { text: label, ...LABEL } } : {}) } });
+const button = (id, x, y, label, placement = 'below') =>
+  items.push({ t: 'button', id, x, y, opts: { r: BTN_R, kind: 'white', ...(label ? { label: { text: label, ...LABEL, placement } } : {}) } });
 // `left` puts the words on the left of a vertical stack, which is what makes the X column a true
 // reflection rather than a copy shifted sideways to dodge its neighbour.
 // SPACING FOLLOWS THE LABELS, not the lamps. Across, the words sit under their own lamp, so the gap
@@ -124,12 +126,21 @@ const radio = (id, x, y, steps, opts = {}) =>
 button('tDejaVu', T(COL_SWITCH), Y_DEJAVU, 'T');
 knack('dejaVu', MID, Y_DEJAVU, 'dejaVuIn', R_MED, 'DÉJÀ VU');
 button('xDejaVu', X(COL_SWITCH), Y_DEJAVU, 'X');
-radio('tMode', T(COL_MODE), Y_DEJAVU, [['bernoulli', 'BRN'], ['clusters', 'CLS'], ['drums', 'DRM']], { dir: 'h', spacing: 6.4 });
-radio('xMode', X(COL_MODE), Y_DEJAVU, [['identical', 'IDN'], ['bump', 'BMP'], ['tilt', 'TLT']], { dir: 'h', spacing: 6.4 });
+// SPELT OUT. Three letters was what a horizontal row of them could carry; stood up on end there is
+// room for the word, and BRN, CLS, DRM is a code you have to have been told. A panel that needs a
+// manual to name its own settings has spent its labels on nothing.
+radio('tMode', T(COL_MODE), Y_DEJAVU, [['bernoulli', 'BERNOULLI'], ['clusters', 'CLUSTERS'], ['drums', 'DRUMS']], { dir: 'h', spacing: 6.4 });
+radio('xMode', X(COL_MODE), Y_DEJAVU, [['identical', 'IDENTICAL'], ['bump', 'BUMP'], ['tilt', 'TILT']], { dir: 'h', spacing: 6.4 });
 
 // ---- the pair you play ------------------------------------------------------------------------
 knack('tRate', T(COL_BIG), Y_BIG, 'tRateIn', R_BIG, 'RATE');
 knack('xSpread', X(COL_BIG), Y_BIG, 'xSpreadIn', R_BIG, 'SPREAD');
+// EXT IN THE X HALF, under that side's radio, because SPREAD's jack is what it changes the meaning
+// of: off, that input modulates the knob; on, it is the signal the module captures and passes along
+// the three x outputs as a shift register. It is an X-side switch — her own name for it is
+// x_register_mode — and on the centre spine it read as though it might do something to the rhythm
+// too, which it does not.
+button('external', X(COL_EXT), Y_EXT, 'EXT', 'left');
 
 // ...and the loop length below it, on the spine, because it belongs to both.
 readout('dejaVuLength', MID, Y_LENGTH, 2, 'LENGTH', '1');
@@ -140,12 +151,11 @@ knack('tJitter', T(COL_INNER), Y_MID, 'tJitterIn', R_MED, 'JITTER');
 knack('xSteps', X(COL_INNER), Y_MID, 'xStepsIn', R_MED, 'STEPS');
 knack('xBias', X(COL_EDGE), Y_MID, 'xBiasIn', R_MED, 'BIAS');
 
-// ---- the low row: each side's clock at its own edge, and the ranges either side of EXTERNAL -----
-// The two ranges sit where they are read: beside the switch that decides what is being processed, one
-// per half, laid out ACROSS because three values of one quantity are a scale rather than a list.
+// ---- the low row: each side's clock at its own edge, and a range apiece --------------------------
+// The two ranges sit where they are read, one per half, laid out ACROSS because three values of one
+// quantity are a scale rather than a list.
 jack('tClockIn', T(COL_EDGE), Y_LOW, 'CLK');
 radio('tRange', T(COL_RANGE), Y_LOW, [['div4', '÷4'], ['x1', '×1'], ['x4', '×4']], { dir: 'h' });
-button('external', MID, Y_LOW, 'EXT');
 radio('xRange', X(COL_RANGE), Y_LOW, [['narrow', '±2'], ['positive', '+5'], ['full', '±5']], { dir: 'h' });
 jack('xClockIn', X(COL_EDGE), Y_LOW, 'CLK');
 

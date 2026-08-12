@@ -1,10 +1,10 @@
 {
   "xBias": {
-    "x": 65.078,
+    "x": 64.115,
     "y": 62.529
   },
   "tBias": {
-    "x": 11.122,
+    "x": 12.085,
     "y": 62.529
   },
   "tJitter": {
@@ -12,31 +12,29 @@
     "y": 87.48
   },
   "xSteps": {
-    "x": 49.693,
+    "x": 49.692,
     "y": 87.48
   },
   "tRange": {
-    "x": 23.7,
-    "y": 63.241,
+    "x": 28.842,
+    "y": 34.014,
     "opts": {
-      "orientation": "v"
+      "orientation": "v",
+      "spacing": 5,
+      "labelLeft": true
     }
   },
   "xRange": {
-    "x": 52.5,
-    "y": 63.241,
+    "x": 47.358,
+    "y": 34.014,
     "opts": {
       "orientation": "v",
-      "labelLeft": true
+      "spacing": 5
     }
   },
   "tClockIn": {
     "x": 9.038,
     "y": 94.794
-  },
-  "external": {
-    "x": 38.1,
-    "y": 76.408
   },
   "xClockIn": {
     "x": 67.162,
@@ -44,15 +42,24 @@
   },
   "dejaVuLength": {
     "x": 38.1,
-    "y": 59.896
+    "y": 28
   },
   "tMode": {
-    "x": 12.646,
-    "y": 11.765
+    "x": 22.03,
+    "y": 62.529,
+    "opts": {
+      "orientation": "v",
+      "spacing": 5
+    }
   },
   "xMode": {
-    "x": 63.554,
-    "y": 11.765
+    "x": 54.17,
+    "y": 62.529,
+    "opts": {
+      "orientation": "v",
+      "spacing": 5,
+      "labelLeft": true
+    }
   },
   "xDejaVu": {
     "x": 49.922,
@@ -61,5 +68,13 @@
   "tDejaVu": {
     "x": 26.278,
     "y": 12
+  },
+  "xSpread": {
+    "x": 64.115,
+    "y": 34.014
+  },
+  "tRate": {
+    "x": 12.085,
+    "y": 34.014
   }
 }

@@ -229,7 +229,15 @@ function registerPatchIpc() {
       return { ok: true, added, kept, session, view };
     } catch (e) { return { error: String((e && e.message) || e) }; }
   });
-  ipcMain.handle('designer:save', (_e, msg) => savePanel(__dirname, msg));
+  // A SAVE THAT SUCCEEDED IS REMEMBERED, and acted on when the editor closes — see openPanelEditor.
+  // The rack builds a faceplate from the SVG once, when the module is made, so a panel edited and
+  // saved behind it goes on showing the drawing it was born with. Every time that has happened it has
+  // looked like the save failed.
+  ipcMain.handle('designer:save', async (_e, msg) => {
+    const r = await savePanel(__dirname, msg);
+    if (r && !r.error) editorSaved = true;
+    return r;
+  });
   ipcMain.handle('designer:list-modules', () => listModules(__dirname));
   // The source revision, for stamping into saved patches (null from a packaged, git-less build).
   ipcMain.handle('app:build', async () => buildInfo());
@@ -309,6 +317,7 @@ function menuSend(action, arg) {
 // browser, no dev server. It loads the same page over app://, and saves through the
 // designer:save IPC below. `moduleId` (a descriptor id) opens it focused on that module.
 let editorWindow = null;
+let editorSaved = false;   // did anything actually change while it was open? — see the 'closed' handler
 function openPanelEditor(opts) {
   const moduleId = opts && opts.moduleId;
   const scale = opts && opts.scale;
@@ -334,7 +343,16 @@ function openPanelEditor(opts) {
   if (scale > 0) q.set('scale', String(scale));
   const suffix = q.toString() ? `?${q}` : '';
   editorWindow.loadURL(`${APP_ORIGIN}/designer.html${suffix}`);
-  editorWindow.on('closed', () => { editorWindow = null; });
+  // CLOSING IT IS THE MOMENT TO CATCH UP. Reloading on every save would pull the rack out from under
+  // you mid-edit — and the editor is where you make twenty small moves in a row — so the rack waits
+  // until you have put the tool down. Only if something was saved: closing an editor you only looked
+  // in should cost nothing. The patch survives, because the session autosaves.
+  editorWindow.on('closed', () => {
+    editorWindow = null;
+    if (!editorSaved) return;
+    editorSaved = false;
+    if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.reloadIgnoringCache();
+  });
 }
 
 function applyAppMenu() {

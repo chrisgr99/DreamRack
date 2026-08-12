@@ -37,6 +37,7 @@ export default {
   abbreviation: 'MRB',
   scope: 'voice',
   hp: 15,
+  worklets: ['modules/marbles/marbles-processor.js'],
   ports: [
     // The two clocks. Each side can run from its own, or from T's internal one.
     { id: 'tClockIn', name: 'T clock', role: 'clock', section: 't', domain: 'control', dir: 'in' },
@@ -72,8 +73,14 @@ export default {
     // because they are independent and the original treats them so.
     { id: 'tDejaVu', name: 'T déjà vu', section: 't', ...onoff(), default: 'off' },
     { id: 'xDejaVu', name: 'X déjà vu', section: 'x', ...onoff(), default: 'off' },
-    // Process an external signal instead of the internal generator.
-    { id: 'external', name: 'External', section: 'dejavu', ...onoff(), default: 'off' },
+    // THE REGISTER SWITCH. Her SWITCH_X_EXT, which toggles x_register_mode. With it on, the value
+    // written into the déjà-vu loop is not a random number: it is the voltage at the X SPREAD input,
+    // so the voltage half stops inventing and starts capturing. The three x outputs then become a
+    // shift register — what you feed in appears at X1, a clock later at X2, then X3 — and déjà vu
+    // loops what it caught rather than what it made up. SPREAD becomes how much of the input is
+    // taken, BIAS transposes it, and STEPS quantises all three channels alike instead of by the
+    // bump or tilt amount.
+    { id: 'external', name: 'External (shift register)', section: 'dejavu', ...onoff(), default: 'off' },
 
     // ---- T: the rhythm half ----
     { id: 'tRate', name: 'T rate', section: 't', min: -1, max: 1, default: 0, glideMs: 12 },
