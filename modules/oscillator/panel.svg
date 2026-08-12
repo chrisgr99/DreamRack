@@ -5,6 +5,9 @@
   <linearGradient id="metalStripH" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f8f8f8"/><stop offset="0.45" stop-color="#d8dbdd"/><stop offset="0.7" stop-color="#f4f4f4"/><stop offset="1" stop-color="#9a9a9a"/></linearGradient>
   <radialGradient id="metalDisc"><stop offset="0" stop-color="#f8f8f8"/><stop offset="0.45" stop-color="#d8dbdd"/><stop offset="0.7" stop-color="#f4f4f4"/><stop offset="1" stop-color="#9a9a9a"/></radialGradient>
   <radialGradient id="blueRing"><stop offset="0" stop-color="#1688cc"/><stop offset="0.55" stop-color="#006da8"/><stop offset="1" stop-color="#003d62"/></radialGradient>
+  <radialGradient id="orangeRing"><stop offset="0" stop-color="#f2953a"/><stop offset="0.55" stop-color="#d06b00"/><stop offset="1" stop-color="#6f3800"/></radialGradient>
+  <radialGradient id="greenRing"><stop offset="0" stop-color="#3ec06a"/><stop offset="0.55" stop-color="#149146"/><stop offset="1" stop-color="#0a4a24"/></radialGradient>
+  <radialGradient id="purpleRing"><stop offset="0" stop-color="#a07ae0"/><stop offset="0.55" stop-color="#7548c0"/><stop offset="1" stop-color="#3d2268"/></radialGradient>
   <radialGradient id="blueDial"><stop offset="0" stop-color="#1d79b7"/><stop offset="0.6" stop-color="#00639a"/><stop offset="1" stop-color="#00456e"/></radialGradient>
   <radialGradient id="knobCap"><stop offset="0" stop-color="#f8f8f8"/><stop offset="0.4" stop-color="#bfc3c5"/><stop offset="0.62" stop-color="#f4f4f4"/><stop offset="1" stop-color="#777777"/></radialGradient>
   <radialGradient id="redLed"><stop offset="0" stop-color="#ff4a4a"/><stop offset="0.55" stop-color="#d00000"/><stop offset="1" stop-color="#650000"/></radialGradient>

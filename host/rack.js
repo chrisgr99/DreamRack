@@ -22,7 +22,7 @@
 // The knАck's proportions come from the CANONICAL control, not from a copy of its numbers: the same
 // fractions that draw the faceplate drive the runtime dress, so changing the control changes both.
 import { KNACK_GRIP_LEN, KNACK_GRIP_OUT, KNACK_GRIP_W } from '../panel/primitives.js';
-import { loadPanel, showValue, attachControlInteraction, knobRadiusPx, scrollScale, scrollScaleTag, controlOrigin, valueToPosition, positionToValue, FACE_H_MM, FACE_TOP_MM, FACE_LEFT_MM, TITLE_STRIP_MM, TITLE_BAR_MM } from './panel-loader.js';
+import { loadPanel, showValue, readoutText, attachControlInteraction, knobRadiusPx, scrollScale, scrollScaleTag, controlOrigin, valueToPosition, positionToValue, FACE_H_MM, FACE_TOP_MM, FACE_LEFT_MM, TITLE_STRIP_MM, TITLE_BAR_MM } from './panel-loader.js';
 import { showReadout, refreshReadout, hideReadout, readoutPinned, formatParamValue } from './knob-readout.js';
 import { Patchbay } from './patchbay.js';
 import { VideoEngine } from './video-engine.js';
@@ -5950,6 +5950,16 @@ export class Rack {
       const t = this._makeReadoutText(host);
       if (t) set.set(id, t);
     }
+    // A READOUT COUNTS TOO. The clock's tempo used to be a display box the engine wrote into; it is a
+    // value list now, and while a cable is in the BPM input the tempo is still the engine's to report.
+    // So a readout's own digits are reachable by the same name, and the two never disagree — unpatched
+    // they are the same number, patched the engine's is the true one and it wins by being the last to
+    // paint.
+    for (const g of svg.querySelectorAll('[data-wcoast-role="readout"]')) {
+      const id = g.getAttribute('data-wcoast-param');
+      const t = g.querySelector('[data-wcoast-role="readout-text"]');
+      if (id && t && !set.has(id)) set.set(id, t);
+    }
     if (!set.size) return;
     rec.repaintGraph = () => { /* nothing here follows a knob — see onReadoutText */ };
     const inst = rec.instance;
@@ -7502,6 +7512,7 @@ export class Rack {
         get: () => rec.values.get(b.id),
         set: (val) => this._setParam(rec, b.id, val),
         values: rec.values,
+        menu: (ev) => this._openValueScroller(rec, b, ev),
       }, { hitGrowMm: btnGrow.get(b.id) || 0 });
       b.group.addEventListener('pointerdown', (e) => e.stopPropagation());
       if (b.kind === 'knob' && !b.group.hasAttribute('data-wcoast-port')) {
@@ -9076,6 +9087,204 @@ export class Rack {
 
   // items: { label, action } clickable rows, plus optional { header:true } group
   // labels and optional { checked, dim } for the connect menu's checkmark/dimming.
+  // EVERY VALUE A CONTROL CAN TAKE, BESIDE THE CONTROL, FOR AS LONG AS YOUR HAND IS THERE. Used by
+  // the readouts that list rather than step: the clock's three ratios and Marbles' loop length.
+  //
+  // IT IS THE KNOB'S SCALE, NOT A CHOOSER. Scroll on the window and the list appears with the current
+  // value level with the window, the rest running up and down from it — off the top or bottom of the
+  // screen if that is where they fall, because the row that must be in the right place is the one you
+  // are on, not the first or the last. Keep scrolling and the whole list slides past that line. Move
+  // away and it goes. There is nothing to click: this is the gesture the knob answered to, given the
+  // one thing the knob could not do, which is show you what is coming.
+  //
+  // THE WINDOW UPDATES AS YOU SCROLL, but the ENGINE waits. Every notch through sixty-nine ratios
+  // would be sixty-nine settings and sixty-nine undo steps for one decision, so the number under the
+  // list is a preview and the value is committed once — when you rest, which is also when the list
+  // goes, or when you move away, since where you stopped is what you chose either way.
+  //
+  // THE WORDS ARE THE CONTROL'S OWN, through readoutText: the same formatter that paints the window
+  // and the hover bubble, so the list cannot call a setting something the panel calls something else.
+  _openValueScroller(rec, b, ev) {
+    if (this._scrollerFor === b) { if (this._scrollerWheel) this._scrollerWheel(ev); return; }
+    this._closeValueScroller();
+    this._closeMenu();
+    const meta = b.meta || {};
+    // A CABLE CAN TAKE THE SETTING AWAY. With something patched to the port named by overriddenBy, the
+    // number in the window is the engine's report and not yours to set — so the list does not open. It
+    // would otherwise be a control that moves and changes nothing, which is worse than none.
+    if (meta.overriddenBy && this._portOccupied(rec.key, meta.overriddenBy)) return;
+    const vals = meta.curve === 'stepped' ? (meta.steps || []).map((st) => st.value)
+      : Array.from({ length: Math.round(meta.max) - Math.round(meta.min) + 1 }, (_v, k) => Math.round(meta.min) + k);
+    if (vals.length < 2) return;
+    const committed = rec.values.get(b.id);
+    let idx = Math.max(0, vals.findIndex((v) => String(v) === String(committed)));
+
+    const menu = document.createElement('div');
+    menu.className = 'rack-menu' + (this.isDark() ? ' theme-dark' : '');
+    menu.style.maxHeight = 'none';        // it may run off the screen; that is the point
+    menu.style.minWidth = '0';            // no wider than the values in it — see the placement below
+    // INERT. Nothing here is a target — the list is a heads-up scale, not a chooser — and once it lies
+    // ACROSS the control the pointer is always on a row, so the menu's own hover styling painted a row
+    // in the accent colour and put the orange highlight back that the green row exists to replace.
+    menu.style.pointerEvents = 'none';
+    // NO SIDE PADDING, on the list or its rows. A menu row carries ten pixels of it each side, which is
+    // right for a menu as wide as its longest label and wrong for one as wide as a three-character
+    // window: twenty pixels of the thirty-odd available went to margins and the numbers were clipped.
+    menu.style.padding = '3px 0';
+    menu.style.visibility = 'hidden';
+
+    // THE WINDOW ITSELF, not the group around it. A readout's group holds its label as well, so its
+    // bounding box reaches below the lit rectangle and its middle is not the middle of anything you
+    // can see — which put the row half a row low, with its top on the centre of the control.
+    const win = b.group.querySelector('rect') || b.group;
+    const box = win.getBoundingClientRect();
+    // The panel's own scale, taken from this rectangle: its width in millimetres is on the element and
+    // its width in pixels is what it measures, so anything else the list needs in millimetres can be
+    // asked for in millimetres.
+    const mmW = parseFloat(win.getAttribute('width')) || 0;
+    const PX_MM = mmW > 0 ? box.width / mmW : 3.8;
+    // THE WINDOW'S OWN COLOUR, read off its digits rather than named again here — a readout may be set
+    // in any colour and the list has to be the same one, or the value appears to change colour on its
+    // way into the control.
+    const GREEN = (b.text && b.text.getAttribute('fill')) || '#4ee37a';
+    const digitPx = Math.max(9, Math.round(box.height * 0.78));
+    // THE WINDOW'S OWN STROKE, read off the panel rather than named again here, so a theme that
+    // repaints the faceplate repaints the list and its mark with it. It draws both the list's border
+    // and the rule round the value on the line.
+    const strokeAttr = win.getAttribute('stroke') || getComputedStyle(win).stroke;
+    const markEdge = (strokeAttr && strokeAttr !== 'none') ? strokeAttr : '';
+
+    // EVERY VALUE IN THE READOUT'S GREEN, at the readout's size. The list is not a menu with one row
+    // dressed up as the control — it is a column of the control's own values, and the one you will get
+    // is the one your pointer is beside. Position IS the indication, which is what a scale is.
+    const rows = vals.map((v) => {
+      const item = document.createElement('div');
+      item.className = 'rack-menu-item';
+      item.style.textAlign = 'center';    // the numbers stack under one another, over the window's own
+      item.style.padding = '2px 0';       // the full width is for the value — see the list's padding
+      item.style.color = GREEN;
+      item.style.fontSize = digitPx + 'px';
+      item.style.fontWeight = '700';
+      item.style.fontFamily = '"Arial Narrow", Helvetica, Arial, sans-serif';
+      item.textContent = readoutText(b, v);
+      menu.appendChild(item);
+      return item;
+    });
+    document.body.appendChild(menu);
+    this._scrollerEl = menu;
+    this._scrollerFor = b;
+
+    // LEVEL WITH THE WINDOW'S MIDDLE — not with the pointer. Anchoring on the pointer put the list a few
+    // pixels higher or lower depending on where in the window you happened to be, so the same control
+    // opened in a slightly different place every time.
+    const rowH = rows[0].offsetHeight || 18;
+    const midY = box.top + box.height / 2;
+    const place = () => {
+      const first = rows[0].offsetTop;   // the padding above the first row, so the line lands on the ROW
+      menu.style.top = Math.round(midY - first - (idx + 0.5) * rowH) + 'px';
+    };
+    // A THIN RULE ROUND THE ONE YOU WILL GET, and nothing else — no fill, no accent, no change of
+    // colour, because every row is already the colour the value will be. IN THE LIST'S OWN EDGE
+    // COLOUR, which is the window's: the mark then reads as the window drawn around that row rather
+    // than as a second green thing competing with the numbers inside it. Drawn INSET, so it takes no
+    // space and cannot shift the row it is marking off the line.
+    const mark = () => {
+      for (let k = 0; k < rows.length; k++) rows[k].style.boxShadow = k === idx ? 'inset 0 0 0 1px ' + markEdge : '';
+    };
+    mark();
+    // OVER THE CONTROL, NOT BESIDE IT. The row on the line is already level with the window and set in
+    // the window's own digits, so laying the list across the window puts that row exactly where the
+    // value was: nothing appears to move when the list opens, and what you scroll through passes
+    // through the window itself. Beside it, the same row was a good imitation of the window sitting
+    // next to the real one.
+    //
+    // AND NO WIDER THAN ITS VALUES, except that it must cover the window it is standing on — a list
+    // narrower than the box it hides would leave the old number showing at both ends.
+    // EXACTLY THE CONTROL'S WIDTH, edge to edge. Border-box, so the outline itself lands ON the
+    // window's outline rather than a pixel and a half outside it — the list should look like the
+    // window has grown upward and downward, not like a panel laid over it.
+    menu.style.boxSizing = 'border-box';
+    // ...PLUS THREE MILLIMETRES ON THE RIGHT. Set at the readout's own digit size, the widest values
+    // are a shade broader than the window they will sit in, and the last numeral was being cut off by
+    // the border. Three millimetres of the panel's own scale, so it is the same margin at any zoom.
+    const EXTRA_MM = 3;
+    menu.style.width = Math.round(box.width + EXTRA_MM * PX_MM) + 'px';
+    menu.style.left = Math.round(box.left) + 'px';
+    // ...and the same line around it — see markEdge, read before the rows were built.
+    if (markEdge) menu.style.borderColor = markEdge;
+    place();
+    menu.style.visibility = '';
+
+    // The window shows where you are while you are moving; the engine is told when you settle — which
+    // is also when the list goes. Every notch through sixty-nine ratios would be sixty-nine settings
+    // and sixty-nine undo steps for one decision, so the number under the list is a preview and the
+    // value is committed once, on the way out.
+    const REST_MS = 3000;
+    const preview = () => { if (b.text) b.text.textContent = readoutText(b, vals[idx]); };
+    const commit = () => {
+      clearTimeout(this._scrollerCommit); this._scrollerCommit = null;
+      const v = vals[idx];
+      if (String(v) !== String(rec.values.get(b.id))) this._setParam(rec, b.id, v);
+    };
+    this._scrollerCommitNow = commit;
+
+    // HOW MANY ROWS ONE NOTCH IS WORTH, from the param. Six for a ratio: one turn of the original's
+    // knob covers all sixty-nine and a notch worth one value made that a chore, and this is a list you
+    // fly through to a region and then settle in. One for a tempo, because landing on a hundred and
+    // twenty-one has to be possible and no rate that skips can do it.
+    const RATE = meta.listRate || 6;
+    const THRESH = Math.max(4, (meta.detentThresh || 100) / RATE);
+    let acc = 0;
+    const step = (dir) => {
+      const ni = Math.max(0, Math.min(vals.length - 1, idx + dir));
+      if (ni === idx) return;
+      idx = ni; mark(); place(); preview();
+    };
+    this._scrollerWheel = (e) => {
+      if (e.ctrlKey) return;
+      e.preventDefault(); e.stopPropagation();
+      const d = e.deltaMode === 1 ? e.deltaY * 16 : e.deltaMode === 2 ? e.deltaY * 400 : e.deltaY;
+      acc += -d;
+      let guard = 0;
+      while (acc >= THRESH && guard++ < 8) { acc -= THRESH; step(+1); }
+      while (acc <= -THRESH && guard++ < 8) { acc += THRESH; step(-1); }
+      // REST AND IT GOES. Half a second without a notch means you have arrived — the list has done its
+      // job and the window can have its own face back. Closing commits, so resting IS choosing and the
+      // value lands the moment the list leaves.
+      clearTimeout(this._scrollerCommit);
+      this._scrollerCommit = setTimeout(() => this._closeValueScroller(), REST_MS);
+    };
+    document.addEventListener('wheel', this._scrollerWheel, { capture: true, passive: false });
+
+    // IT LEAVES WHEN YOU DO — off the window AND off the list. By coordinates rather than by hit test,
+    // because the list is a sibling of everything else on screen and hovering a row must not read as
+    // having left the control it belongs to.
+    this._scrollerMove = (e) => {
+      const inBox = e.clientX >= box.left - 2 && e.clientX <= box.right + 2 && e.clientY >= box.top - 2 && e.clientY <= box.bottom + 2;
+      if (inBox) return;
+      const m = menu.getBoundingClientRect();
+      const inMenu = e.clientX >= m.left && e.clientX <= m.right && e.clientY >= m.top && e.clientY <= m.bottom;
+      if (!inMenu) this._closeValueScroller();
+    };
+    document.addEventListener('pointermove', this._scrollerMove, true);
+    this._scrollerKey = (e) => { if (e.key === 'Escape') { e.stopPropagation(); this._closeValueScroller(); } };
+    document.addEventListener('keydown', this._scrollerKey, true);
+
+    if (ev && ev.type === 'wheel') this._scrollerWheel(ev);
+  }
+
+  _closeValueScroller() {
+    if (!this._scrollerEl) return;
+    // WHERE YOU STOPPED IS WHAT YOU CHOSE. Leaving before the commit timer has run is not a cancel —
+    // you scrolled to a value and walked away from it, which is the same decision made faster.
+    if (this._scrollerCommitNow) this._scrollerCommitNow();
+    clearTimeout(this._scrollerCommit); this._scrollerCommit = null; this._scrollerCommitNow = null;
+    if (this._scrollerWheel) { document.removeEventListener('wheel', this._scrollerWheel, { capture: true }); this._scrollerWheel = null; }
+    if (this._scrollerMove) { document.removeEventListener('pointermove', this._scrollerMove, true); this._scrollerMove = null; }
+    if (this._scrollerKey) { document.removeEventListener('keydown', this._scrollerKey, true); this._scrollerKey = null; }
+    this._scrollerEl.remove(); this._scrollerEl = null; this._scrollerFor = null;
+  }
+
   _openMenu(x, y, items, opts = {}) {
     this._closeMenu();
     // A main item activates (opens its submenu / closes the open one) only after the pointer
@@ -9259,7 +9468,6 @@ export class Rack {
     // Open just to the RIGHT of the pointer, so clicking the same terminal again
     // (without moving) lands off the menu's left edge and toggles it shut rather
     // than selecting the row under the cursor.
-    const GAP = 8;
     let left;
     if (opts.centred) {           // (x, y) is where the menu's MIDDLE should sit — it has no pointer to dodge
       left = Math.round(x - mw / 2);

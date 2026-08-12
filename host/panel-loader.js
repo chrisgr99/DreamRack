@@ -295,6 +295,9 @@ export function showValue(binding, value) {
   // A readout paints the value as WORDS, through the same formatter the hover bubble uses — so the
   // window and the bubble can never disagree about what the setting is called.
   if (binding.kind === 'readout') { if (binding.text) binding.text.textContent = readoutText(binding, value); return; }
+  // ...and an ordinary knob may print its value on the panel too. Same formatter again: three places
+  // can show one setting, and they say the same words.
+  if (binding.valueText) binding.valueText.textContent = readoutText(binding, value);
   if (binding.kind === 'slider') showSlider(binding, valueToPosition(binding.meta, value));
   else if (binding.meta.curve === 'stepped') showStep(binding, value);
   else showPosition(binding, valueToPosition(binding.meta, value));
@@ -344,6 +347,8 @@ export function parsePanel(svg, descriptor) {
       const text = el.querySelector('[data-wcoast-role="readout-text"]');
       if (!text) warnings.push(`readout "${id}" has no text element`);
       controls.set(id, { id, meta, group: el, kind: 'readout', text,
+        // A MENU READOUT lists its values instead of stepping through them — see below.
+        menu: el.getAttribute('data-wcoast-menu') === '1',
         up: el.querySelector('[data-wcoast-role="readout-up"]'),
         down: el.querySelector('[data-wcoast-role="readout-down"]') });
       continue;
@@ -366,6 +371,8 @@ export function parsePanel(svg, descriptor) {
     const binding = {
       id, meta, group: el,
       kind: stepped ? 'switch' : 'knob',
+      // A numeral printed above the knob, if the panel drew one — see showValue.
+      valueText: el.querySelector('[data-wcoast-role="value-text"]'),
       // A dual knAck also names a DEPTH param (the attenuverter on its centre CV). The
       // element additionally carries data-wcoast-port for the CV jack; the rack renders it
       // as a normal knob until that jack is patched, then splits it (value top, depth below).
@@ -681,6 +688,42 @@ export function attachControlInteraction(binding, hooks, opts = {}) {
   binding.readValue = hooks.get;   // the hover readout asks for the number a second later
   if (hooks.values) binding.values = hooks.values;   // ...and the module's other values, for the
                                                      // parameters whose number depends on a switch
+  if (binding.kind === 'readout') {
+    // DOUBLE CLICK RESTORES THE DEFAULT, as it does on every knob. A window whose values you reach by
+    // scrolling can be a long way from where it started, and walking back to a hundred and twenty by
+    // hand is not the point of a default.
+    //
+    // TIMED ON THE PRESS rather than taken from a dblclick event: the press handler below stops the
+    // event so the panel does not drag under it, and a stopped press does not always become a click.
+    let lastDown = 0;
+    el.addEventListener('pointerdown', (e) => {
+      const t = e.timeStamp || 0;
+      if (t - lastDown < 350 && binding.meta.default !== undefined) { lastDown = 0; hooks.set(binding.meta.default); return; }
+      lastDown = t;
+    }, true);
+  }
+  if (binding.kind === 'readout' && binding.menu && hooks.menu) {
+    // A MENU READOUT. Some settings have more values than a wheel is worth walking through — a clock
+    // ratio has sixty-nine, and reaching ×32 from ÷32 is sixty-odd notches during which the number
+    // under your hand is never the one you want. So the window LISTS them: click it or scroll it and
+    // the list opens with the current value marked, you pick one, it closes.
+    //
+    // SCROLL, AND ONLY SCROLL — the gesture the knob this replaced answered to. The list that appears
+    // is not a chooser you click; it is the knob's scale, shown beside the window for as long as your
+    // hand is there. A click on the window does nothing, deliberately: a lit rectangle that responded
+    // to a click would be the button it is drawn not to be.
+    //
+    // THE OPENING NOTCH GOES WITH IT. The list listens on the document once it is up, so the notch that
+    // opened it has already passed that stage — without handing it over, the first notch of a flick
+    // opens the list without moving it and the value trails your hand by one from then on.
+    el.addEventListener('pointerdown', (e) => { e.stopPropagation(); e.preventDefault(); });
+    el.addEventListener('wheel', (e) => {
+      if (e.ctrlKey) return;   // ctrl+wheel is the rack pinch-zoom
+      e.preventDefault(); e.stopPropagation();
+      hooks.menu(e);
+    }, { passive: false });
+    return;
+  }
   if (binding.kind === 'readout') {
     // SCROLL ONLY, and one value per notch. There is no spin control and no click target: a click on a
     // readout does nothing, deliberately, because a lit rectangle that responded to a click would be

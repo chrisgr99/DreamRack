@@ -70,7 +70,7 @@ export default {
   apiVersion: 1,
   name: 'Control Gallery',
   category: 'utility',   // module library grouping
-  hp: 53,
+  hp: 64,
   ports,
   params,
 };

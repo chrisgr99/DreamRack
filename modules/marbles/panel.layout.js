@@ -89,8 +89,9 @@ const jack = (id, x, y, label) =>
 // `value` is what the STATIC svg shows — the param's default in words. The loader repaints it from the
 // live value the moment the module is bound; without it the window is blank in the library and the
 // panel editor, which is where a reader first meets it.
-const readout = (id, x, y, chars, label, value) =>
-  items.push({ t: 'readout', id, x, y, opts: { chars, value: value || '', ...(label ? { label: { text: label, ...LABEL } } : {}) } });
+// A MENU READOUT: click or scroll it and its values open as a list. See rack._openValueMenu.
+ const readout = (id, x, y, chars, label, value) =>
+  items.push({ t: 'readout', id, x, y, opts: { chars, value: value || '', menu: true, ...(label ? { label: { text: label, ...LABEL } } : {}) } });
 const button = (id, x, y, label) =>
   items.push({ t: 'button', id, x, y, opts: { r: BTN_R, kind: 'white', ...(label ? { label: { text: label, ...LABEL } } : {}) } });
 // `left` puts the words on the left of a vertical stack, which is what makes the X column a true

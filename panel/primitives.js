@@ -24,6 +24,9 @@ function defs(theme) {
   <linearGradient id="metalStripH" x1="0" y1="0" x2="0" y2="1">${stripStops}</linearGradient>
   <radialGradient id="metalDisc">${stripStops}</radialGradient>
   <radialGradient id="blueRing"><stop offset="0" stop-color="#1688cc"/><stop offset="0.55" stop-color="#006da8"/><stop offset="1" stop-color="#003d62"/></radialGradient>
+  <radialGradient id="orangeRing"><stop offset="0" stop-color="#f2953a"/><stop offset="0.55" stop-color="#d06b00"/><stop offset="1" stop-color="#6f3800"/></radialGradient>
+  <radialGradient id="greenRing"><stop offset="0" stop-color="#3ec06a"/><stop offset="0.55" stop-color="#149146"/><stop offset="1" stop-color="#0a4a24"/></radialGradient>
+  <radialGradient id="purpleRing"><stop offset="0" stop-color="#a07ae0"/><stop offset="0.55" stop-color="#7548c0"/><stop offset="1" stop-color="#3d2268"/></radialGradient>
   <radialGradient id="blueDial"><stop offset="0" stop-color="#1d79b7"/><stop offset="0.6" stop-color="#00639a"/><stop offset="1" stop-color="#00456e"/></radialGradient>
   <radialGradient id="knobCap"><stop offset="0" stop-color="${cap[0]}"/><stop offset="0.4" stop-color="${cap[1]}"/><stop offset="0.62" stop-color="${cap[2]}"/><stop offset="1" stop-color="${cap[3]}"/></radialGradient>
   <radialGradient id="redLed"><stop offset="0" stop-color="#ff4a4a"/><stop offset="0.55" stop-color="#d00000"/><stop offset="1" stop-color="#650000"/></radialGradient>
@@ -177,7 +180,8 @@ function labelClear(ext, box, placement = 'below') {
 
 function knob(id, cx, cy, opts = {}) {
   const { radius = 4.6, cap = +(radius * 0.72).toFixed(2), angleMin = -150, angleMax = 150,
-    ticks = 7, tickColor = '#ffffff', ring = 'url(#blueRing)', skirt = 0, scale = null, theme = {}, label: lab = null } = opts;
+    ticks = 7, tickColor = '#ffffff', ring = 'url(#blueRing)', skirt = 0, scale = null, theme = {}, label: lab = null,
+    value = null, tint = null } = opts;
   const ink = theme.ink || '#163a69', ringStroke = theme.ringStroke || '#004b7a', capStroke = theme.capStroke || '#666666';
   const a0 = angleMin * Math.PI / 180, a1 = angleMax * Math.PI / 180;
   // White ticks around the rim — mostly ON the blue ring (so they read white in
@@ -209,13 +213,14 @@ function knob(id, cx, cy, opts = {}) {
   // symmetric, so they stay put. The ticks and the pointer ARE the knob face — they
   // sit in the indicator group and rotate together, so the ticks turn with the knob.
   let out = `  <g data-wcoast-param="${id}" data-wcoast-cx="${cx}" data-wcoast-cy="${cy}" data-wcoast-angle-min="${angleMin}" data-wcoast-angle-max="${angleMax}">${skirtSvg}
-    <circle cx="${cx}" cy="${cy}" r="${radius}" fill="${ring}" stroke="${ringStroke}" stroke-width="0.355"/>
+    <circle cx="${cx}" cy="${cy}" r="${radius}" fill="${tint ? tintOf(tint).ring : ring}" stroke="${tint ? tintOf(tint).edge : ringStroke}" stroke-width="0.355"/>
     <circle cx="${cx}" cy="${cy}" r="${cap}" fill="url(#knobCap)" stroke="${capStroke}" stroke-width="0.2366"/>${scaleSvg}
     <g data-wcoast-role="indicator">${tickSvg}
       <line x1="${cx}" y1="${cy}" x2="${cx}" y2="${(cy - cap).toFixed(2)}" stroke="${ink}" stroke-width="0.55"/>${skirtLine}
     </g>
   </g>`;
   const ext = Math.max(radius, skirt);   // label clears the outermost tier (skirt if present)
+  out = withPrintedValue(out, cx, cy, ext, value);
   if (lab) {
     const e = labelClear(ext, scaleBox(outerR, scale, angleMin, angleMax), lab.placement);
     out += '\n' + attachedLabel(cx, cy, e, e, lab);
@@ -376,9 +381,48 @@ function lightestCapTone(theme) {
 // the cap itself — pale on the light faceplate, dark on the dark one.
 const TRIM_EYE_EDGE_W = 0.32;
 
+// THE VALUE, PRINTED ON THE PANEL: a large white numeral ABOVE the control, saying what it is set to.
+// The other answer to the problem the lit readout solves. Where the readout IS the control and is
+// scrolled, this is an ordinary knob that happens to tell you its setting — the gesture everyone
+// already knows, minus the one thing a knob cannot do, which is answer without being turned.
+//
+// ABOVE, not below, so the label keeps the place labels have everywhere else on the rack and the two
+// never trade positions from control to control. White and larger than a label, so it reads as a
+// value rather than as more lettering.
+//
+// INSIDE THE CONTROL'S GROUP — which is not cosmetic. The host finds the numeral by searching the
+// group it binds, so a numeral printed as a sibling is painted once by the panel and never again.
+// Put outside, the number is a picture of one setting; put inside, it is the setting.
+// WHAT EACH TINT IS. A layout names the function; this decides the colour, so there is one place to
+// change what swing looks like. Anything unnamed is blue, which is the house knob.
+const TINTS = {
+  blue:   { ring: 'url(#blueRing)',   edge: '#004b7a' },
+  orange: { ring: 'url(#orangeRing)', edge: '#8a4700' },
+  green:  { ring: 'url(#greenRing)',  edge: '#0b5b2c' },
+  purple: { ring: 'url(#purpleRing)', edge: '#4a2a7d' },
+};
+const tintOf = (t) => TINTS[t] || TINTS.blue;
+
+function withPrintedValue(out, cx, cy, reach, value) {
+  if (!value) return out;
+  const size = value.size || 3.6;
+  const vy = cy - reach - (value.gap == null ? 1.6 : value.gap);
+  const svg = `\n    <text x="${cx}" y="${vy.toFixed(2)}" data-wcoast-role="value-text" font-size="${size}" font-weight="700" fill="${value.fill || '#ffffff'}" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">${value.text || ''}</text>`;
+  const close = out.lastIndexOf('\n  </g>');
+  return close < 0 ? out + svg : out.slice(0, close) + svg + out.slice(close);
+}
+
+// How much room the numeral takes above the control — the grammar reserves this at the TOP of the row
+// and drops the art by it, so nothing lands in the band header above.
+// THE INK, not the font size. A numeral reaches about three quarters of its size above the baseline
+// and nothing at all below it — reserving a full line's height billed the row for a descender that
+// digits do not have, which at twice the size was two and a half millimetres of nothing.
+export const printedValueH = (v) => (v && typeof v === 'object' ? (v.size || 3.6) * 0.78 + (v.gap == null ? 1.6 : v.gap) : 0);
+
 function trim(id, cx, cy, opts = {}) {
   const { radius = TRIM_R, angleMin = -150, angleMax = 150, overhang = TRIM_OVERHANG,
-    centreMark = false, scale = null, accentPort = null, theme = {}, label: lab = null } = opts;
+    centreMark = false, scale = null, accentPort = null, theme = {}, label: lab = null,
+    value = null, tint = null } = opts;
   const ink = theme.ink || '#163a69', ringStroke = theme.ringStroke || '#004b7a';
   const eyeEdge = lightestCapTone(theme);
   const tip = +(cy - (radius + overhang)).toFixed(2);
@@ -430,15 +474,18 @@ function trim(id, cx, cy, opts = {}) {
   // the edge of its jack band. Run to the centre it would bisect the eye and spoil both.
   const pFrom = +(cy - accentR).toFixed(2);
   let out = `  <g data-wcoast-param="${id}" data-wcoast-cx="${cx}" data-wcoast-cy="${cy}" data-wcoast-angle-min="${angleMin}" data-wcoast-angle-max="${angleMax}"${accent}>
-    <circle cx="${cx}" cy="${cy}" r="${radius}" fill="url(#blueRing)" stroke="${ringStroke}" stroke-width="0.355"/>${markSvg}${scaleSvg}${accentSvg}
+    <circle cx="${cx}" cy="${cy}" r="${radius}" fill="${tintOf(tint).ring}" stroke="${tint ? tintOf(tint).edge : ringStroke}" stroke-width="0.355"/>${markSvg}${scaleSvg}${accentSvg}
     <g data-wcoast-role="indicator">
       <line x1="${cx}" y1="${pFrom}" x2="${cx}" y2="${tip}" stroke="${TRIM_CASING}" stroke-width="${TRIM_CASING_W}" stroke-linecap="round"/>
       <line x1="${cx}" y1="${pFrom}" x2="${cx}" y2="${tip}" stroke="#ffffff" stroke-width="${TRIM_POINTER_W}"/>
     </g>
   </g>`;
-  // The label clears the POINTER, not the rim — it sweeps to within 30 degrees of straight down, so a
-  // label set at the rim would have the tip land on it. A centre-marked trim takes its label below.
-  if (lab) out += '\n' + attachedLabel(cx, cy, radius + overhang, radius + overhang, lab);
+  // The numeral clears the POINTER, not the rim, for the same reason the label does.
+  const reach = radius + overhang;
+  out = withPrintedValue(out, cx, cy, reach, value);
+  // The label clears the POINTER too — it sweeps to within 30 degrees of straight down, so a label
+  // set at the rim would have the tip land on it. A centre-marked trim takes its label below.
+  if (lab) out += '\n' + attachedLabel(cx, cy, reach, reach, lab);
   return out;
 }
 
@@ -707,6 +754,11 @@ function stepButton(id, cx, cy, { steps = [], orientation = 'v', btnR = 2.2, led
 // told to you — stay in the panel's ink. Green is this control's colour and means the wheel does
 // something here.
 //
+// THE COLOUR IS AN OPTION, though, because a panel may want a value to belong to something: the same
+// window in the colour a section is coded in says which section it settles. Green is the default and
+// the meaning above is why. Whatever it is set to, the LIST that opens over the window is set in it
+// too — the host reads the colour off the digits rather than being told it twice.
+//
 // IT IS A SPIN CONTROL. The chevrons outside the right edge are pressable: up for the next value, down
 // for the previous, and the wheel does the same thing anywhere on the window. They began as a legend —
 // marks that said "scroll me" without being targets — but a mark that looks like a button and is not
@@ -720,7 +772,7 @@ const READOUT_PAD = 1.5;               // left and right padding inside the wind
 const READOUT_ARROW_GAP = 1.1;         // window edge to the chevrons
 const READOUT_GREEN = '#4ee37a';
 
-function readout(id, cx, cy, { chars = 3, value = '', label: lb = null, theme = {} } = {}) {
+function readout(id, cx, cy, { chars = 3, value = '', label: lb = null, theme = {}, menu = false, digits = READOUT_GREEN } = {}) {
   // This file rounds inline everywhere else; one local helper keeps the path data readable.
   const r2 = (v) => (+v).toFixed(2);
   const w = +(chars * READOUT_CH + READOUT_PAD * 2).toFixed(2);
@@ -728,11 +780,11 @@ function readout(id, cx, cy, { chars = 3, value = '', label: lb = null, theme = 
   const x = +(cx - w / 2).toFixed(2), y = +(cy - h / 2).toFixed(2);
   const dark = (theme && theme.face || '').toLowerCase() !== '#cfcfcf';
   const field = dark ? '#101216' : '#15171c';   // the window is a dark field in both themes, as a display is
-  let g = `  <g data-wcoast-param="${id}" data-wcoast-role="readout" data-wcoast-cx="${r2(cx)}" data-wcoast-cy="${r2(cy)}" data-wcoast-w="${w}">`;
+  let g = `  <g data-wcoast-param="${id}" data-wcoast-role="readout"${menu ? ' data-wcoast-menu="1"' : ''} data-wcoast-cx="${r2(cx)}" data-wcoast-cy="${r2(cy)}" data-wcoast-w="${w}">`;
   g += `\n    <rect x="${x}" y="${y}" width="${w}" height="${h}" rx="1.2" fill="${field}" stroke="${theme.frame || '#8a8a90'}" stroke-width="0.3"/>`;
   // The digits. data-wcoast-role="readout-text" is what the loader repaints; the value baked in here
   // is only what the SVG shows before anything is bound.
-  g += `\n    <text x="${r2(cx)}" y="${r2(cy + h * 0.31)}" data-wcoast-role="readout-text" font-size="${r2(h * 0.78)}" font-weight="700" fill="${READOUT_GREEN}" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">${value}</text>`;
+  g += `\n    <text x="${r2(cx)}" y="${r2(cy + h * 0.31)}" data-wcoast-role="readout-text" font-size="${r2(h * 0.78)}" font-weight="700" fill="${digits}" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">${value}</text>`;
   // The chevrons, outside the right edge.
   // Bigger and further apart than they first were: at working size two 0.85mm chevrons half a
   // millimetre apart read as one small glyph rather than as up and down.
@@ -744,8 +796,13 @@ function readout(id, cx, cy, { chars = 3, value = '', label: lb = null, theme = 
     `\n      <rect x="${r2(ax - 2.1)}" y="${r2(cyPad - 1.9)}" width="4.2" height="3.8" fill="none" pointer-events="all"/>` +
     `\n      <path d="${d}" fill="none" stroke="${theme.ink || '#888'}" stroke-width="0.4" stroke-linecap="round" stroke-linejoin="round" opacity="0.75"/>` +
     `\n    </g>`;
-  g += arrow(up, 'readout-up', cy - gap - rise / 2);
-  g += arrow(dn, 'readout-down', cy + gap + rise / 2);
+  // NO CHEVRONS ON A MENU READOUT. They are up and down by one, and a control whose values you pick
+  // from a list has no next and no previous worth drawing — a pair of arrows beside it would offer a
+  // second, slower way to do the thing the list does in one gesture.
+  if (!menu) {
+    g += arrow(up, 'readout-up', cy - gap - rise / 2);
+    g += arrow(dn, 'readout-down', cy + gap + rise / 2);
+  }
   // The name, beneath, exactly as a knob or a jack wears it — measured from the window's half-height
   // so it clears the box rather than the text inside it.
   if (lb) g += '\n    ' + attachedLabel(cx, cy, w / 2, h / 2, { fill: theme.ink || '#163a69', ...lb });

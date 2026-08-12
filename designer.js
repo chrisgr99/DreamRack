@@ -12,7 +12,7 @@ import { renderPanel } from './panel/render.js';
 import { loadPanel } from './host/panel-loader.js';
 import { applyOverrides } from './panel/overrides.js';
 import { THEME } from './panel/theme.js';
-import { defs, jack, knob, knack, trim, radioGroup, button, slider, label } from './panel/primitives.js';   // control-gallery thumbnails
+import { defs, jack, knob, knack, trim, radioGroup, button, slider, label, readout as readoutArt } from './panel/primitives.js';   // control-gallery thumbnails
 
 import oscLayout from './modules/complex-oscillator-259t/panel.layout.js';
 import oscDesc from './modules/complex-oscillator-259t/descriptor.js';
@@ -1059,6 +1059,11 @@ function buildSettingsBody(id) {
     addP('radius', numberInput(optVal(id, 'radius', 2.8), (v) => setKnobRadiusAll(id, v)));
     addP('centre mark', selectInput(String(optVal(id, 'centreMark', false)), [['false', 'off'], ['true', 'on — bipolar, zero at 12 o’clock']], (v) => setOptAll(id, 'centreMark', v === 'true')));
   }
+  if (it.t === 'readout') {
+    addP('width (chars)', numberInput(optVal(id, 'chars', 3), (v) => setOptAll(id, 'chars', Math.max(1, Math.round(v))), 1));
+    addP('digits', textInput(optVal(id, 'digits', '#4ee37a'), (v) => setOptAll(id, 'digits', v)));
+    addP('opens a list', selectInput(String(optVal(id, 'menu', true)), [['true', 'on — scroll opens every value'], ['false', 'off — chevrons, one step at a time']], (v) => setOptAll(id, 'menu', v === 'true')));
+  }
   if (it.t === 'knack') addP('AV default', selectInput(optVal(id, 'av', 'on'), [['on', 'on — attenuverter shows when patched'], ['off', 'off — plain knAck']], (v) => setOptAll(id, 'av', v)));
   if (it.opts && it.opts.label && typeof it.opts.label === 'object') {
     addP('label text', textInput(optVal(id, 'label.text', ''), (v) => setOpt(id, 'label.text', v)));   // text stays per-control
@@ -1209,6 +1214,7 @@ function openModuleSettings() {
 const TOOLS = [
   { type: 'jack', label: 'Jack' }, { type: 'knob', label: 'Knob' }, { type: 'knack', label: 'knAck' }, { type: 'trim', label: 'Trim' },
   { type: 'radio', label: 'Radio' }, { type: 'button', label: 'Button' }, { type: 'slider', label: 'Slider' },
+  { type: 'readout', label: 'Value list' },
   { type: 'label', label: 'Label', structure: true }, { type: 'divider', label: 'Divider', structure: true },
 ];
 const STRUCTURE_TYPES = new Set(['label', 'divider']);
@@ -1232,6 +1238,7 @@ function thumbSVG(type) {
   else if (type === 'radio') { inner = radioGroup('t', 2.4, 3, { orientation: 'h', spacing: 3.6, ledR: 1.5, steps: [{ value: 'a' }, { value: 'b' }, { value: 'c' }], theme: th }); vb = '0 0 11 6'; }
   else if (type === 'button') { inner = button('t', 4, 4, { r: 3, kind: 'red' }); vb = '0 0 8 8'; }
   else if (type === 'slider') { inner = slider('t', 4, { top: 1, bot: 12, valuePos: 0.6, theme: th }); vb = '0 0 8 14'; }
+  else if (type === 'readout') { inner = readoutArt('t', 6.5, 4, { chars: 3, value: '\u00d71', menu: true, theme: th }); vb = '0 0 13 8'; }
   else if (type === 'label') { inner = label(6, 7.5, 'Aa', { size: 4.5, fill: th.ink }); vb = '0 0 12 11'; }
   else if (type === 'divider') { inner = `<line x1="1" y1="4" x2="13" y2="4" stroke="${th.frame}" stroke-width="0.7"/>`; vb = '0 0 14 8'; }
   const [, , w, h] = vb.split(' ').map(Number);
@@ -1364,6 +1371,10 @@ function makeControl(type, id, x, y) {
     case 'radio':  return { item: { t: 'radio', id, x, y, opts: { orientation: 'v', spacing: 5.6, ledR: 2.16, steps: [{ value: 'a', label: 'A' }, { value: 'b', label: 'B' }] } }, entry: { id, name: 'Switch', curve: 'stepped', default: 'a', steps: [{ value: 'a', name: 'A' }, { value: 'b', name: 'B' }] }, kind: 'param' };
     case 'button': return { item: { t: 'button', id, x, y, opts: { r: 2.0, kind: 'red' } }, entry: { id, name: 'Button', curve: 'stepped', default: 'off', steps: [{ value: 'off', name: 'Off' }, { value: 'on', name: 'On' }] }, kind: 'param' };
     case 'slider': return { item: { t: 'slider', id, x, opts: {} }, entry: { id, name: 'Level', min: 0, max: 1, default: 0.8, unit: '', curve: 'linear' }, kind: 'param' };
+    // THE VALUE LIST: a lit window that opens its whole range over itself when you scroll it. Dropped
+    // as a DETENT param, because that is what it is for — a short walk of named values rather than a
+    // sweep — and the inspector sets how many and what they are called.
+    case 'readout': return { item: { t: 'readout', id, x, y, opts: { chars: 3, value: '1', menu: true, label: lbl('value') } }, entry: { id, name: 'Value', curve: 'detent', min: 0, max: 7, default: 0, unit: '' }, kind: 'param' };
     // Structure — no descriptor entry; the id is only an editor handle.
     case 'label':   return { item: { t: 'label', id, x, y, text: 'Label', opts: { size: 2.4 } }, kind: 'structure' };
     case 'divider': return { item: { t: 'divider', id, x, y, len: 30, w: 0.355 }, kind: 'structure' };

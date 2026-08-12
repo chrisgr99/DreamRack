@@ -13,7 +13,7 @@
 const PROCESSOR = 'wcoast-clock';
 const OUT_PORTS = ['clkOut', 'clk1Out', 'clk2Out', 'clk3Out', 'runOut', 'resetOut'];
 const IN_PORTS = ['runIn', 'resetIn', 'bpmIn'];
-const KNOBS = new Set(['bpm', 'bpmFine', 'ratio1', 'ratio2', 'ratio3', 'swing', 'pw',
+const KNOBS = new Set(['bpm', 'ratio1', 'ratio2', 'ratio3', 'swing', 'pw',
   'swing1', 'swing2', 'swing3', 'pw1', 'pw2', 'pw3', 'delay1', 'delay2', 'delay3']);
 const MESSAGED = new Set(['run', 'reset', 'bpmMode', 'ppqn']);
 
@@ -90,8 +90,8 @@ export function create(ctx, services) {
     onReadoutText(cb) {
       textCb = typeof cb === 'function' ? cb : null;
       if (!textCb) return;
-      // Only the tempo. The ratios are READOUT CONTROLS now — the panel paints them from the param
-      // itself, so nothing here needs to report them.
+      // Only the tempo. The ratios are MENU READOUTS — the panel paints them from the param itself,
+      // so nothing here needs to report them.
       if (shownBpm !== null) textCb('bpm', String(shownBpm));
     },
     dispose: () => { try { node.disconnect(); } catch (_e) { /* already gone */ } },

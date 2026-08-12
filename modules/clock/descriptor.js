@@ -50,7 +50,7 @@ export default {
   // A numeric readout in the panel's display box: the tempo the engine is actually running at.
   graph: 'readout',
   scope: 'voice',
-  hp: 20,
+  hp: 15,
   worklets: ['modules/clock/clock-processor.js'],
   ports: [
     // THE TRANSPORT IS THIS MODULE'S, NOT THE RACK'S. VCV Rack has no global transport and no global
@@ -75,18 +75,19 @@ export default {
   params: [
     // Snapped to whole BPM: the original relies on reading a rounded value back from this knob when it
     // chains to another clock, and a tempo of 119.6 is nobody's intention anyway.
+    // THE TEMPO IS A LIST, one BPM a row — see the panel. It was a coarse knob of ten BPM a notch with a
+    // fine trim beside it to reach the units: two controls and a display for one number, neither of
+    // which could land on a tempo without being watched. listRate is how many rows one notch of the
+    // wheel is worth — the ratios move six at a time because sixty-nine of them is a long walk, and a
+    // tempo moves one, because landing on a hundred and twenty-one has to be possible.
+    //
+    // overriddenBy names the input that takes the setting away. With a cable in the BPM input the tempo
+    // is the cable's and the engine reports what it actually is, so the window goes back to being
+    // something you are told rather than something you set, and the list will not open.
     { id: 'bpm', name: 'Tempo', section: 'master', curve: 'detent', min: 30, max: 300, default: 120, unit: 'BPM',
-      // Ten BPM a notch: 27 from end to end, which is a couple of flicks — the same handful of turns
-      // a continuous knob takes to cross its range, which is the feel being matched. Command-scroll
-      // still steps single BPM for settling on a tempo, and Shift takes it forty at a time.
-      // A third of a notch per detent, so one wheel click steps three: the range crosses in nine clicks
-      // while the step it lands on is still ten. Faster travel, same resolution.
-      detentStep: 10, detentThresh: 34, glideMs: 0 },
-    // THE FINE TEMPO, as a trim on the coarse knob. Ten BPM a notch crosses the range in a couple of
-    // flicks but cannot land on 137; this adds the units, and the two sum. Nine either way, so it
-    // reaches the next coarse detent in both directions without ever needing to be re-centred.
-    { id: 'bpmFine', name: 'Tempo fine', section: 'master', curve: 'detent', min: -9, max: 9, default: 0, unit: 'BPM',
-      detentThresh: 34, glideMs: 0 },
+      listRate: 4, overriddenBy: 'bpmIn', glideMs: 0,
+      // The window and its list print the NUMBER; the unit is painted once on the panel beside them.
+      readoutText: (v) => String(Math.round(v)) },
     // A RATIO KNOB HOLDS AN INDEX AND MEANS A MUSICAL FACT. Reading '12' off it tells you nothing —
     // reading '×11' tells you everything — so each one formats its own readout from the table.
     ...[1, 2, 3].map((n) => ({ id: 'ratio' + n, name: 'Clock ' + n + ' ratio', section: 'ratios',

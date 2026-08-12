@@ -5,6 +5,9 @@
   <linearGradient id="metalStripH" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f8f8f8"/><stop offset="0.45" stop-color="#d8dbdd"/><stop offset="0.7" stop-color="#f4f4f4"/><stop offset="1" stop-color="#9a9a9a"/></linearGradient>
   <radialGradient id="metalDisc"><stop offset="0" stop-color="#f8f8f8"/><stop offset="0.45" stop-color="#d8dbdd"/><stop offset="0.7" stop-color="#f4f4f4"/><stop offset="1" stop-color="#9a9a9a"/></radialGradient>
   <radialGradient id="blueRing"><stop offset="0" stop-color="#1688cc"/><stop offset="0.55" stop-color="#006da8"/><stop offset="1" stop-color="#003d62"/></radialGradient>
+  <radialGradient id="orangeRing"><stop offset="0" stop-color="#f2953a"/><stop offset="0.55" stop-color="#d06b00"/><stop offset="1" stop-color="#6f3800"/></radialGradient>
+  <radialGradient id="greenRing"><stop offset="0" stop-color="#3ec06a"/><stop offset="0.55" stop-color="#149146"/><stop offset="1" stop-color="#0a4a24"/></radialGradient>
+  <radialGradient id="purpleRing"><stop offset="0" stop-color="#a07ae0"/><stop offset="0.55" stop-color="#7548c0"/><stop offset="1" stop-color="#3d2268"/></radialGradient>
   <radialGradient id="blueDial"><stop offset="0" stop-color="#1d79b7"/><stop offset="0.6" stop-color="#00639a"/><stop offset="1" stop-color="#00456e"/></radialGradient>
   <radialGradient id="knobCap"><stop offset="0" stop-color="#f8f8f8"/><stop offset="0.4" stop-color="#bfc3c5"/><stop offset="0.62" stop-color="#f4f4f4"/><stop offset="1" stop-color="#777777"/></radialGradient>
   <radialGradient id="redLed"><stop offset="0" stop-color="#ff4a4a"/><stop offset="0.55" stop-color="#d00000"/><stop offset="1" stop-color="#650000"/></radialGradient>
@@ -87,17 +90,9 @@
     </g>
   </g>
   <text x="54.1" y="46.19232" font-size="2.906" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">SPREAD</text>
-  <g data-wcoast-param="dejaVuLength" data-wcoast-role="readout" data-wcoast-cx="38.10" data-wcoast-cy="59.90" data-wcoast-w="8.1">
+  <g data-wcoast-param="dejaVuLength" data-wcoast-role="readout" data-wcoast-menu="1" data-wcoast-cx="38.10" data-wcoast-cy="59.90" data-wcoast-w="8.1">
     <rect x="34.05" y="56.8" width="8.1" height="6.2" rx="1.2" fill="#15171c" stroke="#7d7d7d" stroke-width="0.3"/>
     <text x="38.10" y="61.82" data-wcoast-role="readout-text" font-size="4.84" font-weight="700" fill="#4ee37a" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">1</text>
-    <g data-wcoast-role="readout-up">
-      <rect x="41.15" y="56.67" width="4.2" height="3.8" fill="none" pointer-events="all"/>
-      <path d="M 42.05 59.10 L 43.25 58.05 L 44.45 59.10" fill="none" stroke="#163a69" stroke-width="0.4" stroke-linecap="round" stroke-linejoin="round" opacity="0.75"/>
-    </g>
-    <g data-wcoast-role="readout-down">
-      <rect x="41.15" y="59.32" width="4.2" height="3.8" fill="none" pointer-events="all"/>
-      <path d="M 42.05 60.70 L 43.25 61.75 L 44.45 60.70" fill="none" stroke="#163a69" stroke-width="0.4" stroke-linecap="round" stroke-linejoin="round" opacity="0.75"/>
-    </g>
       <text x="38.1" y="66.68832" font-size="2.906" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">LENGTH</text>
   </g>
   <g data-wcoast-param="tBias" data-wcoast-cx="11.122" data-wcoast-cy="62.529" data-wcoast-angle-min="-150" data-wcoast-angle-max="150" data-wcoast-port="tBiasIn">

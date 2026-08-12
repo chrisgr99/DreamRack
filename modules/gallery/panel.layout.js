@@ -8,7 +8,7 @@
 
 import { evenScale } from '../../panel/primitives.js';
 
-const FACE_W = 270, FACE_H = 113.5912, MID = 104, MID2 = 160, MID3 = 230;
+const FACE_W = 326, FACE_H = 113.5912, MID = 104, MID2 = 160, MID3 = 230, MID4 = 270;
 const FAMILIES = ['audio', 'cv', 'trig', 'pitch'];
 const HZ = [['27.5', 'A1'], ['55', 'A2'], ['110', 'A3'], ['220', 'A4'], ['440', 'A5'], ['880', 'A6'], ['1760', 'A7'], ['3520', 'A8'], ['7040', 'A9']];
 
@@ -22,7 +22,7 @@ items.push({ t: 'rect', x: 0, y: 0, w: FACE_W, h: FACE_H, rx: 2.5, fill: 'face' 
 items.push({ t: 'rect', x: 0.5, y: 0.5, w: FACE_W - 1, h: FACE_H - 1, rx: 2.2, fill: 'none', stroke: 'frame', sw: 0.5 });
 ink(FACE_W / 2, 6, 'CONTROL GALLERY', { size: 3.4 });
 items.push({ t: 'line', x1: 3, y1: 9, x2: FACE_W - 3, y2: 9, w: 0.355 });
-vline(MID); vline(MID2); vline(MID3);
+vline(MID); vline(MID2); vline(MID3); vline(MID4);
 
 // === LEFT COLUMN: jacks + labels ===
 ink(52, 15.5, 'jack — family colour + direction ring', { size: 2.4 });
@@ -97,5 +97,32 @@ items.push({ t: 'line', x1: 233, y1: 41.5, x2: 267, y2: 41.5, w: 0.355 });
 ink(250, 46.5, 'VU meter · length · count · v/h', { size: 2.2 });
 items.push({ t: 'vu', role: 'vu', x: 243, y: 94, opts: { length: 42, orientation: 'v', segments: 12, chan: 'A', lit: 8 } });
 items.push({ t: 'vu', role: 'vu', x: 237, y: 106, opts: { length: 26, orientation: 'h', segments: 9, chan: 'B', lit: 5 } });
+
+// === FIFTH COLUMN: the value list ===
+// A LIT WINDOW THAT OPENS ITS WHOLE RANGE OVER ITSELF. Scroll it and every value it can take appears
+// as a column standing where the window is, in the window's own digits, sliding past it as you go —
+// the value level with the window is the one you will get, and resting for half a second sets it and
+// takes the list away. Nothing here is clickable: it is the gesture a knob answered to, given the one
+// thing a knob could not do, which is show you what is coming.
+//
+// IT IS FOR A SHORT WALK OF NAMED VALUES — a clock ratio, a loop length, a delay of one sixteenth —
+// where the number IS the setting and a knob would only be a position you have to interpret. It costs
+// about a third of the panel a knob and a separate display took between them.
+//
+// THE COLOUR IS AN OPTION. Green is the default and means the wheel does something here, which is what
+// tells it apart from the engine-driven windows on the same panel; the other two are here because a
+// panel may want a value to belong to a section rather than to the rack's own vocabulary.
+const RO_X = 298;
+ink(RO_X, 15.5, 'value list — scroll opens every value', { size: 2.2 });
+items.push({ t: 'readout', id: 'listRatio', x: RO_X, y: 26, opts: { chars: 3, value: '\u00d74', menu: true, label: cap('ratio', 'below', 1.8) } });
+ink(RO_X, 38, 'green · the default', { size: 1.7 });
+items.push({ t: 'readout', id: 'listAmber', x: RO_X, y: 48, opts: { chars: 4, value: '1/16', menu: true, digits: '#ffb03a', label: cap('delay', 'below', 1.8) } });
+ink(RO_X, 60, 'amber · coded to a section', { size: 1.7 });
+items.push({ t: 'readout', id: 'listBlue', x: RO_X, y: 70, opts: { chars: 2, value: '8', menu: true, digits: '#63c8ff', label: cap('length', 'below', 1.8) } });
+ink(RO_X, 82, 'blue · coded to a section', { size: 1.7 });
+items.push({ t: 'line', x1: MID4 + 3, y1: 86, x2: FACE_W - 3, y2: 86, w: 0.355 });
+// The same window WITHOUT the list: the chevrons come back and the wheel steps one value at a time.
+items.push({ t: 'readout', id: 'listStep', x: RO_X - 2, y: 96, opts: { chars: 3, value: '12', label: cap('step', 'below', 1.8) } });
+ink(RO_X, 108, 'no list · chevrons · one at a time', { size: 1.7 });
 
 export default { faceW: FACE_W, faceH: FACE_H, faceLeft: 0, faceTop: 7.0994, wrap: true, wrapIndent: '', items };

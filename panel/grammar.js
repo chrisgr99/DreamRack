@@ -32,7 +32,8 @@
 'use strict';
 
 import { evenScale, textWidth, scaleBox, scaleMarkBoxes, LAMP_PAD, LAMP_LABEL_GAP,
-  TRIM_MARK_IN, TRIM_MARK_OUT, TRIM_SIGN_R, TRIM_SIGN_X, TRIM_SIGN_OUT, READOUT_H, READOUT_CH, READOUT_PAD, READOUT_ARROW_GAP } from './primitives.js';
+  TRIM_MARK_IN, TRIM_MARK_OUT, TRIM_SIGN_R, TRIM_SIGN_X, TRIM_SIGN_OUT, READOUT_H, READOUT_CH, READOUT_PAD, READOUT_ARROW_GAP,
+  printedValueH } from './primitives.js';
 
 const HP_MM = 5.08;
 export const FACE_H = 113.5912;
@@ -41,6 +42,9 @@ const FACE_LEFT = 3.9, FACE_TOP = 7.0994;
 // House sizes. A module picks by NAME, never by number, so "large" means the same thing on every
 // panel — that is most of what makes a rack of ten modules look like one instrument.
 export const SIZE = { large: 9.5, big: 8.5, medium: 7.2, small: 5.6, tiny: 4.2 };
+// A control's radius: one of the named sizes, or a number in millimetres for a panel that wants a
+// size between them. Everything that measures a knob asks through here.
+const sizeOf = (c) => (typeof c.size === 'number' ? c.size : SIZE[c.size]);
 const JACK_R = 3.0;
 // THE TRIM'S CORNER. A knAck's attenuverter is a separate small knob (see design/inserts.md for why
 // it is not on the control itself), and it always sits in the SAME place relative to its knob: the
@@ -51,6 +55,7 @@ const JACK_R = 3.0;
 // It carries NO LABEL. Sitting in that corner of a knob named LEVEL is what says what it is, and a
 // word under it would cost the height the position was chosen to save. Its centre mark shows zero.
 const TRIM_R = 2.8;           // matches primitives' house trim size
+const TRIM_TIP_OVER = 1.2;    // how far a trim's pointer pokes past its rim (primitives' TRIM_OVERHANG)
 const TRIM_TIP = 1.2;         // its pointer's overhang — part of its real extent
 const TRIM_ANGLE = 34;        // degrees below the horizontal — FOUR O'CLOCK, from drawing it by hand
                               // in the panel editor and comparing. At 50 the trim sat under the knob's
@@ -114,7 +119,8 @@ const BAND_PAD = 3.4;        // band content to the rule below it
 // of the height a row of words underneath does, which on a full panel is the whole point.
 export const knob = (id, label, opts = {}) =>
   ({ kind: 'knob', id, label, size: opts.size || 'medium', scale: opts.scale || null, sub: opts.sub || null,
-     above: !!opts.above, letter: opts.letter || null, at: opts.at || 12, trim: opts.trim || null });
+     above: !!opts.above, letter: opts.letter || null, at: opts.at || 12, trim: opts.trim || null,
+     value: opts.value || null, style: opts.style || null, tint: opts.tint || null });
 
 // A knAck: the ring is the value, the centre is `port`. Pass `depth` to hang a TRIM KNOB in its lower
 // right for that param — the one to use whenever the jack carries ordinary modulation rather than a
@@ -168,7 +174,8 @@ export const display = (id, w, h) => ({ kind: 'display', id, w, h, label: null }
 // it will ever hold, so the window is sized to its contents. `value` is what the static SVG shows
 // before anything is bound — the param's default, in words.
 export const readout = (id, label, opts = {}) =>
-  ({ kind: 'readout', id, label, chars: opts.chars || 3, value: opts.value || '' });
+  ({ kind: 'readout', id, label, chars: opts.chars || 3, value: opts.value || '', menu: !!opts.menu, digits: opts.digits || null,
+    side: opts.side || null, labelSize: opts.labelSize || null });
 
 // Free space in a row, in mm, for when even gaps are not what you want.
 export const gap = (mm) => ({ kind: 'gap', mm });
@@ -185,6 +192,9 @@ export const placed = (items, h) => ({ placed: items, h });
 export const band = (header, rows) => ({ header, rows: rows.map((r) => (r.controls || r.placed ? r : row(r))) });
 // The output band, pinned to the bottom edge. Its header sits to the LEFT of the jacks rather than
 // above them, which buys back a whole line of height on a short panel.
+// The rail along the bottom. The header names it — pass null on a panel where the jacks say what they
+// are and the word is only a word: outputs at the bottom edge under a rule is the rack's own idiom,
+// and a panel does not have to explain its own idiom every time.
 export const outputs = (jacks, header = 'OUT') => ({ header, rows: [row(jacks)], out: true });
 
 // ---------------------------------------------------------------------------
@@ -205,7 +215,7 @@ const LABEL_BLOCK = 1.6 + (LABEL_SIZE + 0.706) * 0.97;   // gap + cap height + d
 const TRIM_UP = TRIM_R + TRIM_TIP + 1.9;                 // radius + pointer overhang + centre mark
 const TRIM_BELOW_AIR = 1.0;
 function trimBelowY(c) {
-  const R = SIZE[c.size];
+  const R = sizeOf(c);
   // The SAME scale object emit() builds, or the measurement is of something that is not on the panel.
   const box = c.scale ? scaleBox(R, { marks: evenScale(c.scale), size: SCALE_SIZE, labelGap: 1.1 }, -150, 150) : null;
   const down = box ? Math.max(R, box.down) : R;
@@ -229,7 +239,7 @@ const TRIM_CLEARANCE = 0.6;   // trim to numeral, at the closest point
 // is not the drawing on the panel.
 const TRIM_SIGN_UP = TRIM_R + (TRIM_MARK_IN + TRIM_MARK_OUT) / 2;   // the mark's midpoint
 function trimDistance(c) {
-  const R = SIZE[c.size];
+  const R = sizeOf(c);
   const d0 = R + TRIM_CLEAR + TRIM_R;
   const boxes = c.scale
     ? scaleMarkBoxes(R, { marks: evenScale(c.scale), size: SCALE_SIZE, labelGap: 1.1 }, -150, 150)
@@ -261,7 +271,12 @@ function extent(c) {
   // box alone suggests — measure it or the next control lands on them.
   if (c.kind === 'readout') {
     const half = readoutHalf(c);
-    return { l: half, r: half + READOUT_ARROW_GAP + 2.6 };
+    // A menu readout has no chevrons, so it reaches no further right than its own window — unless it
+    // wears its label at the side, in which case the word is what the next control has to clear.
+    const arrows = c.menu ? 0 : READOUT_ARROW_GAP + 2.6;
+    const sideLab = (c.side === 'right' && c.label) ? 1.6 + textWidth(c.label, c.labelSize || LABEL_SIZE) : 0;
+    const sideLabL = (c.side === 'left' && c.label) ? 1.6 + textWidth(c.label, c.labelSize || LABEL_SIZE) : 0;
+    return { l: half + sideLabL, r: half + Math.max(arrows, sideLab) };
   }
   if (c.kind === 'lamps' && c.dir !== 'h') {
     const tH = c.ledR + LAMP_PAD;
@@ -296,7 +311,7 @@ function halfWidth(c) {
     // by its own half-width so its inner end clears the rim, and it still has that half-width to
     // spend going outwards.
     const sc = c.scale ? SCALE_RING + 2 * scaleLabelHalf(evenScale(c.scale), SCALE_SIZE) : 0;
-    art = SIZE[c.size] + sc + (c.letter ? 2.4 : 0);
+    art = sizeOf(c) + sc + (c.letter ? 2.4 : 0);
   }
   else if (c.kind === 'display') art = c.w / 2;
   else if (c.kind === 'jack') art = c.r;
@@ -322,7 +337,7 @@ function rowHeight(r) {
   if (r.placed) return r.h;
   let h = 0, sub = 0;
   for (const c of r.controls) {
-    if (c.kind === 'knob' || c.kind === 'knack') h = Math.max(h, (SIZE[c.size] + (c.scale ? SCALE_RING + SCALE_LINE : 0)) * 2);
+    if (c.kind === 'knob' || c.kind === 'knack') h = Math.max(h, (sizeOf(c) + (c.style === 'trim' ? TRIM_TIP_OVER : 0) + (c.scale ? SCALE_RING + SCALE_LINE : 0)) * 2);
     else if (c.kind === 'display') h = Math.max(h, c.h);
     else if (c.kind === 'readout') h = Math.max(h, READOUT_H);
     else if (c.kind === 'jack') h = Math.max(h, c.r * 2);
@@ -335,7 +350,10 @@ function rowHeight(r) {
     if (c.sub) sub = SUB_H;
   }
   const hasLabel = r.controls.some((c) => c.label && c.kind !== 'lamps' && !c.letter);
-  let out = h + (hasLabel ? LABEL_H : 0) + sub;
+  // A printed value sits between the knob and its label, so the row is that much taller.
+  // Only a KNOB's printed value — a readout's `value` is its own text and costs no extra height.
+  const valueH = Math.max(0, ...r.controls.map((c) => printedValueH(c.value)));
+  let out = h + (hasLabel ? LABEL_H : 0) + sub + valueH;
   // A trim hangs below its knob's centre line. On a big knob that is still inside the label's own
   // reach and costs nothing; on a small one it is not, so measure rather than assume.
   for (const c of r.controls) {
@@ -345,7 +363,7 @@ function rowHeight(r) {
     // knob it belongs to, and the knob's centre sits half the art's height down the row — so adding
     // the offset to nothing reserved half a knob too little, and the filter's below-the-label trim
     // came to rest in the middle of the resonance and drive row beneath it.
-    const half = SIZE[c.size] + (c.scale ? SCALE_RING + SCALE_LINE : 0);
+    const half = sizeOf(c) + (c.scale ? SCALE_RING + SCALE_LINE : 0);
     const drop = c.trimBelow ? trimBelowY(c) : trimOffset(c).dy;
     out = Math.max(out, half + drop + TRIM_R + TRIM_TIP);
   }
@@ -394,12 +412,14 @@ function placeRow(r, faceW, pack) {
 // Emitting.
 
 function emit(items, c, x, y) {
-  const lab = c.label ? { text: c.label, placement: c.above ? 'above' : 'below',
+  const lab = c.label ? { text: c.label, placement: c.side || (c.above ? 'above' : 'below'),
     size: c.labelSize || (c.kind === 'jack' ? JACK_LABEL : LABEL_SIZE), gap: 1.6 } : null;
   switch (c.kind) {
     case 'knob':
-      items.push({ t: 'knob', id: c.id, x, y, opts: {
-        radius: SIZE[c.size], label: lab,
+      items.push({ t: c.style === 'trim' ? 'trim' : 'knob', id: c.id, x, y, opts: {
+        radius: sizeOf(c), label: lab,
+        ...(c.value ? { value: c.value } : {}),
+        ...(c.tint ? { tint: c.tint } : {}),
         ...(c.scale ? { scale: { marks: evenScale(c.scale), size: SCALE_SIZE, labelGap: 1.1 } } : {}),
       } });
       // A TRIM ON A PLAIN KNOB. The satellite was built for a knAck's depth, but the shape says
@@ -414,7 +434,7 @@ function emit(items, c, x, y) {
       break;
     case 'knack':
       items.push({ t: 'knack', id: c.id, x, y, opts: {
-        radius: SIZE[c.size], port: c.port, label: lab,
+        radius: sizeOf(c), port: c.port, label: lab,
         ...(c.scale ? { scale: { marks: evenScale(c.scale), size: SCALE_SIZE, labelGap: 1.1 } } : {}),
       } });
       if (c.depth) {
@@ -436,7 +456,7 @@ function emit(items, c, x, y) {
       } });
       break;
     case 'readout':
-      items.push({ t: 'readout', id: c.id, x, y, opts: { chars: c.chars, value: c.value, ...(lab ? { label: lab } : {}) } });
+      items.push({ t: 'readout', id: c.id, x, y, opts: { chars: c.chars, value: c.value, ...(c.menu ? { menu: true } : {}), ...(c.digits ? { digits: c.digits } : {}), ...(lab ? { label: lab } : {}) } });
       break;
     case 'display': {
       // A recessed well: the frame line, and a group the host fills. The group carries the id so the
@@ -453,12 +473,12 @@ function emit(items, c, x, y) {
   // so 11 leans left and 1 leans right — which is what makes four of them read as an arc.
   if (c.letter) {
     const rad = (c.at * 30 - 90) * Math.PI / 180;
-    const rr = SIZE[c.size] + LETTER_OUT;
+    const rr = sizeOf(c) + LETTER_OUT;
     items.push({ t: 'label', x: +(x + rr * Math.cos(rad)).toFixed(2),
       y: +(y + rr * Math.sin(rad) + LETTER_SIZE * 0.36).toFixed(2),
       text: c.letter, opts: { size: LETTER_SIZE, italic: false } });
   }
-  if (c.sub) items.push({ t: 'label', x, y: +(y + SIZE[c.size || 'medium'] + LABEL_H + 2.2).toFixed(2), text: c.sub, opts: { size: SUB_SIZE } });
+  if (c.sub) items.push({ t: 'label', x, y: +(y + (sizeOf(c) || SIZE.medium) + LABEL_H + 2.2).toFixed(2), text: c.sub, opts: { size: SUB_SIZE } });
 }
 
 // ---------------------------------------------------------------------------
@@ -545,12 +565,15 @@ export function panel(opts, bands) {
       // too high and its top numerals were printed into the band header above — "400" sitting in the
       // middle of the word FILTER.
       const artH = Math.max(...r.controls.map((c) => (c.kind === 'knob' || c.kind === 'knack')
-        ? (SIZE[c.size] + (c.scale ? SCALE_RING + SCALE_LINE : 0)) * 2
+        ? (sizeOf(c) + (c.scale ? SCALE_RING + SCALE_LINE : 0)) * 2
         : c.kind === 'display' ? c.h
           : c.kind === 'jack' ? c.r * 2 : c.kind === 'button' ? c.r * 2
             : c.kind === 'lamps' ? (c.dir === 'h' ? (c.ledR + LAMP_PAD) * 2 : (c.steps.length - 1) * c.spacing + (c.ledR + LAMP_PAD) * 2)
               : LAMP_R * 2), 0);
-      const cy = +(ry + artH / 2).toFixed(2);
+      // A printed value sits ABOVE the art, so the art starts that far down the row — otherwise the
+      // numeral is drawn into whatever is above, which on the top row of a band is its header.
+      const valueUp = Math.max(0, ...r.controls.map((c) => printedValueH(c.value)));
+      const cy = +(ry + valueUp + artH / 2).toFixed(2);
       r.controls.forEach((c, i) => emit(items, c, xs[i], cy));
       ry += h + (ri < b.rows.length - 1 ? ROW_PAD + extra : 0);
     });
@@ -577,15 +600,25 @@ export function panel(opts, bands) {
     const jacks = outBand.rows[0].controls;
     // The header sits left of the jacks. Its width is taken out of the row before the gaps are shared,
     // so the jacks never run under it.
-    const headW = textWidth(outBand.header, 2.2);
+    const headW = outBand.header ? textWidth(outBand.header, 2.2) : 0;
     const cy = FACE_H - OUT_CY_UP;
-    items.push({ t: 'label', x: MARGIN - 0.5, y: +(cy + 1.2).toFixed(2), text: outBand.header, opts: { size: 2.2, anchor: 'start' } });
     const hw = jacks.map(extent);
-    const x0 = MARGIN + headW + 2.5, x1 = faceW - MARGIN;
+    const headGap = outBand.header ? 2.5 : 0;
+    const x0 = MARGIN + headW + headGap, x1 = faceW - MARGIN;
     const span = hw.reduce((s, w) => s + w.l + w.r, 0);
-    const g = jacks.length > 1 ? ((x1 - x0) - span) / (jacks.length - 1) : 0;
+    let g = jacks.length > 1 ? ((x1 - x0) - span) / (jacks.length - 1) : 0;
     if (g < 0) warnings.push(`output row overflows the panel by ${(-g * (jacks.length - 1)).toFixed(2)}mm`);
     let cur = x0;
+    let headX = MARGIN - 0.5;
+    // PACKED, like every other row on a packed panel: the gap is capped and the whole group — header
+    // and jacks together — is centred in what is left, so the header stays against the jacks it names.
+    if (opts.pack && g > GAP_JACK) {
+      g = GAP_JACK;
+      const groupW = headW + headGap + span + g * (jacks.length - 1);
+      headX = MARGIN + ((x1 - MARGIN) - groupW) / 2;
+      cur = headX + headW + headGap;
+    }
+    if (outBand.header) items.push({ t: 'label', x: +headX.toFixed(2), y: +(cy + 1.2).toFixed(2), text: outBand.header, opts: { size: 2.2, anchor: 'start' } });
     jacks.forEach((c, i) => { emit(items, c, +(cur + hw[i].l).toFixed(2), cy); cur += hw[i].l + hw[i].r + g; });
   }
 
