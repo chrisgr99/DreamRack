@@ -388,6 +388,10 @@ function applyAppMenu() {
         { label: 'Redo', accelerator: 'CmdOrCtrl+Shift+Z', enabled: s.canRedo, click: () => menuSend('redo') },
         { label: 'Create Patch from Clipboard', click: () => menuSend('createFromClipboard') },
         { type: 'separator' },
+        // Emptying the patch is an edit of the whole patch, not a module command — see the in-app
+        // menu for the same reasoning. `&&` renders one literal '&'.
+        { label: 'Clear Connections && Controls…', click: () => menuSend('clearAll') },
+        { type: 'separator' },
         { role: 'cut' }, { role: 'copy' }, { role: 'paste' }, { role: 'selectAll' },
       ],
     },
@@ -405,15 +409,9 @@ function applyAppMenu() {
     {
       label: 'Module',
       submenu: [
+        // Duplicate and Delete are NOT here: they are about one module, and a menu bar cannot say
+        // which. Right-click a module's title bar for those — see rack._openModuleMenu.
         { label: 'Module Library…', click: () => menuSend('library') },
-        { type: 'separator' },
-        { label: 'Duplicate with Settings…', click: () => menuSend('duplicateWithSettings') },
-        { label: 'Duplicate…', click: () => menuSend('duplicateModule') },
-        { label: 'Delete Module…', click: () => menuSend('deleteModule') },
-        { type: 'separator' },
-        // `&&` renders one literal '&' — a lone '&' in an Electron menu label is a mnemonic marker
-        // and gets eaten, so a single ampersand here would show as "Clear Connections  Controls…".
-        { label: 'Clear Connections && Controls…', click: () => menuSend('clearAll') },
       ],
     },
     {

@@ -71,7 +71,7 @@
   <text x="32.7" y="32.5" font-size="2.906" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">attack</text>
   <g data-wcoast-param="attackDepthA" data-wcoast-cx="42.98" data-wcoast-cy="27.43" data-wcoast-angle-min="-150" data-wcoast-angle-max="150" data-wcoast-accent-port="attackCvA">
     <circle cx="42.98" cy="27.43" r="2.8" fill="url(#blueRing)" stroke="#004b7a" stroke-width="0.355"/>
-    <line x1="42.98" y1="24.28" x2="42.98" y2="22.13" stroke="#163a69" stroke-width="0.4"/>
+    <line x1="42.98" y1="24.28" x2="42.98" y2="22.13" stroke="#163a69" stroke-width="0.4" data-wcoast-role="trim-tick" data-tick-top="22.13"/>
     <circle cx="41.03" cy="23.2" r="1.05" fill="none" stroke="#163a69" stroke-width="0.28"/><line x1="40.48" y1="23.2" x2="41.58" y2="23.2" stroke="#163a69" stroke-width="0.28"/>
     <circle cx="44.93" cy="23.2" r="1.05" fill="none" stroke="#163a69" stroke-width="0.28"/><line x1="44.38" y1="23.2" x2="45.48" y2="23.2" stroke="#163a69" stroke-width="0.28"/><line x1="44.93" y1="22.65" x2="44.93" y2="23.75" stroke="#163a69" stroke-width="0.28"/>
     <circle cx="42.98" cy="27.43" r="1.4" fill="#8a8a8a" stroke="#f8f8f8" stroke-width="0.32" data-wcoast-role="trim-accent"/>
@@ -107,7 +107,7 @@
   <text x="53.5" y="32.5" font-size="2.906" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">decay</text>
   <g data-wcoast-param="decayDepthA" data-wcoast-cx="63.78" data-wcoast-cy="27.43" data-wcoast-angle-min="-150" data-wcoast-angle-max="150" data-wcoast-accent-port="decayCvA">
     <circle cx="63.78" cy="27.43" r="2.8" fill="url(#blueRing)" stroke="#004b7a" stroke-width="0.355"/>
-    <line x1="63.78" y1="24.28" x2="63.78" y2="22.13" stroke="#163a69" stroke-width="0.4"/>
+    <line x1="63.78" y1="24.28" x2="63.78" y2="22.13" stroke="#163a69" stroke-width="0.4" data-wcoast-role="trim-tick" data-tick-top="22.13"/>
     <circle cx="61.83" cy="23.2" r="1.05" fill="none" stroke="#163a69" stroke-width="0.28"/><line x1="61.28" y1="23.2" x2="62.38" y2="23.2" stroke="#163a69" stroke-width="0.28"/>
     <circle cx="65.73" cy="23.2" r="1.05" fill="none" stroke="#163a69" stroke-width="0.28"/><line x1="65.18" y1="23.2" x2="66.28" y2="23.2" stroke="#163a69" stroke-width="0.28"/><line x1="65.73" y1="22.65" x2="65.73" y2="23.75" stroke="#163a69" stroke-width="0.28"/>
     <circle cx="63.78" cy="27.43" r="1.4" fill="#8a8a8a" stroke="#f8f8f8" stroke-width="0.32" data-wcoast-role="trim-accent"/>
@@ -174,7 +174,7 @@
   <text x="32.7" y="57.5" font-size="2.906" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">attack</text>
   <g data-wcoast-param="attackDepthB" data-wcoast-cx="42.98" data-wcoast-cy="52.43" data-wcoast-angle-min="-150" data-wcoast-angle-max="150" data-wcoast-accent-port="attackCvB">
     <circle cx="42.98" cy="52.43" r="2.8" fill="url(#blueRing)" stroke="#004b7a" stroke-width="0.355"/>
-    <line x1="42.98" y1="49.28" x2="42.98" y2="47.13" stroke="#163a69" stroke-width="0.4"/>
+    <line x1="42.98" y1="49.28" x2="42.98" y2="47.13" stroke="#163a69" stroke-width="0.4" data-wcoast-role="trim-tick" data-tick-top="47.13"/>
     <circle cx="41.03" cy="48.21" r="1.05" fill="none" stroke="#163a69" stroke-width="0.28"/><line x1="40.48" y1="48.21" x2="41.58" y2="48.21" stroke="#163a69" stroke-width="0.28"/>
     <circle cx="44.93" cy="48.21" r="1.05" fill="none" stroke="#163a69" stroke-width="0.28"/><line x1="44.38" y1="48.21" x2="45.48" y2="48.21" stroke="#163a69" stroke-width="0.28"/><line x1="44.93" y1="47.66" x2="44.93" y2="48.76" stroke="#163a69" stroke-width="0.28"/>
     <circle cx="42.98" cy="52.43" r="1.4" fill="#8a8a8a" stroke="#f8f8f8" stroke-width="0.32" data-wcoast-role="trim-accent"/>
@@ -210,7 +210,7 @@
   <text x="53.5" y="57.5" font-size="2.906" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">decay</text>
   <g data-wcoast-param="decayDepthB" data-wcoast-cx="63.78" data-wcoast-cy="52.43" data-wcoast-angle-min="-150" data-wcoast-angle-max="150" data-wcoast-accent-port="decayCvB">
     <circle cx="63.78" cy="52.43" r="2.8" fill="url(#blueRing)" stroke="#004b7a" stroke-width="0.355"/>
-    <line x1="63.78" y1="49.28" x2="63.78" y2="47.13" stroke="#163a69" stroke-width="0.4"/>
+    <line x1="63.78" y1="49.28" x2="63.78" y2="47.13" stroke="#163a69" stroke-width="0.4" data-wcoast-role="trim-tick" data-tick-top="47.13"/>
     <circle cx="61.83" cy="48.21" r="1.05" fill="none" stroke="#163a69" stroke-width="0.28"/><line x1="61.28" y1="48.21" x2="62.38" y2="48.21" stroke="#163a69" stroke-width="0.28"/>
     <circle cx="65.73" cy="48.21" r="1.05" fill="none" stroke="#163a69" stroke-width="0.28"/><line x1="65.18" y1="48.21" x2="66.28" y2="48.21" stroke="#163a69" stroke-width="0.28"/><line x1="65.73" y1="47.66" x2="65.73" y2="48.76" stroke="#163a69" stroke-width="0.28"/>
     <circle cx="63.78" cy="52.43" r="1.4" fill="#8a8a8a" stroke="#f8f8f8" stroke-width="0.32" data-wcoast-role="trim-accent"/>
@@ -277,7 +277,7 @@
   <text x="32.7" y="82.5" font-size="2.906" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">attack</text>
   <g data-wcoast-param="attackDepthC" data-wcoast-cx="42.98" data-wcoast-cy="77.43" data-wcoast-angle-min="-150" data-wcoast-angle-max="150" data-wcoast-accent-port="attackCvC">
     <circle cx="42.98" cy="77.43" r="2.8" fill="url(#blueRing)" stroke="#004b7a" stroke-width="0.355"/>
-    <line x1="42.98" y1="74.28" x2="42.98" y2="72.13" stroke="#163a69" stroke-width="0.4"/>
+    <line x1="42.98" y1="74.28" x2="42.98" y2="72.13" stroke="#163a69" stroke-width="0.4" data-wcoast-role="trim-tick" data-tick-top="72.13"/>
     <circle cx="41.03" cy="73.21" r="1.05" fill="none" stroke="#163a69" stroke-width="0.28"/><line x1="40.48" y1="73.21" x2="41.58" y2="73.21" stroke="#163a69" stroke-width="0.28"/>
     <circle cx="44.93" cy="73.21" r="1.05" fill="none" stroke="#163a69" stroke-width="0.28"/><line x1="44.38" y1="73.21" x2="45.48" y2="73.21" stroke="#163a69" stroke-width="0.28"/><line x1="44.93" y1="72.66" x2="44.93" y2="73.76" stroke="#163a69" stroke-width="0.28"/>
     <circle cx="42.98" cy="77.43" r="1.4" fill="#8a8a8a" stroke="#f8f8f8" stroke-width="0.32" data-wcoast-role="trim-accent"/>
@@ -313,7 +313,7 @@
   <text x="53.5" y="82.5" font-size="2.906" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">decay</text>
   <g data-wcoast-param="decayDepthC" data-wcoast-cx="63.78" data-wcoast-cy="77.43" data-wcoast-angle-min="-150" data-wcoast-angle-max="150" data-wcoast-accent-port="decayCvC">
     <circle cx="63.78" cy="77.43" r="2.8" fill="url(#blueRing)" stroke="#004b7a" stroke-width="0.355"/>
-    <line x1="63.78" y1="74.28" x2="63.78" y2="72.13" stroke="#163a69" stroke-width="0.4"/>
+    <line x1="63.78" y1="74.28" x2="63.78" y2="72.13" stroke="#163a69" stroke-width="0.4" data-wcoast-role="trim-tick" data-tick-top="72.13"/>
     <circle cx="61.83" cy="73.21" r="1.05" fill="none" stroke="#163a69" stroke-width="0.28"/><line x1="61.28" y1="73.21" x2="62.38" y2="73.21" stroke="#163a69" stroke-width="0.28"/>
     <circle cx="65.73" cy="73.21" r="1.05" fill="none" stroke="#163a69" stroke-width="0.28"/><line x1="65.18" y1="73.21" x2="66.28" y2="73.21" stroke="#163a69" stroke-width="0.28"/><line x1="65.73" y1="72.66" x2="65.73" y2="73.76" stroke="#163a69" stroke-width="0.28"/>
     <circle cx="63.78" cy="77.43" r="1.4" fill="#8a8a8a" stroke="#f8f8f8" stroke-width="0.32" data-wcoast-role="trim-accent"/>
@@ -380,7 +380,7 @@
   <text x="32.7" y="107.5" font-size="2.906" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">attack</text>
   <g data-wcoast-param="attackDepthD" data-wcoast-cx="42.98" data-wcoast-cy="102.43" data-wcoast-angle-min="-150" data-wcoast-angle-max="150" data-wcoast-accent-port="attackCvD">
     <circle cx="42.98" cy="102.43" r="2.8" fill="url(#blueRing)" stroke="#004b7a" stroke-width="0.355"/>
-    <line x1="42.98" y1="99.28" x2="42.98" y2="97.13" stroke="#163a69" stroke-width="0.4"/>
+    <line x1="42.98" y1="99.28" x2="42.98" y2="97.13" stroke="#163a69" stroke-width="0.4" data-wcoast-role="trim-tick" data-tick-top="97.13"/>
     <circle cx="41.03" cy="98.21" r="1.05" fill="none" stroke="#163a69" stroke-width="0.28"/><line x1="40.48" y1="98.21" x2="41.58" y2="98.21" stroke="#163a69" stroke-width="0.28"/>
     <circle cx="44.93" cy="98.21" r="1.05" fill="none" stroke="#163a69" stroke-width="0.28"/><line x1="44.38" y1="98.21" x2="45.48" y2="98.21" stroke="#163a69" stroke-width="0.28"/><line x1="44.93" y1="97.66" x2="44.93" y2="98.76" stroke="#163a69" stroke-width="0.28"/>
     <circle cx="42.98" cy="102.43" r="1.4" fill="#8a8a8a" stroke="#f8f8f8" stroke-width="0.32" data-wcoast-role="trim-accent"/>
@@ -416,7 +416,7 @@
   <text x="53.5" y="107.5" font-size="2.906" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">decay</text>
   <g data-wcoast-param="decayDepthD" data-wcoast-cx="63.78" data-wcoast-cy="102.43" data-wcoast-angle-min="-150" data-wcoast-angle-max="150" data-wcoast-accent-port="decayCvD">
     <circle cx="63.78" cy="102.43" r="2.8" fill="url(#blueRing)" stroke="#004b7a" stroke-width="0.355"/>
-    <line x1="63.78" y1="99.28" x2="63.78" y2="97.13" stroke="#163a69" stroke-width="0.4"/>
+    <line x1="63.78" y1="99.28" x2="63.78" y2="97.13" stroke="#163a69" stroke-width="0.4" data-wcoast-role="trim-tick" data-tick-top="97.13"/>
     <circle cx="61.83" cy="98.21" r="1.05" fill="none" stroke="#163a69" stroke-width="0.28"/><line x1="61.28" y1="98.21" x2="62.38" y2="98.21" stroke="#163a69" stroke-width="0.28"/>
     <circle cx="65.73" cy="98.21" r="1.05" fill="none" stroke="#163a69" stroke-width="0.28"/><line x1="65.18" y1="98.21" x2="66.28" y2="98.21" stroke="#163a69" stroke-width="0.28"/><line x1="65.73" y1="97.66" x2="65.73" y2="98.76" stroke="#163a69" stroke-width="0.28"/>
     <circle cx="63.78" cy="102.43" r="1.4" fill="#8a8a8a" stroke="#f8f8f8" stroke-width="0.32" data-wcoast-role="trim-accent"/>

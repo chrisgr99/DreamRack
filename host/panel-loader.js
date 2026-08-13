@@ -18,7 +18,7 @@
 'use strict';
 
 import { attachKnobHover } from './knob-hover.js';
-import { showReadout, refreshReadout, hideReadout, moveReadout, readoutLive, readoutPinned, formatParamValue } from './knob-readout.js';
+import { showReadout, hideReadout, readoutLive, readoutPinned, formatParamValue } from './knob-readout.js';
 
 // Default pointer sweep (degrees each side of straight-up), per the contract.
 // A control may override with data-wcoast-angle-min / -max.
@@ -592,6 +592,28 @@ function arcEndAngle(el, r, binding, valueOverride) {
   return binding.angleMin;
 }
 
+// WHERE THE CHIP STANDS: centred over the control, just clear of its top. Not at the pointer, which
+// is where it used to be — a number that follows your hand is a number you have to chase, and on a
+// knob you are already looking at, the top of the knob is where your eye is. A slider's is above the
+// TOP OF ITS TRACK rather than above its handle, so it holds still while the handle runs under it.
+const CHIP_GAP = 3;   // px between the control's top edge and the bottom of the chip
+export function controlAnchor(binding) {
+  const el = binding && binding.group;
+  if (!el) return null;
+  let r = null;
+  if (binding.kind === 'slider') {
+    const track = el.querySelector('[data-wcoast-role="slider-track"]') || el;
+    r = track.getBoundingClientRect();
+  } else {
+    // The RING, not the group: a knob's group carries its label underneath and, on a knАck, its
+    // attenuverter — so the group's top is the ring's top anyway, but its centre is not the ring's.
+    const ring = el.querySelector('circle') || el;
+    r = ring.getBoundingClientRect();
+  }
+  if (!r || (!r.width && !r.height)) return null;
+  return { x: r.left + r.width / 2, y: r.top - CHIP_GAP };
+}
+
 export function controlOrigin(binding, valueOverride) {
   const el = binding && binding.group;
   if (!el) return null;
@@ -718,6 +740,7 @@ export function attachControlInteraction(binding, hooks, opts = {}) {
     el.style.cursor = 'pointer';
     el.addEventListener('pointerdown', (e) => {
       e.stopPropagation(); e.preventDefault();
+      if (binding.gated) return;   // a window that is only reporting — see the colour, and _attachTextReadout
       const t = e.timeStamp || 0;
       if (t - lastDown < DBL_MS) {
         clearTimeout(openTimer); openTimer = 0; lastDown = 0;
@@ -739,6 +762,7 @@ export function attachControlInteraction(binding, hooks, opts = {}) {
       };
       el.addEventListener('wheel', (e) => {
         if (e.ctrlKey) return;   // ctrl+wheel is the rack pinch-zoom
+        if (binding.gated) return;
         e.preventDefault(); e.stopPropagation();
         const d = e.deltaMode === 1 ? e.deltaY * 16 : e.deltaMode === 2 ? e.deltaY * 400 : e.deltaY;
         acc += -d;
@@ -830,7 +854,7 @@ export function attachControlInteraction(binding, hooks, opts = {}) {
       let guard = 0;
       while (acc >= THRESH && guard++ < 8) { acc -= THRESH; step(+1, by); }
       while (acc <= -THRESH && guard++ < 8) { acc += THRESH; step(-1, by); }
-      refreshReadout(formatParamValue(binding.meta, hooks.get(), binding.values) + scrollScaleTag(scale), e.clientX, e.clientY, { name: binding.meta && binding.meta.name, region: 'value' });
+      showReadout(formatParamValue(binding.meta, hooks.get(), binding.values) + scrollScaleTag(scale), controlAnchor(binding), null, true, { origin: () => controlOrigin(binding), region: 'value', hold: true });
     }, { passive: false });
     return;
   }
@@ -854,7 +878,7 @@ export function attachControlInteraction(binding, hooks, opts = {}) {
       // Refreshed from the LOOP, not from the wheel event: momentum keeps the value moving after
       // the last tick, and a readout driven by the event alone would freeze on the first number
       // while the knob carried on somewhere else.
-      if (at) refreshReadout(formatParamValue(binding.meta, hooks.get(), binding.values) + tag, at.x, at.y, { name: binding.meta && binding.meta.name, region: 'value' });
+      if (at) showReadout(formatParamValue(binding.meta, hooks.get(), binding.values) + tag, controlAnchor(binding), null, true, { origin: () => controlOrigin(binding), region: 'value', hold: true });
       vel *= Math.exp(-KNOB_DRAG * dt);
       // Stop only when the velocity is spent, or when we're pushing INTO a
       // boundary (not when velocity would carry us away from it — that's how you
@@ -865,6 +889,10 @@ export function attachControlInteraction(binding, hooks, opts = {}) {
     };
     el.addEventListener('wheel', (e) => {
       if (e.ctrlKey) return;   // ctrl+wheel is a pinch-zoom for the rack, not a knob turn
+      // A GATED CONTROL DOES NOT TURN. Set by the host on a CV-depth trim whose jack is empty — the
+      // trim is greyed to say it is doing nothing, and a wheel that moved it anyway would contradict
+      // the panel. Not preventDefault'd either: the scroll belongs to whatever is underneath.
+      if (binding.gated) return;
       e.preventDefault();
       // Normalise the scroll amount across devices (px / lines / pages).
       const d = e.deltaMode === 1 ? e.deltaY * 16 : e.deltaMode === 2 ? e.deltaY * 400 : e.deltaY;
@@ -873,7 +901,7 @@ export function attachControlInteraction(binding, hooks, opts = {}) {
       at = { x: e.clientX, y: e.clientY };
       // Straight away, not on the next frame: the chip is standing in for the pointer, and a frame's
       // wait is enough to see it arrive late. The loop keeps it current from here on.
-      refreshReadout(formatParamValue(binding.meta, hooks.get(), binding.values) + tag, at.x, at.y, { name: binding.meta && binding.meta.name, region: 'value' });
+      showReadout(formatParamValue(binding.meta, hooks.get(), binding.values) + tag, controlAnchor(binding), null, true, { origin: () => controlOrigin(binding), region: 'value', hold: true });
       vel += (-d / 100) * KNOB_STEP * KNOB_DRAG * factor;   // up (negative delta) raises
       if (vel > KNOB_MAXV) vel = KNOB_MAXV; else if (vel < -KNOB_MAXV) vel = -KNOB_MAXV;
       if (!raf) { last = performance.now(); raf = requestAnimationFrame(tick); }
@@ -885,6 +913,9 @@ export function attachControlInteraction(binding, hooks, opts = {}) {
     // the crop translate), then normalise against top..bot. stopPropagation keeps
     // a fader grab from starting a rack module drag.
     if (!binding.handle || binding.top == null || binding.bot == null) return;
+    // A FADER HAS NO HOVER MODULE, so nothing else would send its chip home now that the timer is off.
+    // Leaving the fader is leaving the thing the number describes, which is the same rule a knob has.
+    el.addEventListener('pointerleave', () => hideReadout());
 
     // THE NUMBER ON HOVER, which faders were missing. A knob gets it from the hover mark, and a fader
     // has no hover mark — it has no scroll band to shade — so the same behaviour is wired here: a
@@ -892,7 +923,6 @@ export function attachControlInteraction(binding, hooks, opts = {}) {
     // goes home into the handle when it leaves.
     // A fader shows its number when you DRAG or SCROLL it, like every other control — never on
     // hover. While it is up it follows the pointer, and it goes home into the handle on leaving.
-    el.addEventListener('pointermove', (e) => { if (readoutLive()) moveReadout(e.clientX, e.clientY); });
     el.addEventListener('pointerleave', () => hideReadout());
 
     const posFromEvent = (e) => {
@@ -906,7 +936,7 @@ export function attachControlInteraction(binding, hooks, opts = {}) {
       const p = posFromEvent(e);
       if (p == null) return;
       hooks.set(positionToValue(binding.meta, p));
-      showReadout(formatParamValue(binding.meta, hooks.get(), binding.values), e.clientX, e.clientY, true, { origin: () => controlOrigin(binding), region: 'value', name: binding.meta && binding.meta.name });
+      showReadout(formatParamValue(binding.meta, hooks.get(), binding.values), controlAnchor(binding), null, true, { origin: () => controlOrigin(binding), region: 'value', hold: true });
     };
     el.addEventListener('pointerdown', (e) => {
       e.stopPropagation(); e.preventDefault();
@@ -931,7 +961,7 @@ export function attachControlInteraction(binding, hooks, opts = {}) {
       last = now;
       const next = clamp01(valueToPosition(binding.meta, hooks.get()) + vel * dt);
       hooks.set(positionToValue(binding.meta, next));
-      if (at) showReadout(formatParamValue(binding.meta, hooks.get(), binding.values) + fTag, at.x, at.y, true, { origin: () => controlOrigin(binding), region: 'value', name: binding.meta && binding.meta.name });
+      if (at) showReadout(formatParamValue(binding.meta, hooks.get(), binding.values) + fTag, controlAnchor(binding), null, true, { origin: () => controlOrigin(binding), region: 'value', hold: true });
       vel *= Math.exp(-KNOB_DRAG * dt);
       const pinned = (next <= 0 && vel < 0) || (next >= 1 && vel > 0);
       if (Math.abs(vel) > 1e-3 && !pinned) raf = requestAnimationFrame(tick);
@@ -944,7 +974,7 @@ export function attachControlInteraction(binding, hooks, opts = {}) {
       at = { x: e.clientX, y: e.clientY };
       const factor = scrollScale(e);
       fTag = scrollScaleTag(factor);
-      showReadout(formatParamValue(binding.meta, hooks.get(), binding.values) + fTag, at.x, at.y, true, { origin: () => controlOrigin(binding), region: 'value', name: binding.meta && binding.meta.name });
+      showReadout(formatParamValue(binding.meta, hooks.get(), binding.values) + fTag, controlAnchor(binding), null, true, { origin: () => controlOrigin(binding), region: 'value', hold: true });
       vel += (-d / 100) * KNOB_STEP * KNOB_DRAG * factor;   // up (negative delta) raises
       if (vel > KNOB_MAXV) vel = KNOB_MAXV; else if (vel < -KNOB_MAXV) vel = -KNOB_MAXV;
       if (!raf) { last = performance.now(); raf = requestAnimationFrame(tick); }

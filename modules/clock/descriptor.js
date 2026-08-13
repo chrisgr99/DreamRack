@@ -58,18 +58,18 @@ export default {
     // and tempo is a voltage, and an application that knew either would know something the patch did
     // not. We follow it: run and reset are a button, an input and an output on this panel, and a rack
     // of clocks is started together by patching them together.
-    { id: 'runIn', name: 'Run', role: 'gate', section: 'transport', domain: 'control', dir: 'in' },
-    { id: 'resetIn', name: 'Reset', role: 'trigger', section: 'transport', domain: 'control', dir: 'in' },
+    { id: 'runIn', name: 'Run', role: 'gate', section: 'transport', domain: 'trigger', dir: 'in' },
+    { id: 'resetIn', name: 'Reset', role: 'trigger', section: 'transport', domain: 'trigger', dir: 'in' },
     // ONE INPUT, TWO MEANINGS, chosen by the BPM mode radio: a voltage that sets the tempo, or a clock
     // to lock onto. Kept as one jack because they are alternatives, never both at once.
     { id: 'bpmIn', name: 'BPM CV / external clock', section: 'transport', domain: 'control', dir: 'in' },
 
-    { id: 'clkOut', name: 'Master clock', role: 'clock', section: 'out', domain: 'control', dir: 'out' },
-    { id: 'clk1Out', name: 'Clock 1', role: 'clock', section: 'out', domain: 'control', dir: 'out' },
-    { id: 'clk2Out', name: 'Clock 2', role: 'clock', section: 'out', domain: 'control', dir: 'out' },
-    { id: 'clk3Out', name: 'Clock 3', role: 'clock', section: 'out', domain: 'control', dir: 'out' },
-    { id: 'runOut', name: 'Run', role: 'gate', section: 'out', domain: 'control', dir: 'out' },
-    { id: 'resetOut', name: 'Reset', role: 'trigger', section: 'out', domain: 'control', dir: 'out' },
+    { id: 'clkOut', name: 'Master clock', role: 'clock', section: 'out', domain: 'trigger', dir: 'out' },
+    { id: 'clk1Out', name: 'Clock 1', role: 'clock', section: 'out', domain: 'trigger', dir: 'out' },
+    { id: 'clk2Out', name: 'Clock 2', role: 'clock', section: 'out', domain: 'trigger', dir: 'out' },
+    { id: 'clk3Out', name: 'Clock 3', role: 'clock', section: 'out', domain: 'trigger', dir: 'out' },
+    { id: 'runOut', name: 'Run', role: 'gate', section: 'out', domain: 'trigger', dir: 'out' },
+    { id: 'resetOut', name: 'Reset', role: 'trigger', section: 'out', domain: 'trigger', dir: 'out' },
     { id: 'bpmOut', name: 'BPM CV thru', section: 'out', domain: 'control', dir: 'out' },
   ],
   params: [
@@ -93,7 +93,11 @@ export default {
     // A RATIO KNOB HOLDS AN INDEX AND MEANS A MUSICAL FACT. Reading '12' off it tells you nothing —
     // reading '×11' tells you everything — so each one formats its own readout from the table.
     ...[1, 2, 3].map((n) => ({ id: 'ratio' + n, name: 'Clock ' + n + ' ratio', section: 'ratios',
-      curve: 'detent', min: -34, max: 34, default: 0, glideMs: 0, readoutText: ratioText })),
+      // listStep/listRate: six values a notch, the same rate the open list slides at, so the wheel
+      // feels identical whether the list happens to be up or not. Sixty-nine ratios is a dozen notches
+      // end to end, which is a flick.
+      curve: 'detent', min: -34, max: 34, default: 0, glideMs: 0, readoutText: ratioText,
+      listStep: 6, listRate: 6 })),
     // SWING displaces every second beat: negative drags it early, positive late, zero is straight.
     // Expressed as a fraction of the pair of beats it shifts between, which is what makes the same
     // number mean the same feel at any tempo and any ratio.
@@ -106,7 +110,8 @@ export default {
     // DELAY, in the original's eight fractions of a beat — 0, 1/16, 1/8, 1/4, 1/3, 1/2, 2/3, 3/4 — so
     // a clock can be pushed off the beat by a musical amount rather than an arbitrary one.
     ...[1, 2, 3].map((n) => ({ id: 'delay' + n, name: 'Clock ' + n + ' delay', section: 'clocks',
-      curve: 'detent', min: 0, max: 7, default: 0, glideMs: 0, readoutText: delayText })),
+      curve: 'detent', min: 0, max: 7, default: 0, glideMs: 0, readoutText: delayText,
+      listStep: 1, listRate: 1 })),
     // RUN LATCHES, RESET DOES NOT. Running is a state you can see; resetting is a thing that happens.
     { id: 'run', name: 'Run', section: 'transport', curve: 'stepped', default: 'off', modulatable: false,
       steps: [{ value: 'off' }, { value: 'on' }] },
@@ -122,6 +127,7 @@ export default {
       section: 'lamps', curve: 'stepped', steps: [{ value: 'off' }, { value: 'on' }], default: 'off',
       readOnly: true })),
     { id: 'ppqn', name: 'Pulses per quarter note', section: 'transport', curve: 'detent', min: 0, max: 5, default: 1,
-      readoutText: (i) => String(PPQN_VALUES[Math.max(0, Math.min(5, Math.round(i)))]), glideMs: 0 },
+      readoutText: (i) => String(PPQN_VALUES[Math.max(0, Math.min(5, Math.round(i)))]), glideMs: 0,
+      listStep: 1, listRate: 1 },
   ],
 };

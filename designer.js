@@ -40,6 +40,8 @@ import clockLayout from './modules/clock/panel.layout.js';
 import clockDesc from './modules/clock/descriptor.js';
 import marblesLayout from './modules/marbles/panel.layout.js';
 import marblesDesc from './modules/marbles/descriptor.js';
+import delayLayout from './modules/delay/panel.layout.js';
+import delayDesc from './modules/delay/descriptor.js';
 import sineLayout from './modules/sine-source/panel.layout.js';
 import sineDesc from './modules/sine-source/descriptor.js';
 import fieldLayout from './modules/coordinate-field/panel.layout.js';
@@ -80,6 +82,7 @@ const MODULES = [
   { name: 'Octave', dir: 'octave', base: octLayout, desc: octDesc },
   { name: 'drClckd', dir: 'clock', base: clockLayout, desc: clockDesc },
   { name: 'Marbles', dir: 'marbles', base: marblesLayout, desc: marblesDesc },
+  { name: 'Delay', dir: 'delay', base: delayLayout, desc: delayDesc },
   { name: 'Sine Source', dir: 'sine-source', base: sineLayout, desc: sineDesc },
   { name: 'Coordinate Field', dir: 'coordinate-field', base: fieldLayout, desc: fieldDesc },
   { name: 'Formula', dir: 'formula', base: formulaLayout, desc: formulaDesc },

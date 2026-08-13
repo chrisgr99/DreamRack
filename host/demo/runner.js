@@ -105,7 +105,7 @@ export function createDemoRunner(rack, opts = {}) {
   function targetsOf(s) {
     switch (s.do) {
       case 'patch': return [s.from, s.to];
-      case 'set': return [s.target];
+      case 'set': case 'choose': return [s.target];
       default: return [];
     }
   }
@@ -345,6 +345,30 @@ export function createDemoRunner(rack, opts = {}) {
           theatre.hoverItem(null);
           await theatre.sleep(secs(s, 'settle'));
         }
+        return;
+      }
+      case 'choose': {
+        // A VALUE LIST. The pointer goes to the lit window, clicks, and the list opens over it — the
+        // real one, with the real values in it — then walks to the row it wants and presses that.
+        //
+        // Which is more theatre than a `set` needs, and deliberately: the list IS the feature. A demo
+        // that reached the same value by calling the parameter would show a number changing by itself,
+        // which is exactly what a viewer cannot learn anything from.
+        const t = resolve(s.target);
+        const [k, id] = split(s.target);
+        if (t) { await goTo(t, s, 'moveToReadout', s.target); await announce('openList', s, true, s.target); }
+        theatre.click();
+        if (!rack.openValueList(k, id)) { console.warn(`[demo] no value list for "${s.target}"`); return; }
+        await theatre.sleep(secs(s, 'settle'));
+        const row = rack.valueListRowEl(s.to);
+        if (!row) { console.warn(`[demo] no row for ${JSON.stringify(s.to)} in "${s.target}"`); rack.closeValueList(); return; }
+        const rr = row.getBoundingClientRect();
+        await goTo({ el: row, x: rr.left + rr.width / 2, y: rr.top + rr.height / 2, w: rr.width, h: rr.height }, s, 'moveToListItem');
+        if (row._light) row._light();   // the rule follows a real pointer; the synthetic one has to say so
+        await announce('chooseValue', s, true);
+        theatre.click();
+        rack.chooseValueListRow(row);
+        await theatre.sleep(secs(s, 'settle'));
         return;
       }
       case 'key': {

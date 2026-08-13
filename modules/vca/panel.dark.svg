@@ -37,7 +37,7 @@
   <text x="12.25" y="29.94832" font-size="2.706" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">LEVEL</text>
   <g data-wcoast-param="levelDepth" data-wcoast-cx="23.73" data-wcoast-cy="25.64" data-wcoast-angle-min="-150" data-wcoast-angle-max="150" data-wcoast-accent-port="levelCv">
     <circle cx="23.73" cy="25.64" r="2.8" fill="url(#blueRing)" stroke="#6fa8d6" stroke-width="0.355"/>
-    <line x1="23.73" y1="22.49" x2="23.73" y2="20.34" stroke="#b8b8bc" stroke-width="0.4"/>
+    <line x1="23.73" y1="22.49" x2="23.73" y2="20.34" stroke="#b8b8bc" stroke-width="0.4" data-wcoast-role="trim-tick" data-tick-top="20.34"/>
     <circle cx="21.78" cy="21.41" r="1.05" fill="none" stroke="#b8b8bc" stroke-width="0.28"/><line x1="21.23" y1="21.41" x2="22.33" y2="21.41" stroke="#b8b8bc" stroke-width="0.28"/>
     <circle cx="25.68" cy="21.41" r="1.05" fill="none" stroke="#b8b8bc" stroke-width="0.28"/><line x1="25.13" y1="21.41" x2="26.23" y2="21.41" stroke="#b8b8bc" stroke-width="0.28"/><line x1="25.68" y1="20.86" x2="25.68" y2="21.96" stroke="#b8b8bc" stroke-width="0.28"/>
     <circle cx="23.73" cy="25.64" r="1.4" fill="#8a8a8a" stroke="#6b7079" stroke-width="0.32" data-wcoast-role="trim-accent"/>

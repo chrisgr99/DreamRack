@@ -58,6 +58,24 @@ sometimes an abbreviation, so anything a demo actually points at is worth writin
 | lpg:inB | the input terminal of channel B |
 | lpg:levelCvA | the control input on channel A's level knob |
 | osc:modTriOut | the triangle output of the modulation oscillator |
+| clk:bpm | the tempo window |
+| clk:ratio1 | the ratio for clock one |
+| clk:ratio2 | the ratio for clock two |
+| clk:delay2 | the delay for clock two |
+| clk:swing1 | the swing knob for clock one |
+| clk:ppqn | the pulses per quarter note |
+| clk:run | the clock's run button |
+| clk:clkOut | the clock's master output |
+| clk:clk1Out | the first clock output |
+| clk:clk2Out | the second clock output |
+| mar:tClockIn | the rhythm side's clock input |
+| mar:dejaVu | the déjà vu knob |
+| mar:dejaVuLength | the loop length |
+| mar:tBias | the rhythm bias knob |
+| mar:xSpread | the spread knob |
+| mar:xSteps | the steps knob |
+| mar:t1Out | the first gate output |
+| mar:x1Out | the first voltage output |
 | lpg:outB | the output terminal of channel B |
 | lpg:strikeA | the strike button on channel A |
 | lpg:decayA | the decay knob on channel A |
@@ -259,6 +277,62 @@ the words under an existing one does not.
 
 **Short**
 - click
+
+## moveToReadout
+
+**Badge** move pointer
+
+**Long**
+- move the pointer to {target}
+- move the pointer across to {target}
+
+**After**
+- move the pointer to it
+- move across to it
+
+**Short**
+- move to the window
+- move
+
+## openList
+
+**Badge** left click
+
+**Long**
+- click {target} and every value it can take opens over it
+- click {target} to open its list of values
+
+**After**
+- click it and every value it can take opens over it
+- click it to open its list
+
+**Short**
+- click to open the list
+- open the list
+
+## moveToListItem
+
+**Badge** move pointer
+
+**Long**
+- move the pointer down the list to the value
+- move down the list
+
+**Short**
+- move down the list
+- move
+
+## chooseValue
+
+**Badge** left click
+
+**Long**
+- click the value and the list closes on it
+- click to choose it
+
+**Short**
+- click
+- choose it
 
 ## switchPage
 

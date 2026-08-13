@@ -49,7 +49,7 @@
   <text x="20.12" y="37.891461766589885" font-size="2.706" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">CUTOFF</text>
   <g data-wcoast-param="cutoffDepth" data-wcoast-cx="32.72" data-wcoast-cy="30.8" data-wcoast-angle-min="-150" data-wcoast-angle-max="150" data-wcoast-accent-port="cutoffCv">
     <circle cx="32.72" cy="30.8" r="2.8" fill="url(#blueRing)" stroke="#6fa8d6" stroke-width="0.355"/>
-    <line x1="32.72" y1="27.65" x2="32.72" y2="25.5" stroke="#b8b8bc" stroke-width="0.4"/>
+    <line x1="32.72" y1="27.65" x2="32.72" y2="25.5" stroke="#b8b8bc" stroke-width="0.4" data-wcoast-role="trim-tick" data-tick-top="25.5"/>
     <circle cx="30.77" cy="26.57" r="1.05" fill="none" stroke="#b8b8bc" stroke-width="0.28"/><line x1="30.22" y1="26.57" x2="31.32" y2="26.57" stroke="#b8b8bc" stroke-width="0.28"/>
     <circle cx="34.67" cy="26.57" r="1.05" fill="none" stroke="#b8b8bc" stroke-width="0.28"/><line x1="34.12" y1="26.57" x2="35.22" y2="26.57" stroke="#b8b8bc" stroke-width="0.28"/><line x1="34.67" y1="26.02" x2="34.67" y2="27.12" stroke="#b8b8bc" stroke-width="0.28"/>
     <circle cx="32.72" cy="30.8" r="1.4" fill="#8a8a8a" stroke="#6b7079" stroke-width="0.32" data-wcoast-role="trim-accent"/>

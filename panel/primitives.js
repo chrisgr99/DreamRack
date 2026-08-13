@@ -443,7 +443,11 @@ function trim(id, cx, cy, opts = {}) {
     // DRAWN, NOT SET. A plus and a minus as text at this size are two glyphs whose bar heights and
     // widths are the font's business, and they did not line up with each other or sit level with the
     // mark. Two lines and a circle are the same shapes with the geometry under our control.
-    markSvg = `\n    <line x1="${cx}" y1="${y0}" x2="${cx}" y2="${y1}" stroke="${ink}" stroke-width="0.4"/>`
+    // The TICK carries a role: on a trim that attenuates a jack, the host paints it in that jack's
+    // colour once something is patched, and runs a line from the jack up to its top end. The signs
+    // either side stay in the panel's ink — they say which way is more, which is true whatever is
+    // plugged in. See rack._syncDepthTrims.
+    markSvg = `\n    <line x1="${cx}" y1="${y0}" x2="${cx}" y2="${y1}" stroke="${ink}" stroke-width="0.4" data-wcoast-role="trim-tick" data-tick-top="${y1}"/>`
       + `\n    ${sign(+(cx - TRIM_SIGN_X).toFixed(2), false)}`
       + `\n    ${sign(+(cx + TRIM_SIGN_X).toFixed(2), true)}`;
   }

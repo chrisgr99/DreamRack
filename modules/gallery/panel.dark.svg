@@ -303,7 +303,7 @@
   <text x="249" y="33.40432" font-size="2.5060000000000002" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">r 2.8</text>
   <g data-wcoast-param="trimAv" data-wcoast-cx="262" data-wcoast-cy="26" data-wcoast-angle-min="-150" data-wcoast-angle-max="150">
     <circle cx="262" cy="26" r="2.8" fill="url(#blueRing)" stroke="#6fa8d6" stroke-width="0.355"/>
-    <line x1="262" y1="22.85" x2="262" y2="20.7" stroke="#b8b8bc" stroke-width="0.4"/>
+    <line x1="262" y1="22.85" x2="262" y2="20.7" stroke="#b8b8bc" stroke-width="0.4" data-wcoast-role="trim-tick" data-tick-top="20.7"/>
     <circle cx="260.05" cy="21.77" r="1.05" fill="none" stroke="#b8b8bc" stroke-width="0.28"/><line x1="259.50" y1="21.77" x2="260.60" y2="21.77" stroke="#b8b8bc" stroke-width="0.28"/>
     <circle cx="263.95" cy="21.77" r="1.05" fill="none" stroke="#b8b8bc" stroke-width="0.28"/><line x1="263.40" y1="21.77" x2="264.50" y2="21.77" stroke="#b8b8bc" stroke-width="0.28"/><line x1="263.95" y1="21.22" x2="263.95" y2="22.32" stroke="#b8b8bc" stroke-width="0.28"/>
     <g data-wcoast-role="indicator">

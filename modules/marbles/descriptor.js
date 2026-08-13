@@ -40,8 +40,8 @@ export default {
   worklets: ['modules/marbles/marbles-processor.js'],
   ports: [
     // The two clocks. Each side can run from its own, or from T's internal one.
-    { id: 'tClockIn', name: 'T clock', role: 'clock', section: 't', domain: 'control', dir: 'in' },
-    { id: 'xClockIn', name: 'X clock', role: 'clock', section: 'x', domain: 'control', dir: 'in' },
+    { id: 'tClockIn', name: 'T clock', role: 'clock', section: 't', domain: 'trigger', dir: 'in' },
+    { id: 'xClockIn', name: 'X clock', role: 'clock', section: 'x', domain: 'trigger', dir: 'in' },
     // ...and the seven that live in the middle of the knob they modulate.
     { id: 'tRateIn', name: 'T rate CV', section: 't', domain: 'control', dir: 'in', target: 'tRate' },
     { id: 'tBiasIn', name: 'T bias CV', section: 't', domain: 'control', dir: 'in', target: 'tBias' },
@@ -51,13 +51,13 @@ export default {
     { id: 'xBiasIn', name: 'X bias CV', section: 'x', domain: 'control', dir: 'in', target: 'xBias' },
     { id: 'xStepsIn', name: 'X steps CV', section: 'x', domain: 'control', dir: 'in', target: 'xSteps' },
 
-    { id: 't1Out', name: 'T1', role: 'gate', section: 'out', domain: 'control', dir: 'out' },
-    { id: 't2Out', name: 'T2', role: 'gate', section: 'out', domain: 'control', dir: 'out' },
-    { id: 't3Out', name: 'T3', role: 'gate', section: 'out', domain: 'control', dir: 'out' },
+    { id: 't1Out', name: 'T1', role: 'gate', section: 'out', domain: 'trigger', dir: 'out' },
+    { id: 't2Out', name: 'T2', role: 'gate', section: 'out', domain: 'trigger', dir: 'out' },
+    { id: 't3Out', name: 'T3', role: 'gate', section: 'out', domain: 'trigger', dir: 'out' },
     { id: 'yOut', name: 'Y', section: 'out', domain: 'control', dir: 'out' },
-    { id: 'x1Out', name: 'X1', role: 'pitch', section: 'out', domain: 'control', dir: 'out' },
-    { id: 'x2Out', name: 'X2', role: 'pitch', section: 'out', domain: 'control', dir: 'out' },
-    { id: 'x3Out', name: 'X3', role: 'pitch', section: 'out', domain: 'control', dir: 'out' },
+    { id: 'x1Out', name: 'X1', section: 'out', domain: 'control', dir: 'out' },
+    { id: 'x2Out', name: 'X2', section: 'out', domain: 'control', dir: 'out' },
+    { id: 'x3Out', name: 'X3', section: 'out', domain: 'control', dir: 'out' },
   ],
   params: [
     // ---- the spine: shared by both halves ----
@@ -68,7 +68,9 @@ export default {
     // positions — 1 1 1 2 2 2 2 2 3 3 3 3 4 4 4 … — which a pointer cannot report and a number can. It is
     // a readout: the value you can see is the value it is on.
     { id: 'dejaVuLength', name: 'Loop length', section: 'dejavu', curve: 'detent', min: 0, max: 11, default: 0,
-      readoutText: (i) => String(LOOP_LENGTHS[Math.max(0, Math.min(11, Math.round(i)))]), glideMs: 0 },
+      readoutText: (i) => String(LOOP_LENGTHS[Math.max(0, Math.min(11, Math.round(i)))]), glideMs: 0,
+      // The wheel as well as the list, like every other value window — see the clock's ratios.
+      listStep: 1, listRate: 1 },
     // Which half déjà vu applies to — either, both, or neither. Two latches rather than one control,
     // because they are independent and the original treats them so.
     { id: 'tDejaVu', name: 'T déjà vu', section: 't', ...onoff(), default: 'off' },

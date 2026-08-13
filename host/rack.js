@@ -22,8 +22,8 @@
 // The knАck's proportions come from the CANONICAL control, not from a copy of its numbers: the same
 // fractions that draw the faceplate drive the runtime dress, so changing the control changes both.
 import { KNACK_GRIP_LEN, KNACK_GRIP_OUT, KNACK_GRIP_W } from '../panel/primitives.js';
-import { loadPanel, showValue, readoutText, attachControlInteraction, knobRadiusPx, scrollScale, scrollScaleTag, controlOrigin, valueToPosition, positionToValue, FACE_H_MM, FACE_TOP_MM, FACE_LEFT_MM, TITLE_STRIP_MM, TITLE_BAR_MM } from './panel-loader.js';
-import { showReadout, refreshReadout, hideReadout, readoutPinned, formatParamValue } from './knob-readout.js';
+import { loadPanel, showValue, readoutText, attachControlInteraction, knobRadiusPx, scrollScale, scrollScaleTag, controlOrigin, controlAnchor, valueToPosition, positionToValue, FACE_H_MM, FACE_TOP_MM, FACE_LEFT_MM, TITLE_STRIP_MM, TITLE_BAR_MM } from './panel-loader.js';
+import { showReadout, hideReadout, readoutPinned, formatParamValue } from './knob-readout.js';
 import { Patchbay } from './patchbay.js';
 import { VideoEngine } from './video-engine.js';
 
@@ -34,6 +34,9 @@ const SVG_NS = 'http://www.w3.org/2000/svg';
 // The attenuverter's travel, each way from straight up: the same sweep a value knob has, so a
 // knАck's two rings read alike — seven o'clock, up through twelve, round to five.
 const POINTER_OVERHANG = 1.5;   // how far a knАck's pointer reaches past the knob's rim
+// How far down a CV-depth trim goes while its jack is empty — see _syncDepthTrims. Faint enough to
+// read as inactive, solid enough that the orange eye at its centre is still legible.
+const DEPTH_TRIM_DIM = 0.6;
 
 // A press on the DEMO TRANSPORT is that window's, not the rack's. A cord in hand listens on the
 // document in the CAPTURE phase and swallows every left click, so while a scripted demo was carrying
@@ -168,7 +171,12 @@ const LIT_GRAB_TO_R = 2.33;
 //
 // MILLIMETRES, not jack radii like the length below: this is a clearance from other things on the
 // panel, and those are laid out in millimetres.
-const LIT_GRAB_GAP_MM = 2.0;
+// ...AND IT IS MEASURED FROM THE JACK'S HIT PAD, not from the coloured disc. A terminal takes presses
+// HIT_GROW_MM beyond its own edge, so a stretch standing two millimetres off the DISC left only seven
+// tenths of a millimetre between what unplugs the cable and what starts a new one — and at that
+// distance, on a round target approached at an angle, the two are the same press. The clearance below
+// is from the pad's edge, which is the boundary that actually decides which one you hit.
+const LIT_GRAB_GAP_MM = 1.0;
 const LIT_GRAB_W = 2.2;      // hit width, in cord widths
 const LIT_GRAB_SHOW = 2.2;   // ...and the width it is drawn at once you have dwelt on it
 const LIT_HOVER_MS = 300;    // dwell before the stretch reveals itself
@@ -1176,6 +1184,24 @@ export class Rack {
     return null;
   }
   activateMenuItem(el) { if (el && el._activate) { el._activate(); return true; } return false; }
+  // A VALUE LIST, BY NAME — for a scripted demo, which has to make the list actually appear. Opening
+  // and choosing are separate calls because the pointer travels between them and the viewer has to see
+  // the list standing there before a row is picked: that pause is the whole point of the gesture.
+  openValueList(key, paramId) {
+    const rec = this.records.get(key);
+    const b = rec && rec.panel && rec.panel.controls.get(paramId);
+    if (!b) return false;
+    this._openValueList(rec, b);
+    return !!this._valueListEl;
+  }
+  // The row standing for a value, so the pointer can be sent to it and it can be lit on arrival.
+  valueListRowEl(value) {
+    if (!this._valueListEl) return null;
+    for (const row of this._valueListEl.children) if (row._value !== undefined && String(row._value) === String(value)) return row;
+    return null;
+  }
+  chooseValueListRow(el) { if (el && el._choose) { el._choose(); return true; } return false; }
+  closeValueList() { this._closeValueList(); }
   menuIsOpen() { return !!this._menuEl; }
 
   // Open the menu a right-click on a TERMINAL raises, at a given point. The same entry point the
@@ -1616,7 +1642,28 @@ export class Rack {
       // the cord itself now ends by the HOLE's rim — see _cordGeom.
       ring: port.outerR ? (hole + port.outerR) / 2 : hole,
       outerR: port.outerR || hole,
+      // A knАck's jack is at the CENTRE OF A KNOB, so the obstacle around this terminal is the knob,
+      // not the socket. Anything keeping clear of the terminal — the bend handle below — has to know
+      // that. Zero on a plain jack, where the socket is the whole of it.
+      knobR: this._knobRadiusAt(rec, portId),
     };
+  }
+
+  // The dial radius of the knob a port sits in the middle of, in panel millimetres, or 0 if the port
+  // is a plain jack. Cached per module: the cable layer redraws on every pointer move, and this would
+  // otherwise walk every control of every module each time.
+  _knobRadiusAt(rec, portId) {
+    if (!rec._knobRByPort) rec._knobRByPort = new Map();
+    if (rec._knobRByPort.has(portId)) return rec._knobRByPort.get(portId);
+    let r = 0;
+    const controls = rec.panel && rec.panel.controls;
+    if (controls) {
+      for (const b of controls.values()) {
+        if (b.group && b.group.getAttribute && b.group.getAttribute('data-wcoast-port') === portId) { r = b.dialR || 0; break; }
+      }
+    }
+    rec._knobRByPort.set(portId, r);
+    return r;
   }
 
   _clientToMm(clientX, clientY) {
@@ -1902,7 +1949,7 @@ export class Rack {
           const startR = (fromA ? g.aR : g.bR) || ring;
           // Its round cap reaches half a width back along the cord, so starting the segment half a
           // width beyond the disc puts the cap's edge exactly ON the disc's edge: touching, not over.
-          const from = Math.max(0, outer + (wmm * LIT_GRAB_W) / 2 - startR) + LIT_GRAB_GAP_MM;
+          const from = Math.max(0, outer + HIT_GROW_MM + LIT_GRAB_GAP_MM + (wmm * LIT_GRAB_W) / 2 - startR);
           const seg = this._cordSegment(g, fromA, from, from + ring * (LIT_GRAB_TO_R - LIT_GRAB_FROM_R));
           if (!seg) continue;
           const end = fromA ? 'a' : 'b';
@@ -3053,12 +3100,40 @@ export class Rack {
   // Once shown it FOLLOWS you along the cord rather than staying pinned where it first appeared: it
   // marks where the bend would be taken, and having to go back to a fixed spot to use it is the fault
   // the old midpoint handle had.
+  // How close to a cord's END a bend handle may come. It is a pill drawn on the cord, and so is the
+  // grab that unplugs it — put them within a couple of millimetres and they merge into one mark with
+  // two meanings. And where the cord ends in a knАck, the jack is at the centre of a KNOB, so the end
+  // of the cord is not the end of the obstacle: the handle has to clear the knob's outer edge too, or
+  // it lies on the part you turn.
+  _bendKeepOut(edge, m) {
+    const g = this._cordGeom(edge);
+    if (!g) return false;
+    const BEND_END_GAP_MM = 2.0;
+    for (const [pt, side] of [[g.pA, g.a], [g.pB, g.b]]) {
+      if (!pt) continue;
+      // The obstacle is the knob if there is one — a knАck's jack sits at its centre — and the jack's
+      // own hit pad otherwise. Either way the handle starts a clear couple of millimetres beyond it.
+      // Past the obstacle AND past the grab stretch that unplugs the cable, which runs from just
+      // beyond the terminal for about one terminal's diameter.
+      const w = g.w || 0;
+      const obstacle = Math.max((side && side.knobR) || 0, ((side && side.outerR) || 0) + HIT_GROW_MM);
+      const grabEnd = ((side && side.ring) || 0) * (LIT_GRAB_TO_R - LIT_GRAB_FROM_R)
+        + ((side && side.outerR) || 0) + HIT_GROW_MM + LIT_GRAB_GAP_MM + w * LIT_GRAB_W / 2;
+      const keep = Math.max(obstacle, grabEnd) + BEND_END_GAP_MM;
+      if (Math.hypot(m.x - pt.x, m.y - pt.y) < keep) return true;
+    }
+    return false;
+  }
+
   _watchCableHover() {
     document.addEventListener('pointermove', (e) => {
       if (this._tempCable || this._reshaping || this._optDown || this._carryingModule) { this._clearBend(); return; }
       const edge = this._cordAtPoint(this._clientToMm(e.clientX, e.clientY));
       if (!edge) { this._clearBend(); return; }
       const mm = this._clientToMm(e.clientX, e.clientY);
+      // Too near an end: no handle, and any handle already up goes. Not merely "do not arm" — the
+      // shown one travels with the pointer, so it would otherwise slide into the grab it must avoid.
+      if (this._bendKeepOut(edge, mm)) { this._clearBend(); return; }
       if (this._bendShown && this._bendShown.id === edge.id) {
         this._bendShown.at = mm;   // shown already: it travels with you along this cord
         this._drawCables();
@@ -6029,7 +6104,22 @@ export class Rack {
     rec.repaintGraph = () => { /* nothing here follows a knob — see onReadoutText */ };
     const inst = rec.instance;
     if (inst && typeof inst.onReadoutText === 'function') {
-      inst.onReadoutText((id, s) => { const t = set.get(id); if (t) t.textContent = s == null ? '' : String(s); });
+      inst.onReadoutText((id, s, opts) => {
+        const t = set.get(id);
+        if (!t) return;
+        t.textContent = s == null ? '' : String(s);
+        // A WINDOW THAT IS SOMETIMES A CONTROL says which it is by its colour, and only the engine
+        // knows: the delay's window reports the time it is running at until a clock arrives, and then
+        // becomes the division you choose. Green means the wheel does something here — so it is green
+        // when it is live and the panel's own ink when it is only reporting. `live` is undefined for
+        // every other module's readouts, which are one thing all the time and are left alone.
+        if (!opts || opts.clocked === undefined) return;
+        const b2 = rec.panel && rec.panel.controls.get(id);
+        if (!b2) return;
+        if (b2.liveInk === undefined) b2.liveInk = t.getAttribute('fill') || '';
+        b2.gated = !opts.clocked;
+        t.setAttribute('fill', opts.clocked ? b2.liveInk : (this.isDark() ? '#8a8a90' : '#5a5a60'));
+      });
     }
   }
 
@@ -6856,7 +6946,104 @@ export class Rack {
   // Keep every LINK true to its target: prune links whose target lost its feed (which cascades down
   // the chain), and re-point a link's hidden fan-out when its target's SOURCE changes. Idempotent,
   // looping until stable so a whole chain (C→B→A) settles in one call.
+  // A CV-DEPTH TRIM IS GREYED UNTIL ITS JACK IS PATCHED. The attenuverter stopped being part of the
+  // knАck a while ago — three ways of putting depth on the knob itself were tried and each solved the
+  // last one's problem by making a new one — so it is a satellite trim now, drawn with the same
+  // primitive as a fine-tune trim and read as one. It attenuates the CV arriving at the jack in the
+  // middle of its knob, and nothing on the panel said so.
+  //
+  // GREYING IT IS THE CHEAPEST TRUE THING TO SAY. Dim, it reads as not yet doing anything, which is
+  // exactly right: with no cable in that jack there is no CV for it to attenuate. Patched, it comes up
+  // to full and the orange eye at its centre — already painted in the jack's own family colour — has
+  // something to be noticed against. Cause and effect in TIME, rather than a line drawn in space: any
+  // line from the trim to the jack would have to cross the knob, and a line stopped at the rim points
+  // at the knob rather than at the jack in its middle, which is the misreading being fixed.
+  //
+  // Found by the tag the trim already carries: the generator writes data-wcoast-accent-port on any
+  // trim that attenuates a port, and that is the port to ask about.
+  _syncDepthTrims() {
+    for (const rec of this.records.values()) {
+      const svg = rec.el && rec.el.querySelector('svg');
+      if (!svg) continue;
+      for (const g of svg.querySelectorAll('[data-wcoast-accent-port]')) {
+        const portId = g.getAttribute('data-wcoast-accent-port');
+        const live = this._portOccupied(rec.key, portId);
+        g.style.opacity = live ? '' : String(DEPTH_TRIM_DIM);
+        // AND IT DOES NOT TURN while it is greyed. There is no CV for it to attenuate, so a wheel
+        // over it would move a number nothing reads — and the panel has just said as much.
+        const depthId = g.getAttribute('data-wcoast-param');
+        const db = depthId && rec.panel && rec.panel.controls.get(depthId);
+        if (db) db.gated = !live;
+        this._drawCvLink(rec, svg, g, portId, live);
+      }
+    }
+  }
+
+  // THE LINE FROM THE JACK TO THE TRIM'S INDEX, drawn only while something is patched. It leaves the
+  // edge of the jack's coloured eye and runs to the top of the tick between the plus and the minus,
+  // and the tick itself takes the same colour — so the eye, the line and the index are one mark in
+  // one colour reaching from the socket to the control that attenuates it.
+  //
+  // IT CROSSES THE KNOB, which every earlier attempt at this refused to do. What makes it acceptable
+  // is that it is not there unless a cable is: an unpatched knАck is as clean as it ever was, and the
+  // line appears at the moment there is a relationship for it to describe.
+  //
+  // The signs stay white. They say which way is more, which is true whatever is plugged in.
+  _drawCvLink(rec, svg, trimG, portId, live) {
+    const tick = trimG.querySelector('[data-wcoast-role="trim-tick"]');
+    if (!tick) return;
+    const id = 'cvlink-' + rec.key + '-' + portId;
+    let line = svg.querySelector('[data-cv-link="' + id + '"]');
+    if (!live) {
+      if (line) line.remove();
+      if (tick.dataset.inkWas) tick.setAttribute('stroke', tick.dataset.inkWas);
+      return;
+    }
+    // The jack is the knАck's own centre, and the trim knows where that is: its accent eye is a small
+    // copy of it. Both are in the same panel coordinates, so no transform is involved.
+    const knob = svg.querySelector('[data-wcoast-param][data-wcoast-port="' + portId + '"]');
+    if (!knob) return;
+    const jx = parseFloat(knob.getAttribute('data-wcoast-cx'));
+    const jy = parseFloat(knob.getAttribute('data-wcoast-cy'));
+    const tx = parseFloat(tick.getAttribute('x1'));
+    const ty = parseFloat(tick.getAttribute('data-tick-top'));
+    if (![jx, jy, tx, ty].every(Number.isFinite)) return;
+    const colour = this._portColour(rec, portId);
+    if (!tick.dataset.inkWas) tick.dataset.inkWas = tick.getAttribute('stroke') || '';
+    tick.setAttribute('stroke', colour);
+
+    // Started at the EDGE of the jack's eye rather than at its centre, so the line touches the socket
+    // instead of being drawn through it.
+    const dx = tx - jx, dy = ty - jy;
+    const len = Math.hypot(dx, dy) || 1;
+    const r = 1.6;   // the jack eye's radius on a knАck, in panel millimetres
+    const x0 = +(jx + dx / len * r).toFixed(2), y0 = +(jy + dy / len * r).toFixed(2);
+    if (!line) {
+      line = document.createElementNS(SVG_NS, 'line');
+      line.setAttribute('data-cv-link', id);
+      line.setAttribute('stroke-width', '0.4');   // the trim's own index weight; thicker read heavy
+      line.setAttribute('stroke-linecap', 'round');
+      line.style.pointerEvents = 'none';
+      trimG.parentNode.insertBefore(line, trimG);   // under the trim, so its ring paints over the end
+    }
+    line.setAttribute('x1', x0); line.setAttribute('y1', y0);
+    line.setAttribute('x2', tx.toFixed(2)); line.setAttribute('y2', ty.toFixed(2));
+    line.setAttribute('stroke', colour);
+  }
+
+  // What colour a port's cables are, which is what its eye and its link are painted in. The same
+  // table the cords use, reached the same way — a link that disagreed with the cable it describes
+  // would be worse than no link.
+  _portColour(rec, portId) {
+    const desc = this.host.registry.descriptor(rec.descriptorId);
+    const port = desc && (desc.ports || []).find((x) => x.id === portId);
+    if (!port) return STYLE_COLOR.control;
+    const style = (port.role === 'pitch' || port.name === '1V/Oct') ? 'pitch' : domainStyle(port.domain);
+    return STYLE_COLOR[style] || STYLE_COLOR.control;
+  }
+
   _reconcileLinks() {
+    this._syncDepthTrims();   // every patch change passes through here, including a restore
     let changed = true, guard = 0;
     while (changed && guard++ < 64) {
       changed = false;
@@ -7537,6 +7724,10 @@ export class Rack {
   _skinModule(rec, panel) {
     const el = rec.el;
     while (el.firstChild) el.removeChild(el.firstChild);
+    // A module that has only just appeared has no cables, so its depth trims must start greyed —
+    // reconcile does this after every patch CHANGE, and arriving is not one. Deferred a frame so the
+    // panel is in the document to be walked.
+    setTimeout(() => this._syncDepthTrims(), 0);
     const svg = document.adoptNode(panel.svg);
     const vb = (svg.getAttribute('viewBox') || '0 0 171 128.5').split(/\s+/).map(Number);
     rec.panelWmm = vb[2];
@@ -7635,12 +7826,7 @@ export class Rack {
         port.element.appendChild(pad);
       }
     }
-    // The vertical title up the left edge: right-click it for the delete menu.
-    const title = svg.querySelector('.module-title');
-    if (title) {
-      title.style.cursor = 'var(--grip)';   // the title is the drag handle now (right-click still opens its menu)
-      title.addEventListener('contextmenu', (e) => this._onTitleContextMenu(e, rec));
-    }
+
   }
 
   // Take a forced key out of circulation, so the next auto-minted key cannot collide with it. Only
@@ -7713,8 +7899,12 @@ export class Rack {
       // The cord test only runs inside the band, which is a few millimetres of a panel, so it costs
       // nothing anywhere else; a per-move scan of every cable in the patch is exactly what was taken
       // out when the old middle-handle hover went.
+      // NO GRAB CURSOR. It said "press here and drag", which stopped being true when picking a module
+      // up became a second's hold: a hand that appears the moment you pass over the bar promises a
+      // gesture that is not there, and the one that IS there is not something a cursor can announce.
       const onCord = inBand && !!this._cordAtPoint(this._clientToMm(e.clientX, e.clientY));
-      el.style.cursor = (inBand && !onCord) ? 'var(--grip)' : '';
+      el.style.cursor = '';
+      void onCord;
     });
 
     this.records.set(rec.key, rec);
@@ -8174,6 +8364,7 @@ export class Rack {
     dk.patched = this._isKnackPatched(rec.key, portId);
   }
 
+
   // What would a scroll HERE actually do? On a knАck that depends on where the pointer is:
   // the bottom band of a patched knob with its attenuverter on scrolls CV DEPTH, over its own
   // travel and on its own speed curve, not the value. The hover mark asks this so it can draw
@@ -8193,14 +8384,14 @@ export class Rack {
         const nv = Math.max(dk.b.meta.min, Math.min(dk.b.meta.max, cur + dir));
         if (nv !== cur) this._setParam(dk.rec, dk.b.id, nv);
       }
-      refreshReadout(formatParamValue(dk.b.meta, dk.rec.values.get(dk.b.id), dk.rec.values), e.clientX, e.clientY, { name: dk.b.meta && dk.b.meta.name, region: 'value' });
+      showReadout(formatParamValue(dk.b.meta, dk.rec.values.get(dk.b.id), dk.rec.values), controlAnchor(dk.b), null, true, { origin: () => controlOrigin(dk.b), region: 'value', hold: true });
       return;
     }
     const f = scrollScale(e);
     const step = (-raw / 100) * 0.05 * f;
     const np = Math.max(0, Math.min(1, valueToPosition(dk.b.meta, dk.rec.values.get(dk.b.id)) + step));
     this._setParam(dk.rec, dk.b.id, positionToValue(dk.b.meta, np));
-    refreshReadout(formatParamValue(dk.b.meta, dk.rec.values.get(dk.b.id), dk.rec.values) + scrollScaleTag(f), e.clientX, e.clientY, { name: dk.b.meta && dk.b.meta.name, region: 'value' });
+    showReadout(formatParamValue(dk.b.meta, dk.rec.values.get(dk.b.id), dk.rec.values) + scrollScaleTag(f), controlAnchor(dk.b), null, true, { origin: () => controlOrigin(dk.b), region: 'value', hold: true });
   }
 
   // Two presses within DBL_MS, near the same spot = a double. Manual rather than the native dblclick
@@ -8239,9 +8430,11 @@ export class Rack {
     if (readoutPinned(b, zone)) { hideReadout(); return; }
     const text = formatParamValue(b.meta, rec.values.get(b.id), rec.values);
     if (text == null) return;
-    showReadout(text, x, y, false, {
+    // Over the control, like the turning chip — a pinned number and a turning one are the same number
+    // and should not stand in two different places.
+    showReadout(text, controlAnchor(b) || { x, y }, null, false, {
       sticky: true, pin: true, token: b, region: 'value',
-      name: b.meta && b.meta.name, origin: () => controlOrigin(b),
+      origin: () => controlOrigin(b),
     });
   }
 
@@ -8755,83 +8948,11 @@ export class Rack {
     track(lastX, lastY);
   }
 
-  // ---- the two title-bar modes ----
-  // Both arm the POINTER rather than opening anything: the cursor changes to say what a click will
-  // now do, and the target is a module's TITLE BAR — the same strip you drag it by. Aiming at the
-  // faceplate does nothing at all in either mode, so a stray click on a panel full of controls is
-  // harmless, which is the whole reason for choosing the title strip over the module.
-  //
-  // `kind` is 'duplicate' or 'delete'; `opts.withSettings` decides whether a copy carries the
-  // original's knob positions. Escape, a right click, or choosing the command again ends it.
-  startModuleMode(kind, opts = {}) {
-    const withSettings = !!opts.withSettings;
-    // Choosing the SAME command again puts the mode away; choosing the other duplicate switches to it,
-    // rather than silently turning the mode off because both are called duplicate.
-    if (this._moduleMode === kind && (kind !== 'duplicate' || this._moduleModeWith === withSettings)) { this._endModuleMode(); return; }
-    this._endModuleMode();
-    this._moduleMode = kind; this._moduleModeWith = withSettings;
-    document.body.classList.add(kind === 'delete' ? 'mode-delete-module' : 'mode-duplicate-module');
-
-    const titleOf = (target) => {
-      const el = target && target.closest ? target.closest('.rack-module') : null;
-      if (!el) return null;
-      const t = target.closest('.module-title');
-      if (!t) return null;
-      return this.records.get(el.dataset.key) || null;
-    };
-    const onDown = (ev) => {
-      if (ev.button !== 0) return;
-      const rec = titleOf(ev.target);
-      // A CLICK THAT MISSES A TITLE BAR ENDS THE MODE. A mode where clicking destroys things is one
-      // you want to fall out of easily; the cost is only that a mis-aimed click ends the run early,
-      // and running it again is one menu item away.
-      if (!rec) { this._endModuleMode(); return; }
-      ev.preventDefault(); ev.stopPropagation();
-      if (kind === 'delete') {
-        if (rec.pinned) return;   // the mixer stays
-        // ONE MODULE PER INVOCATION, the same as duplicate. A mode that stays armed after destroying
-        // something is a mode the next click can destroy something else with, and the pointer is the
-        // only sign it is still on. Arm it again for the next one.
-        this._endModuleMode();
-        this._deleteModuleWithUndo(rec);   // undoable, whole — its cables and scopes come back with it
-        return;
-      }
-      const type = (this.moduleTypes || []).find((t) => t.descriptorId === rec.descriptorId);
-      const singleton = !!(type && type.descriptor && type.descriptor.singleton);
-      if (rec.pinned || singleton) return;   // one mixer, one video output — nothing to duplicate
-      const params = opts.withSettings ? new Map(rec.values) : null;
-      this._endModuleMode();
-      // One duplicate per invocation: you asked for A copy, and staying armed would make the next
-      // click somewhere harmless into another module you did not ask for.
-      // The copy appears held at the point on the original you clicked, so it comes off the module
-      // rather than out of nowhere.
-      const rr = rec.el.getBoundingClientRect();
-      this.startCarryModule(rec.descriptorId, null, {
-        params, fromRec: opts.withSettings ? rec : null, fresh: !opts.withSettings,
-        atX: ev.clientX, atY: ev.clientY,
-        offFrac: { x: (ev.clientX - rr.left) / (rr.width || 1), y: (ev.clientY - rr.top) / (rr.height || 1) },
-      });
-    };
-    const onCtx = (ev) => { ev.preventDefault(); ev.stopPropagation(); this._endModuleMode(); };
-    const onKey = (ev) => { if (ev.key === 'Escape') { ev.preventDefault(); this._endModuleMode(); } };
-    this._modeOff = () => {
-      document.removeEventListener('pointerdown', onDown, true);
-      document.removeEventListener('contextmenu', onCtx, true);
-      document.removeEventListener('keydown', onKey, true);
-      document.body.classList.remove('mode-delete-module', 'mode-duplicate-module');
-      this._moduleMode = null; this._modeOff = null;
-    };
-    document.addEventListener('pointerdown', onDown, true);
-    document.addEventListener('contextmenu', onCtx, true);
-    document.addEventListener('keydown', onKey, true);
-  }
-
-  _endModuleMode() { if (this._modeOff) this._modeOff(); }
-
-  moduleModeActive(kind, withSettings) {
-    if (this._moduleMode !== kind) return false;
-    return withSettings === undefined || this._moduleModeWith === !!withSettings;
-  }
+  // THERE IS NO ARMED MODE ANY MORE. Duplicating or deleting a module used to be chosen from the
+  // menu bar, which cannot say WHICH module — so it armed the pointer and waited for a click on a
+  // title bar to name one. Two gestures for one act, a mode you could forget you were in, and a
+  // command that appeared to do nothing whenever the naming click missed. Both commands live on the
+  // module's own right-click menu now, where the module is named by the act of opening the menu.
 
   // Where a module dropped at this point would COME TO REST once the row packs: the widths of
   // everything that sorts before it. Only the ghost needs this — the drop itself just needs the
@@ -8922,15 +9043,48 @@ export class Rack {
     e.preventDefault();
     e.stopPropagation();
     if (e.target.closest && e.target.closest('[data-wcoast-param]')) { this._openScopeMenuForControl(e, rec); return; }   // over a knob/control → the Scopes roster
+    // THE TITLE BAR MEANS THIS MODULE, so it gives the module's own menu — duplicate, reset, delete —
+    // and the face gives the application menu. Decided here, in the one handler this element has: it
+    // was briefly two, and the second one simply replaced the first's menu with the app's.
+    const r = rec.el.getBoundingClientRect();
+    if ((e.clientY - r.top) <= TITLE_BAND_MM * this.pxPerMm) { this._openModuleMenu(e.clientX, e.clientY, rec); return; }
     if (this.onAppMenuBar) this.onAppMenuBar(e.clientX, e.clientY, rec);
   }
 
   _openModuleMenu(x, y, rec) {
+    const type = (this.moduleTypes || []).find((t) => t.descriptorId === rec.descriptorId);
+    const singleton = !!(type && type.descriptor && type.descriptor.singleton);
+    const only = rec.pinned || singleton;   // one mixer, one video output — nothing to copy
     this._openMenu(x, y, [
+      // DUPLICATE ON THE MODULE'S OWN MENU, and it acts at once. The Module menu's Duplicate arms the
+      // pointer and waits for you to say WHICH — it has to, because nothing has been named. Here the
+      // module is the thing you right-clicked, so asking you to click it again is asking twice.
+      { label: `Duplicate ${rec.name}`, disabled: only,
+        action: only ? undefined : () => this._duplicateToPointer(rec, false, x, y) },
+      { label: `Duplicate ${rec.name} with settings`, disabled: only,
+        action: only ? undefined : () => this._duplicateToPointer(rec, true, x, y) },
+      { separator: true },
       { label: `Reset ${rec.name}`, action: () => this._resetModuleWithUndo(rec) },
       { label: `Delete ${rec.name}`, disabled: !!rec.pinned,
         action: rec.pinned ? undefined : () => this._deleteModuleWithUndo(rec) },
     ]);
+  }
+
+  // A copy, into your hand, ready to be put down with a click. Shared by the module's own menu and by
+  // the armed Duplicate mode, so the two cannot come to mean different things.
+  _duplicateToPointer(rec, withSettings, x, y) {
+    const rr = rec.el.getBoundingClientRect();
+    this.startCarryModule(rec.descriptorId, null, {
+      params: withSettings ? new Map(rec.values) : null,
+      fromRec: withSettings ? rec : null,
+      fresh: !withSettings,
+      atX: x, atY: y,
+      // Held where you clicked if that was on the module, and by its title bar otherwise — a copy
+      // summoned from a menu that opened over empty rack has no point on the face to come off.
+      offFrac: (x >= rr.left && x <= rr.right && y >= rr.top && y <= rr.bottom)
+        ? { x: (x - rr.left) / (rr.width || 1), y: (y - rr.top) / (rr.height || 1) }
+        : undefined,
+    });
   }
 
   // Right-click a knob or any control → the Scopes roster. It lists every scope by the terminal it
@@ -9351,12 +9505,16 @@ export class Rack {
       row.style.cursor = 'pointer';
       row.addEventListener('pointerenter', () => mark(k));
       row.addEventListener('pointerdown', (e) => { e.preventDefault(); e.stopPropagation(); });
-      row.addEventListener('click', (e) => {
-        e.preventDefault(); e.stopPropagation();
+      // Named on the element so a scripted demo can find this row and run this act — see
+      // valueListRowEl / chooseValueListRow. One function, so a demo cannot diverge from a click.
+      row._value = shown[k];
+      row._light = () => mark(k);
+      row._choose = () => {
         idx = vals.length - 1 - k;   // the list is drawn highest first; see rowOf
         apply();
         this._closeValueList();
-      });
+      };
+      row.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); row._choose(); });
     });
 
     menu.addEventListener('pointerleave', () => mark());   // back to the value you are actually on

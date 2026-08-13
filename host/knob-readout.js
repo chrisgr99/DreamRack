@@ -8,10 +8,14 @@
 // where exactly you are pointing on a knob decides how fast a scroll moves it, so losing the arrow
 // costs you something you need. The chip sits above the tip and the arrow shows through.
 //
-// ONLY WHEN YOU ASK FOR IT — a click on the control. Not on hover, and not on turning either: you
-// can tweak a knob in peace and watch the gauge, and click when you want the number. A click is also
-// how you read a setting you have no intention of changing. Clicking again, or leaving the control,
-// sends it home.
+// IT COMES UP WHEN YOU TURN, and stands centred just above the control rather than on the pointer. It
+// used to need a click, on the idea that you could tweak in peace and watch the gauge — but the number
+// is the thing you are usually after, and asking for it every time is a gesture spent on nothing. A
+// click still PINS it, which is how you read a setting you have no intention of changing; clicking
+// again, or leaving the control, sends it home.
+//
+// THE VALUE ALONE, with no parameter name. The chip stands on the control it belongs to, so the name
+// was answering a question the position already answers.
 //
 // The earlier hover version is gone for good. Every version that did — after a
 // second, after a settling pause, after a longer pause — put numbers over the panel while the pointer
@@ -190,7 +194,10 @@ function place(x, y) {
   const c = ensureChip();
   const w = c.offsetWidth || 48, h = c.offsetHeight || 20;
   const W = window.innerWidth || 0, H = window.innerHeight || 0;
-  let left = anchorLeft(x, w, W);
+  // CENTRED ON THE CONTROL. anchorLeft dodges the pointer — bottom-left corner on it near the left
+  // edge, bottom-right near the right — which is what you want from a chip standing on your hand and
+  // wrong for one standing on a knob, where centred is the only position that reads as belonging.
+  let left = x - w / 2;
   // Backstop: a chip wider than the room it has left still stays on screen.
   if (W > 0) { if (left < EDGE_MARGIN) left = EDGE_MARGIN; else if (left + w > W - EDGE_MARGIN) left = W - EDGE_MARGIN - w; }
   let top = y - h;
@@ -254,8 +261,13 @@ export function hideReadout() {
 // Show it NOW, at the pointer, and keep it up for a moment after the last call. `hideCursor` is true
 // while scrolling — then the chip really is standing in for the pointer — and false when it appeared
 // on its own from hovering, where taking the cursor away would just lose it.
-export function showReadout(text, x, y, hideCursor, opts = {}) {
+// The anchor argument is either a point — { x, y }, the place the chip's bottom centre should sit — or an x with a
+// separate y, which is what the older pointer-following callers pass.
+export function showReadout(text, at, y, hideCursor, opts = {}) {
   if (!READOUT_ENABLED || text == null) return;
+  if (!at) return;
+  const x = typeof at === 'object' ? at.x : at;
+  if (typeof at === 'object') y = at.y;
   const c = ensureChip();
   clearTimeout(showTimer); showTimer = 0;
   // Moved to another part of the same control: send the old number home before drawing the new one.
@@ -286,28 +298,18 @@ export function showReadout(text, x, y, hideCursor, opts = {}) {
   if (opts.sticky) sticky = true;
   if (opts.pin) { pinned = true; pinToken = opts.token; }
   // A pinned number has no clock on it. Everything else goes when it goes quiet.
-  if (!pinned) hideTimer = setTimeout(hideReadout, opts.sticky ? IDLE_MS : (opts.lingerMs || LINGER_MS));
+  // NO TIMER WHEN THE CONTROL HOLDS IT. A chip raised by turning a knob stays up until the pointer
+  // leaves that knob — the control's own pointerleave sends it home — so a countdown alongside would
+  // take it away while you were still looking at the thing it describes. The jack in a knАck's middle
+  // is inside the same group, so crossing it does not count as leaving.
+  //
+  // Everything else keeps the timer: a chip nothing is standing over has to retire itself.
+  if (!pinned && !opts.hold) hideTimer = setTimeout(hideReadout, opts.sticky ? IDLE_MS : (opts.lingerMs || LINGER_MS));
 }
 
 
 // Update a PINNED number in place — new value, same pin, same origin. Turning a knob you have pinned
 // keeps one chip that counts along with you; turning one you have not pinned shows nothing at all.
-export function refreshReadout(text, x, y, opts = {}) {
-  if (!pinned || text == null) return;
-  // A pinned number describes the control you clicked. Turning the OTHER half of a knАck does not
-  // quietly rewrite it into something you never asked for — click that half if you want its number.
-  if (opts.region && region && opts.region !== region) return;
-  const c = ensureChip();
-  setText(c, text, opts.name);
-  place(x, y);
-}
-
-// Move it without changing what it says. Following the pointer is not a state change: the number goes
-// on describing whatever you last turned, wherever you carry the pointer on that control.
-export function moveReadout(x, y) {
-  if (!chip || !visible) return;
-  place(x, y);
-}
 
 // ---- formatting ---------------------------------------------------------
 // What a number MEANS is in the descriptor — its unit, its curve, whether it crosses zero — so the

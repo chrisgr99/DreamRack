@@ -386,11 +386,8 @@
     /* The two armed modes say what a click will do by changing the pointer: the same hand carrying a
        plus, or carrying a red ×. Nothing else on screen changes, so the cursor is the whole signal —
        which is why the delete one is red and the duplicate one is not. */
-    body.mode-duplicate-module, body.mode-duplicate-module * { cursor: var(--grip-plus) !important; }
-    body.mode-delete-module, body.mode-delete-module * { cursor: var(--grip-x) !important; }
     /* ...and in delete mode a title bar lights red as you pass over it, so you can see what you are
        about to remove before you commit to it. */
-    body.mode-delete-module .rack-module:hover { outline: 2px solid #c00; outline-offset: -2px; }
 
 
     /* ---- rack (single scrolling viewport with a scaled content area) ---- */

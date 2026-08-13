@@ -39,7 +39,9 @@ import octDescriptor from '../modules/octave/descriptor.js';
 import { create as octCreate } from '../modules/octave/factory.js';
 import clockDescriptor from '../modules/clock/descriptor.js';
 import marblesDescriptor from '../modules/marbles/descriptor.js';
+import delayDescriptor from '../modules/delay/descriptor.js';
 import { create as marblesCreate } from '../modules/marbles/factory.js';
+import { create as delayCreate } from '../modules/delay/factory.js';
 import { create as clockCreate } from '../modules/clock/factory.js';
 import progDescriptor from '../modules/programmer-8/descriptor.js';
 import { create as progCreate } from '../modules/programmer-8/factory.js';
@@ -85,6 +87,7 @@ registry.register({ descriptor: filterDescriptor, create: filterCreate });
 registry.register({ descriptor: octDescriptor, create: octCreate });
 registry.register({ descriptor: clockDescriptor, create: clockCreate });
 registry.register({ descriptor: marblesDescriptor, create: marblesCreate });
+registry.register({ descriptor: delayDescriptor, create: delayCreate });
 registry.register({ descriptor: progDescriptor, create: progCreate });
 registry.register({ descriptor: vidDescriptor, create: vidCreate });
 registry.register({ descriptor: fieldDescriptor, create: fieldCreate });
@@ -160,6 +163,12 @@ const MODULE_TYPES = [{
   hp: 15,
   panelUrl: 'modules/marbles/panel.svg',
   descriptor: marblesDescriptor,
+}, {
+  descriptorId: delayDescriptor.id,
+  name: 'Delay',
+  hp: 8,
+  panelUrl: 'modules/delay/panel.svg',
+  descriptor: delayDescriptor,
 }, {
   descriptorId: clockDescriptor.id,
   name: 'drClckd',
@@ -964,9 +973,6 @@ async function boot() {
       captureWork: () => captureWork(),
       restoreWork: () => restoreWork(),
       library: () => library.show(),
-      duplicateWithSettings: () => rack.startModuleMode('duplicate', { withSettings: true }),
-      duplicateModule: () => rack.startModuleMode('duplicate', { withSettings: false }),
-      deleteModule: () => rack.startModuleMode('delete'),
       resetToDefault: () => resetToDefault(),
       toggleVideoFollow: () => setVideoFollow(!rack.videoFollowsPointer()),
       // Run the same items the in-window Help menu offers, rather than restating their URLs here.
@@ -1007,6 +1013,11 @@ async function boot() {
       { label: 'Undo', disabled: !rack.canUndo(), action: () => rack.undo() },
       { label: 'Redo', disabled: !rack.canRedo(), action: () => rack.redo() },
       { label: 'Create patch from clipboard', action: () => createFromClipboard() },
+      { separator: true },
+      // Emptying the patch is an edit of the whole patch. It sat under Module because it is about
+      // modules, which is true of nearly everything in the app and is not what that menu is for:
+      // Module is where you reach for ONE of them.
+      { label: 'Clear connections & controls…', action: () => rack.confirmDeleteAllCables() },
     ];
     // View (Dark/Light mode is self-describing: the label names the mode it switches to).
     const view = [
@@ -1041,21 +1052,15 @@ async function boot() {
     // It replaces the old Rack menu: the engine went (the space bar toggles it, and the mixer has the
     // control), Rows went to View, and deleting a page is now the × on the tab itself.
     //
-    // Deleting ONE module is not here. It lives on that module's own right-click menu, where "this
-    // module" means the one under the pointer rather than whichever title bar opened this menu.
+    // NOTHING HERE ACTS ON A PARTICULAR MODULE. Duplicating one, or deleting one, is about a module
+    // you have to name — and this menu cannot name it, so it used to arm the pointer and wait for a
+    // click to say which. That is a whole extra gesture, and an armed mode you can forget you are in.
+    // Right-clicking a module's title bar names it by definition, so those commands live there.
+    //
+    // What is left is the library, which is about no module in particular. Clearing the patch went to
+    // Edit, where the other whole-patch commands are.
     const modulesMenu = [
       { label: 'Module library…', action: () => library.show() },
-      { separator: true },
-      // Two duplicates, named so that neither has to be read as the absence of the other: "with
-      // settings" says what it brings, "module" says only that you get one of these.
-      { label: 'Duplicate with settings…', checkFn: () => rack.moduleModeActive('duplicate', true),
-        action: () => rack.startModuleMode('duplicate', { withSettings: true }) },
-      { label: 'Duplicate…', checkFn: () => rack.moduleModeActive('duplicate', false),
-        action: () => rack.startModuleMode('duplicate', { withSettings: false }) },
-      { label: 'Delete module…', checkFn: () => rack.moduleModeActive('delete'),
-        action: () => rack.startModuleMode('delete') },
-      { separator: true },
-      { label: 'Clear connections & controls…', action: () => rack.confirmDeleteAllCables() },
     ];
     // DR is the application menu, in the position and role the app menu holds on a Mac. DEV is
     // last and abbreviated: it earns a place for the people who need it without taking the width

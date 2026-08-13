@@ -25,6 +25,7 @@ export const ACTION_KIND = {
   moveToButton: 'button', pressButton: 'button',
   moveToTab: 'tab', switchPage: 'tab',
   rightClick: 'terminal', moveToMenuItem: 'menu', chooseItem: 'menu',
+  moveToReadout: 'readout', openList: 'readout', moveToListItem: 'menu', chooseValue: 'menu',
 };
 
 // What a control is CALLED when spoken. A two-column table keyed by "moduleKey:controlId", holding a

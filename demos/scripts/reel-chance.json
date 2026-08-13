@@ -1,0 +1,186 @@
+{
+ "id": "reel-chance",
+ "title": "Reel — a clock, a gate and a handful of chance",
+ "defaults": {
+  "perform": 1.0,
+  "arrive": 2.0,
+  "beat": 0.7,
+  "settle": 0.9,
+  "hold": 3.0
+ },
+ "steps": [
+  {
+   "do": "add",
+   "module": "wcoast.complexOsc259t",
+   "as": "osc",
+   "row": 0,
+   "x": 0,
+   "note": "A complex oscillator, a quad low pass gate, a clock and a random generator. Four modules, and nothing patched between them yet."
+  },
+  {
+   "do": "add",
+   "module": "lpg-292",
+   "as": "lpg",
+   "row": 0,
+   "x": 160
+  },
+  {
+   "do": "add",
+   "module": "wcoast.clock",
+   "as": "clk",
+   "row": 1,
+   "x": 0
+  },
+  {
+   "do": "add",
+   "module": "wcoast.marbles",
+   "as": "mar",
+   "row": 1,
+   "x": 90
+  },
+  {
+   "do": "set",
+   "target": "mixer:muteA",
+   "to": "off"
+  },
+  {
+   "do": "set",
+   "target": "mixer:engine",
+   "to": "on"
+  },
+  {
+   "do": "set",
+   "target": "mixer:master",
+   "to": 0.2,
+   "perform": 1.5
+  },
+  {
+   "do": "patch",
+   "from": "osc:prinSquareOut",
+   "to": "lpg:inA",
+   "note": "The oscillator runs continuously. The gate decides when any of it is heard."
+  },
+  {
+   "do": "patch",
+   "from": "lpg:outA",
+   "to": "mixer:chanB"
+  },
+  {
+   "do": "pause",
+   "for": 2.0,
+   "note": "Nothing yet. The gate is shut, and a shut gate is silence rather than a quiet sound."
+  },
+  {
+   "do": "patch",
+   "from": "clk:clk1Out",
+   "to": "lpg:trigA",
+   "note": "The clock's first output strikes the gate. Each strike opens it and lets it fall closed again."
+  },
+  {
+   "do": "set",
+   "target": "clk:run",
+   "to": "on",
+   "note": "And there it is — a pluck, because that is what a gate does to a drone."
+  },
+  {
+   "do": "pause",
+   "for": 4.0
+  },
+  {
+   "do": "choose",
+   "target": "clk:bpm",
+   "to": 96,
+   "note": "The tempo is not a knob. It is a window, and clicking it opens every value it can take."
+  },
+  {
+   "do": "pause",
+   "for": 3.0
+  },
+  {
+   "do": "choose",
+   "target": "clk:ratio1",
+   "to": 2,
+   "note": "Each of the three clocks holds a ratio to the master. This one now runs at twice the tempo."
+  },
+  {
+   "do": "pause",
+   "for": 4.0
+  },
+  {
+   "do": "set",
+   "target": "clk:swing1",
+   "to": 0.55,
+   "perform": 3.0,
+   "note": "Swing drags every second pulse late, and the pair still takes the time two straight ones would."
+  },
+  {
+   "do": "pause",
+   "for": 5.0
+  },
+  {
+   "do": "patch",
+   "from": "clk:clkOut",
+   "to": "mar:tClockIn",
+   "note": "The master clock now drives a random generator — Émilie Gillet's Marbles, ported here from her own source."
+  },
+  {
+   "do": "patch",
+   "from": "mar:x1Out",
+   "to": "osc:prinPitchIn",
+   "note": "Its first voltage output goes to the oscillator's pitch. The rhythm is the clock's; the notes are chance."
+  },
+  {
+   "do": "pause",
+   "for": 6.0
+  },
+  {
+   "do": "set",
+   "target": "mar:xSteps",
+   "to": 0.75,
+   "perform": 2.5,
+   "note": "Steps quantises those voltages. Turned up it narrows the scale rather than switching it, until only the root is left."
+  },
+  {
+   "do": "pause",
+   "for": 5.0
+  },
+  {
+   "do": "choose",
+   "target": "mar:dejaVuLength",
+   "to": 3,
+   "note": "Déjà vu is the loop. Set a length, turn the knob up, and the random becomes a phrase that comes round again."
+  },
+  {
+   "do": "set",
+   "target": "mar:dejaVu",
+   "to": 1.0,
+   "perform": 2.5
+  },
+  {
+   "do": "pause",
+   "for": 8.0,
+   "note": "Four notes, chosen by chance and then kept."
+  },
+  {
+   "do": "set",
+   "target": "mar:dejaVu",
+   "to": 0.5,
+   "perform": 2.0,
+   "note": "Back to the middle and it forgets again."
+  },
+  {
+   "do": "pause",
+   "for": 5.0
+  },
+  {
+   "do": "set",
+   "target": "clk:run",
+   "to": "off",
+   "note": "And that is four modules, six cables, and about a minute."
+  },
+  {
+   "do": "pause",
+   "for": 2.0
+  }
+ ]
+}

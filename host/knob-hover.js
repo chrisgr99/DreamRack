@@ -22,7 +22,7 @@
 
 'use strict';
 
-import { hideReadout, moveReadout, readoutLive, readoutRegion } from './knob-readout.js';
+import { hideReadout, readoutLive, readoutRegion } from './knob-readout.js';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
@@ -97,14 +97,14 @@ export function attachKnobHover(binding) {
   binding.group.insertBefore(wedge, binding.group.firstChild);
 
   // THE NUMBER IS NOT SHOWN FROM HERE. Clicking a control is what shows it; this side only carries it
-  // about and sends it home. It follows the pointer while the pointer stays on the part of the
-  // control it is describing, and goes back into the setting the moment you leave that part.
+  // about and sends it home. THE CHIP NO LONGER FOLLOWS: it stands centred over the control, so there
+  // is nothing to carry — only the case where the pointer crosses into the OTHER half of a knАck,
+  // where a number describing the value has stopped describing what is under your hand.
   const zoneNow = (e) => (typeof binding.hoverProbe === 'function' ? binding.hoverProbe(e).mode : 'value');
   const carryReadout = (e) => {
     if (!readoutLive()) return;
     const r = readoutRegion();
     if (r && zoneNow(e) !== r) hideReadout();
-    else moveReadout(e.clientX, e.clientY);
   };
 
   const on = binding.group;
