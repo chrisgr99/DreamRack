@@ -43,7 +43,7 @@ export function createDemoRunner(rack, opts = {}) {
   const snapshot = opts.snapshot || (() => null);           // capture the whole app state (patch, page, view)
   const restoreSnapshot = opts.restoreSnapshot || (async () => {});
 
-  let running = false, cancelled = false, rate = 1;
+  let running = false, cancelled = false, rate = 1.5;   // matches the transport's default — see panel.js
   let demo = null, steps = [], defaults = { ...DEFAULTS };
   let index = 0;                 // the step about to be performed
   let history = [];              // history[i] = the app state as it stood BEFORE step i
@@ -106,6 +106,8 @@ export function createDemoRunner(rack, opts = {}) {
     switch (s.do) {
       case 'patch': return [s.from, s.to];
       case 'set': case 'choose': return [s.target];
+      case 'unpatch': return [s.at];
+      case 'repatch': return [s.at, s.to];
       default: return [];
     }
   }
@@ -161,9 +163,85 @@ export function createDemoRunner(rack, opts = {}) {
     const p = (d.ports || []).find((x) => x.id === id) || (d.params || []).find((x) => x.id === id);
     return p ? p.name : null;
   }
+  // WHAT TO SAY FOR A GESTURE THIS TIME ROUND. Three rules, in order:
+  //
+  //   1. If the note has already named the control, say nothing. A note that reads "the scale knob
+  //      zooms that space" has done the naming, and a gesture line after it is the same words twice.
+  //   2. First time this kind of action appears, say it in full; second time, briefly; after that,
+  //      not at all. The gesture is learned once. The badge beside the pointer still shows on every
+  //      one of them, so what is happening stays legible without being narrated.
+  //   3. A step may always override with its own `say`, or force a level with `voice`.
+  //
+  // Rule 1 works on the CORE of the spoken name — "the scale knob on the coordinate field" is matched
+  // by a note saying "the scale knob", which is how a note would naturally put it.
+  function noteNames(s, ref) {
+    if (!ref || !s || !s.note) return false;
+    const full = phrases.describe(ref, nameOf(ref));
+    if (!full) return false;
+    const core = String(full).replace(/^the\s+/i, '').split(/\s+(?:on|of|in)\s+/)[0].trim().toLowerCase();
+    return core.length > 2 && String(s.note).toLowerCase().includes(core);
+  }
+
+  function gestureLevel(s, action, ref) {
+    if (s && s.voice) return s.voice;
+    // THE DEMO'S OWN SETTING IS A CEILING, and 'off' means off. When the gesture narration moved to
+    // one-sentence-per-gesture this rule was left behind in the old path, so a silent reel — no notes,
+    // voice off — still announced every cable and every knob. A demo that says it wants no words gets
+    // no words, whatever the per-action tier below would have chosen.
+    if (verbosity === 'off') return 'off';
+    if (noteNames(s, ref)) return 'off';
+    const n = phrases.timesSaid ? phrases.timesSaid(action) : 0;
+    const tier = n === 0 ? 'long' : n === 1 ? 'short' : 'off';
+    return (verbosity === 'short' && tier === 'long') ? 'short' : tier;
+  }
+
   const sayFor = (s, action, back = false, ref = null) =>
     (s && s.say !== undefined ? s.say
       : phrases.sayFor(action, (s && s.voice) || verbosity, { back, target: ref, fallback: nameOf(ref) }));
+
+  // WHERE A STEP IS ABOUT TO ACT, so the pointer can be sent there before its note is read. A note
+  // describes what you are looking at — "radius gives us distance from the centre" — and reading it
+  // while the pointer is still resting on the last module asks the viewer to take it on trust and
+  // find out what it meant three seconds later. It used to be an instruction ("now turn the timbre
+  // knob"), which is the one kind of sentence that belongs BEFORE the move; nothing is written that
+  // way any more.
+  function approachOf(s) {
+    if (!s) return null;
+    switch (s.do) {
+      case 'set': case 'choose': return resolve(s.target);
+      case 'patch': return resolve(s.from);
+      case 'repatch': case 'unpatch': {
+        const [k, id] = split(s.at);
+        const key = aliases[k] || k;
+        const edge = rack.edgeAt && rack.edgeAt(key, id);
+        if (!edge) return null;
+        const which = (edge.dst.key === key && edge.dst.portId === id) ? 'dst' : 'src';
+        return rack.cordGrabPoint(edge, which);
+      }
+      case 'menu': return s.on ? resolve(s.on) : null;
+      case 'page': return resolveTab(s.to);
+      default: return null;
+    }
+  }
+
+  // TRAVEL AND ACT AS ONE. The pointer sets off and a single sentence describes the whole gesture
+  // while it goes — "click the X coordinate button" — instead of one sentence for the journey and
+  // another for the press. The action that follows this must NOT announce itself again; that pairing
+  // is what made every knob take three sentences to turn.
+  async function gestureTo(t, s, action, ref = null) {
+    if (!t) return null;
+    theatre.badge(phrases.badgeFor(action), { x: t.x, y: t.y });
+    const level = gestureLevel(s, action, ref);
+    const line = (s && s.say !== undefined) ? s.say
+      : phrases.sayFor(action, level, { target: ref, fallback: nameOf(ref), combined: true });
+    // Already standing there, because the approach took us before the note was read: say the line,
+    // do not walk the same six inches again. A second travel of zero distance still spends its whole
+    // duration, which reads as the demo hesitating for no reason.
+    const there = theatre.pos && Math.hypot(theatre.pos.x - t.x, theatre.pos.y - t.y) < 4;
+    await Promise.all([there ? Promise.resolve() : theatre.moveTo(t.x, t.y, secs(s, 'perform')), voice.speak(line)]);
+    if (!there) await theatre.sleep(secs(s, 'arrive') * 0.35);
+    return t;
+  }
 
   // Travel to a target, announcing the move, then wait there so the viewer can see WHERE before
   // being told WHAT. Returns the resolved target (or null if there is nothing to point at).
@@ -214,8 +292,14 @@ export function createDemoRunner(rack, opts = {}) {
     switch (s.do) {
       case 'page': {
         const t = resolveTab(s.to);
-        if (t) { await goTo(t, s, 'moveToTab'); await clickAt(t, s, 'switchPage', true); }
+        // ONE UTTERANCE, like every other gesture. This was still announcing the journey and then the
+        // press — and a step carrying its own `say` had that ONE line spoken by both halves, so the
+        // demo said "let's go to the video page" twice in a row on the way to a single click.
+        if (rack.page === s.to) return;   // already there: pressing the tab again would take us BACK
+        if (t) { await gestureTo(t, s, 'switchPage'); theatre.click(); theatre.highlight(t.el); }
         if (rack._hasPage(s.to)) rack.selectPage(s.to);
+        else console.warn(`[demo] there is no page called ${s.to}`);
+        if (rack.page !== s.to) console.warn(`[demo] page step asked for ${s.to} but we are showing ${rack.page}`);
         return;
       }
       case 'add':
@@ -278,18 +362,32 @@ export function createDemoRunner(rack, opts = {}) {
         // machinery, not a mime of it. So the cable trails the pointer, the destination arms and
         // highlights as it arrives, and the drop connects through the same path your own hand takes.
         // Announcing that we are pulling a cable while nothing is in hand was the visible lie here.
-        await goTo(a, s, fromMove, s.from);
-        await announce('pickUpCable', s, true, s.from);
+        await gestureTo(a, s, 'pickUpCable', s.from);
         theatre.click();
+        // WHICH PAGE THE FAR END IS ON. A cord in hand crosses pages by pressing a tab — the rack
+        // keeps it in hand and the free end travels with you — so a patch between two pages is one
+        // continuous gesture, not two halves joined behind the scenes. Worth showing rather than
+        // hiding: a reader who has put two modules on different pages needs to know this is possible.
+        const destRec = recOf(tk);
+        const destPage = destRec && rack.pageOf ? rack.pageOf(destRec) : null;
+        const crossing = destPage && destPage !== rack.page;
         // The rack must know this carry is the SCRIPT's, so a real mouse crossing the window cannot
         // snatch the cord's free end away from the synthetic pointer.
         rack._demoCarry = true;
         rack._startStickyCable(fk, fp, a.x, a.y);
         theatre.setTracker((x, y) => { if (rack._carryTrack) rack._carryTrack(x, y); });
         try {
-          const b = resolve(s.to) || b0;                 // re-resolve: highlighting may have moved nothing, but be safe
-          await goTo(b, s, toMove, s.to);
-          await announce('dropCable', s, true, s.to);
+          if (crossing) {
+            const tab = resolveTab(destPage);
+            if (tab) {
+              await gestureTo(tab, s, 'switchPage');
+              theatre.click();
+            }
+            if (rack._hasPage(destPage) && rack.page !== destPage) rack.selectPage(destPage);
+            await theatre.sleep(secs(s, 'settle'));
+          }
+          const b = resolve(s.to) || b0;                 // re-resolve: the page change moved everything
+          await gestureTo(b, s, 'dropCable', s.to);
           theatre.click();
           if (rack._carryDrop) rack._carryDrop(b.x, b.y);
           else rack.connectPatch({ key: fk, portId: fp }, { key: tk, portId: tp });
@@ -301,21 +399,23 @@ export function createDemoRunner(rack, opts = {}) {
         const t = resolve(s.target);
         const [k, id] = split(s.target);
         const rec = recOf(k);
+        if (!rec) console.warn(`[demo] no module for ${s.target}`);
         // A numeric target is a knob, anything else a button — which is all that is needed to choose
         // between "turn the scroll wheel over the knob" and "press the button".
         const numeric = typeof s.to === 'number';
-        if (t) await goTo(t, s, numeric ? 'moveToKnob' : 'moveToButton', s.target);
+        if (t) await gestureTo(t, s, numeric ? 'turnKnob' : 'pressButton', s.target);
         if (numeric) {
           // Every continuous control here is wheel-driven — there is no drag-to-turn anywhere in
-          // the app — so a value move is always a scroll-wheel gesture.
-          if (t) await announce('turnKnob', s, true, s.target);
+          // the app — so a value move is always a scroll-wheel gesture. The sentence for it was
+          // already spoken on the way in; here the wheel simply turns.
           const d = secs(s, 'perform');
           const spin = theatre.wheelTicks(d, Math.max(3, Math.round(d * 5)));
           await ramp(s.target, s.to, d);
           await spin;
         } else {
-          if (t) await clickAt(t, s, 'pressButton', true, s.target);
+          if (t) { theatre.click(); await theatre.sleep(secs(s, 'beat')); }
           if (rec) rack.applyParam(rec, id, s.to);
+          else console.warn(`[demo] no module for ${s.target} — the value was not set`);
         }
         return;
       }
@@ -330,7 +430,7 @@ export function createDemoRunner(rack, opts = {}) {
         // the menu that appears and presses an item — and the press runs the very function a real
         // click runs, rather than a second copy of it. Submenus are just more names in `choose`.
         const t = s.on ? resolve(s.on) : null;
-        if (t) { await goTo(t, s, 'moveToTerminal'); await announce('rightClick', s, true, s.on); }
+        if (t) await gestureTo(t, s, 'rightClick', s.on);
         theatre.click();
         if (s.on) { const [k, id] = split(s.on); rack.openTerminalMenu(k, id, t ? t.x : theatre.pos.x, t ? t.y : theatre.pos.y); }
         for (const label of (Array.isArray(s.choose) ? s.choose : [s.choose]).filter(Boolean)) {
@@ -356,7 +456,7 @@ export function createDemoRunner(rack, opts = {}) {
         // which is exactly what a viewer cannot learn anything from.
         const t = resolve(s.target);
         const [k, id] = split(s.target);
-        if (t) { await goTo(t, s, 'moveToReadout', s.target); await announce('openList', s, true, s.target); }
+        if (t) await gestureTo(t, s, 'openList', s.target);
         theatre.click();
         if (!rack.openValueList(k, id)) { console.warn(`[demo] no value list for "${s.target}"`); return; }
         await theatre.sleep(secs(s, 'settle'));
@@ -386,6 +486,124 @@ export function createDemoRunner(rack, opts = {}) {
         await theatre.sleep(secs(s, 'settle'));
         return;
       }
+      case 'point': {
+        // POINT AT A MODULE while it is described. Not a gesture — nothing is clicked and nothing
+        // changes — so it carries no badge and says nothing of its own: the note is the whole content,
+        // and the pointer is there to say WHICH of six faceplates the note is about. runStep moves it
+        // before the note is read, so the sentence lands with the pointer already resting on its
+        // subject rather than arriving after it.
+        const t = rack.moduleBox ? rack.moduleBox(aliases[s.at] || s.at) : null;
+        if (!t) { console.warn(`[demo] no module to point at: ${s.at}`); return; }
+        await theatre.moveTo(t.x, t.y, secs(s, 'perform'));
+        return;
+      }
+      case 'repatch': {
+        // MOVE ONE END OF A CABLE. Inserting a module into a working chain is not "unplug, then plug
+        // in twice" — the cord already runs to the output, so the end at the far side is carried over
+        // to the new module and the output end never moves. That is what a hand does, it is one
+        // gesture instead of three, and nothing is ever seen to be destroyed: the picture changes
+        // over rather than going away and coming back.
+        const [k, id] = split(s.at);
+        const key = aliases[k] || k;
+        const edge = rack.edgeAt && rack.edgeAt(key, id);
+        if (!edge) { console.warn(`[demo] no cable at ${s.at} to move`); return; }
+        const which = (edge.dst.key === key && edge.dst.portId === id) ? 'dst' : 'src';
+        const grab = rack.cordGrabPoint(edge, which);
+        const dest = resolve(s.to);
+        if (!grab || !dest) {
+          // Say WHICH half is missing. "cannot move A to B" is true and useless: the cord's grab point
+          // and the destination jack fail for entirely different reasons, and one message for both
+          // sent the last investigation down the wrong path.
+          const [dk, dp] = split(s.to);
+          const drec = recOf(dk);
+          console.warn(`[demo] cannot move ${s.at} to ${s.to} — `
+            + `grab=${grab ? 'ok' : 'NULL (cord geometry unmeasurable)'} `
+            + `dest=${dest ? 'ok' : 'NULL'} `
+            + `[module ${drec ? 'found' : 'MISSING'}, `
+            + `its page ${drec && rack.pageOf ? rack.pageOf(drec) : '?'} vs showing ${rack.page}, `
+            + `jack ${rack._jackElement && rack._jackElement(dk, dp) ? 'found' : 'MISSING'}]`);
+          return;
+        }
+        await gestureTo(grab, s, 'pullCable', s.at);
+        theatre.click();
+        rack._demoCarry = true;
+        if (!rack.startRegrab(edge, which, grab.x, grab.y)) { rack._demoCarry = false; return; }
+        theatre.setTracker((x, y) => { if (rack._carryTrack) rack._carryTrack(x, y); });
+        try {
+          const b2 = resolve(s.to) || dest;
+          await gestureTo(b2, s, 'dropCable', s.to);
+          theatre.click();
+          if (rack._carryDrop) rack._carryDrop(b2.x, b2.y);
+          theatre.highlight(b2.el);
+        } finally { theatre.setTracker(null); rack._demoCarry = false; }
+        return;
+      }
+      case 'carry': {
+        // PICK A MODULE UP AND PUT IT SOMEWHERE ELSE, including on another page, with its cables
+        // still attached. The rack has always allowed this by hand — hold the title strip, press a
+        // tab, drop — and the cords follow the panel while it is in the air. A demo could only ever
+        // CREATE a module before this.
+        const key = aliases[s.module] || s.module;
+        const box = rack.moduleBox && rack.moduleBox(key);
+        if (!box) {
+          const rec = rack.records.get(key);
+          console.warn(`[demo] cannot carry ${s.module} — `
+            + (!rec ? 'no module with that name is on the rack'
+                    : `it is on page ${rack.pageOf ? rack.pageOf(rec) : '?'} and we are showing ${rack.page}`));
+          return;
+        }
+        await goTo(box, s, 'moveToTitle');
+        theatre.click();
+        rack._demoCarry = true;
+        try {
+          if (!rack.carryModule(key, { atX: box.x, atY: box.y })) { console.warn(`[demo] could not pick up ${s.module}`); return; }
+          theatre.setTracker((x, y) => { if (rack._moduleCarryTrack) rack._moduleCarryTrack(x, y); });
+          if (s.page && s.page !== rack.page) {
+            const tab = resolveTab(s.page);
+            if (tab) { await goTo(tab, s, 'moveToTab'); theatre.click(); }
+            if (rack._hasPage(s.page) && rack.page !== s.page) rack.selectPage(s.page);
+            await theatre.sleep(secs(s, 'settle'));
+          }
+          const spot = rack.rowPoint(s.row || 0, s.x || 0);
+          if (spot) await goTo(spot, s, 'moveToEmpty');
+          theatre.click();
+          if (rack._moduleCarryDrop && spot) rack._moduleCarryDrop(spot.x, spot.y);
+          // DID IT LAND? A carry that quietly fails leaves the module where it was, which on another
+          // page looks exactly like a module that was never moved — and the step itself would have
+          // said nothing. Checked against what was asked for, not assumed from the absence of an error.
+          const rec = rack.records.get(key);
+          const page = rec && rack.pageOf ? rack.pageOf(rec) : null;
+          if (!rec) console.warn(`[demo] ${s.module} vanished during the carry`);
+          else if (s.page && page !== s.page) console.warn(`[demo] ${s.module} did not move — it is still on ${page}`);
+          else if (s.row !== undefined && rec.row !== s.row) console.warn(`[demo] ${s.module} landed in row ${rec.row}, not ${s.row}`);
+        } finally { theatre.setTracker(null); rack._demoCarry = false; }
+        return;
+      }
+      case 'unpatch': {
+        // TAKE A CABLE OUT, by the gesture a hand uses: take hold of the cord just outside the jack,
+        // the end comes away with the pointer, and dropping it on empty space removes it. The same
+        // carry the patch step uses, run backwards — not a call to disconnect with the pointer waved
+        // over it, which would be the visible lie that patching-by-mime once was.
+        const [k, id] = split(s.at);
+        const key = aliases[k] || k;
+        const edge = rack.edgeAt && rack.edgeAt(key, id);
+        if (!edge) { console.warn(`[demo] nothing plugged into ${s.at}`); return; }
+        const which = (edge.dst.key === key && edge.dst.portId === id) ? 'dst' : 'src';
+        const grab = rack.cordGrabPoint(edge, which);
+        if (!grab) { rack.patchbay.disconnect(edge); rack.redrawCables(); return; }
+        await gestureTo(grab, s, 'pullCable', s.at);
+        theatre.click();
+        rack._demoCarry = true;
+        if (!rack.startRegrab(edge, which, grab.x, grab.y)) { rack._demoCarry = false; return; }
+        theatre.setTracker((x, y) => { if (rack._carryTrack) rack._carryTrack(x, y); });
+        try {
+          const away = rack.emptyPointNear(grab.x, grab.y + 140) || grab;
+          await gestureTo(away, s, 'dropAway');
+          theatre.click();
+          if (rack._carryDrop) rack._carryDrop(away.x, away.y);
+        } finally { theatre.setTracker(null); rack._demoCarry = false; }
+        return;
+      }
       case 'pause':
         await theatre.sleep(num(s.for, 1));
         return;
@@ -398,6 +616,13 @@ export function createDemoRunner(rack, opts = {}) {
   async function runStep(i) {
     const s = steps[i];
     if (!s) return;
+    // POINTING COMES FIRST. Every other action answers a note that has already been read — "now do
+    // this" — but a point exists to say what the note is ABOUT, so it has to arrive before the words
+    // rather than three seconds after them.
+    if (s.do === 'point') await perform(s);
+    // Everything else with somewhere to go gets there first, silently. The gesture's own sentence is
+    // still said by the action, on arrival.
+    else { const at = approachOf(s); if (at) await theatre.moveTo(at.x, at.y, secs(s, 'perform')); }
     if (s.note !== undefined) {
       noteText = s.note;
       const region = noteSpanAvoid(i);
@@ -408,10 +633,24 @@ export function createDemoRunner(rack, opts = {}) {
       if (opts.onAvoid) opts.onAvoid([region, captions ? card.rect() : null]);
       // The note is read aloud while it is up, and the demo waits for BOTH the hold and the
       // narration — the speech is the floor, so a hold shorter than the sentence cannot cut it off.
-      if (s.note) await Promise.all([theatre.sleep(secs(s, 'hold')), voice.speak(s.note)]);
+      // `wait: false` — SPEAK IT AND CARRY ON. A note normally holds the demo until it has been read,
+      // which is right for a sentence about the thing that is happening next. It is wrong for a long
+      // opening statement: a minute of narration over a motionless rack cannot be told apart from a
+      // demo that has hung, and the honest response to that is to stop it, which is what happened.
+      // Unwaited, the words play over the first moves instead of in front of them.
+      if (s.note && s.wait === false) { voice.speak(s.note); await theatre.sleep(secs(s, 'beat')); }
+      else if (s.note) await Promise.all([theatre.sleep(secs(s, 'hold')), voice.speak(s.note)]);
     }
-    await perform(s);
+    if (s.do !== 'point') await perform(s);
     theatre.badge(null);
+    // AND A NOTE THAT BELONGS AFTERWARDS. "Now we have a chain three modules long" is true once the
+    // cable has landed and not a moment before, and saying it on the way in describes a rack that
+    // does not exist yet. `after` is for the result; `note` stays for what you are about to watch.
+    if (s.after) {
+      showCard(s.after, noteSpanAvoid(i), s.berth || null);
+      noteText = s.after;
+      await Promise.all([theatre.sleep(secs(s, 'beat')), voice.speak(s.after)]);
+    }
     await theatre.sleep(secs(s, 'settle'));
   }
 
@@ -476,8 +715,14 @@ export function createDemoRunner(rack, opts = {}) {
       // tab, which is a step the viewer has to make sense of before anything else happens and which
       // demonstrates nothing — the demo has not started yet. A `page` step is now only for a demo that
       // means to SHOW a page change.
+      // WHERE THE DEMO OPENS. Declared, when the demo says: a reel that begins by crossing to the
+      // video page has to begin ON the audio page, and "wherever the first module happens to be"
+      // depends on the order the stage lines were written in — which is a thing an author changes
+      // for other reasons and should not silently move the opening shot.
+      const want = demo.page || null;
       const first = [...rack.records.values()].find((r) => !r.pinned);
-      if (first && rack.pageOf) { const pg = rack.pageOf(first); if (rack._hasPage(pg)) rack.selectPage(pg); }
+      const pg = want || (first && rack.pageOf ? rack.pageOf(first) : null);
+      if (pg && rack._hasPage(pg)) rack.selectPage(pg);
     }
     // The transport is now the ENGINE over two buses, and turning the engine on brings the master
     // bus with it — so this one switch is the whole of "make sound".
@@ -502,15 +747,32 @@ export function createDemoRunner(rack, opts = {}) {
       // A BEAT BEFORE ANYTHING HAPPENS. The tutorial has just vanished and the rack has just been set
       // up; starting to narrate and move in the same instant asks the viewer to work out where they
       // are and follow a pointer at the same time. Let them look first.
+      console.warn(`[demo] RUN START — ${demo.id || '?'}, ${steps.length} steps, rate ${rate}`);
       await theatre.sleep(num(demo.openHold, 2.5));
       if (demo.intro) { showCard(demo.intro); await Promise.all([theatre.sleep(num(demo.introHold, 2.5)), voice.speak(demo.intro)]); }
       while (index < steps.length && !cancelled) {
         capture(index);
-        await runStep(index);
+        // A STEP THAT THROWS LOSES ITS STEP, NOT THE REEL. This used to fall straight out of the loop
+        // into the cleanup, so a script that hit a bad reference simply stopped partway through with
+        // no message and nothing to distinguish it from a script that had ended — which is exactly
+        // how it looked from the outside, and cost a round of guessing to find. Now it says which
+        // step and why, and carries on to the next one.
+        if (window.__demoTrace) {
+          const st = steps[index] || {};
+          const what = st.target || st.at || st.from || st.to || st.module || '';
+          console.warn(`[demo] step ${index}: ${st.do} ${what}`);
+        }
+        try { await runStep(index); }
+        catch (e) {
+          const st = steps[index] || {};
+          console.warn(`[demo] step ${index} (${st.do}) failed — ${(e && e.message) || e}`);
+          releaseCable();
+        }
         index++;
       }
       if (!cancelled && demo.outro) { showCard(demo.outro); await Promise.all([theatre.sleep(num(demo.outroHold, 3.0)), voice.speak(demo.outro)]); }
     } finally {
+      console.warn(`[demo] RUN END — reached step ${index} of ${steps.length}, cancelled=${cancelled}`);
       releaseCable();
       theatre.end();
       card.hide();
@@ -577,8 +839,16 @@ export function createDemoRunner(rack, opts = {}) {
   // sound up. Stepping back through the demo turns it on again; this is only about walking away.
   function silence() { if (rack.engineOn && rack.engineOn()) rack.toggleEngine(); }
 
-  function stop() {
+  // WHO STOPPED IT. A run that ends early is indistinguishable from one that finished unless the
+  // stop says where it came from — and there are six ways to stop a demo, one of which is a stray
+  // Escape key that nobody remembers pressing.
+  function stop(reason) {
+    if (running) console.warn(`[demo] STOP — ${reason || 'no reason given'}`);
     cancelled = true;
+    // The monitors a demo opened are the demo's, not yours: they were put there to show a stage of a
+    // chain being built, and once the run is over they are a screenful of pictures with nothing to
+    // explain them. Cleared with the rest of the theatre.
+    if (rack.closeVideoMonitors) rack.closeVideoMonitors();
     releaseCable(); theatre.end(); card.hide();
     voice.stop(); voice.setEnabled(false);
     silence();

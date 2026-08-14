@@ -1,0 +1,313 @@
+{
+ "id": "tour-video",
+ "title": "Tour — DreamRack video",
+ "stage": [
+  "R1: osc func prog",
+  "R2: lpg",
+  "VR1: field shapes videoMaths timeMachine compositor videoOut"
+ ],
+ "page": "a1",
+ "voice": "off",
+ "openHold": 1.0,
+ "defaults": {
+  "perform": 0.7,
+  "arrive": 0.8,
+  "beat": 0.2,
+  "settle": 0.3,
+  "hold": 0.5
+ },
+ "steps": [
+  {
+   "do": "page",
+   "to": "video",
+   "note": "DreamRack synthesises video as well as sound, on a page of its own. Let's build a video patch.",
+   "wait": false,
+   "settle": 6.0
+  },
+  {
+   "do": "set",
+   "target": "videoOut:window",
+   "to": "on",
+   "settle": 3.6,
+   "note": "Video output is always the last module in a chain. We'll open its window.",
+   "wait": false
+  },
+  {
+   "do": "patch",
+   "from": "field:fieldOut",
+   "to": "videoOut:imageIn",
+   "settle": 0.4,
+   "note": "The coordinate field produces the video.",
+   "wait": false
+  },
+  {
+   "do": "set",
+   "target": "field:field",
+   "to": "radius",
+   "settle": 0.4
+  },
+  {
+   "do": "repatch",
+   "at": "field:fieldOut",
+   "to": "shapes:shapeOut",
+   "settle": 0.3,
+   "note": "Shapes selects part of that video, which gives it an edge.",
+   "wait": false
+  },
+  {
+   "do": "patch",
+   "from": "field:fieldOut",
+   "to": "shapes:fieldIn",
+   "settle": 0.4
+  },
+  {
+   "do": "set",
+   "target": "shapes:width",
+   "to": 0.1,
+   "perform": 1.0,
+   "settle": 0.3
+  },
+  {
+   "do": "set",
+   "target": "shapes:width",
+   "to": 0.55,
+   "perform": 1.0,
+   "settle": 0.3
+  },
+  {
+   "do": "set",
+   "target": "shapes:mode",
+   "to": "above",
+   "settle": 0.4
+  },
+  {
+   "do": "set",
+   "target": "shapes:width",
+   "to": 0.47,
+   "perform": 0.8,
+   "settle": 0.2
+  },
+  {
+   "do": "set",
+   "target": "shapes:centre",
+   "to": 0.11,
+   "perform": 0.8,
+   "settle": 0.2
+  },
+  {
+   "do": "set",
+   "target": "shapes:soft",
+   "to": 0.24,
+   "perform": 0.8,
+   "settle": 0.4
+  },
+  {
+   "do": "set",
+   "target": "field:scale",
+   "to": 0.64,
+   "perform": 1.2,
+   "settle": 0.3,
+   "note": "Back to the field, which is where most of the structure comes from. Scale, tile, quantise, and scroll, which starts it moving.",
+   "wait": false
+  },
+  {
+   "do": "set",
+   "target": "field:tile",
+   "to": 5.24,
+   "perform": 1.4,
+   "settle": 0.3
+  },
+  {
+   "do": "set",
+   "target": "field:quantise",
+   "to": 4.7,
+   "perform": 1.4,
+   "settle": 0.3
+  },
+  {
+   "do": "set",
+   "target": "field:twist",
+   "to": 0.42,
+   "perform": 1.0,
+   "settle": 0.2
+  },
+  {
+   "do": "set",
+   "target": "field:rotate",
+   "to": 0.27,
+   "perform": 1.0,
+   "settle": 0.2
+  },
+  {
+   "do": "set",
+   "target": "field:polar",
+   "to": 0.13,
+   "perform": 1.0,
+   "settle": 0.3
+  },
+  {
+   "do": "set",
+   "target": "field:scroll",
+   "to": 0.51,
+   "perform": 1.2,
+   "settle": 1.5
+  },
+  {
+   "do": "repatch",
+   "at": "shapes:shapeOut",
+   "to": "timeMachine:imageOut",
+   "settle": 0.3,
+   "note": "The time module stores earlier frames. This is slit scan.",
+   "wait": false
+  },
+  {
+   "do": "patch",
+   "from": "shapes:shapeOut",
+   "to": "timeMachine:imageIn",
+   "settle": 0.3
+  },
+  {
+   "do": "set",
+   "target": "timeMachine:mode",
+   "to": "slit",
+   "settle": 0.4
+  },
+  {
+   "do": "set",
+   "target": "timeMachine:spread",
+   "to": 0.9,
+   "perform": 1.2,
+   "settle": 1.0
+  },
+  {
+   "do": "repatch",
+   "at": "timeMachine:imageOut",
+   "to": "videoMaths:outImage",
+   "settle": 0.3,
+   "note": "Video maths combines two video signals. Difference gives us interference.",
+   "wait": false
+  },
+  {
+   "do": "patch",
+   "from": "timeMachine:imageOut",
+   "to": "videoMaths:aIn",
+   "settle": 0.3
+  },
+  {
+   "do": "patch",
+   "from": "field:fieldOut",
+   "to": "videoMaths:bIn",
+   "settle": 0.3
+  },
+  {
+   "do": "set",
+   "target": "videoMaths:op",
+   "to": "diff",
+   "settle": 1.2
+  },
+  {
+   "do": "repatch",
+   "at": "videoMaths:outImage",
+   "to": "compositor:imageOut",
+   "settle": 0.3,
+   "note": "The compositor combines two more, using a third as a key.",
+   "wait": false
+  },
+  {
+   "do": "patch",
+   "from": "videoMaths:outImage",
+   "to": "compositor:aIn",
+   "settle": 0.3
+  },
+  {
+   "do": "patch",
+   "from": "timeMachine:imageOut",
+   "to": "compositor:bIn",
+   "settle": 0.3
+  },
+  {
+   "do": "patch",
+   "from": "shapes:shapeOut",
+   "to": "compositor:keyIn",
+   "settle": 0.4
+  },
+  {
+   "do": "set",
+   "target": "compositor:mode",
+   "to": "screen",
+   "settle": 0.4
+  },
+  {
+   "do": "set",
+   "target": "compositor:key",
+   "to": 0.4,
+   "perform": 1.2,
+   "settle": 1.0
+  },
+  {
+   "do": "add",
+   "module": "wcoast.quadFn281t",
+   "as": "lfo",
+   "page": "video",
+   "row": 1,
+   "x": 0,
+   "settle": 2.5,
+   "note": "Audio modules can go on the video page too. A function generator, set to cyclic, repeats on its own — a slow oscillator.",
+   "wait": false
+  },
+  {
+   "do": "set",
+   "target": "lfo:modeA",
+   "to": "cyclic",
+   "settle": 1.2
+  },
+  {
+   "do": "set",
+   "target": "lfo:modeB",
+   "to": "cyclic",
+   "settle": 1.2
+  },
+  {
+   "do": "set",
+   "target": "lfo:attackA",
+   "to": 2.0,
+   "perform": 0.6,
+   "settle": 0.8
+  },
+  {
+   "do": "set",
+   "target": "lfo:decayA",
+   "to": 2.0,
+   "perform": 0.6,
+   "settle": 0.8
+  },
+  {
+   "do": "set",
+   "target": "lfo:quadEnAB",
+   "to": "on",
+   "settle": 1.2,
+   "note": "Quadrature puts channel B a quarter cycle behind channel A.",
+   "wait": false
+  },
+  {
+   "do": "patch",
+   "from": "lfo:fnA",
+   "to": "field:offsetXCv",
+   "settle": 0.6
+  },
+  {
+   "do": "patch",
+   "from": "lfo:fnB",
+   "to": "field:offsetYCv",
+   "settle": 4.5,
+   "note": "Into the field's X and Y, and the video moves on its own.",
+   "wait": false
+  },
+  {
+   "do": "pause",
+   "for": 10.0,
+   "note": "Six modules, ten cables.",
+   "wait": false
+  }
+ ]
+}

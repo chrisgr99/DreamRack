@@ -1,0 +1,356 @@
+{
+ "id": "reel-video-fast",
+ "title": "Reel — video, short version",
+ "stage": [
+  "R1: osc func prog",
+  "R2: lpg",
+  "VR1: field shapes videoMaths timeMachine compositor videoOut"
+ ],
+ "page": "a1",
+ "defaults": {
+  "perform": 0.9,
+  "arrive": 1.0,
+  "beat": 0.35,
+  "settle": 0.4,
+  "hold": 0.8
+ },
+ "steps": [
+  {
+   "do": "say",
+   "note": "DreamRack synthesises video as well as sound, on a page of its own."
+  },
+  {
+   "do": "page",
+   "to": "video",
+   "say": "Here's the video page."
+  },
+  {
+   "do": "point",
+   "at": "videoOut",
+   "settle": 0.6,
+   "note": "Video Output ends every chain, and shows a test pattern until something is patched."
+  },
+  {
+   "do": "set",
+   "target": "videoOut:window",
+   "to": "on",
+   "settle": 1.0,
+   "note": "Open its window."
+  },
+  {
+   "do": "point",
+   "at": "field",
+   "settle": 0.6,
+   "note": "Coordinate Field is the workhorse: it moves a coordinate space, and reads a value out of it as brightness."
+  },
+  {
+   "do": "patch",
+   "from": "field:fieldOut",
+   "to": "videoOut:imageIn",
+   "settle": 0.8
+  },
+  {
+   "do": "set",
+   "target": "field:field",
+   "to": "radius",
+   "settle": 0.8,
+   "note": "Radius, drawn as brightness."
+  },
+  {
+   "do": "point",
+   "at": "shapes",
+   "settle": 0.6,
+   "note": "Shapes keeps a slice of a field, which is how you get an edge out of a gradient."
+  },
+  {
+   "do": "repatch",
+   "at": "field:fieldOut",
+   "to": "shapes:shapeOut",
+   "settle": 0.5
+  },
+  {
+   "do": "patch",
+   "from": "field:fieldOut",
+   "to": "shapes:fieldIn",
+   "settle": 0.8
+  },
+  {
+   "do": "set",
+   "target": "shapes:width",
+   "to": 0.1,
+   "perform": 1.4,
+   "settle": 0.5,
+   "note": "Width is how much we keep. Narrow, and it's a ring."
+  },
+  {
+   "do": "set",
+   "target": "shapes:width",
+   "to": 0.55,
+   "perform": 1.4,
+   "settle": 0.5,
+   "note": "Wide, and the ring fills in."
+  },
+  {
+   "do": "set",
+   "target": "shapes:mode",
+   "to": "above",
+   "settle": 0.6,
+   "note": "And the mode switch turns it into an edge instead of a band."
+  },
+  {
+   "do": "set",
+   "target": "shapes:width",
+   "to": 0.47,
+   "perform": 1.0,
+   "settle": 0.3
+  },
+  {
+   "do": "set",
+   "target": "shapes:centre",
+   "to": 0.11,
+   "perform": 1.0,
+   "settle": 0.3
+  },
+  {
+   "do": "set",
+   "target": "shapes:soft",
+   "to": 0.24,
+   "perform": 1.0,
+   "settle": 0.6,
+   "note": "Soft turns the cut into a gradient."
+  },
+  {
+   "do": "set",
+   "target": "field:scale",
+   "to": 0.64,
+   "perform": 1.6,
+   "settle": 0.4,
+   "note": "Now the field's controls have something to show. Scale zooms the space."
+  },
+  {
+   "do": "set",
+   "target": "field:tile",
+   "to": 5.24,
+   "perform": 1.8,
+   "settle": 0.5,
+   "note": "Tile repeats it across the frame."
+  },
+  {
+   "do": "set",
+   "target": "field:quantise",
+   "to": 4.7,
+   "perform": 1.8,
+   "settle": 0.5,
+   "note": "Quantise steps it into bands."
+  },
+  {
+   "do": "set",
+   "target": "field:twist",
+   "to": 0.42,
+   "perform": 1.4,
+   "settle": 0.3
+  },
+  {
+   "do": "set",
+   "target": "field:rotate",
+   "to": 0.27,
+   "perform": 1.2,
+   "settle": 0.3
+  },
+  {
+   "do": "set",
+   "target": "field:polar",
+   "to": 0.13,
+   "perform": 1.2,
+   "settle": 0.4,
+   "note": "Twist, rotate and polar bend it."
+  },
+  {
+   "do": "set",
+   "target": "field:scroll",
+   "to": 0.51,
+   "perform": 1.4,
+   "settle": 2.0,
+   "note": "And scroll drifts it, so the video moves on its own."
+  },
+  {
+   "do": "point",
+   "at": "timeMachine",
+   "settle": 0.6,
+   "note": "Time remembers what it is given: delay, trails, or slit scan."
+  },
+  {
+   "do": "repatch",
+   "at": "shapes:shapeOut",
+   "to": "timeMachine:imageOut",
+   "settle": 0.5
+  },
+  {
+   "do": "patch",
+   "from": "shapes:shapeOut",
+   "to": "timeMachine:imageIn",
+   "settle": 0.6
+  },
+  {
+   "do": "set",
+   "target": "timeMachine:mode",
+   "to": "slit",
+   "settle": 0.6,
+   "note": "Slit scan builds one frame out of many moments."
+  },
+  {
+   "do": "set",
+   "target": "timeMachine:spread",
+   "to": 0.9,
+   "perform": 1.6,
+   "settle": 1.2,
+   "note": "Spread is how far back the oldest line comes from."
+  },
+  {
+   "do": "point",
+   "at": "videoMaths",
+   "settle": 0.6,
+   "note": "Video Maths is two video signals and one piece of arithmetic."
+  },
+  {
+   "do": "repatch",
+   "at": "timeMachine:imageOut",
+   "to": "videoMaths:outImage",
+   "settle": 0.5
+  },
+  {
+   "do": "patch",
+   "from": "timeMachine:imageOut",
+   "to": "videoMaths:aIn",
+   "settle": 0.4
+  },
+  {
+   "do": "patch",
+   "from": "field:fieldOut",
+   "to": "videoMaths:bIn",
+   "settle": 0.6,
+   "note": "The slit scan against the raw field."
+  },
+  {
+   "do": "set",
+   "target": "videoMaths:op",
+   "to": "diff",
+   "settle": 1.4,
+   "note": "Difference is light wherever they disagree, which is where interference comes from."
+  },
+  {
+   "do": "point",
+   "at": "compositor",
+   "settle": 0.6,
+   "note": "The Compositor puts two video signals together."
+  },
+  {
+   "do": "repatch",
+   "at": "videoMaths:outImage",
+   "to": "compositor:imageOut",
+   "settle": 0.5
+  },
+  {
+   "do": "patch",
+   "from": "videoMaths:outImage",
+   "to": "compositor:aIn",
+   "settle": 0.4
+  },
+  {
+   "do": "patch",
+   "from": "timeMachine:imageOut",
+   "to": "compositor:bIn",
+   "settle": 0.4
+  },
+  {
+   "do": "patch",
+   "from": "shapes:shapeOut",
+   "to": "compositor:keyIn",
+   "settle": 0.8,
+   "note": "A third video signal into the key input makes the mix per pixel instead of one number for the frame."
+  },
+  {
+   "do": "set",
+   "target": "compositor:mode",
+   "to": "screen",
+   "settle": 0.6,
+   "note": "Screen adds without clipping."
+  },
+  {
+   "do": "set",
+   "target": "compositor:key",
+   "to": 0.4,
+   "perform": 1.6,
+   "settle": 1.4,
+   "note": "And the amount knob fades the key in and out."
+  },
+  {
+   "do": "say",
+   "settle": 0.4,
+   "note": "So far, all by hand. The video is more interesting when something else turns the knobs."
+  },
+  {
+   "do": "add",
+   "module": "wcoast.quadFn281t",
+   "as": "lfo",
+   "page": "video",
+   "row": 1,
+   "x": 0,
+   "settle": 0.8,
+   "note": "A function generator, on the video page."
+  },
+  {
+   "do": "set",
+   "target": "lfo:modeA",
+   "to": "cyclic",
+   "settle": 0.3,
+   "note": "Cyclic makes it run on its own. That's an oscillator, and a slow one."
+  },
+  {
+   "do": "set",
+   "target": "lfo:modeB",
+   "to": "cyclic",
+   "settle": 0.3
+  },
+  {
+   "do": "set",
+   "target": "lfo:attackA",
+   "to": 2.0,
+   "perform": 0.8,
+   "settle": 0.2
+  },
+  {
+   "do": "set",
+   "target": "lfo:decayA",
+   "to": 2.0,
+   "perform": 0.8,
+   "settle": 0.3,
+   "note": "About four seconds a cycle. Picture speed, not audio speed — the video side reads one value per frame."
+  },
+  {
+   "do": "set",
+   "target": "lfo:quadEnAB",
+   "to": "on",
+   "settle": 0.5,
+   "note": "Quadrature puts B a quarter cycle behind A."
+  },
+  {
+   "do": "patch",
+   "from": "lfo:fnA",
+   "to": "field:offsetXCv",
+   "settle": 0.4
+  },
+  {
+   "do": "patch",
+   "from": "lfo:fnB",
+   "to": "field:offsetYCv",
+   "settle": 1.0,
+   "note": "Into the field's X and Y, so the space drifts in a circle.",
+   "after": "Six modules, ten cables, and nothing in the patch that isn't on the panel in front of you."
+  },
+  {
+   "do": "pause",
+   "for": 8.0
+  }
+ ]
+}

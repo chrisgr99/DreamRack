@@ -55,6 +55,10 @@ import shapesDescriptor from '../modules/shapes/descriptor.js';
 import { create as shapesCreate } from '../modules/shapes/factory.js';
 import mathsDescriptor from '../modules/video-maths/descriptor.js';
 import { create as mathsCreate } from '../modules/video-maths/factory.js';
+import voiceDescriptor from '../modules/model-voice/descriptor.js';
+import { create as voiceCreate } from '../modules/model-voice/factory.js';
+import compositorDescriptor from '../modules/compositor/descriptor.js';
+import { create as compositorCreate } from '../modules/compositor/factory.js';
 import formulaDescriptor from '../modules/formula/descriptor.js';
 import { create as formulaCreate } from '../modules/formula/factory.js';
 import { serialize, restore, validate, APP_NAME, APP_VERSION } from '../host/patch-io.js';
@@ -94,6 +98,8 @@ registry.register({ descriptor: fieldDescriptor, create: fieldCreate });
 registry.register({ descriptor: timeDescriptor, create: timeCreate });
 registry.register({ descriptor: shapesDescriptor, create: shapesCreate });
 registry.register({ descriptor: mathsDescriptor, create: mathsCreate });
+registry.register({ descriptor: compositorDescriptor, create: compositorCreate });
+registry.register({ descriptor: voiceDescriptor, create: voiceCreate });
 registry.register({ descriptor: formulaDescriptor, create: formulaCreate });
 
 const MODULE_TYPES = [{
@@ -159,7 +165,7 @@ const MODULE_TYPES = [{
   // Octave — a 1V/oct signal moved whole octaves. No worklet: on 1V/oct an octave is exactly one, so
   // it is a sum the audio graph does for free. 4 HP.
   descriptorId: marblesDescriptor.id,
-  name: 'Marbles',
+  name: 'Random Sampler',
   hp: 15,
   panelUrl: 'modules/marbles/panel.svg',
   descriptor: marblesDescriptor,
@@ -251,6 +257,15 @@ const MODULE_TYPES = [{
   panelUrl: 'modules/video-maths/panel.svg',
   descriptor: mathsDescriptor,
 }, {
+  // Compositor — two PICTURES into one, where Video Maths combines single channels. It is what turns
+  // a rack full of sources into one image, and where backgrounds live, which is why Video Output has
+  // no background input of its own. 8 HP: the eight named blends are folded into two columns.
+  descriptorId: compositorDescriptor.id,
+  name: 'Compositor',
+  hp: 8,
+  panelUrl: 'modules/compositor/panel.svg',
+  descriptor: compositorDescriptor,
+}, {
   // Formula — four images, four knobs and a typed expression, shown on the faceplate. It exists
   // beside Video Maths rather than replacing it: Maths is one cable and a switch, Formula is for
   // when a patch would otherwise be three Maths modules whose arithmetic is spread across the
@@ -261,6 +276,15 @@ const MODULE_TYPES = [{
   hp: 8,
   panelUrl: 'modules/formula/panel.svg',
   descriptor: formulaDescriptor,
+}, {
+  // Macro Oscillator 2 — a complete instrument in one module: the sound, its envelope and the gate that
+  // shapes it. One cable from the clock and it plays. A port of Émilie Gillet's Plaits (MIT); the
+  // faceplate is here and the synthesis is not, so the panel can be judged before it is written.
+  descriptorId: voiceDescriptor.id,
+  name: 'Macro Oscillator 2',
+  hp: 14,
+  panelUrl: 'modules/model-voice/panel.svg',
+  descriptor: voiceDescriptor,
 }, {
   // The mixer is a pinned singleton placed at boot, so it is hidden from the module
   // library (no second mixer). Still a normal module type otherwise.
@@ -1332,6 +1356,18 @@ async function boot() {
   let demoList = [];
   try { const res = await fetch('demos/scripts/index.json'); if (res.ok) demoList = (await res.json()).demos || []; }
   catch (_e) { /* no demo library */ }
+  // MOST RECENTLY EDITED FIRST. index.json is in the order the reels were written, which is the least
+  // useful order for the person writing them: the one you are working on is whichever you last saved,
+  // and it was at the bottom. Anything we cannot date keeps the file's own order behind the rest.
+  try {
+    if (window.wcoast && window.wcoast.demoMtimes) {
+      const when = await window.wcoast.demoMtimes();
+      demoList = demoList
+        .map((d, i) => ({ d, i, t: when[d.file] || 0 }))
+        .sort((a, b) => (b.t - a.t) || (a.i - b.i))
+        .map((x) => x.d);
+    }
+  } catch (_e) { /* keep the file's own order */ }
 
   const loadDemo = async (entry) => {
     // Cache-busted: the whole point of Reload is to pick up an edit made a moment ago, and a cached
@@ -1447,8 +1483,8 @@ async function boot() {
       return demoPromise;
     } finally { demoStarting = false; }
   }
-  async function stopDemo() { if (rack.demo.running) { demoStop = true; rack.demo.stop(); } if (demoPromise) { try { await demoPromise; } catch (_e) { /* ignore */ } } }
-  async function restartDemo() { await stopDemo(); runSelected(); }
+  async function stopDemo(why) { if (rack.demo.running) { demoStop = true; rack.demo.stop(why || 'stopDemo'); } if (demoPromise) { try { await demoPromise; } catch (_e) { /* ignore */ } } }
+  async function restartDemo() { await stopDemo('Restart button'); runSelected(); }
 
   // Step-through. The first press stands the demo up the way Run does — the user's work put aside,
   // the rack cleared, sound on — and then performs one step. Leaving step-through is what puts the
@@ -1468,7 +1504,7 @@ async function boot() {
   async function exitStepping() {
     if (!demoStepping) return;
     demoStepping = null;
-    rack.demo.stop();
+    rack.demo.stop('leaving step-through');
     await releaseUserState();
     demoActive = false;
     demoPanel.setPosition(0, 0);
@@ -1525,12 +1561,19 @@ async function boot() {
   // Leaving the transport by hand. From the tutorial it goes back there, at the section you pressed
   // the play button in; opened from the DEV menu it simply closes.
   async function leaveDemo() {
-    await stopDemo();
+    await stopDemo('Close button');
     await exitStepping();
     returnToTutorial();
   }
 
   selectedEntry = demoList[0] || null;
+  // Started from the command line (WCOAST_DEMO=<id>): open the transport on that demo and run it.
+  const autoId = new URLSearchParams(location.search).get('demo');
+  if (autoId) {
+    const entry = demoList.find((d) => d.id === autoId);
+    if (!entry) console.warn(`[demo] no demo named "${autoId}"`);
+    else { window.__demoTrace = true; setTimeout(() => demonstrate(entry.id), 1200); }
+  }
   demoPanel = createDemoPanel({
     demos: demoList,
     onSelect: (e) => { selectedEntry = e; if (demoStepping) exitStepping(); },
@@ -1540,8 +1583,8 @@ async function boot() {
     // want to look at that step, go back a step, or change its words. Pressing Stop again (when
     // nothing is playing) is what puts your own patch back.
     onStop: async () => {
-      if (rack.demo.running) { await stopDemo(); showPos(); return; }
-      await stopDemo(); await exitStepping();
+      if (rack.demo.running) { await stopDemo('Stop button'); showPos(); return; }
+      await stopDemo('Stop button'); await exitStepping();
     },
     onRestart: restartDemo,
     onRate: (v) => { if (v > 0) overrideRate = v; },
@@ -1551,13 +1594,25 @@ async function boot() {
   });
   // The DEV menu opens it as an AUTHOR tool — picker, Play and Reload — and closing it just closes it.
   // The same two commands the native menu bar carries — see developerMenuItems.
+  // THE PANEL EDITOR SAVED A FACEPLATE. Find the module type whose panel file lives in that
+  // directory and re-skin its instances — the drawing changes, the patch does not.
+  if (window.wcoast && window.wcoast.onPanelSaved) {
+    window.wcoast.onPanelSaved(async (dir) => {
+      if (!dir) return;
+      const type = MODULE_TYPES.find((t) => t.panelUrl === `modules/${dir}/panel.svg`);
+      if (!type) { log(`panel saved for "${dir}", which no module on the rack uses`); return; }
+      const done = await rack.reskinType(type.descriptorId);
+      log(done ? `${type.name} re-skinned from the editor's save` : `${type.name} saved; none placed on the rack`);
+    });
+  }
+
   rack.onCaptureWork = () => captureWork();
   rack.onRestoreWork = () => restoreWork();
   rack.onResetDefault = () => resetToDefault();
   rack.openDemoPanel = () => { cameFromTutorial = null; demoPanel.setMode('author'); demoPanel.setExitLabel('Close'); demoPanel.open(); };
 
   window.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && rack.demo.running) { stopDemo(); return; }
+    if (e.key === 'Escape' && rack.demo.running) { stopDemo('Escape key'); return; }
     if (e.ctrlKey && e.shiftKey && e.code === 'KeyD') { e.preventDefault(); runSelected(); }
   }, true);
 

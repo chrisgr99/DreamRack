@@ -76,6 +76,13 @@ sometimes an abbreviation, so anything a demo actually points at is worth writin
 | mar:xSteps | the steps knob |
 | mar:t1Out | the first gate output |
 | mar:x1Out | the first voltage output |
+| dly:audioIn | the delay's input |
+| dly:clockIn | the delay's clock input |
+| dly:mixOut | the delay's mix output |
+| dly:time | the time knob |
+| dly:feedback | the feedback knob |
+| dly:tone | the tone knob |
+| mixer:chanC | the mixer input for channel three |
 | lpg:outB | the output terminal of channel B |
 | lpg:strikeA | the strike button on channel A |
 | lpg:decayA | the decay knob on channel A |
@@ -84,6 +91,47 @@ sometimes an abbreviation, so anything a demo actually points at is worth writin
 | lpg:rate | the rate knob on the gate's clock |
 | lpg:divA | the clock ratio for channel A |
 | lpg:divB | the clock ratio for channel B |
+| videoOut:imageIn | the video output's image input |
+| videoOut:window | the window button on the video output |
+| videoOut:test | the test pattern button |
+| field:fieldOut | the field output of the coordinate field |
+| field:field | the field selector on the coordinate field |
+| field:scale | the scale knob on the coordinate field |
+| field:polar | the polar knob on the coordinate field |
+| field:twist | the twist knob on the coordinate field |
+| field:tile | the tile knob on the coordinate field |
+| field:quantise | the quantise knob on the coordinate field |
+| field:scroll | the scroll knob on the coordinate field |
+| field:rotate | the rotate knob on the coordinate field |
+| field:offsetXCv | the X jack in the middle of the coordinate field's X knob |
+| field:offsetYCv | the Y jack in the middle of the coordinate field's Y knob |
+| shapes:fieldIn | the field input on shapes |
+| shapes:shapeOut | the shape output of shapes |
+| shapes:centre | the centre knob on shapes |
+| shapes:width | the width knob on shapes |
+| shapes:soft | the soft knob on shapes |
+| shapes:mode | the mode switch on shapes |
+| timeMachine:imageIn | the image input on the time module |
+| timeMachine:imageOut | the image output of the time module |
+| timeMachine:mode | the mode selector on the time module |
+| timeMachine:spread | the spread knob on the time module |
+| videoMaths:aIn | the A input on video maths |
+| videoMaths:bIn | the B input on video maths |
+| videoMaths:outImage | the output of video maths |
+| videoMaths:op | the operation selector on video maths |
+| compositor:aIn | the A input on the compositor |
+| compositor:bIn | the B input on the compositor |
+| compositor:keyIn | the key input on the compositor |
+| compositor:imageOut | the compositor's output |
+| compositor:mode | the blend list on the compositor |
+| compositor:key | the key amount knob on the compositor |
+| lfo:fnA | the function generator's channel A output |
+| lfo:fnB | the function generator's channel B output |
+| lfo:modeA | the mode switch for channel A |
+| lfo:modeB | the mode switch for channel B |
+| lfo:attackA | the attack knob on channel A |
+| lfo:decayA | the decay knob on channel A |
+| lfo:quadEnAB | the quadrature button for channels A and B |
 
 # How this file works
 
@@ -95,6 +143,16 @@ by name, so a mistyped heading fails loudly rather than quietly saying nothing. 
 - **Long** — what to say early on, when the reader does not yet know the vocabulary.
 - **After** — what to say when the move just before it already named the thing.
 - **Short** — what to say later, once they do.
+- **Combined** — the WHOLE gesture in one sentence, said while the pointer is still travelling: "click
+  the enable button", not "move the pointer to the enable button" and then "click it". This is what a
+  reel uses. The two-part form is a tutorial's, for a reader being taught the gesture itself.
+
+A gesture is narrated less the more often it happens: in full the first time that kind of action comes
+round, briefly the second, and silently after that. And a gesture whose control the step's own NOTE has
+already named says nothing at all — the note has done the naming, and saying it again is the same words
+twice in two breaths. The badge beside the pointer still shows every time, so what is happening stays
+legible without being spoken. A step can override all of this with its own `say`, or force a level with
+`voice`.
 
 **After** is what to say when the thing was named a moment ago — the pointer moves to the enable
 button, so the click that follows says "click it" rather than naming the button all over again. Used
@@ -181,6 +239,11 @@ the words under an existing one does not.
 
 **Badge** left click
 
+**Combined**
+- take a cable from {target}
+- let's take a cable from {target}
+- we'll start a cable at {target}
+
 **Long**
 - left click {target} to take hold of a cable
 - click {target}, and a cable comes with the pointer
@@ -196,6 +259,11 @@ the words under an existing one does not.
 ## dropCable
 
 **Badge** left click
+
+**Combined**
+- and drop it on {target}
+- and land it on {target}
+- and put it into {target}
 
 **Long**
 - left click {target} to drop the cable into it
@@ -213,6 +281,11 @@ the words under an existing one does not.
 
 **Badge** left click
 
+**Combined**
+- let's click {target}
+- click {target}
+- we'll click {target}
+
 **Long**
 - left click {target}
 - press {target}
@@ -229,6 +302,11 @@ the words under an existing one does not.
 
 **Badge** scroll-wheel
 
+**Combined**
+- let's turn {target}
+- we'll turn {target}
+- turn {target}
+
 **Long**
 - turn the scroll wheel over {target}
 - roll the wheel to move {target}
@@ -244,6 +322,10 @@ the words under an existing one does not.
 ## rightClick
 
 **Badge** right click
+
+**Combined**
+- right click {target}
+- let's right click {target}
 
 **Long**
 - right click {target} to open its menu
@@ -271,6 +353,10 @@ the words under an existing one does not.
 
 **Badge** left click
 
+**Combined**
+- and choose it
+- and take that one
+
 **Long**
 - click it
 - choose it
@@ -297,6 +383,11 @@ the words under an existing one does not.
 ## openList
 
 **Badge** left click
+
+**Combined**
+- let's open {target}
+- open {target}
+- we'll open {target}
 
 **Long**
 - click {target} and every value it can take opens over it
@@ -326,6 +417,11 @@ the words under an existing one does not.
 
 **Badge** left click
 
+**Combined**
+- and take that one
+- and choose that
+- and there it is
+
 **Long**
 - click the value and the list closes on it
 - click to choose it
@@ -334,9 +430,91 @@ the words under an existing one does not.
 - click
 - choose it
 
+## moveToCable
+
+**Badge** move pointer
+
+**Long**
+- move the pointer to the cable at {target}
+- move the pointer to where that cable meets {target}
+
+**Short**
+- move to the cable
+- move
+
+## pullCable
+
+**Badge** click
+
+**Combined**
+- take hold of the cable at {target}
+- let's take hold of the cable at {target}
+
+**Long**
+- click, and the end of the cable comes away into the pointer
+- click, and that end lifts out of the socket
+
+**After**
+- click, and it comes away
+- click, and it lifts out
+
+**Short**
+- click
+- take it out
+
+## moveToEmpty
+
+**Badge** move pointer
+
+**Long**
+- carry it out to where there is nothing
+- carry the loose end clear of the modules
+
+**Short**
+- carry it clear
+- move it away
+
+## dropAway
+
+**Badge** click
+
+**Combined**
+- and let it go where there is nothing, which removes it
+- and drop it clear of everything, which takes the cable away
+
+**Long**
+- click, and letting it go on empty space removes the cable
+- click, and dropped on nothing the cable is gone
+
+**After**
+- click, and it is gone
+- click, and that cable is removed
+
+**Short**
+- click
+- drop it
+
+## moveToTitle
+
+**Badge** move pointer
+
+**Combined**
+- take hold of the module by its title strip
+- let's pick the module up by its title strip
+
+**Long**
+- move the pointer to the module's title strip
+
+**Short**
+- move to the title strip
+
 ## switchPage
 
 **Badge** left click
+
+**Combined**
+- let's go to that page
+- so we click the tab, and there we are
 
 **Long**
 - left click the tab to go to that page

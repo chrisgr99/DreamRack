@@ -1,6 +1,6 @@
 {
  "id": "reel-chance",
- "title": "Reel — a clock, a gate and a handful of chance",
+ "title": "Reel — a clock, a gate, a handful of chance and an echo",
  "defaults": {
   "perform": 1.0,
   "arrive": 2.0,
@@ -90,7 +90,7 @@
    "do": "choose",
    "target": "clk:bpm",
    "to": 96,
-   "note": "The tempo is not a knob. It is a window, and clicking it opens every value it can take."
+   "note": "The tempo is not a knob. It is a window — scroll it to nudge, or click it and every value it can take opens over it."
   },
   {
    "do": "pause",
@@ -111,7 +111,7 @@
    "target": "clk:swing1",
    "to": 0.55,
    "perform": 3.0,
-   "note": "Swing drags every second pulse late, and the pair still takes the time two straight ones would."
+   "note": "Swing drags every second pulse of this clock late, and the pair still takes the time two straight ones would — so the rhythm leans without the tempo moving."
   },
   {
    "do": "pause",
@@ -173,10 +173,67 @@
    "for": 5.0
   },
   {
+   "do": "add",
+   "module": "wcoast.delay",
+   "as": "dly",
+   "row": 1,
+   "x": 200,
+   "note": "One more: a delay. Its input takes a second cable off the gate, so the dry pluck keeps its own way to the mixer and this is a send."
+  },
+  {
+   "do": "patch",
+   "from": "lpg:outA",
+   "to": "dly:audioIn"
+  },
+  {
+   "do": "patch",
+   "from": "dly:mixOut",
+   "to": "mixer:chanC"
+  },
+  {
+   "do": "set",
+   "target": "dly:feedback",
+   "to": 0.62,
+   "perform": 2.0,
+   "note": "Feedback decides how many times it comes round."
+  },
+  {
+   "do": "pause",
+   "for": 5.0
+  },
+  {
+   "do": "patch",
+   "from": "clk:clk2Out",
+   "to": "dly:clockIn",
+   "note": "And a clock into its own input. The time knob stops being a duration and becomes a ratio to that beat — half a second on the dial is one beat at any tempo."
+  },
+  {
+   "do": "set",
+   "target": "dly:time",
+   "to": 0.25,
+   "perform": 2.5,
+   "note": "Half a beat."
+  },
+  {
+   "do": "pause",
+   "for": 6.0
+  },
+  {
+   "do": "set",
+   "target": "dly:tone",
+   "to": 0.2,
+   "perform": 2.5,
+   "note": "Tone filters what goes back in rather than what comes out, so each repeat is darker than the one before it instead of merely quieter."
+  },
+  {
+   "do": "pause",
+   "for": 7.0
+  },
+  {
    "do": "set",
    "target": "clk:run",
    "to": "off",
-   "note": "And that is four modules, six cables, and about a minute."
+   "note": "6 modules, 8 cables, and nothing in it that was not a click or a scroll."
   },
   {
    "do": "pause",

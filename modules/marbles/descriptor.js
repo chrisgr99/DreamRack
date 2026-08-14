@@ -32,9 +32,13 @@ const onoff = () => ({ curve: 'stepped', steps: [{ value: 'off' }, { value: 'on'
 export default {
   apiVersion: 1,
   id: 'wcoast.marbles',
-  name: 'Marbles',
+  // RANDOM SAMPLER, not Marbles. The name Marbles belongs to Émilie Gillet's hardware; the design and
+  // the DSP are hers and are credited throughout, but the word is not ours to put on a panel. The
+  // descriptor id, this folder and the worklet keep the old name — it is written into every saved
+  // patch that has one, and renaming it would break those files to change a label.
+  name: 'Random Sampler',
   category: 'random',
-  abbreviation: 'MRB',
+  abbreviation: 'RSM',   // shown on scope and monitor labels, so it is user-facing too
   scope: 'voice',
   hp: 15,
   worklets: ['modules/marbles/marbles-processor.js'],

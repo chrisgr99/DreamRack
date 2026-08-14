@@ -1,0 +1,209 @@
+{
+ "id": "reel-video",
+ "title": "Reel — the video modules, one at a time",
+ "stage": [
+  "R1: osc func prog",
+  "R2: lpg",
+  "VR1: field shapes videoMaths timeMachine compositor videoOut"
+ ],
+ "page": "a1",
+ "defaults": {
+  "perform": 1.4,
+  "arrive": 2.0,
+  "beat": 0.7,
+  "settle": 1.0,
+  "hold": 3.0
+ },
+ "steps": [
+  {
+   "do": "say",
+   "note": "This demo will highlight a few features of DreamRack video synthesis. We will also see how to modulate video with a normal audio control voltage."
+  },
+  {
+   "do": "page",
+   "to": "video",
+   "say": "Let's go to the video page."
+  },
+  {
+   "do": "say",
+   "settle": 1.4,
+   "note": "These are some of the basic video modules, left to right in the order they are normally used. We'll learn a bit about each and build a video patch."
+  },
+  {
+   "do": "point",
+   "at": "videoOut",
+   "settle": 1.2,
+   "note": "Video Output, at the right hand end. Every video chain finishes here. Even without input it can show the test pattern you see here."
+  },
+  {
+   "do": "set",
+   "target": "videoOut:window",
+   "to": "on",
+   "settle": 2.5,
+   "note": "You can open the output into a larger window, make it full screen, or open it on a different monitor. Let's open it on the right."
+  },
+  {
+   "do": "point",
+   "at": "field",
+   "settle": 1.2,
+   "note": "Coordinate Field, at the far end, and it's the workhorse of the set. It owns a coordinate space and does two things with it: it moves that space, and it reads a value out of it as brightness."
+  },
+  {
+   "do": "patch",
+   "from": "field:fieldOut",
+   "to": "videoOut:imageIn",
+   "settle": 2.0,
+   "note": "Patch it straight to the output, replacing the test pattern."
+  },
+  {
+   "do": "set",
+   "target": "field:field",
+   "to": "radius",
+   "settle": 2.0,
+   "note": "Radius gives us distance from the centre of the frame, drawn as brightness. The coordinate module gives us a soft gradient, so there isn't much to see with it alone. We'll bring in the next module before touching any of these knobs."
+  },
+  {
+   "do": "point",
+   "at": "shapes",
+   "settle": 1.6,
+   "note": "Shapes. It takes a field and keeps a slice of it, and that's how you get something with an edge out of something that's all gradient."
+  },
+  {
+   "do": "repatch",
+   "at": "field:fieldOut",
+   "to": "shapes:shapeOut",
+   "settle": 1.6
+  },
+  {
+   "do": "patch",
+   "from": "field:fieldOut",
+   "to": "shapes:fieldIn",
+   "settle": 2.0,
+   "after": "And the chain is three modules long."
+  },
+  {
+   "do": "set",
+   "target": "shapes:width",
+   "to": 0.1,
+   "perform": 2.5,
+   "settle": 1.4,
+   "note": "Width is how much of the field we keep. Narrow it down and what's left is a thin ring."
+  },
+  {
+   "do": "set",
+   "target": "shapes:centre",
+   "to": 0.32,
+   "perform": 2.5,
+   "settle": 1.4,
+   "note": "Centre is where in the field that slice sits, so on a radius field it moves the ring in and out."
+  },
+  {
+   "do": "set",
+   "target": "shapes:width",
+   "to": 0.55,
+   "perform": 2.5,
+   "settle": 1.6,
+   "note": "Open the width right up and the ring fills in to a disc. One control gives you both, which is why there's no shape switch."
+  },
+  {
+   "do": "set",
+   "target": "shapes:mode",
+   "to": "above",
+   "settle": 2.0,
+   "note": "And it isn't only rings. The mode switch keeps everything above the slice instead of the slice itself, which turns the same field into an edge rather than a band."
+  },
+  {
+   "do": "set",
+   "target": "shapes:width",
+   "to": 0.47,
+   "perform": 2.0,
+   "settle": 1.0,
+   "note": "Narrow it back a little and that edge gets a soft band of its own."
+  },
+  {
+   "do": "set",
+   "target": "shapes:centre",
+   "to": 0.11,
+   "perform": 2.0,
+   "settle": 1.0,
+   "note": "Set low, the edge sits near the middle of the field."
+  },
+  {
+   "do": "set",
+   "target": "shapes:soft",
+   "to": 0.24,
+   "perform": 2.0,
+   "settle": 1.8,
+   "note": "And soft turns the cut into a gradient, which is what you want when the shape is going to meet something else rather than be looked at on its own."
+  },
+  {
+   "do": "say",
+   "settle": 0.8,
+   "note": "Now we have an edge to watch, the coordinate field's own controls are worth going back to. Every one of them moves the space that edge is cut out of."
+  },
+  {
+   "do": "set",
+   "target": "field:scale",
+   "to": 4.5,
+   "perform": 2.5,
+   "settle": 1.0,
+   "note": "Scale zooms that space. Far enough out and there's nothing left in the frame, which is the honest thing a zoom does."
+  },
+  {
+   "do": "set",
+   "target": "field:scale",
+   "to": 0.64,
+   "perform": 2.5,
+   "settle": 1.4,
+   "note": "So we come back in, past where we started, until the whole of it is in view."
+  },
+  {
+   "do": "set",
+   "target": "field:tile",
+   "to": 5.24,
+   "perform": 3.0,
+   "settle": 1.8,
+   "note": "Tile repeats the space across the frame. One shape becomes a row of them, and it costs nothing — the same field is simply read more than once."
+  },
+  {
+   "do": "set",
+   "target": "field:quantise",
+   "to": 4.7,
+   "perform": 3.0,
+   "settle": 2.0,
+   "note": "Quantise steps the field into bands instead of a smooth run, and that's what turns a gradient into hard-edged rings."
+  },
+  {
+   "do": "set",
+   "target": "field:twist",
+   "to": 0.42,
+   "perform": 2.5,
+   "settle": 1.4,
+   "note": "Twist turns the space further the further out you go, so the bands wind round each other."
+  },
+  {
+   "do": "set",
+   "target": "field:rotate",
+   "to": 0.27,
+   "perform": 2.0,
+   "settle": 1.2,
+   "note": "Rotate turns the whole thing."
+  },
+  {
+   "do": "set",
+   "target": "field:polar",
+   "to": 0.13,
+   "perform": 2.0,
+   "settle": 1.6,
+   "note": "And polar is a sweep rather than a switch, so a little of it bends the grid without going all the way round."
+  },
+  {
+   "do": "set",
+   "target": "field:scroll",
+   "to": 0.51,
+   "perform": 2.5,
+   "settle": 4.0,
+   "note": "Scroll is the one that makes it move. It drifts what's read out of the space, half a frame a second, and nothing is patched to do it — the video is running on its own now, out of two modules and two cables."
+  }
+ ]
+}

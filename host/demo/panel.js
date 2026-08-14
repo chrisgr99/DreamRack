@@ -78,7 +78,11 @@ export function createDemoPanel({ demos = [], onSelect, onRun, onStop, onRestart
         '<label>Rate ' +
           '<select class="demo-panel-rate">' +
             '<option value="0.5">0.5×</option><option value="0.75">0.75×</option>' +
-            '<option value="1" selected>1×</option><option value="1.5">1.5×</option><option value="2">2×</option>' +
+            // ONE AND A HALF BY DEFAULT. A demo is watched, not worked through: at 1× the pointer
+            // ambles between two knobs that are four inches apart and the whole thing sags. A
+            // tutorial someone is following along with can be slowed from here; a reel should not
+            // have to be sped up before it is worth watching.
+            '<option value="1">1×</option><option value="1.5" selected>1.5×</option><option value="2">2×</option>' +
           '</select>' +
         '</label>' +
         // Captions OFF by default: the narration is spoken, and a card over the rack is in the way

@@ -56,7 +56,12 @@ export function parseVoiceSettings(md) {
 }
 
 // Actions out of the markdown: a camelCase `##` heading opens one, a **Badge** line sets its chip
-// text, **Long** / **Short** switch which list the bullets below them join. Everything else is prose
+// text, **Long** / **Short** / **Combined** switch which list the bullets below them join.
+//
+// COMBINED is one sentence for the whole gesture — the travel and the act together, spoken while the
+// pointer is still moving: "click the X button", not "move the pointer to the X button" and then
+// "click it". Two sentences was right for a tutorial teaching the gesture and wrong for a reel, where
+// the gesture is not the subject and saying it twice is what made the narration sound mechanical. Everything else is prose
 // and is ignored, so the file can explain itself around the data.
 export function parseActions(md) {
   const actions = {};
@@ -67,12 +72,12 @@ export function parseActions(md) {
     // camelCase only — a lower-case first letter and no spaces. That is what keeps prose headings
     // like "Voice" or "How this file works" from being mistaken for actions.
     const head = /^##\s+([a-z][A-Za-z0-9]*)\s*$/.exec(line);
-    if (head) { cur = actions[head[1]] = { badge: '', long: [], after: [], short: [] }; list = null; continue; }
+    if (head) { cur = actions[head[1]] = { badge: '', long: [], after: [], short: [], combined: [] }; list = null; continue; }
 
     if (!cur) continue;
     const badge = /^\*\*Badge\*\*\s*(.+?)\s*$/i.exec(line);
     if (badge) { cur.badge = badge[1]; list = null; continue; }
-    const which = /^\*\*(Long|After|Short)\*\*\s*$/i.exec(line);
+    const which = /^\*\*(Long|After|Short|Combined)\*\*\s*$/i.exec(line);
     if (which) { list = which[1].toLowerCase(); continue; }
     if (/^#/.test(line)) { cur = null; list = null; continue; }   // a new section ends the action
 
@@ -111,17 +116,23 @@ export function createPhraseBook(actions = {}, controls = {}) {
   // at is worth writing down properly.
   const describe = (ref, fallback) => controls[ref] || (fallback ? `the ${fallback}` : 'it');
 
-  const sayFor = (key, verbosity = 'long', { back = false, target = null, fallback = null } = {}) => {
+  const sayFor = (key, verbosity = 'long', { back = false, target = null, fallback = null, combined = false } = {}) => {
     if (verbosity === 'off') return null;
     const a = actions[key];
     if (!a) return null;
     const n = (seen.get(key) || 0);
     seen.set(key, n + 1);
-    const text = verbosity === 'short' ? pick(a.short, n)
-      : (back && a.after && a.after.length) ? pick(a.after, n)
-        : pick(a.long, n);
+    const text = combined ? pick(a.combined && a.combined.length ? a.combined : a.long, n)
+      : verbosity === 'short' ? pick(a.short, n)
+        : (back && a.after && a.after.length) ? pick(a.after, n)
+          : pick(a.long, n);
     return text ? text.replace('{target}', describe(target, fallback)) : text;
   };
+
+  // HOW MANY TIMES an action has come round already this run. The runner uses it to let the gesture
+  // narration fall away: said in full the first time, briefly the second, and not at all after that.
+  // You learn once that the wheel turns a knob; the tenth knob should simply turn.
+  const timesSaid = (key) => seen.get(key) || 0;
 
   // Occurrence counts are per demo: a replay must start from the same place or the variety would
   // drift with every run.
@@ -142,7 +153,7 @@ export function createPhraseBook(actions = {}, controls = {}) {
     for (const [key, a] of Object.entries(actions)) {
       const want = ACTION_KIND[key];
       const usable = (kinds && want) ? refs.filter((r) => kinds[r] === want) : refs;
-      for (const t of [...a.long, ...(a.after || []), ...a.short]) {
+      for (const t of [...a.long, ...(a.after || []), ...a.short, ...(a.combined || [])]) {
         if (!t) continue;
         if (t.includes('{target}')) { for (const r of usable) out.add(t.replace('{target}', controls[r])); }
         else out.add(t);
@@ -150,7 +161,7 @@ export function createPhraseBook(actions = {}, controls = {}) {
     }
     return [...out];
   };
-  return { badgeFor, sayFor, describe, reset, keys, all, actions, controls };
+  return { badgeFor, sayFor, describe, reset, keys, all, timesSaid, actions, controls };
 }
 
 // Browser side: fetch and parse. A missing or unreadable file is a normal state — the demo still

@@ -2,37 +2,37 @@
  "demos": [
   {
    "id": "fast-first-sound",
-   "title": "Fast first sound — open an example",
+   "title": "Fast first sound \u2014 open an example",
    "file": "fast-first-sound.json"
   },
   {
    "id": "fast-knobs",
-   "title": "Fast first sound — turning the knobs",
+   "title": "Fast first sound \u2014 turning the knobs",
    "file": "fast-knobs.json"
   },
   {
    "id": "fast-output",
-   "title": "Fast first sound — where the sound goes out",
+   "title": "Fast first sound \u2014 where the sound goes out",
    "file": "fast-output.json"
   },
   {
    "id": "cables",
-   "title": "Cables — click, move, click",
+   "title": "Cables \u2014 click, move, click",
    "file": "cables.json"
   },
   {
    "id": "knobs",
-   "title": "Knobs — hover and scroll",
+   "title": "Knobs \u2014 hover and scroll",
    "file": "knobs.json"
   },
   {
    "id": "engine",
-   "title": "The engine — where sound starts",
+   "title": "The engine \u2014 where sound starts",
    "file": "engine.json"
   },
   {
    "id": "first-sound",
-   "title": "First sound — oscillator into the mixer",
+   "title": "First sound \u2014 oscillator into the mixer",
    "file": "first-sound.json"
   },
   {
@@ -42,7 +42,7 @@
   },
   {
    "id": "gate-patch",
-   "title": "Building a patch — through the gate",
+   "title": "Building a patch \u2014 through the gate",
    "file": "gate-patch.json"
   },
   {
@@ -67,28 +67,43 @@
   },
   {
    "id": "two-voices",
-   "title": "Bonus — two plucks drifting apart",
+   "title": "Bonus \u2014 two plucks drifting apart",
    "file": "two-voices.json"
   },
   {
    "id": "tabs",
-   "title": "Pages — a cable that crosses a tab",
+   "title": "Pages \u2014 a cable that crosses a tab",
    "file": "tabs.json"
   },
   {
    "id": "intro",
-   "title": "Reel — oscillator into gate into mixer",
+   "title": "Reel \u2014 oscillator into gate into mixer",
    "file": "intro.json"
   },
   {
    "id": "scope",
-   "title": "Seeing a signal — a scope on a terminal",
+   "title": "Seeing a signal \u2014 a scope on a terminal",
    "file": "scope.json"
   },
   {
    "id": "reel-chance",
-   "title": "Reel — a clock, a gate and a handful of chance",
+   "title": "Reel \u2014 a clock, a gate, a handful of chance and an echo",
    "file": "reel-chance.json"
+  },
+  {
+   "id": "reel-video",
+   "title": "Reel \u2014 the video modules, one at a time",
+   "file": "reel-video.json"
+  },
+  {
+   "id": "reel-video-fast",
+   "title": "Reel \u2014 video, short version",
+   "file": "reel-video-fast.json"
+  },
+  {
+   "id": "tour-video",
+   "title": "Tour \u2014 DreamRack video",
+   "file": "tour-video.json"
   }
  ]
 }
