@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="40.64mm" height="128.5mm" viewBox="3.9 0 40.64 128.5" font-family="Arial Narrow, Helvetica, Arial, sans-serif">
+<defs>
+  <linearGradient id="metalStripV" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#565a62"/><stop offset="0.45" stop-color="#6a6f78"/><stop offset="0.7" stop-color="#7a7f88"/><stop offset="1" stop-color="#8b909a"/></linearGradient>
+  <linearGradient id="metalStripH" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#565a62"/><stop offset="0.45" stop-color="#6a6f78"/><stop offset="0.7" stop-color="#7a7f88"/><stop offset="1" stop-color="#8b909a"/></linearGradient>
+  <radialGradient id="metalDisc"><stop offset="0" stop-color="#565a62"/><stop offset="0.45" stop-color="#6a6f78"/><stop offset="0.7" stop-color="#7a7f88"/><stop offset="1" stop-color="#8b909a"/></radialGradient>
+  <radialGradient id="blueRing"><stop offset="0" stop-color="#1688cc"/><stop offset="0.55" stop-color="#006da8"/><stop offset="1" stop-color="#003d62"/></radialGradient>
+  <radialGradient id="orangeRing"><stop offset="0" stop-color="#f2953a"/><stop offset="0.55" stop-color="#d06b00"/><stop offset="1" stop-color="#6f3800"/></radialGradient>
+  <radialGradient id="greenRing"><stop offset="0" stop-color="#3ec06a"/><stop offset="0.55" stop-color="#149146"/><stop offset="1" stop-color="#0a4a24"/></radialGradient>
+  <radialGradient id="purpleRing"><stop offset="0" stop-color="#a07ae0"/><stop offset="0.55" stop-color="#7548c0"/><stop offset="1" stop-color="#3d2268"/></radialGradient>
+  <radialGradient id="blueDial"><stop offset="0" stop-color="#1d79b7"/><stop offset="0.6" stop-color="#00639a"/><stop offset="1" stop-color="#00456e"/></radialGradient>
+  <radialGradient id="knobCap"><stop offset="0" stop-color="#3a3d43"/><stop offset="0.4" stop-color="#4c5058"/><stop offset="0.62" stop-color="#5a5f67"/><stop offset="1" stop-color="#6b7079"/></radialGradient>
+  <radialGradient id="redLed"><stop offset="0" stop-color="#ff4a4a"/><stop offset="0.55" stop-color="#d00000"/><stop offset="1" stop-color="#650000"/></radialGradient>
+  <radialGradient id="greenLed"><stop offset="0" stop-color="#5cf07a"/><stop offset="0.55" stop-color="#12a531"/><stop offset="1" stop-color="#054d15"/></radialGradient>
+  <radialGradient id="orangeLed"><stop offset="0" stop-color="#ffbf5c"/><stop offset="0.55" stop-color="#ef7d00"/><stop offset="1" stop-color="#7a3a00"/></radialGradient>
+</defs>
+  <g transform="translate(3.9 7.0994)">
+  <rect x="0" y="0" width="40.64" height="113.5912" rx="2.5" fill="#262629"/>
+  <rect x="0.5" y="0.5" width="39.64" height="112.5912" rx="2.2" fill="none" stroke="#808085" stroke-width="0.5"/>
+  <text x="7.1584" y="7.4" font-size="3.106" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">NOTE</text>
+  <g data-wcoast-port="noteIn" data-wcoast-cx="20.32" data-wcoast-cy="12.4">
+    <circle cx="20.32" cy="12.4" r="3" fill="#8a8a8a" stroke="#000000" stroke-width="0.3"/>
+    <circle cx="20.32" cy="12.4" r="1.6" fill="#000000"/>
+  </g>
+  <text x="20.32" y="18.80432" font-size="2.5060000000000002" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">note</text>
+  <line x1="4.4704" y1="35.93" x2="36.1704" y2="35.93" stroke="#808085" stroke-width="0.355"/>
+  <g data-wcoast-port="levelOut" data-wcoast-cx="7.47" data-wcoast-cy="52.45">
+    <circle cx="7.47" cy="52.45" r="3" fill="#8a8a8a" stroke="#000000" stroke-width="0.3"/>
+    <circle cx="7.47" cy="52.45" r="1.6" fill="#000000"/>
+  </g>
+  <text x="7.47" y="58.85432" font-size="2.5060000000000002" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">level</text>
+  <g data-wcoast-port="durOut" data-wcoast-cx="33.17" data-wcoast-cy="52.45">
+    <circle cx="33.17" cy="52.45" r="3" fill="#8a8a8a" stroke="#000000" stroke-width="0.3"/>
+    <circle cx="33.17" cy="52.45" r="1.6" fill="#000000"/>
+  </g>
+  <text x="33.17" y="58.85432" font-size="2.5060000000000002" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">dur</text>
+  <g data-wcoast-port="panOut" data-wcoast-cx="7.47" data-wcoast-cy="80.58">
+    <circle cx="7.47" cy="80.58" r="3" fill="#8a8a8a" stroke="#000000" stroke-width="0.3"/>
+    <circle cx="7.47" cy="80.58" r="1.6" fill="#000000"/>
+  </g>
+  <text x="7.47" y="86.98432" font-size="2.5060000000000002" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">pan</text>
+  <g data-wcoast-port="bendOut" data-wcoast-cx="33.17" data-wcoast-cy="80.58">
+    <circle cx="33.17" cy="80.58" r="3" fill="#8a8a8a" stroke="#000000" stroke-width="0.3"/>
+    <circle cx="33.17" cy="80.58" r="1.6" fill="#000000"/>
+  </g>
+  <text x="33.17" y="86.98432" font-size="2.5060000000000002" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">bend</text>
+  <line x1="4.4704" y1="97.99" x2="36.1704" y2="97.99" stroke="#808085" stroke-width="0.355"/>
+  <text x="3.97" y="104.59" font-size="2.906" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="start" font-family="Arial Narrow, Helvetica, Arial, sans-serif">OUT</text>
+  <g data-wcoast-port="gateOut" data-wcoast-cx="13.67" data-wcoast-cy="103.3912">
+    <circle cx="13.67" cy="103.3912" r="3" fill="#8a8a8a" stroke="#000000" stroke-width="0.3"/>
+    <circle cx="13.67" cy="103.3912" r="1.6" fill="#000000"/>
+  </g>
+  <text x="13.67" y="109.79552" font-size="2.5060000000000002" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">gate</text>
+  <g data-wcoast-port="pitchOut" data-wcoast-cx="33.17" data-wcoast-cy="103.3912">
+    <circle cx="33.17" cy="103.3912" r="3" fill="#8a8a8a" stroke="#000000" stroke-width="0.3"/>
+    <circle cx="33.17" cy="103.3912" r="1.6" fill="#000000"/>
+  </g>
+  <text x="33.17" y="109.79552" font-size="2.5060000000000002" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">v/oct</text>
+  </g>
+</svg>

@@ -96,7 +96,7 @@ for (const s of STAGES) ports.push({ id: `sel${s}`, name: `Select ${s}`, section
 // Module outputs.
 ports.push({ id: 'outA', name: 'A', section: 'out', domain: 'control', dir: 'out' });
 ports.push({ id: 'outB', name: 'B', section: 'out', domain: 'control', dir: 'out' });
-ports.push({ id: 'outAB', name: 'A minus B', section: 'out', domain: 'control', dir: 'out' });
+ports.push({ id: 'outAB', name: 'A minus B', section: 'out', domain: 'control', dir: 'out', polarity: 'bipolar' });
 ports.push({ id: 'allGate', name: 'All Gate', section: 'out', domain: 'trigger', dir: 'out' });
 ports.push({ id: 'trig', name: 'Trigger', section: 'out', domain: 'trigger', dir: 'out' });
 // Per-stage pulse outputs — fire when that stage becomes active, by any means.

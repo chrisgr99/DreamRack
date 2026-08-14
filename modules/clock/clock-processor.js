@@ -34,6 +34,16 @@ const RATIOS = [1, 1.5, 2, 2.5, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16,
   24, 29, 31, 32, 37, 41, 43, 47, 48, 53, 59, 61, 64, 96];
 
 const BPM_MIN = 30, BPM_MAX = 300;
+// THE TEMPO CV SCALE, and it is a convention rather than a fact about this module: 0 to 1 across 0 to
+// BPM_CV_FULL, so 0.12 is 120 BPM. Chosen so that any module speaking about tempo can be swapped for
+// any other — a scale each module interpreted its own way would make two clocks that agree on nothing.
+// The ceiling is far above anything anyone plays, which is the point: it is a fixed reference, not a
+// range to use up. ZERO IS STOPPED, not a very slow tempo.
+//
+// It replaces a 1V/oct reading — 120 BPM at zero, doubling per volt — which was the more musical
+// scale and the less interoperable one.
+const BPM_CV_FULL = 1000;
+const BPM_CV_STOP = 1;         // below one beat per minute the clock simply halts
 const LEN_MAX = 60 / BPM_MIN, LEN_MIN = 60 / BPM_MAX;
 // The sync window at the end of a sub-clock's last period. It must be low through this region, and it
 // is where it waits for the master. Half a millisecond, as in the original: long enough to be reached
@@ -172,6 +182,8 @@ class ClockEngine extends AudioWorkletProcessor {
     this._masterLength = 0.5;        // 120 BPM
     this._sampleTime = 1 / sampleRate;
     this._bpmMode = 'cv';
+    this._bpmCv = 120 / BPM_CV_FULL;   // what the BPM output carries until the first block runs
+    this._cvStopped = false;
     this._ppqn = 4;
     // Edge detection on the two transport inputs, and the reset pulse we emit.
     this._runPrev = 0;
@@ -221,6 +233,7 @@ class ClockEngine extends AudioWorkletProcessor {
     const out = [outputs[0][0], outputs[1][0], outputs[2][0], outputs[3][0]];
     const runOut = outputs[4] && outputs[4][0];
     const resetOut = outputs[5] && outputs[5][0];
+    const bpmOut = outputs[6] && outputs[6][0];
     const n = out[0] ? out[0].length : 128;
     const st = this._sampleTime;
 
@@ -228,16 +241,38 @@ class ClockEngine extends AudioWorkletProcessor {
     // the original prints "Ext." on the display when a cable is in, and this is that.
     // Coarse plus fine: the knob steps ten and the trim beside it adds the units, so any tempo in the
     // range is reachable and neither control has to be precise.
-    let target = 60 / Math.max(BPM_MIN, Math.min(BPM_MAX, parameters.bpm[0] + parameters.bpmFine[0]));
+    let bpmNow = Math.max(BPM_MIN, Math.min(BPM_MAX, parameters.bpm[0] + parameters.bpmFine[0]));
+    let target = 60 / bpmNow;
+    this._cvStopped = false;
     if (bpmIn && this._bpmMode === 'cv') {
-      // 1V/oct for tempo: 120 BPM at zero, doubling per volt, so a pitch CV transposes tempo the same
-      // way it transposes an oscillator. T = 60 / (120 * 2^V) = 0.5 / 2^V.
-      target = 0.5 / Math.pow(2, bpmIn[0]);
+      // 0..1 across 0..BPM_CV_FULL. Clamped at both ends: a negative CV is not a tempo, and above one
+      // there is nothing left to ask for.
+      const cv = Math.max(0, Math.min(1, bpmIn[0]));
+      bpmNow = cv * BPM_CV_FULL;
+      if (bpmNow < BPM_CV_STOP) {
+        // Stopped, not crawling. Holding the period at its slowest and letting the phase creep would
+        // start a beat minutes later that nobody asked for; and 60/0 is not a number.
+        this._cvStopped = true;
+        target = LEN_MAX;
+      } else {
+        target = 60 / bpmNow;
+      }
     } else if (bpmIn && this._bpmMode === 'clock' && this._extPeriod > 0) {
       // Locked to an incoming clock: its measured period times the pulses per quarter note is a beat.
       target = this._extPeriod * this._ppqn;
     }
-    target = Math.max(LEN_MIN, Math.min(LEN_MAX, target));
+    // THE KNOB'S RANGE IS NOT THE CV'S. The knob runs 30 to 300 BPM, which is what a tempo control
+    // should offer a hand; the CV is a shared scale that reaches 1000, and clamping it to the knob's
+    // limits would leave everything above 0.3 doing nothing — seven tenths of a scale that exists to
+    // be relied on. So a cable is allowed the whole way, down to one beat a minute and up to a
+    // thousand, and only the knob is held to a musical range.
+    const cvDriven = !!(bpmIn && this._bpmMode === 'cv');
+    const lenMin = cvDriven ? 60 / BPM_CV_FULL : LEN_MIN;
+    const lenMax = cvDriven ? 60 / BPM_CV_STOP : LEN_MAX;
+    target = Math.max(lenMin, Math.min(lenMax, target));
+    // What the BPM output carries, on the same scale the input reads: the tempo the ENGINE settled on,
+    // so a chain of clocks passes on what is actually running rather than what a knob says.
+    this._bpmCv = this._cvStopped ? 0 : Math.max(0, Math.min(1, (60 / target) / BPM_CV_FULL));
     if (target !== this._masterLength) {
       const factor = target / this._masterLength;
       for (const c of this._all) c.stretch(factor);
@@ -277,7 +312,7 @@ class ClockEngine extends AudioWorkletProcessor {
         this._extPrev = v;
       }
 
-      if (this._running) {
+      if (this._running && !this._cvStopped) {
         // A frame begins when a clock has reset. The master takes its period; each sub-clock takes a
         // period and an iteration count derived from its ratio, and a ratio changed mid-run is picked
         // up here — at a frame boundary, never in the middle of one.
@@ -321,6 +356,7 @@ class ClockEngine extends AudioWorkletProcessor {
         this._edgePrev[k] = high;
         if (this._lampLeft[k] > 0) this._lampLeft[k]--;
       }
+      if (bpmOut) bpmOut[i] = this._bpmCv;
       if (runOut) runOut[i] = this._running ? 1 : 0;
       if (resetOut) { resetOut[i] = this._resetPulse > 0 ? 1 : 0; if (this._resetPulse > 0) this._resetPulse--; }
 

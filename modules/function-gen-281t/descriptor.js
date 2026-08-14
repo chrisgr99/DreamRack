@@ -36,8 +36,11 @@ const params = [];
 // Port names mirror the faceplate labels (the user-facing text on the panel), plus the channel letter.
 for (const L of CH) ports.push({ id: `trig${L}`, name: `Trig ${L}`, section: 'channel', domain: 'trigger', dir: 'in' });
 for (const L of CH) ports.push({ id: `cycleIn${L}`, name: `Cycle ${L}`, section: 'channel', domain: 'trigger', dir: 'in' });
-for (const L of CH) ports.push({ id: `attackCv${L}`, name: `Attack CV ${L}`, section: 'channel', domain: 'control', dir: 'in' });
-for (const L of CH) ports.push({ id: `decayCv${L}`, name: `Decay CV ${L}`, section: 'channel', domain: 'control', dir: 'in' });
+  // The trim that scales what arrives here. Named on the PORT, not merely present among the params,
+  // so the rack can see the pairing: it is what tells the panel this jack sits at a knob's centre
+  // and what earns the jack its bipolar dot, since an attenuverter can invert whatever is patched.
+for (const L of CH) ports.push({ id: `attackCv${L}`, name: `Attack CV ${L}`, section: 'channel', domain: 'control', dir: 'in', via: `attackDepth${L}` });
+for (const L of CH) ports.push({ id: `decayCv${L}`, name: `Decay CV ${L}`, section: 'channel', domain: 'control', dir: 'in', via: `decayDepth${L}` });
 for (const L of CH) ports.push({ id: `fn${L}`, name: `CV out ${L}`, section: 'channel', domain: 'control', dir: 'out' });
 for (const L of CH) ports.push({ id: `pulse${L}`, name: `Pulse out ${L}`, section: 'channel', domain: 'trigger', dir: 'out' });
 ports.push({ id: 'quadOutAB', name: 'A-B out', section: 'quad', domain: 'control', dir: 'out' });

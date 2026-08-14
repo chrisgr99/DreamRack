@@ -39,6 +39,32 @@ export const DIRECTIONS = Object.freeze(['in', 'out']);
 // NOT enforce DSP-level correctness — the descriptor can be complete on paper
 // while its factory is still a stub. Throws on the first structural problem
 // with a message naming the offending module and field.
+// WHICH JACKS DEAL IN A SIGNAL THAT SWINGS BOTH WAYS, worked out rather than declared one port at a
+// time. The panel paints a white dot in the hole of every one of these (see faceplate-system.md §6a).
+//
+// A control input qualifies when either is true:
+//   - it has an ATTENUVERTER (`via` a param that goes negative). The trim can invert what arrives, so
+//     the input is bipolar-capable whatever is patched into it.
+//   - its TARGET param goes negative — pan, symmetry, a rate that can run backwards. Sending it a
+//     unipolar signal silently costs you half the control.
+//
+// Marking both is the consistent rule, and consistency is the point: a dot means "this can go either
+// way", and a reader should not have to know which of the two reasons applies. It does mean a great
+// many CV inputs carry one, which is simply true of this rack.
+//
+// A port that declares `polarity` itself is left alone — that is how outputs are marked, since
+// nothing about a descriptor says what an output's own range is, and how a module whose polarity
+// follows a control declares `unipolarWhen`.
+export function derivePolarity(descriptor) {
+  const params = new Map((descriptor.params || []).map((p) => [p.id, p]));
+  const signed = (id) => { const p = params.get(id); return !!(p && typeof p.min === 'number' && p.min < 0); };
+  for (const port of descriptor.ports || []) {
+    if (port.polarity || port.domain !== 'control' || port.dir !== 'in') continue;
+    if ((port.via && signed(port.via)) || (port.target && signed(port.target))) port.polarity = 'bipolar';
+  }
+  return descriptor;
+}
+
 export function validateDescriptor(descriptor) {
   const where = descriptor && descriptor.id ? `module "${descriptor.id}"` : 'module (no id)';
   if (!descriptor || typeof descriptor !== 'object') {
@@ -130,6 +156,7 @@ export class ModuleRegistry {
     }
     const { descriptor, create } = entry;
     validateDescriptor(descriptor);
+    derivePolarity(descriptor);
     if (create !== undefined && typeof create !== 'function') {
       throw new Error(`Module "${descriptor.id}" create must be a function if given.`);
     }

@@ -32,10 +32,13 @@ for (const L of CH) ports.push({ id: `trig${L}`, name: `Trig ${L}`, section: 'ch
 // knAck CV inputs — one per modulatable knob (the cable plugs into the knob's centre).
 // Appended AFTER trig so the existing worklet input indices (in 0-3, cv 4-7, trig 8-11)
 // are undisturbed; these become indices 12+ in descriptor order (see the factory).
-for (const L of CH) ports.push({ id: `levelCv${L}`, name: `Level CV ${L}`, section: 'channel', domain: 'control', dir: 'in' });
-for (const L of CH) ports.push({ id: `decayCv${L}`, name: `Decay CV ${L}`, section: 'channel', domain: 'control', dir: 'in' });
-for (const L of CH) ports.push({ id: `ratioCv${L}`, name: `Ratio CV ${L}`, section: 'channel', domain: 'control', dir: 'in' });
-ports.push({ id: 'rateCv', name: 'Rate CV', section: 'clock', domain: 'control', dir: 'in' });
+  // The trim that scales what arrives here. Named on the PORT, not merely present among the params,
+  // so the rack can see the pairing: it is what tells the panel this jack sits at a knob's centre
+  // and what earns the jack its bipolar dot, since an attenuverter can invert whatever is patched.
+for (const L of CH) ports.push({ id: `levelCv${L}`, name: `Level CV ${L}`, section: 'channel', domain: 'control', dir: 'in', via: `levelDepth${L}` });
+for (const L of CH) ports.push({ id: `decayCv${L}`, name: `Decay CV ${L}`, section: 'channel', domain: 'control', dir: 'in', via: `decayDepth${L}` });
+for (const L of CH) ports.push({ id: `ratioCv${L}`, name: `Ratio CV ${L}`, section: 'channel', domain: 'control', dir: 'in', via: `ratioDepth${L}` });
+ports.push({ id: 'rateCv', name: 'Rate CV', section: 'clock', domain: 'control', dir: 'in', via: 'rateDepth' });
 for (const L of CH) ports.push({ id: `out${L}`, name: `Out ${L}`, section: 'channel', domain: 'audio', dir: 'out' });
 ports.push({ id: 'mixOdd', name: 'Odd', section: 'sum', domain: 'audio', dir: 'out' });
 ports.push({ id: 'mixEven', name: 'Even', section: 'sum', domain: 'audio', dir: 'out' });

@@ -1076,6 +1076,7 @@ const JACK = {
   hole: '#2f2f33',     // centre plug-hole
   holeRim: '#cfcfd3',  // hair-thin light rim around the hole
   holeRimW: '0.15',
+  bipolar: '#ffffff',  // the dot marking a jack that deals in a signal swinging either side of zero
   edge: '#111111',     // thin black edge on every jack (light panel only)
   edgeW: '0.22',
 };
@@ -1144,6 +1145,39 @@ function paintJack(port, dark) {
   const noteInk = isNote(port.meta) ? (dark ? JACK.noteLight : JACK.noteDark) : null;
   if (noteInk) addNoteRing(port, outer, ro, rh, noteInk);
   addDirRing(port, outer, ro, rh, noteInk || JACK.ring);
+  // Only when there IS a hole: a jack drawn as a single circle has none, and sizing the dot from
+  // the outer radius would fill the whole jack with white.
+  addBipolarDot(port, hole !== outer ? hole : null);
+}
+
+// THE WHITE DOT: this jack deals in a signal that swings both ways.
+//
+// It is in the HOLE because the hole is the one part of a jack a cable never covers — a cord stops
+// half a width outside the rim, so the mark is there whether the jack is empty or patched, and it is
+// there at the moment it is wanted, which is when a hand is on the cable rather than after.
+//
+// ON OUTPUTS it says what you are about to send. ON INPUTS it says what this was built to be sent —
+// and only where that is true by design, which is a short list: pan, symmetry, mod index, the
+// coordinate field's signed controls, a rate that can run backwards. NOT on knАck inputs, whose
+// attenuverter exists precisely to turn a unipolar signal into a swing, so a dot on all of those
+// would appear on nearly every CV input in the rack and mean nothing.
+//
+// Painted here rather than drawn in the panel SVG, so a module whose polarity follows a control can
+// have the dot come and go — see rack._applyPolarity.
+function addBipolarDot(port, hole) {
+  const old = port.element.querySelector('.jack-bipolar');
+  if (old) old.remove();
+  if (!port.meta || port.meta.polarity !== 'bipolar' || !hole) return;
+  const cx = parseFloat(hole.getAttribute('cx')), cy = parseFloat(hole.getAttribute('cy'));
+  const rh = parseFloat(hole.getAttribute('r'));
+  if (!isFinite(cx) || !isFinite(cy) || !(rh > 0)) return;
+  const dot = port.element.ownerDocument.createElementNS(SVG_NS, 'circle');
+  dot.setAttribute('class', 'jack-bipolar');
+  dot.setAttribute('cx', round3(cx)); dot.setAttribute('cy', round3(cy));
+  dot.setAttribute('r', round3(rh * 0.34));
+  dot.setAttribute('fill', JACK.bipolar);
+  dot.style.pointerEvents = 'none';
+  port.element.appendChild(dot);
 }
 
 // The second ring on a note jack: solid, the middle third of the coloured surround, in the inverse of
@@ -1293,6 +1327,11 @@ function paintKnAck(port, dark) {
   if (!dark) { band.setAttribute('stroke', JACK.edge); band.setAttribute('stroke-width', JACK.edgeW); }   // thin black edge on the light face only
   port.element.insertBefore(band, hole);
   addDirRing(port, band, ro, rh);   // input dashes hugging the hole (dir='in' → inner third)
+  // A knАck usually needs no bipolar dot: its attenuverter is there precisely to turn a unipolar
+  // signal into a swing, so marking every one of them would mark nearly every CV input in the rack.
+  // The Coordinate Field is the exception that makes this worth drawing — its knАcks dropped their
+  // depth params, so there is no trim to convert with and the signed ones are signed by design.
+  addBipolarDot(port, hole);
 }
 
 // The lit-button gradient: a red LED core fading to the gray button body, so an

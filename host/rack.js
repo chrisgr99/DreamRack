@@ -69,6 +69,15 @@ const STYLE_COLOR = { audio: '#f3c40b', control: '#ff7300', trigger: '#5aa0e6', 
 // its job is to stay legible against whatever it crosses, not to name a domain.
 const NOTE_COLOR = { dark: '#ececed', light: '#141418' };
 const NOTE_WIDTH = 1.8;          // × the usual cable width — a multicore beside a patch lead
+// A NOTE CABLE FLASHES WHEN A NOTE STARTS. It is the only cable carrying events rather than a
+// continuous signal, and this is what says so — one note is a blink, a chord is a stronger one, a
+// dense passage is a cable that stays lit. Brightness rather than a pulse travelling along the
+// cable, because the cable is polyphonic: several pulses at different offsets read as flicker,
+// while overlapping brightness simply adds up. Drawn as a wide, soft halo of the cable's own
+// colour, which reads as a glow on the dark faces and as a spread shadow on the light ones.
+const NOTE_GLOW_W = 2.4;         // × the note cable's own width
+const NOTE_GLOW_OP = 0.5;        // opacity at full flash
+const NOTE_GLOW_TAU = 0.13;      // seconds — decay time constant
 const noteColor = (dark) => (dark ? NOTE_COLOR.dark : NOTE_COLOR.light);
 const styleColor = (style, dark) => (style === 'note' ? noteColor(dark)
   : STYLE_COLOR[style] || STYLE_COLOR.control);
@@ -363,6 +372,7 @@ export class Rack {
     this._ovWheel = this._overviewWheel.bind(this);
     this._ovDown = this._overviewDown.bind(this);
     this._hoverRec = null;   // module under the pointer
+    this._noteFlash = new Map();  // module key -> 0..1 note glow, decayed in the flow loop
     this._cableCur = new Map();   // edge id -> current (eased) { body, dash } opacity, animated toward _cableTgt in the flow loop
     this._cableTgt = new Map();   // edge id -> target { body, dash } opacity set each _drawCables
     this._isolateNet = null; // Set of edge ids when isolating one terminal's subnet (else null)
@@ -615,6 +625,27 @@ export class Rack {
     window.addEventListener('blur', () => { this._ctrlDown = false; endNav(); if (this._ovActive) this._cancelOverview(); });
     // Right-click does nothing while navigating (Option held): no connection/context menu.
     document.addEventListener('contextmenu', (e) => { if (this._optDown) { e.preventDefault(); e.stopPropagation(); } }, true);
+  }
+
+  // THE BIPOLAR DOT, where it is not a fixed property of the port.
+  //
+  // Most jacks that swing both ways always do, and the panel loader paints those once. A few follow a
+  // control: the Random Sampler's outputs are bipolar at ±2 and ±5 and unipolar at +5, all set by one
+  // X RANGE switch. Such a port declares `unipolarWhen: { param, is: [...] }` and the dot is hidden
+  // while that control sits on one of those values.
+  //
+  // Called with an id after that control moves, and with none when a panel is first skinned, which is
+  // what gets a restored patch right before anything is touched.
+  _applyPolarity(rec, id) {
+    if (!rec || !rec.panel) return;
+    for (const port of rec.panel.ports.values()) {
+      const rule = port.meta && port.meta.unipolarWhen;
+      if (!rule || (id !== undefined && rule.param !== id)) continue;
+      const dot = port.element.querySelector('.jack-bipolar');
+      if (!dot) continue;
+      const v = rec.values.get(rule.param);
+      dot.style.display = (rule.is || []).includes(v) ? 'none' : '';
+    }
   }
 
   // A patch endpoint resolved to a common shape.
@@ -1986,6 +2017,14 @@ export class Rack {
       const bodyD = `M${r2(g.pA.x)},${r2(g.pA.y)} C${r2(g.c1.x)},${r2(g.c1.y)} ${r2(g.c2.x)},${r2(g.c2.y)} ${r2(g.pB.x)},${r2(g.pB.y)}`;
       // A held cable is the SAME WIDTH as any other; brightness alone marks it, with everything else
       // pulled back. Drawing it heavier as well made it a stripe across the rack.
+      // The glow goes in FIRST so it sits behind the cable rather than washing over it. It is drawn
+      // at zero opacity and lit by the flow loop, so a note arriving between redraws still shows.
+      if (e.style === 'note') {
+        const glow = mk(bodyD, color, ewmm * NOTE_GLOW_W, 0, null);
+        glow.setAttribute('class', 'cable-note-glow');
+        glow.setAttribute('stroke-linecap', 'round');
+        glow.dataset.src = e.src.key;
+      }
       const bp = mk(bodyD, color, ewmm, bodyOp, null);
       if (!this._isolateNet) { bp.setAttribute('class', 'cable-body'); bp.dataset.edge = e.id; }
       // Flow direction: black dashes crawl source->dest (path runs pA=src -> pB=dst),
@@ -4399,6 +4438,25 @@ export class Rack {
 
   // The crawl offset (content mm) from one running clock, so the dashes drift
   // continuously even though _drawCables rebuilds the dash paths constantly.
+  // A note started on this module: light every note cable leaving it. Called from the Sequencer's
+  // onNote hook, which the worklet posts once per note.
+  pulseNote(key, level) {
+    const v = Math.max(0.35, Math.min(1, level === undefined ? 1 : level));
+    this._noteFlash.set(key, Math.max(this._noteFlash.get(key) || 0, v));
+  }
+
+  _tickNoteGlow(dt) {
+    if (!this._noteFlash.size) return;
+    const k = Math.exp(-dt / NOTE_GLOW_TAU);
+    for (const [key, v] of this._noteFlash) {
+      const next = v * k;
+      if (next < 0.02) this._noteFlash.delete(key); else this._noteFlash.set(key, next);
+    }
+    for (const p of this.cables.querySelectorAll('.cable-note-glow')) {
+      p.style.opacity = String(r2(NOTE_GLOW_OP * (this._noteFlash.get(p.dataset.src) || 0)));
+    }
+  }
+
   _flowOffset() {
     if (this._flowT0 == null) this._flowT0 = performance.now();
     return -((performance.now() - this._flowT0) / 1000) * FLOW_SPEED;
@@ -4443,6 +4501,8 @@ export class Rack {
         for (const p of this.cables.querySelectorAll('.cable-body')) {
           const c = this._cableCur.get(p.dataset.edge); if (c) p.style.opacity = String(r2(c.body));
         }
+        this._tickNoteGlow(dt);
+
         this._tickHoverFocus(k);   // breathe the hovered ports; ease the control-dim (same ~1s as the cables)
       }
       this._flowRaf = requestAnimationFrame(tick);
@@ -7960,6 +8020,10 @@ export class Rack {
       const t = this.moduleTypes.find((x) => x.descriptorId === rec.descriptorId);
       if (t) queueMicrotask(() => { this._attachVideoModule(rec, t.descriptor); this._attachReadout(rec, t.descriptor); });
     }
+    // A skin carries the dot for every port that is always bipolar; the ones that follow a control
+    // are set from the values this module already holds, so a restored patch is right before anything
+    // is touched.
+    this._applyPolarity(rec);
     const btnGrow = this._buttonGrowMap(svg);   // adaptive hit-pad size per single push button
     for (const b of panel.controls.values()) {
       const v = rec.values.get(b.id);
@@ -8086,6 +8150,7 @@ export class Rack {
     // indication like a sequencer's active-stage lamp and wrong for a state the patch must record —
     // the video window closed from its own chrome, say.
     if (typeof instance.onParamChange === 'function') instance.onParamChange((id, v) => this.applyParam(rec, id, v));
+    if (typeof instance.onNote === 'function') instance.onNote((n) => this.pulseNote(rec.key, n && n.level));
     if (typeof instance.attachEngine === 'function') this._attachVideoModule(rec, type.descriptor);
     this._attachReadout(rec, type.descriptor);
     this._attachGraph(rec, type.descriptor);
@@ -8185,6 +8250,7 @@ export class Rack {
     const b = rec.panel.controls.get(id);
     if (b) showValue(b, value);
     this._mirrorMixerEnable(rec, id);   // the tab's buttons are the panel's lamps, seen twice
+    this._applyPolarity(rec, id);       // a jack whose polarity follows this control shows or hides its dot
     if (rec.repaintGraph) rec.repaintGraph();   // a drawn envelope follows its own knobs
     this.patchbay.setDepth(rec.key, id, value);   // if this knob is a cord's depth control
     if (rec.pinned && id === 'monitorLevel') this._setMonMaster(value);              // the Monitor fader

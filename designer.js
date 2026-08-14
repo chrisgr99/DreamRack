@@ -60,6 +60,10 @@ import compositorLayout from './modules/compositor/panel.layout.js';
 import compositorDesc from './modules/compositor/descriptor.js';
 import vidoutLayout from './modules/video-out/panel.layout.js';
 import vidoutDesc from './modules/video-out/descriptor.js';
+import noteSeqLayout from './modules/sequencer/panel.layout.js';
+import noteSeqDesc from './modules/sequencer/descriptor.js';
+import pageVoiceLayout from './modules/voice/panel.layout.js';
+import pageVoiceDesc from './modules/voice/descriptor.js';
 import octLayout from './modules/octave/panel.layout.js';
 import octDesc from './modules/octave/descriptor.js';
 
@@ -96,6 +100,8 @@ const MODULES = [
   { name: 'Macro Oscillator 2', dir: 'model-voice', base: voiceLayout, desc: voiceDesc },
   { name: 'Compositor', dir: 'compositor', base: compositorLayout, desc: compositorDesc },
   { name: 'Video Output', dir: 'video-out', base: vidoutLayout, desc: vidoutDesc },
+  { name: 'Sequencer (note out)', dir: 'sequencer', base: noteSeqLayout, desc: noteSeqDesc },
+  { name: 'Voice (note in)', dir: 'voice', base: pageVoiceLayout, desc: pageVoiceDesc },
 ];
 
 const stage = document.getElementById('stage');

@@ -62,6 +62,10 @@ export default {
     { id: 'resetIn', name: 'Reset', role: 'trigger', section: 'transport', domain: 'trigger', dir: 'in' },
     // ONE INPUT, TWO MEANINGS, chosen by the BPM mode radio: a voltage that sets the tempo, or a clock
     // to lock onto. Kept as one jack because they are alternatives, never both at once.
+    // TEMPO CV IS 0..1 ACROSS 0..1000 BPM, in and out, so two clocks — or a clock and anything else
+    // that speaks about tempo — can be swapped without either reinterpreting the other. 0.12 is 120.
+    // Zero is stopped rather than very slow. It replaces a 1V/oct reading, which was the more musical
+    // scale and the less interoperable one.
     { id: 'bpmIn', name: 'BPM CV / external clock', section: 'transport', domain: 'control', dir: 'in' },
 
     { id: 'clkOut', name: 'Master clock', role: 'clock', section: 'out', domain: 'trigger', dir: 'out' },
@@ -70,7 +74,7 @@ export default {
     { id: 'clk3Out', name: 'Clock 3', role: 'clock', section: 'out', domain: 'trigger', dir: 'out' },
     { id: 'runOut', name: 'Run', role: 'gate', section: 'out', domain: 'trigger', dir: 'out' },
     { id: 'resetOut', name: 'Reset', role: 'trigger', section: 'out', domain: 'trigger', dir: 'out' },
-    { id: 'bpmOut', name: 'BPM CV thru', section: 'out', domain: 'control', dir: 'out' },
+    { id: 'bpmOut', name: 'BPM CV thru', section: 'out', domain: 'control', dir: 'out' },   // 0..1 = 0..1000 BPM, the tempo the engine settled on
   ],
   params: [
     // Snapped to whole BPM: the original relies on reading a rounded value back from this knob when it

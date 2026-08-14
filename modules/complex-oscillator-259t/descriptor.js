@@ -196,7 +196,7 @@ export default {
       dir: "out" },                                   // fixed triangle, always available
     { id: "modSigOut", section: "modOsc", name: "Mod Signal", domain: "audio",
       dir: "out" },                                   // shape set by modWave
-    { id: "modCvOut", section: "modOsc", name: "Mod CV Out", domain: "control",
+    { id: "modCvOut", section: "modOsc", name: "Mod CV Out", domain: "control", polarity: "bipolar",
       dir: "out" },                                   // for use as a control source
 
     // Principal oscillator inputs

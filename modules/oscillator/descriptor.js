@@ -35,7 +35,7 @@ const ports = [
   { id: 'syncIn', name: 'Sync', section: 'freq', domain: 'audio', dir: 'in' },
   // Pulse width's CV is LINEAR, so it goes to the AudioParam rather than a worklet input —
   // same treatment as the 259t's folder CVs. It is still a real jack: the knAck's centre.
-  { id: 'pwIn', name: 'Pulse width CV', section: 'shape', domain: 'control', dir: 'in', target: 'pulseWidth' },
+  { id: 'pwIn', name: 'Pulse width CV', section: 'shape', domain: 'control', dir: 'in', target: 'pulseWidth', via: 'pwDepth' },
   // dir="out" order fixes the worklet's output indices.
   { id: 'sineOut', name: 'Sine out', section: 'out', domain: 'audio', dir: 'out' },
   { id: 'triOut', name: 'Triangle out', section: 'out', domain: 'audio', dir: 'out' },

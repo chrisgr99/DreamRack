@@ -126,6 +126,29 @@ The host still validates on load: every tag resolves to a real descriptor id,
 every param/port has exactly one tagged element, every control has an
 indicator + pivot (or step-indicators), every jack has an anchor.
 
+## 6a. The bipolar dot
+
+A jack carries a **white dot in its hole** when it deals in a signal that swings either side of zero.
+Painted by the host, not drawn in the panel SVG.
+
+**In the hole**, because the hole is the one part of a jack a cable never covers — a cord stops half
+its width outside the rim. So the mark is there whether the jack is patched or empty, and it is there
+at the moment it is wanted, which is while a hand is on the cable rather than afterwards.
+
+**Inputs are worked out, not declared** (`derivePolarity` in `host/registry.js`). A control input is
+marked when it has an **attenuverter** — a `via` param that goes negative, so the trim can invert
+whatever arrives — or when its **target param goes negative**, like pan, symmetry, or a rate that can
+run backwards. Both get the dot, and the consistency is the point: the mark means "this can go either
+way", and a reader should not have to know which of the two reasons applies. It does mean a great
+many CV inputs carry one, which is simply true of this rack.
+
+**Outputs declare `polarity: 'bipolar'` on the port**, because nothing in a descriptor says what an
+output's own range is. Eight do.
+
+**Where polarity follows a control**, the port adds `unipolarWhen: { param, is: [...] }` and the dot
+comes and goes with that control. One module needs this: the Random Sampler's outputs are bipolar at
+±2 and ±5 and unipolar at +5, all from one X RANGE switch.
+
 ## 7. Theme tokens
 
 Colors are named tokens, not hex, resolved from a two-entry theme table (light,

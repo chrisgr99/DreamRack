@@ -59,6 +59,12 @@ import voiceDescriptor from '../modules/model-voice/descriptor.js';
 import { create as voiceCreate } from '../modules/model-voice/factory.js';
 import compositorDescriptor from '../modules/compositor/descriptor.js';
 import { create as compositorCreate } from '../modules/compositor/factory.js';
+// The two boundary modules. `voiceDescriptor` above is the Macro Oscillator's — these are the page's
+// note in and note out (design/voice-pages.md), so they are named for the page rather than the sound.
+import pageVoiceDescriptor from '../modules/voice/descriptor.js';
+import { create as pageVoiceCreate } from '../modules/voice/factory.js';
+import noteSeqDescriptor from '../modules/sequencer/descriptor.js';
+import { create as noteSeqCreate } from '../modules/sequencer/factory.js';
 import formulaDescriptor from '../modules/formula/descriptor.js';
 import { create as formulaCreate } from '../modules/formula/factory.js';
 import { serialize, restore, validate, APP_NAME, APP_VERSION } from '../host/patch-io.js';
@@ -100,6 +106,8 @@ registry.register({ descriptor: shapesDescriptor, create: shapesCreate });
 registry.register({ descriptor: mathsDescriptor, create: mathsCreate });
 registry.register({ descriptor: compositorDescriptor, create: compositorCreate });
 registry.register({ descriptor: voiceDescriptor, create: voiceCreate });
+registry.register({ descriptor: pageVoiceDescriptor, create: pageVoiceCreate });
+registry.register({ descriptor: noteSeqDescriptor, create: noteSeqCreate });
 registry.register({ descriptor: formulaDescriptor, create: formulaCreate });
 
 const MODULE_TYPES = [{
@@ -285,6 +293,20 @@ const MODULE_TYPES = [{
   hp: 14,
   panelUrl: 'modules/model-voice/panel.svg',
   descriptor: voiceDescriptor,
+}, {
+  // Sequencer and Voice — a page's outward face. A page holding one of these makes notes; a page
+  // holding the other plays them. See design/voice-pages.md.
+  descriptorId: noteSeqDescriptor.id,
+  name: 'Sequencer',
+  hp: 8,
+  panelUrl: 'modules/sequencer/panel.svg',
+  descriptor: noteSeqDescriptor,
+}, {
+  descriptorId: pageVoiceDescriptor.id,
+  name: 'Voice',
+  hp: 8,
+  panelUrl: 'modules/voice/panel.svg',
+  descriptor: pageVoiceDescriptor,
 }, {
   // The mixer is a pinned singleton placed at boot, so it is hidden from the module
   // library (no second mixer). Still a normal module type otherwise.
@@ -713,7 +735,11 @@ async function boot() {
       sync: { lastSyncAt: new Date().toISOString() },
       files: { roundTrip: ['inbox.json'], observationOnly: ['patch.json', 'active.json', 'catalogue.json', 'last-apply-result.json', 'selection.json', 'runtime.json', 'audio-trace.json', 'demo.json', 'AGENTS.md', 'README.md'] },
     }),
-    catalogue: buildCatalogue([oscDescriptor, lpgDescriptor], mixerDescriptor),
+    // EVERY module type, not a hand-kept pair. This listed two of the twenty-six, so the catalogue an
+    // external sender reads to find its targets — and that ai-mirror.md says enumerates the rack —
+    // described the Complex Oscillator and the Quad Low Pass Gate and nothing else. Taken from
+    // MODULE_TYPES so a module added to the library is in the catalogue by the same act.
+    catalogue: buildCatalogue(MODULE_TYPES.filter((t) => !t.hidden).map((t) => t.descriptor), mixerDescriptor),
     applyEdit,
   });
 

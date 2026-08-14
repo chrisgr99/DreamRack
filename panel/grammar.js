@@ -615,6 +615,11 @@ export function panel(opts, bands) {
   }
 
   if (outBand) {
+    // ONE ROW, and saying so out loud. The out rail is pinned to the foot of the panel, so a second
+    // row has nowhere to go — and for a while it was dropped in silence, which cost three jacks on the
+    // Voice module and nothing anywhere reported it. A layout wanting more outputs than fit puts the
+    // rest in an ordinary band above.
+    if (outBand.rows.length > 1) warnings.push(`the output row holds one row; ${outBand.rows.length - 1} more were dropped`);
     const jacks = outBand.rows[0].controls;
     // The header sits left of the jacks. Its width is taken out of the row before the gaps are shared,
     // so the jacks never run under it.

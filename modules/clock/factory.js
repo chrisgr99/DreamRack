@@ -11,7 +11,9 @@
 'use strict';
 
 const PROCESSOR = 'wcoast-clock';
-const OUT_PORTS = ['clkOut', 'clk1Out', 'clk2Out', 'clk3Out', 'runOut', 'resetOut'];
+// bpmOut was missing from this list, so the jack on the faceplate could not be patched at all —
+// getOutput returned null and the patchbay refused every cable with "output not realized".
+const OUT_PORTS = ['clkOut', 'clk1Out', 'clk2Out', 'clk3Out', 'runOut', 'resetOut', 'bpmOut'];
 const IN_PORTS = ['runIn', 'resetIn', 'bpmIn'];
 const KNOBS = new Set(['bpm', 'ratio1', 'ratio2', 'ratio3', 'swing', 'pw',
   'swing1', 'swing2', 'swing3', 'pw1', 'pw2', 'pw3', 'delay1', 'delay2', 'delay3']);

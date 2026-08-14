@@ -58,10 +58,16 @@ export default {
     { id: 't1Out', name: 'T1', role: 'gate', section: 'out', domain: 'trigger', dir: 'out' },
     { id: 't2Out', name: 'T2', role: 'gate', section: 'out', domain: 'trigger', dir: 'out' },
     { id: 't3Out', name: 'T3', role: 'gate', section: 'out', domain: 'trigger', dir: 'out' },
-    { id: 'yOut', name: 'Y', section: 'out', domain: 'control', dir: 'out' },
-    { id: 'x1Out', name: 'X1', section: 'out', domain: 'control', dir: 'out' },
-    { id: 'x2Out', name: 'X2', section: 'out', domain: 'control', dir: 'out' },
-    { id: 'x3Out', name: 'X3', section: 'out', domain: 'control', dir: 'out' },
+    // X RANGE decides this: +5 is the one setting of the three that never goes below zero,
+    // so the dot follows the control rather than being printed once and left lying.
+    { id: 'yOut', name: 'Y', section: 'out', domain: 'control', dir: 'out',
+      polarity: 'bipolar', unipolarWhen: { param: 'xRange', is: ['positive'] } },
+    { id: 'x1Out', name: 'X1', section: 'out', domain: 'control', dir: 'out',
+      polarity: 'bipolar', unipolarWhen: { param: 'xRange', is: ['positive'] } },
+    { id: 'x2Out', name: 'X2', section: 'out', domain: 'control', dir: 'out',
+      polarity: 'bipolar', unipolarWhen: { param: 'xRange', is: ['positive'] } },
+    { id: 'x3Out', name: 'X3', section: 'out', domain: 'control', dir: 'out',
+      polarity: 'bipolar', unipolarWhen: { param: 'xRange', is: ['positive'] } },
   ],
   params: [
     // ---- the spine: shared by both halves ----

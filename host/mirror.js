@@ -19,6 +19,10 @@ export function buildCatalogue(moduleDescriptors, mixerDescriptor) {
     const o = { id: p.id, name: p.name, domain: p.domain, dir: p.dir };
     if (p.target) o.target = p.target;
     if (p.via) o.via = p.via;
+    // Whether this jack deals in a signal that swings either side of zero. A sender scaling into a
+    // target needs it as much as the range does, and the panel already says it with a white dot.
+    if (p.polarity) o.polarity = p.polarity;
+    if (p.role) o.role = p.role;
     return o;
   };
   const paramOf = (p) => {

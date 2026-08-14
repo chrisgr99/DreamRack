@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="utf-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="40.64mm" height="128.5mm" viewBox="3.9 0 40.64 128.5" font-family="Arial Narrow, Helvetica, Arial, sans-serif">
+<defs>
+  <linearGradient id="metalStripV" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#f8f8f8"/><stop offset="0.45" stop-color="#d8dbdd"/><stop offset="0.7" stop-color="#f4f4f4"/><stop offset="1" stop-color="#9a9a9a"/></linearGradient>
+  <linearGradient id="metalStripH" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f8f8f8"/><stop offset="0.45" stop-color="#d8dbdd"/><stop offset="0.7" stop-color="#f4f4f4"/><stop offset="1" stop-color="#9a9a9a"/></linearGradient>
+  <radialGradient id="metalDisc"><stop offset="0" stop-color="#f8f8f8"/><stop offset="0.45" stop-color="#d8dbdd"/><stop offset="0.7" stop-color="#f4f4f4"/><stop offset="1" stop-color="#9a9a9a"/></radialGradient>
+  <radialGradient id="blueRing"><stop offset="0" stop-color="#1688cc"/><stop offset="0.55" stop-color="#006da8"/><stop offset="1" stop-color="#003d62"/></radialGradient>
+  <radialGradient id="orangeRing"><stop offset="0" stop-color="#f2953a"/><stop offset="0.55" stop-color="#d06b00"/><stop offset="1" stop-color="#6f3800"/></radialGradient>
+  <radialGradient id="greenRing"><stop offset="0" stop-color="#3ec06a"/><stop offset="0.55" stop-color="#149146"/><stop offset="1" stop-color="#0a4a24"/></radialGradient>
+  <radialGradient id="purpleRing"><stop offset="0" stop-color="#a07ae0"/><stop offset="0.55" stop-color="#7548c0"/><stop offset="1" stop-color="#3d2268"/></radialGradient>
+  <radialGradient id="blueDial"><stop offset="0" stop-color="#1d79b7"/><stop offset="0.6" stop-color="#00639a"/><stop offset="1" stop-color="#00456e"/></radialGradient>
+  <radialGradient id="knobCap"><stop offset="0" stop-color="#f8f8f8"/><stop offset="0.4" stop-color="#bfc3c5"/><stop offset="0.62" stop-color="#f4f4f4"/><stop offset="1" stop-color="#777777"/></radialGradient>
+  <radialGradient id="redLed"><stop offset="0" stop-color="#ff4a4a"/><stop offset="0.55" stop-color="#d00000"/><stop offset="1" stop-color="#650000"/></radialGradient>
+  <radialGradient id="greenLed"><stop offset="0" stop-color="#5cf07a"/><stop offset="0.55" stop-color="#12a531"/><stop offset="1" stop-color="#054d15"/></radialGradient>
+  <radialGradient id="orangeLed"><stop offset="0" stop-color="#ffbf5c"/><stop offset="0.55" stop-color="#ef7d00"/><stop offset="1" stop-color="#7a3a00"/></radialGradient>
+</defs>
+  <g transform="translate(3.9 7.0994)">
+  <rect x="0" y="0" width="40.64" height="113.5912" rx="2.5" fill="#cfcfcf"/>
+  <rect x="0.5" y="0.5" width="39.64" height="112.5912" rx="2.2" fill="none" stroke="#7d7d7d" stroke-width="0.5"/>
+  <text x="7.1584" y="7.4" font-size="3.106" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">NOTE</text>
+  <g data-wcoast-param="level" data-wcoast-cx="10.07" data-wcoast-cy="15" data-wcoast-angle-min="-150" data-wcoast-angle-max="150">
+    <circle cx="10.07" cy="15" r="5.6" fill="url(#blueRing)" stroke="#004b7a" stroke-width="0.355"/>
+    <circle cx="10.07" cy="15" r="4.03" fill="url(#knobCap)" stroke="#666666" stroke-width="0.2366"/>
+    <g data-wcoast-role="indicator">
+    <line x1="7.62" y1="19.25" x2="7.10" y2="20.15" stroke="#ffffff" stroke-width="0.2783"/>
+    <line x1="5.24" y1="15.85" x2="4.21" y2="16.03" stroke="#ffffff" stroke-width="0.2783"/>
+    <line x1="6.31" y1="11.85" x2="5.51" y2="11.18" stroke="#ffffff" stroke-width="0.2783"/>
+    <line x1="10.07" y1="10.10" x2="10.07" y2="9.05" stroke="#ffffff" stroke-width="0.2783"/>
+    <line x1="13.83" y1="11.85" x2="14.63" y2="11.18" stroke="#ffffff" stroke-width="0.2783"/>
+    <line x1="14.90" y1="15.85" x2="15.93" y2="16.03" stroke="#ffffff" stroke-width="0.2783"/>
+    <line x1="12.52" y1="19.25" x2="13.04" y2="20.15" stroke="#ffffff" stroke-width="0.2783"/>
+      <line x1="10.07" y1="15" x2="10.07" y2="10.97" stroke="#163a69" stroke-width="0.55"/>
+    </g>
+  </g>
+  <text x="10.07" y="24.148320000000002" font-size="2.706" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">LEVEL</text>
+  <g data-wcoast-param="duration" data-wcoast-cx="30.57" data-wcoast-cy="15" data-wcoast-angle-min="-150" data-wcoast-angle-max="150">
+    <circle cx="30.57" cy="15" r="5.6" fill="url(#blueRing)" stroke="#004b7a" stroke-width="0.355"/>
+    <circle cx="30.57" cy="15" r="4.03" fill="url(#knobCap)" stroke="#666666" stroke-width="0.2366"/>
+    <g data-wcoast-role="indicator">
+    <line x1="28.12" y1="19.25" x2="27.60" y2="20.15" stroke="#ffffff" stroke-width="0.2783"/>
+    <line x1="25.74" y1="15.85" x2="24.71" y2="16.03" stroke="#ffffff" stroke-width="0.2783"/>
+    <line x1="26.81" y1="11.85" x2="26.01" y2="11.18" stroke="#ffffff" stroke-width="0.2783"/>
+    <line x1="30.57" y1="10.10" x2="30.57" y2="9.05" stroke="#ffffff" stroke-width="0.2783"/>
+    <line x1="34.33" y1="11.85" x2="35.13" y2="11.18" stroke="#ffffff" stroke-width="0.2783"/>
+    <line x1="35.40" y1="15.85" x2="36.43" y2="16.03" stroke="#ffffff" stroke-width="0.2783"/>
+    <line x1="33.02" y1="19.25" x2="33.54" y2="20.15" stroke="#ffffff" stroke-width="0.2783"/>
+      <line x1="30.57" y1="15" x2="30.57" y2="10.97" stroke="#163a69" stroke-width="0.55"/>
+    </g>
+  </g>
+  <text x="30.57" y="24.148320000000002" font-size="2.706" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">DUR</text>
+  <g data-wcoast-port="levelIn" data-wcoast-cx="7.47" data-wcoast-cy="32.48">
+    <circle cx="7.47" cy="32.48" r="3" fill="#8a8a8a" stroke="#000000" stroke-width="0.3"/>
+    <circle cx="7.47" cy="32.48" r="1.6" fill="#000000"/>
+  </g>
+  <text x="7.47" y="38.884319999999995" font-size="2.5060000000000002" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">level</text>
+  <g data-wcoast-port="durIn" data-wcoast-cx="33.17" data-wcoast-cy="32.48">
+    <circle cx="33.17" cy="32.48" r="3" fill="#8a8a8a" stroke="#000000" stroke-width="0.3"/>
+    <circle cx="33.17" cy="32.48" r="1.6" fill="#000000"/>
+  </g>
+  <text x="33.17" y="38.884319999999995" font-size="2.5060000000000002" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">dur</text>
+  <g data-wcoast-param="pan" data-wcoast-cx="10.07" data-wcoast-cy="49.96" data-wcoast-angle-min="-150" data-wcoast-angle-max="150">
+    <circle cx="10.07" cy="49.96" r="5.6" fill="url(#blueRing)" stroke="#004b7a" stroke-width="0.355"/>
+    <circle cx="10.07" cy="49.96" r="4.03" fill="url(#knobCap)" stroke="#666666" stroke-width="0.2366"/>
+    <g data-wcoast-role="indicator">
+    <line x1="7.62" y1="54.21" x2="7.10" y2="55.11" stroke="#ffffff" stroke-width="0.2783"/>
+    <line x1="5.24" y1="50.81" x2="4.21" y2="50.99" stroke="#ffffff" stroke-width="0.2783"/>
+    <line x1="6.31" y1="46.81" x2="5.51" y2="46.14" stroke="#ffffff" stroke-width="0.2783"/>
+    <line x1="10.07" y1="45.06" x2="10.07" y2="44.01" stroke="#ffffff" stroke-width="0.2783"/>
+    <line x1="13.83" y1="46.81" x2="14.63" y2="46.14" stroke="#ffffff" stroke-width="0.2783"/>
+    <line x1="14.90" y1="50.81" x2="15.93" y2="50.99" stroke="#ffffff" stroke-width="0.2783"/>
+    <line x1="12.52" y1="54.21" x2="13.04" y2="55.11" stroke="#ffffff" stroke-width="0.2783"/>
+      <line x1="10.07" y1="49.96" x2="10.07" y2="45.93" stroke="#163a69" stroke-width="0.55"/>
+    </g>
+  </g>
+  <text x="10.07" y="59.108320000000006" font-size="2.706" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">PAN</text>
+  <g data-wcoast-param="bendRange" data-wcoast-cx="30.57" data-wcoast-cy="49.96" data-wcoast-angle-min="-150" data-wcoast-angle-max="150">
+    <circle cx="30.57" cy="49.96" r="5.6" fill="url(#blueRing)" stroke="#004b7a" stroke-width="0.355"/>
+    <circle cx="30.57" cy="49.96" r="4.03" fill="url(#knobCap)" stroke="#666666" stroke-width="0.2366"/>
+    <g data-wcoast-role="indicator">
+    <line x1="28.12" y1="54.21" x2="27.60" y2="55.11" stroke="#ffffff" stroke-width="0.2783"/>
+    <line x1="25.74" y1="50.81" x2="24.71" y2="50.99" stroke="#ffffff" stroke-width="0.2783"/>
+    <line x1="26.81" y1="46.81" x2="26.01" y2="46.14" stroke="#ffffff" stroke-width="0.2783"/>
+    <line x1="30.57" y1="45.06" x2="30.57" y2="44.01" stroke="#ffffff" stroke-width="0.2783"/>
+    <line x1="34.33" y1="46.81" x2="35.13" y2="46.14" stroke="#ffffff" stroke-width="0.2783"/>
+    <line x1="35.40" y1="50.81" x2="36.43" y2="50.99" stroke="#ffffff" stroke-width="0.2783"/>
+    <line x1="33.02" y1="54.21" x2="33.54" y2="55.11" stroke="#ffffff" stroke-width="0.2783"/>
+      <line x1="30.57" y1="49.96" x2="30.57" y2="45.93" stroke="#163a69" stroke-width="0.55"/>
+    </g>
+  </g>
+  <text x="30.57" y="59.108320000000006" font-size="2.706" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">BEND</text>
+  <g data-wcoast-port="panIn" data-wcoast-cx="20.32" data-wcoast-cy="67.43">
+    <circle cx="20.32" cy="67.43" r="3" fill="#8a8a8a" stroke="#000000" stroke-width="0.3"/>
+    <circle cx="20.32" cy="67.43" r="1.6" fill="#000000"/>
+  </g>
+  <text x="20.32" y="73.83432" font-size="2.5060000000000002" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">pan</text>
+  <g data-wcoast-port="gateIn" data-wcoast-cx="7.47" data-wcoast-cy="82.31">
+    <circle cx="7.47" cy="82.31" r="3" fill="#8a8a8a" stroke="#000000" stroke-width="0.3"/>
+    <circle cx="7.47" cy="82.31" r="1.6" fill="#000000"/>
+  </g>
+  <text x="7.47" y="88.71432" font-size="2.5060000000000002" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">gate</text>
+  <g data-wcoast-port="pitchIn" data-wcoast-cx="33.17" data-wcoast-cy="82.31">
+    <circle cx="33.17" cy="82.31" r="3" fill="#8a8a8a" stroke="#000000" stroke-width="0.3"/>
+    <circle cx="33.17" cy="82.31" r="1.6" fill="#000000"/>
+  </g>
+  <text x="33.17" y="88.71432" font-size="2.5060000000000002" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">v/oct</text>
+  <line x1="4.4704" y1="97.99" x2="36.1704" y2="97.99" stroke="#7d7d7d" stroke-width="0.355"/>
+  <text x="3.97" y="104.59" font-size="2.906" font-weight="700" font-style="italic" fill="#163a69" text-anchor="start" font-family="Arial Narrow, Helvetica, Arial, sans-serif">OUT</text>
+  <g data-wcoast-port="noteOut" data-wcoast-cx="13.67" data-wcoast-cy="103.3912">
+    <circle cx="13.67" cy="103.3912" r="3" fill="#8a8a8a" stroke="#000000" stroke-width="0.3"/>
+    <circle cx="13.67" cy="103.3912" r="1.6" fill="#000000"/>
+  </g>
+  <text x="13.67" y="109.79552" font-size="2.5060000000000002" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">note</text>
+  </g>
+</svg>

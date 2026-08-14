@@ -211,6 +211,7 @@ class ComplexOsc259t extends AudioWorkletProcessor {
   //   0 modTriOut   1 modSigOut  2 modCvOut
   //   3 prinSineOut 4 prinSquareOut 5 prinFinalOut (folded)
   process(inputs, outputs, parameters) {
+    const NYQUIST = sampleRate * 0.45;
     const outModTri = outputs[0] && outputs[0][0];
     const outModSig = outputs[1] && outputs[1][0];
     const outModCv = outputs[2] && outputs[2][0];
@@ -299,7 +300,13 @@ class ComplexOsc259t extends AudioWorkletProcessor {
       const modPitchFactor = (modPitchCh || modCvCh) ? Math.exp(modOct * LN2) : 1;
       const modBaseHz = pModFreq[i * modFreqStride] * modFineFactor * rangeFactor * modPitchFactor;
       const modFmSig = modFmCh ? modFmCh[i] : 0;
-      const modHz = modBaseHz + modFmSig * modFmAmount * modBaseHz;
+      // NYQUIST IS A HARD WALL, not a guideline. Above it the phase increment passes one and the
+      // band-limiting terms — which assume a step lands inside a single sample — stop describing
+      // anything, so the output does not merely alias, it explodes: ten volts into the pitch input
+      // took this to a hundred thousand. Reachable in an ordinary patch, since the Random Sampler
+      // sends five volts and the Octave module adds four.
+      const modHzRaw = modBaseHz + modFmSig * modFmAmount * modBaseHz;
+      const modHz = modHzRaw > NYQUIST ? NYQUIST : (modHzRaw < -NYQUIST ? -NYQUIST : modHzRaw);
       const modInc = modHz * invSr;
       const modDt = modInc < 0 ? -modInc : modInc;
 
@@ -318,9 +325,13 @@ class ComplexOsc259t extends AudioWorkletProcessor {
       const prinBaseHz = pPrinFreq[i * prinFreqStride] * prinFineFactor * prinPitchFactor;
       const prinFmSig = prinFmCh ? prinFmCh[i] : 0;
       const internalFm = pitchMod ? (modSource * mi) : 0;
-      const prinHz = prinBaseHz
+      const prinHzRaw = prinBaseHz
         + internalFm * prinBaseHz
         + prinFmSig * prinFmAmount * prinBaseHz;
+      // Same wall (see the modulation oscillator above). Through-zero FM is why the floor is the
+      // negative of the ceiling rather than zero: a swing past zero reverses the sweep, which is
+      // wanted, while a swing past Nyquist is only ever a fault.
+      const prinHz = prinHzRaw > NYQUIST ? NYQUIST : (prinHzRaw < -NYQUIST ? -NYQUIST : prinHzRaw);
       const prinInc = prinHz * invSr;
       const prinDt = prinInc < 0 ? -prinInc : prinInc;
 

@@ -105,8 +105,7 @@ Two kinds of thing, and the difference matters.
 
 **Lanes that keep moving while the note sounds:**
 
-- **bend** — pitch movement within the note, in the same 1V/oct units, to be summed with the held
-  pitch by any voice that wants to glide.
+- **bend** — how far the pitch has moved since the note started, as −1 to 1 against a bend range.
 - **pressure** — a continuous amplitude or effort signal. Breath for a wind voice, bow force for a
   string one.
 
@@ -123,11 +122,33 @@ cases, which is the wrong way round: those are ordinary here.
 Where a sender speaks in note numbers — MIDI does — the conversion happens once, at the module where
 that sender enters the rack (§7). The bundle never knows MIDI exists.
 
-**The pitch is captured when the note starts and holds for the note's life.** Holding is what makes
-a note a note, and a source whose pitch input keeps moving after the gate — an unquantised drift, a
-sequencer's next step arriving early — must not drag a sounding note around with it. Continuous
-movement within a note is the bend lane's job, which a gliding voice sums with the held pitch. That
-is one cable inside the page, in the case that is genuinely the unusual one.
+**Pitch is on the wire twice: the value the note started on, and how far it has moved since.** The
+held lane is captured at note-on and does not move again, because holding is what makes a note a note
+— a source whose pitch keeps moving after the gate, an unquantised drift or a sequencer's next step
+arriving early, must not drag a sounding note around with it.
+
+The second lane is **bend**: a deviation, not an absolute pitch. That is what a wheel, a wind
+controller and MPE all produce, so it behaves the way anyone who has played one expects. It is also
+what suits where it lands — bend is patched into a modulation input, and by the knАck convention
+every one of those carries a depth trim, so **how far a bend bends is a knob that already exists on
+the module being played**. An absolute lane would instead have to be summed with the held pitch, and
+an input here takes one cable, so that sum would mean an adder module in every gliding patch.
+
+It runs **−1 to 1 rather than in volts**, like every other modulation signal in the rack, so it is an
+ordinary control signal in the ordinary control colour and its depth trim behaves as it does for any
+other CV. The Sequencer's **bend range** knob is what turns volts into that number: how many
+semitones of movement count as full deflection, defaulting to the two a MIDI instrument ships with.
+Movement past the range clamps, as a wheel at its stop does.
+
+The range is **semitones but not whole ones** — a tenth of a semitone at one end, two octaves at the
+other, and everything between. A quarter-tone bend, a scale that is not twelve-tone, and a range set
+by ear are all ordinary things to want, and a knob that only stopped on integers would refuse all
+three.
+
+**The source still patches one ordinary 1V/oct signal.** Both lanes are derived in the Sequencer
+module, which is where the note-on moment is known: bend is the pitch input minus the value held at
+that moment, so it is exactly zero on every note and nothing on the sending side has to know the
+lane exists.
 
 ### Level and pressure stay separate
 
@@ -243,8 +264,8 @@ Each stage is usable on its own and worth having even if the next one is never b
 1. **The note domain.** The cable and jack appearance above, the patchbay rules, and the one
    restriction that a note cable may only land on a Voice module's input. Nothing to play yet, but
    every later stage depends on it.
-2. **The two modules, monophonic.** Sequencer bundles pitch, level, duration and pan; Voice unbundles
-   them; count fixed at one. At this point a hand-built sequencer on one page plays a voice on
+2. **The two modules, monophonic.** Sequencer bundles the gate, the held pitch, bend, level,
+   duration and pan; Voice unbundles them; count fixed at one. At this point a hand-built sequencer on one page plays a voice on
    another, which is the whole idea demonstrated end to end.
 3. **The page kind and its naming.** Singleton enforcement, the default nicknames, and the refusal to
    hold both modules.
