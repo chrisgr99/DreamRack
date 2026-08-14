@@ -591,6 +591,90 @@ class ParticleEngine {
   }
 }
 
+// THE SECOND FLAVOUR OF EACH DRUM. Every analogue drum machine's voice was a circuit, and the
+// famous ones differ in what that circuit was: a bridged-T ringing after a pulse, versus an envelope
+// opening a VCA on an oscillator. These three are the ringing-circuit version — the sound people mean
+// when they say a machine's name — and they take the same three knobs as their siblings.
+
+// A bridged-T is a resonator hit by a pulse: no oscillator at all, just a filter that rings. That is
+// exactly what the 808's kick is, and why it has that particular thump.
+class Kick808 {
+  constructor() { this.f = new Svf(); this.amp = new Env(); this.click = new Env(); this.hit = 0; }
+  strike() { this.amp.trig(); this.click.trig(); this.hit = 2; this.f.reset(); }
+  render(out, aux, n, f0, harmonics, timbre, morph, sr) {
+    // Q IS THE DECAY here, not an envelope: the circuit rings for as long as it rings. The envelope
+    // on top only stops it from going on for ever at the top of the knob.
+    const t60 = 0.2 + morph * morph * 3.0;
+    this.f.set(clamp(f0, 20, sr * 0.45), Math.max(4, t60 * f0 / 2.2), sr);
+    // The envelope outlasts the ring on purpose: the CIRCUIT should decide how long this rings, and
+    // the envelope is only here to stop it going on for ever at the top of the knob.
+    this.amp.set(t60 * 2.5, sr);
+    this.click.set(0.0015 + timbre * 0.006, sr);
+    for (let i = 0; i < n; i++) {
+      const a = this.amp.next(), ce = this.click.next();
+      let x = 0;
+      if (this.hit > 0) { x = 1 + harmonics * 3; this.hit--; }   // harmonics is how hard it is hit
+      const ring = this.f.process(x)[1];
+      out[i] = softClip(ring * 14 * a + ce * timbre * 0.8);
+      aux[i] = ring * 14 * a;                                     // without the click
+    }
+  }
+}
+
+// The machine snare: a pair of ringing circuits for the shell and a band of noise for the wires,
+// with their own envelopes — the wires always outlast the shell, which is the sound.
+class Snare808 {
+  constructor() {
+    this.f1 = new Svf(); this.f2 = new Svf(); this.bp = new Svf();
+    this.amp = new Env(); this.namp = new Env(); this.hit = 0; this.rng = new Prng(0x77aa33);
+  }
+  strike() { this.amp.trig(); this.namp.trig(); this.hit = 2; this.f1.reset(); this.f2.reset(); }
+  render(out, aux, n, f0, harmonics, timbre, morph, sr) {
+    const t = 0.06 + morph * morph * 0.7;
+    this.amp.set(t * 0.5, sr);
+    this.namp.set(t, sr);
+    this.f1.set(clamp(f0, 20, sr * 0.45), 12, sr);
+    this.f2.set(clamp(f0 * 1.47, 20, sr * 0.45), 12, sr);        // the two shell modes of the real thing
+    this.bp.set(clamp(1200 + timbre * 5000, 100, sr * 0.45), 0.9, sr);
+    for (let i = 0; i < n; i++) {
+      const a = this.amp.next(), na = this.namp.next();
+      let x = 0;
+      if (this.hit > 0) { x = 1; this.hit--; }
+      const shell = (this.f1.process(x)[1] + this.f2.process(x)[1] * 0.6) * a * 8;
+      const wires = this.bp.process(this.rng.next())[1] * na;
+      out[i] = softClip(shell * (1 - harmonics) * 1.3 + wires * harmonics * 1.8);
+      aux[i] = wires;
+    }
+  }
+}
+
+// The machine hat: the same six squares as its sibling, but through a band pass and gated twice —
+// a short window and a long one, which is what closed and open hats are on one circuit.
+class Hat808 {
+  constructor() { this.ph = HAT_RATIOS.map(() => 0); this.amp = new Env(); this.bp = new Svf(); this.hp = new Svf(); }
+  strike() { this.amp.trig(); }
+  render(out, aux, n, f0, harmonics, timbre, morph, sr) {
+    this.amp.set(0.015 + morph * morph * 1.1, sr);
+    const band = clamp(f0 * (8 + timbre * 30), 800, sr * 0.45);
+    this.bp.set(band, 1.6 + harmonics * 6, sr);                  // narrower than the analogue one
+    this.hp.set(clamp(band * 0.6, 400, sr * 0.45), 0.7, sr);
+    const base = f0 * 6;
+    for (let i = 0; i < n; i++) {
+      const a = this.amp.next();
+      let metal = 0;
+      for (let k = 0; k < HAT_RATIOS.length; k++) {
+        const d = base * HAT_RATIOS[k] / sr;
+        this.ph[k] += d; if (this.ph[k] >= 1) this.ph[k] -= 1;
+        metal += this.ph[k] < 0.5 ? 1 : -1;
+      }
+      metal /= HAT_RATIOS.length;
+      const y = this.hp.process(this.bp.process(metal)[1])[2];
+      out[i] = softClip(y * a * 2.2);
+      aux[i] = this.bp.process(metal)[1] * a;
+    }
+  }
+}
+
 // The decay time the DECAY knob asks for, in seconds: a short pluck at one end, a long ring at the
 // other, exponential between them because that is how the ear reads time.
 const decaySeconds = (d) => 0.005 * Math.pow(2000, clamp(d, 0, 1));
@@ -628,6 +712,9 @@ class ModelVoice extends AudioWorkletProcessor {
     this.kick = new KickEngine();
     this.snare = new SnareEngine();
     this.hat = new HatEngine();
+    this.kick808 = new Kick808();
+    this.snare808 = new Snare808();
+    this.hat808 = new Hat808();
     this.grain = new GrainEngine();
     this.particle = new ParticleEngine();
     this.armed = true;      // ready for a rising edge
@@ -732,8 +819,10 @@ class ModelVoice extends AudioWorkletProcessor {
       if (this.model === 'string') this.string.render(out, aux, n, f, harmonics, timbre, damping);
       else this.modal.render(out, aux, n, f, harmonics, timbre, damping);
       enveloped = true;   // it decays because it is a string, not because we turned it down
-    } else if (this.model === 'kick' || this.model === 'snare' || this.model === 'hat') {
-      const e = this.model === 'kick' ? this.kick : this.model === 'snare' ? this.snare : this.hat;
+    } else if (this.model === 'kick' || this.model === 'snare' || this.model === 'hat'
+            || this.model === 'kick808' || this.model === 'snare808' || this.model === 'hat808') {
+      const e = { kick: this.kick, snare: this.snare, hat: this.hat,
+        kick808: this.kick808, snare808: this.snare808, hat808: this.hat808 }[this.model];
       if (this.struck) e.strike();
       // DECAY joins MORPH here for the same reason it does on the physical models: they are the same
       // idea, and two knobs fighting over one is how a control ends up seeming not to work.

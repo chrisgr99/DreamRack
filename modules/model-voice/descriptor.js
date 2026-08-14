@@ -41,13 +41,22 @@ const knack = (id, name, min, max, def, opts = {}) => {
 // which asks you to count. A readout with a pop-up list says "modal resonator" — the one place our
 // vocabulary is plainly better than the panel we are porting, and worth the width it costs.
 //
-// The first ten are what the DSP will carry first: both physical models, the drums, and the four
-// oscillators that need no data tables. The rest follow.
+// FOURTEEN, NOT SIXTEEN. Each drum has two flavours — the analogue circuit and the sampled-machine
+// version of the same instrument — which is how the original splits them and costs almost nothing,
+// since they share a panel and a trigger.
+//
+// The other two of the original's sixteen are deliberately NOT here. Wavetable synthesis is about the
+// table — loading it, scanning it, morphing in two dimensions — and one position in a list is the
+// worst possible version of it; additive wants a hundred partials with real spectral shaping, not
+// twenty-four behind one knob. Both are better as their own modules, and are on the list as such.
+// A chord engine is not here either: it exists on the hardware because that hardware had one voice,
+// and a voice allocator with several of these gives real chords in any model instead.
 params.push({ id: 'model', name: 'Model', section: 'voice', curve: 'stepped', default: 'string',
   steps: [
     { value: 'analog' }, { value: 'shaper' }, { value: 'fm' }, { value: 'grain' },
     { value: 'noise' }, { value: 'particle' }, { value: 'string' }, { value: 'modal' },
-    { value: 'kick' }, { value: 'snare' }, { value: 'hat' },
+    { value: 'kick' }, { value: 'kick808' }, { value: 'snare' }, { value: 'snare808' },
+    { value: 'hat' }, { value: 'hat808' },
   ] });
 
 // ---- PITCH. Eight octaves on the knob, and the V/oct jack is its own terminal rather than a knАck:
