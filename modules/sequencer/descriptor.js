@@ -1,11 +1,11 @@
-// descriptor.js — Sequencer. A page's outward face when that page makes notes.
+// descriptor.js — Sequence Out. A page's outward face when that page makes notes.
 //
 // It bundles, and that is the whole of its job (design/voice-pages.md §2). Separate gate, pitch,
 // level, duration and pan signals go in; one note cable comes out, and crosses to a voice page. What
 // produces those signals — a hand-built sequencer, a MIDI listener, an arpeggiator — is whatever else
 // is on the page, and this module has no opinion about it.
 //
-// IT IS ALSO WHAT MAKES THE PAGE A SEQUENCER PAGE. A page holds one of these or one Voice module,
+// IT IS ALSO WHAT MAKES THE PAGE A SEQUENCER PAGE. A page holds one of these or one Voice In module,
 // never both, so a page can be trusted to be one thing. That enforcement lands in stage three; here
 // the module is an ordinary one you can place anywhere, and the note cable's domain rule already
 // stops it being wired anywhere it should not go.
@@ -24,9 +24,11 @@
 
 export default {
   apiVersion: 1,
+  // THE ID IS NOT THE NAME. `wcoast.sequencer` is in saved patches and in the registry; the name on
+  // the panel says which way the notes run, which is what a reader of a patch needs.
   id: 'wcoast.sequencer',
-  name: 'Sequencer',
-  abbreviation: 'SEQ',
+  name: 'Sequence Out',
+  abbreviation: 'SQO',
   category: 'sequencing',
   scope: 'shared',            // it is the page's boundary, not one voice's worth of it
   hp: 8,

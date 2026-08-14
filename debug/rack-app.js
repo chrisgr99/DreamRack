@@ -294,16 +294,16 @@ const MODULE_TYPES = [{
   panelUrl: 'modules/model-voice/panel.svg',
   descriptor: voiceDescriptor,
 }, {
-  // Sequencer and Voice — a page's outward face. A page holding one of these makes notes; a page
+  // Sequence Out and Voice In — a page's outward face. A page holding one of these makes notes; a page
   // holding the other plays them. See design/voice-pages.md.
   descriptorId: noteSeqDescriptor.id,
-  name: 'Sequencer',
+  name: 'Sequence Out',
   hp: 8,
   panelUrl: 'modules/sequencer/panel.svg',
   descriptor: noteSeqDescriptor,
 }, {
   descriptorId: pageVoiceDescriptor.id,
-  name: 'Voice',
+  name: 'Voice In',
   hp: 8,
   panelUrl: 'modules/voice/panel.svg',
   descriptor: pageVoiceDescriptor,

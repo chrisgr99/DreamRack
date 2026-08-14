@@ -100,8 +100,8 @@ const MODULES = [
   { name: 'Macro Oscillator 2', dir: 'model-voice', base: voiceLayout, desc: voiceDesc },
   { name: 'Compositor', dir: 'compositor', base: compositorLayout, desc: compositorDesc },
   { name: 'Video Output', dir: 'video-out', base: vidoutLayout, desc: vidoutDesc },
-  { name: 'Sequencer (note out)', dir: 'sequencer', base: noteSeqLayout, desc: noteSeqDesc },
-  { name: 'Voice (note in)', dir: 'voice', base: pageVoiceLayout, desc: pageVoiceDesc },
+  { name: 'Sequence Out', dir: 'sequencer', base: noteSeqLayout, desc: noteSeqDesc },
+  { name: 'Voice In', dir: 'voice', base: pageVoiceLayout, desc: pageVoiceDesc },
 ];
 
 const stage = document.getElementById('stage');

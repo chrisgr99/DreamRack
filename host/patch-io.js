@@ -232,7 +232,11 @@ export async function restore(obj, rack, mixer, opts = {}) {
     (a2.page || 'a1').localeCompare(b2.page || 'a1') || (a2.row - b2.row) || (a2.x - b2.x));
   for (const m of inOrder) {
     const page = m.page || (legacy ? homePage(rack, m.type) : 'a1');
-    const rec = await rack.addModule(m.type, m.row, m.x, opts.keepKeys ? { page, key: m.id } : { page });
+    // `restoring` — a saved patch has already decided what is on which page and what each page is
+    // called, so the one-boundary-per-page refusal and the automatic naming both stand aside. A file
+    // that somehow holds two would open as it is rather than losing a module on load.
+    const rec = await rack.addModule(m.type, m.row, m.x,
+      opts.keepKeys ? { page, key: m.id, restoring: true } : { page, restoring: true });
     if (rec) { idToKey.set(m.id, rec.key); if (opts.keepKeys && rack.reserveKey) rack.reserveKey(rec.key); }
   }
   // Put the pinned mixer back where it was saved (it survives rack.clear() at its boot x=0 otherwise).

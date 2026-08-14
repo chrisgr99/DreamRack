@@ -26,9 +26,9 @@ export function create(ctx, services) {
 
   const inIndex = new Map(IN_PORTS.map((id, i) => [id, i]));
 
-  // The cable's flash. The worklet posts one message per note; the rack subscribes through onNote and
-  // brightens every note cable leaving this module. Nothing else in the rack has an event to show, so
-  // nothing else has this hook.
+  // The cable's flash. The worklet posts one note event per note — handle, sample, and what the note
+  // holds — and the rack subscribes through onNote and brightens every note cable leaving this
+  // module. Today the flash is the only reader; the event is the shape the transport will carry.
   let noteCb = null;
   node.port.onmessage = (e) => {
     const d = e.data || {};

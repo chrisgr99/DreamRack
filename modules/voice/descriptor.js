@@ -1,12 +1,12 @@
-// descriptor.js — Voice. A page's outward face when that page is an instrument.
+// descriptor.js — Voice In. A page's outward face when that page is an instrument.
 //
 // One note cable in, and the note's parts come back out as ordinary jacks: gate, 1V/oct pitch, bend,
 // level, duration and pan. Patch those into whatever the page is built from and the page plays.
 //
-// UNBUNDLING HAPPENS HERE AND NOWHERE ELSE, exactly as bundling happens only in the Sequencer module
+// UNBUNDLING HAPPENS HERE AND NOWHERE ELSE, exactly as bundling happens only in the Sequence Out module
 // (design/voice-pages.md §3). That is the rule that keeps the note domain out of general patching,
 // and with the domain rule in the patchbay it is also what makes a page's kind enforce itself: a note
-// cable has nowhere to land on a page that has no Voice module.
+// cable has nowhere to land on a page that has no Voice In module.
 //
 // PITCH COMES OUT TWICE — the note's own pitch, held, and BEND: how far it has moved since. Holding
 // is what makes a note a note, and a deviation is what a wheel, a wind controller and MPE all send,
@@ -28,9 +28,10 @@
 
 export default {
   apiVersion: 1,
+  // The id stays as it is — it is in saved patches — while the name says which way the notes run.
   id: 'wcoast.voice',
-  name: 'Voice',
-  abbreviation: 'VCE',
+  name: 'Voice In',
+  abbreviation: 'VCI',
   category: 'utility',
   scope: 'shared',            // it is the page's boundary, not one voice's worth of it
   hp: 8,

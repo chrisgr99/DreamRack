@@ -65,6 +65,11 @@ class SequencerProcessor extends AudioWorkletProcessor {
     this._age = 0;          // samples since the note started
     this._len = 0;          // samples the note may last at most
     this._held = { pitch: 0, level: 0, duration: 0, pan: 0 };
+    // A handle names one sounding note so a later message can refer to it — which is what makes an
+    // early release possible at all. Session prefix plus a counter, per control-protocol.md: free of
+    // collisions within a sender, namespaced across senders, and readable when something is wrong.
+    this._prefix = 'q' + Math.floor(Math.random() * 46656).toString(36);
+    this._noteSeq = 0;
   }
 
   process(inputs, outputs, params) {
@@ -103,9 +108,22 @@ class SequencerProcessor extends AudioWorkletProcessor {
         this._on = true;
         this._age = 0;
         this._len = Math.max(1, Math.round(held.duration * sampleRate));
-        // One message per note, for the cable's flash. Notes arrive a few times a second, not at
-        // audio rate, so this is a cheap thing to post and there is no need to throttle it.
-        this.port.postMessage({ note: { level: held.level } });
+        // ONE MESSAGE PER NOTE, and it is already shaped like the event the transport will carry
+        // (design/voice-pages.md §3): a handle naming this note, the sample it began on, and what it
+        // holds. Today only the cable's flash reads it. Nothing here is expensive — measured at about
+        // 0.8 microseconds a message, and notes arrive a few times a second, not at audio rate.
+        //
+        // THE SAMPLE MATTERS EVEN NOW. A message cannot be received before the block it was posted
+        // during has finished, so a receiver that acts on arrival is late by however far into the
+        // block the edge fell — nothing to 2.7ms, and variable, which smears rhythm. Carrying the
+        // sample lets a receiver defer by one block and place the note exactly, turning that jitter
+        // into constant latency.
+        const at = (typeof currentFrame === 'number' ? currentFrame : 0) + i;
+        this.port.postMessage({ note: {
+          handle: this._prefix + ':' + (this._noteSeq++),
+          time: at,
+          pitch: held.pitch, level: held.level, duration: held.duration, pan: held.pan,
+        } });
       }
       gatePrev = g;
 

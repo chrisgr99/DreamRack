@@ -67,8 +67,18 @@ const STYLE_COLOR = { audio: '#f3c40b', control: '#ff7300', trigger: '#5aa0e6', 
 // the bundle is told apart by being neutral and THICKER, which reads at any zoom and for any kind of
 // colour vision (design/voice-pages.md §3). It is also the only cable that changes with the theme:
 // its job is to stay legible against whatever it crosses, not to name a domain.
-const NOTE_COLOR = { dark: '#ececed', light: '#141418' };
-const NOTE_WIDTH = 1.8;          // × the usual cable width — a multicore beside a patch lead
+// Three-quarter grey on the dark faces rather than white: at nearly twice the width of the other
+// cables, full brightness made the bundle the loudest thing on the rack — and it is a signal path,
+// not an alarm. Still the only cable without a hue, which is what identifies it.
+// White again now that it is no longer drawn heavier: at the ordinary cable width it reads as one
+// more cable rather than as a stripe across the rack, and white is what separates it from the six
+// hues at a glance.
+const NOTE_COLOR = { dark: '#ffffff', light: '#141418' };
+// SAME WIDTH AS EVERY OTHER CABLE. It was drawn heavier, and the extra width did real harm: the bend
+// handle is drawn as a multiple of the cable's width, so on the widest cable in the rack it swallowed
+// the grab stretch that unplugs it and the two could not be told apart under the pointer. Being the
+// only cable without a hue is distinction enough.
+const NOTE_WIDTH = 1.0;
 // A NOTE CABLE FLASHES WHEN A NOTE STARTS. It is the only cable carrying events rather than a
 // continuous signal, and this is what says so — one note is a blink, a chord is a stronger one, a
 // dense passage is a cable that stays lit. Brightness rather than a pulse travelling along the
@@ -167,6 +177,18 @@ const STUB_SWOOP_PX = 55;
 // Slot one sits this far in from the tab's left edge. Slots are counted from the LEFT and never
 // recentred, so a cable's place on the bar does not shift when another cable is added or removed.
 const SLOT_INSET = 6;
+// ---- THE TWO BOUNDARY MODULES (design/voice-pages.md). A page holding one of these is a voice or a
+// source of notes, and holding one is the whole of what makes it so — there is no page TYPE anywhere.
+// One per page and never both, so a page can be trusted to be one thing.
+const BOUNDARY = {
+  'wcoast.sequencer': { dir: 'out', port: 'noteOut', label: 'Sequencer', kind: 'a sequence' },
+  'wcoast.voice': { dir: 'in', port: 'noteIn', label: 'Voice', kind: 'a voice' },
+};
+const NOTE_BTN_PX = Math.round(2.9 * 96 / 25.4);   // the tab's note port, in the bar's own scale
+// The port's surround: the note neutral knocked back, since a filled disc carries far more of a
+// colour than a line of it does. The dashes and the hole are the jacks' own black.
+const NOTE_BTN_INK = { dark: '#b9b9bb', light: '#232327' };
+const JACK_HOLE_INK = '#000000';
 const CARRY_MORPH_MS = 2000;   // the held cord's anchor sliding from the tab you clicked to the one you left
 // The stretch of a cord that can be clicked to hold it bright, measured in JACK RADII from the jack's
 // own centre — so it scales with the terminal rather than being a number that happens to suit one panel.
@@ -198,6 +220,11 @@ const LIT_GRAB_TO_R = 2.33;
 // distance, on a round target approached at an angle, the two are the same press. The clearance below
 // is from the pad's edge, which is the boundary that actually decides which one you hit.
 const LIT_GRAB_GAP_MM = 1.0;
+// The end-grab's outline — what tells it apart from the reshape handle at a glance. It follows the
+// theme rather than the cable: its job is to stand off the FACE behind it, and a dark line on a dark
+// panel is a line nobody can see.
+const GRAB_EDGE = { dark: '#ffffff', light: '#0b0b0d' };
+const GRAB_EDGE_MM = 0.18;   // how far it stands out past the pill, each side
 const LIT_GRAB_W = 2.2;      // hit width, in cord widths
 const LIT_GRAB_SHOW = 2.2;   // ...and the width it is drawn at once you have dwelt on it
 const LIT_HOVER_MS = 300;    // dwell before the stretch reveals itself
@@ -2083,6 +2110,14 @@ export class Rack {
           const seg = this._cordSegment(g, fromA, from, from + ring * (LIT_GRAB_TO_R - LIT_GRAB_FROM_R));
           if (!seg) continue;
           const end = fromA ? 'a' : 'b';
+          // TWO HANDLES, TOLD APART BY A LINE. This one takes the cable's end off; the bend handle
+          // reshapes it. They are the same pill in the same colour otherwise, and confusing them
+          // costs you a patch. So this one is OUTLINED: a hair-thin dark edge drawn under the pill
+          // and showing only at its rim. The reshape handle keeps the plain cable colour.
+          const outline = mk(seg, 'transparent', wmm * LIT_GRAB_W, null, null);
+          outline.setAttribute('stroke-linecap', 'round');
+          outline.setAttribute('class', 'cable-grab-edge');
+          outline.dataset.edge = e.id; outline.dataset.end = end;
           const hit = mk(seg, 'transparent', wmm * LIT_GRAB_W, null, 'stroke');
           hit.setAttribute('stroke-linecap', 'round');   // a pill, not a block
           hit.setAttribute('class', 'cable-grab');
@@ -2093,6 +2128,12 @@ export class Rack {
             el.setAttribute('stroke', on ? color : 'transparent');
             el.setAttribute('stroke-width', r2(wmm * (on ? LIT_GRAB_SHOW : LIT_GRAB_W)));
             el.style.opacity = on ? '0.9' : '';
+            const edge = this.cables.querySelector(`.cable-grab-edge[data-edge="${el.dataset.edge}"][data-end="${el.dataset.end}"]`);
+            if (edge) {
+              edge.setAttribute('stroke', on ? (this.dark ? GRAB_EDGE.dark : GRAB_EDGE.light) : 'transparent');
+              edge.setAttribute('stroke-width', r2(wmm * LIT_GRAB_SHOW + GRAB_EDGE_MM * 2));
+              edge.style.opacity = on ? '0.9' : '';
+            }
           };
           // THE DWELL AND THE SHOWN STATE LIVE ON THE RACK, NOT ON THIS ELEMENT — because this element
           // does not survive. Every pointer move can redraw the cable layer (the nearest-cable hover
@@ -2577,6 +2618,105 @@ export class Rack {
     }
   }
 
+  // ---- THE TAB'S NOTE PORT ------------------------------------------------------------------
+  // A page holding a boundary module gets a port on its tab, and it is there whether or not anything
+  // is patched to it. That is what makes a voice reachable from anywhere: pull the note cable off and
+  // you can put it back without travelling to the other page to find the jack — which is exactly the
+  // journey the feature exists to remove.
+  //
+  // It is not a new kind of connection. The button stands for the module's own note jack, and a cord
+  // dropped on it connects through the ordinary path, the way the mixer's channel buttons already do.
+  _boundaryOn(pageId) {
+    for (const rec of this.records.values()) {
+      const b = BOUNDARY[rec.descriptorId];
+      if (b && this.pageOf(rec) === pageId) return { rec, ...b };
+    }
+    return null;
+  }
+
+  // On the LEFT of the tab, before the slots that crossing cables count off — a fixed place, so it is
+  // the same target on every tab that has one.
+  _noteButtonGeom() {
+    if (!this._tabBarEl) return [];
+    const out = [];
+    for (const p of this.pages) {
+      if (p.id === this.page) continue;   // standing on it, its own jack is in front of you
+      const b = this._boundaryOn(p.id);
+      if (!b) continue;
+      const a = this._noteAnchor(p.id);
+      if (!a) continue;
+      const patched = this.patchbay.list().some((e) => (e.dst.key === b.rec.key && e.dst.portId === b.port)
+        || (e.src.key === b.rec.key && e.src.portId === b.port));
+      out.push({ ...b, portId: b.port, x: a.x, y: a.y,
+        r: NOTE_BTN_PX / 2, hitR: NOTE_BTN_PX, patched });
+    }
+    return out;
+  }
+
+  // WHERE THE NOTE PORT SITS, and therefore where its cable must land. One place, read by the button
+  // and by the stub that arrives at it — they were computed separately and the cable came down on its
+  // numbered slot while the port sat at the tab's edge, a few millimetres apart and plainly wrong.
+  _noteAnchor(pageId) {
+    const el = this._tabBarEl && this._tabBarEl.querySelector(`[data-page="${pageId}"]`);
+    if (!el) return null;
+    const r = el.getBoundingClientRect();
+    return { x: r.left + SLOT_INSET, y: r.bottom - 1 };
+  }
+
+  // Is this cable's far end the note port of a boundary module on that page?
+  _isNoteStub(item) {
+    const far = item.nearIsSrc ? item.e.dst : (item.e.link || item.e.src);
+    const rec = far && this.records.get(far.key);
+    const b = rec && BOUNDARY[rec.descriptorId];
+    return !!(b && far.portId === b.port);
+  }
+
+  // DRAWN AS THE JACK IT STANDS FOR: a coloured surround, a dark hole, and the direction dashes on the
+  // outer third for an output or the inner third for an input — the same three things every terminal
+  // on every faceplate says, at the size the tab bar can afford.
+  //
+  // Knocked back from the cable's own white. A cable is a line and can be bright without shouting; a
+  // filled disc at full brightness on a dark bar is the loudest thing in the window, and this is a
+  // socket sitting quietly until you need it.
+  _drawNoteButtons(svg) {
+    const ink = this.dark ? NOTE_BTN_INK.dark : NOTE_BTN_INK.light;
+    for (const b of this._noteButtonGeom()) {
+      const pad = document.createElementNS(SVG_NS, 'circle');
+      pad.setAttribute('cx', r2(b.x)); pad.setAttribute('cy', r2(b.y)); pad.setAttribute('r', r2(b.hitR));
+      pad.setAttribute('fill', 'transparent');
+      svg.appendChild(pad);
+
+      const disc = document.createElementNS(SVG_NS, 'circle');
+      disc.setAttribute('cx', r2(b.x)); disc.setAttribute('cy', r2(b.y)); disc.setAttribute('r', r2(b.r));
+      disc.setAttribute('fill', ink);
+      disc.setAttribute('class', 'note-btn');
+      svg.appendChild(disc);
+
+      // The plug hole, as on a jack — and what makes the surround a surround, so the dashes have a
+      // band to sit in.
+      const rh = b.r * 0.42;
+      const hole = document.createElementNS(SVG_NS, 'circle');
+      hole.setAttribute('cx', r2(b.x)); hole.setAttribute('cy', r2(b.y)); hole.setAttribute('r', r2(rh));
+      hole.setAttribute('fill', JACK_HOLE_INK);
+      svg.appendChild(hole);
+
+      // OUT hugs the outer edge, IN hugs the hole. The same rule as addDirRing in the panel loader,
+      // and the same reason: one colour reads as in or out without a second colour.
+      const band = b.r - rh, w = band / 3;
+      const ringR = b.dir === 'out' ? b.r - w / 2 : rh + w / 2;
+      const circ = 2 * Math.PI * ringR;
+      const n = Math.max(6, Math.round(circ / (w * 1.6)));
+      const seg = circ / (2 * n);
+      const dash = document.createElementNS(SVG_NS, 'circle');
+      dash.setAttribute('cx', r2(b.x)); dash.setAttribute('cy', r2(b.y)); dash.setAttribute('r', r2(ringR));
+      dash.setAttribute('fill', 'none');
+      dash.setAttribute('stroke', JACK_HOLE_INK);
+      dash.setAttribute('stroke-width', r2(w));
+      dash.setAttribute('stroke-dasharray', `${r2(seg)} ${r2(seg)}`);
+      svg.appendChild(dash);
+    }
+  }
+
   // The ten buttons in window coordinates: one per mixer channel, on its own slot, centred ON the
   // tab's lower edge so they straddle it.
   _mixerButtonGeom() {
@@ -2714,7 +2854,9 @@ export class Rack {
       };
       list.forEach((item, i) => {
         const slot = slotOf(item, i);
-        let anchor = this._stubAnchor(farPage, slot);
+        // A note cable lands ON the note port, not on a counted slot: the port is a fixed place on
+        // the tab, and a cable arriving anywhere else would be pointing at nothing.
+        let anchor = this._isNoteStub(item) ? this._noteAnchor(farPage) : this._stubAnchor(farPage, slot);
         // Mid-switch: every crossing cable sweeps out from THIS page's own tab to the tab of the page
         // it runs to. That reads as the cable reaching out from where you are now to where it goes —
         // and it covers the case of arriving from somewhere uninvolved, where the cable was not drawn
@@ -2723,7 +2865,7 @@ export class Rack {
         const m = this._stubMorph;
         if (m && anchor) {
           const t = Math.min(1, (performance.now() - m.t0) / CARRY_MORPH_MS);
-          const was = this._stubAnchor(m.here, slot);
+          const was = this._isNoteStub(item) ? this._noteAnchor(m.here) : this._stubAnchor(m.here, slot);
           if (was) {
             const k = 1 - Math.pow(1 - t, 3);
             anchor = { x: was.x + (anchor.x - was.x) * k, y: was.y + (anchor.y - was.y) * k };
@@ -3003,6 +3145,7 @@ export class Rack {
     this._drawStubBendHandle(svg);
     // LAST, so they sit OVER the stubs. Drawn first, the lower half of every button was really the
     // stub underneath it, and pressing there traced the cable instead of toggling the channel.
+    this._drawNoteButtons(svg);   // a page's note port, before the mixer's channels
     this._drawMixerButtons(svg);
   }
 
@@ -3068,6 +3211,12 @@ export class Rack {
       if (this._tempCable || this._reshaping || this._optDown || this._carryingModule) { this._clearStubBend(); return; }
       const hit = this._stubCurveAt(e.clientX, e.clientY);
       if (!hit) { this._clearStubBend(); return; }
+      // KEEP CLEAR OF BOTH ENDS, as an on-page cord's handle does. Without this the reshape handle
+      // armed over the whole stub — including over the press that takes the cable off — and on the
+      // tab bar the two were simply the same target. Measured in cable widths, so it scales with
+      // zoom the way the stub itself does, and capped at a third of the run so a short stub keeps a
+      // middle to bend.
+      if (this._stubBendKeepOut(hit, e.clientX, e.clientY)) { this._clearStubBend(); return; }
       const at = { x: e.clientX, y: e.clientY };
       if (this._stubBend && this._stubBend.id === hit.id) { this._stubBend.at = at; this._drawPageStubs(); return; }
       if (this._stubArm && this._stubArm.id === hit.id) { this._stubArm.at = at; return; }
@@ -3080,6 +3229,12 @@ export class Rack {
         this._drawPageStubs();
       }, BEND_HOVER_MS);
     }, true);
+  }
+
+  _stubBendKeepOut(c, x, y) {
+    const span = Math.hypot(c.T.x - c.Je.x, c.T.y - c.Je.y);
+    const keep = Math.min(Math.max(24, (c.w || 3) * 8), span * 0.33);
+    return Math.hypot(x - c.Je.x, y - c.Je.y) < keep || Math.hypot(x - c.T.x, y - c.T.y) < keep;
   }
 
   _clearStubBend() {
@@ -3238,7 +3393,11 @@ export class Rack {
   _bendKeepOut(edge, m) {
     const g = this._cordGeom(edge);
     if (!g) return false;
+    // FOUR TERMINAL DIAMETERS CLEAR of each end, not the two millimetres past the grab stretch that
+    // this used to be. The two handles are the same pill and confusing them costs a patch, so the gap
+    // between them should be one nobody can cross by accident.
     const BEND_END_GAP_MM = 2.0;
+    const TERMINAL_CLEAR = 4;   // × the terminal's diameter
     for (const [pt, side] of [[g.pA, g.a], [g.pB, g.b]]) {
       if (!pt) continue;
       // The obstacle is the knob if there is one — a knАck's jack sits at its centre — and the jack's
@@ -3249,7 +3408,11 @@ export class Rack {
       const obstacle = Math.max((side && side.knobR) || 0, ((side && side.outerR) || 0) + HIT_GROW_MM);
       const grabEnd = ((side && side.ring) || 0) * (LIT_GRAB_TO_R - LIT_GRAB_FROM_R)
         + ((side && side.outerR) || 0) + HIT_GROW_MM + LIT_GRAB_GAP_MM + w * LIT_GRAB_W / 2;
-      const keep = Math.max(obstacle, grabEnd) + BEND_END_GAP_MM;
+      // ...but never so far that a short cord has nowhere left to bend. A third of its length from
+      // each end always remains, whatever the terminals are.
+      const span = Math.hypot(g.pB.x - g.pA.x, g.pB.y - g.pA.y);
+      const wide = ((side && side.outerR) || 0) * 2 * TERMINAL_CLEAR;
+      const keep = Math.min(Math.max(obstacle, grabEnd, wide) + BEND_END_GAP_MM, span * 0.33);
       if (Math.hypot(m.x - pt.x, m.y - pt.y) < keep) return true;
     }
     return false;
@@ -3338,6 +3501,9 @@ export class Rack {
     // THE MIXER'S BUTTONS FIRST, in window coordinates — they live on the tab bar, not in the rack.
     // Answering here means a cord dropped on one connects through the ordinary drop path, with no
     // second way of making a connection to keep in step with this one.
+    for (const b of this._noteButtonGeom()) {
+      if (Math.hypot(clientX - b.x, clientY - b.y) <= b.hitR + 3) return { key: b.rec.key, portId: b.portId };
+    }
     for (const b of this._mixerButtonGeom()) {
       if (Math.hypot(clientX - b.x, clientY - b.y) <= b.hitR + 3) return { key: b.rec.key, portId: b.portId };
     }
@@ -8117,6 +8283,9 @@ export class Rack {
   async addModule(descriptorId, rowIndex, xMm, opts = {}) {
     const type = this.moduleTypes.find((t) => t.descriptorId === descriptorId);
     if (!type) return null;
+    const onPage = this._hasPage(opts.page) ? opts.page : this.page;
+    const refusal = this._boundaryRefusal(descriptorId, onPage);
+    if (refusal && !opts.restoring) { this._sayRefusal(refusal); return null; }
     rowIndex = Math.max(0, Math.min(this.rowCount - 1, rowIndex | 0));
 
     const { instanceId, instance } = await this.host.instantiate(descriptorId);
@@ -8129,7 +8298,7 @@ export class Rack {
       // The page it belongs to, alongside its row and x. A new module lands on the page you are
       // LOOKING at — with no way yet to move one between pages, that is the only way a second audio
       // page or the Video page ever gets anything on it.
-      page: this._hasPage(opts.page) ? opts.page : this.page,
+      page: onPage,
       // x is an ORDERING here, not a position — the row packs the moment this module joins it, so
       // whatever number arrives is only used to sort. It is deliberately NOT clamped to zero: a drop
       // in front of the leftmost module asks for an x just below that module's, and at the left-hand
@@ -8199,6 +8368,12 @@ export class Rack {
     // to change. A module is a node from the moment it exists; the cables only say what feeds what.
     if (rec.instance && typeof rec.instance.videoPass === 'function') this._rebuildVideoGraph();
     this._tidyVideoMonitors();
+    // A boundary module names its page and gives its tab a note port. Not while restoring: a saved
+    // patch has already said what its pages are called, and renaming them on load would overwrite it.
+    if (BOUNDARY[descriptorId] && !opts.restoring) {
+      this._nameForBoundary(rec.page, descriptorId);
+      this._drawPageStubs();
+    }
     this.onChange();
     return rec;
   }
@@ -8408,6 +8583,59 @@ export class Rack {
   // "put it back at 240mm" is wrong the moment a neighbour has changed width. "Put it back third"
   // always means the same thing.
   _indexOf(rec) { return this._rowOccupants(rec.row, this.pageOf(rec)).indexOf(rec); }
+
+  // ---- ONE BOUNDARY MODULE PER PAGE, AND NEVER BOTH -------------------------------------------
+  // The refusal is the enforcement of the whole page model: someone opening a patch they did not
+  // build reads the tab bar and knows the shape of it, and that only holds if a page is one thing.
+  // Said out loud rather than silently undone — a module that vanished on being dropped would read
+  // as a bug.
+  _boundaryRefusal(descriptorId, pageId, exceptRec) {
+    const want = BOUNDARY[descriptorId];
+    if (!want) return null;
+    for (const rec of this.records.values()) {
+      if (rec === exceptRec) continue;
+      const has = BOUNDARY[rec.descriptorId];
+      if (!has || this.pageOf(rec) !== pageId) continue;
+      const name = this._pageName(pageId);
+      return has.dir === want.dir
+        ? `${name} already has a ${has.label} module. A page has one.`
+        : `${name} is ${has.kind}. A page is one thing or the other, not both.`;
+    }
+    return null;
+  }
+
+  // Said where the eye already is — the same chip a stub's label uses, centred on the pointer, which
+  // is what a screen magnifier is tracking.
+  _sayRefusal(text) {
+    const x = this._lastPointer ? this._lastPointer.x : window.innerWidth / 2;
+    const y = this._lastPointer ? this._lastPointer.y : 80;
+    this._showFlag(text, '#e0603a', x, y, null);
+    this._flagSticky = false;
+    clearTimeout(this._flagGoTimer);
+    this._flagGoTimer = setTimeout(() => { this._flagGoTimer = 0; this._hideFlag(); }, 2600);
+  }
+
+  _pageName(id) {
+    const p = this.pages.find((x) => x.id === id);
+    return (p && p.name) || 'This page';
+  }
+
+  // THE PAGE TAKES ITS NAME FROM THE MODULE, unless you have already named it yourself. Voice 1,
+  // Sequencer 1, numbered by how many pages of that kind there are — so the tab bar explains the
+  // idea before any documentation does. A name you chose is never overwritten, and deleting the
+  // module leaves the name alone: renaming a page out from under someone is worse than a stale name.
+  _nameForBoundary(pageId, descriptorId) {
+    const b = BOUNDARY[descriptorId];
+    const p = this.pages.find((x) => x.id === pageId);
+    if (!b || !p) return;
+    if (!/^Audio \d+$/.test(p.name || '')) return;   // already named, by you or by another module
+    let n = 0;
+    for (const q of this.pages) {
+      const on = this._boundaryOn(q.id);
+      if (on && on.label === b.label && q.id !== pageId) n++;
+    }
+    this.renamePage(pageId, `${b.label} ${n + 1}`);
+  }
 
   _placeAtIndex(key, row, page, index) {
     const rec = this.records.get(key);
@@ -9199,11 +9427,25 @@ export class Rack {
       if (!at || (rec && !lifted)) { finish(); return; }
       placed = true;
       if (rec) {
+        // THE SAME RULE ON ARRIVAL AS ON CREATION. A boundary module carried onto a page that already
+        // has one is refused and goes back where it came from — which it does by simply not changing
+        // pages, since it is still in your hand over the page it started on.
+        const refusal = this._boundaryRefusal(rec.descriptorId, this.page, rec);
+        if (refusal && this.pageOf(rec) !== this.page) {
+          this._sayRefusal(refusal);
+          rec.lifted = false;
+          rec.el.style.display = '';
+          finish();
+          this.relayout();
+          return;
+        }
         rec.lifted = false;
         rec.el.style.display = '';
         // ...and it lands on the page you are LOOKING at, which is how a module crosses pages at all:
         // pick it up here, click a tab, put it down there.
+        const cameFrom = this.pageOf(rec);
         rec.page = this.page;
+        if (BOUNDARY[rec.descriptorId] && cameFrom !== this.page) this._nameForBoundary(this.page, rec.descriptorId);
         finish();
         // IT STARTS WHERE YOUR HAND LET GO and eases from there into its slot — so a module dropped
         // past the end of a row is seen to travel back and nestle against the last one, rather than

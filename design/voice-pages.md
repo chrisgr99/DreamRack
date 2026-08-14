@@ -1,7 +1,7 @@
 # Voice pages — specification
 
-A page becomes a voice by containing a Voice module, and a source of notes by containing a
-Sequencer module. Everything else follows from that one sentence: what the tab is called, what
+A page becomes a voice by containing a **Voice In** module, and a source of notes by containing a
+**Sequence Out** module. Everything else follows from that one sentence: what the tab is called, what
 crosses its boundary, how many copies of the page run, and where an external sequencer plugs in.
 
 This extends `tabs.md`, which describes pages and the ports they carry, and `control-protocol.md`,
@@ -10,8 +10,8 @@ in §9.
 
 ## 1. Two modules, and what they decide
 
-**The Voice module** makes its page a voice. **The Sequencer module** makes its page a source of
-notes. Both are singletons: one per page, and a page may not hold both.
+**Voice In** makes its page a voice. **Sequence Out** makes its page a source of notes. The names say
+which way the notes run, which is what someone reading an unfamiliar patch needs first. Both are singletons: one per page, and a page may not hold both.
 
 Refusing the combination is deliberate. The point of the scheme is that someone opening a patch they
 did not build can read the tab bar and know the shape of the whole thing. That only works if a page
@@ -23,8 +23,8 @@ on it is the whole of the answer, and it is visible.
 
 ### Naming
 
-The letter remains a page's identity, as in `tabs.md`. Adding a Voice module sets the page's
-nickname to **Voice 1**, the next to Voice 2; a Sequencer module sets **Sequencer 1**. A nickname
+The letter remains a page's identity, as in `tabs.md`. Adding a Voice In module sets the page's
+nickname to **Voice 1**, the next to Voice 2; a Sequence Out module sets **Sequencer 1**. A nickname
 you have already chosen is never overwritten — a page called Bass stays Bass.
 
 Deleting the module leaves the nickname alone and takes the boundary away. Renaming a page out from
@@ -37,9 +37,8 @@ tab bar reading Sequencer 1, Voice 1, Voice 2 explains the idea before any docum
 
 **The two modules bundle and unbundle. That is their entire job.**
 
-The Sequencer module takes a gate and separate pitch, level, duration and pan signals from the page
-and makes one note out of them. The Voice module takes a note in and gives those back as ordinary
-jacks inside the page.
+Sequence Out takes a gate and separate pitch, level, duration and pan signals from the page and makes
+one note out of them. Voice In takes a note in and gives those back as ordinary jacks inside the page.
 
 They do not carry anything else. A filter sweep running from a sequencer page to a voice page is an
 ordinary control cable crossing a tab, exactly as `tabs.md` already describes, and neither module is
@@ -54,9 +53,8 @@ other domain crosses tabs as it does now.
 
 A note is its own domain, with its own cable colour, alongside audio, control, trigger, luma and rgb.
 
-**A note bundle is created in exactly one place and opened in exactly one place.** The Sequencer
-module is the only thing in the rack that produces one; the Voice module is the only thing that
-opens one. Nothing else bundles or unbundles.
+**A note bundle is created in exactly one place and opened in exactly one place.** Sequence Out is the
+only thing in the rack that produces one; Voice In is the only thing that opens one. Nothing else bundles or unbundles.
 
 That single rule does more work than it looks. It keeps the note domain from leaking into general
 patching, and it enforces the encapsulation in §1 without a placement rule anywhere: put a note
@@ -70,10 +68,13 @@ The rack's hues are spent: audio yellow, control orange, trigger light blue, pit
 off-white, rgb magenta. Everything left over is adjacent to one of those, so **the note cable is not
 a hue at all.**
 
-- **It is neutral and thicker than every other cable** — near-white on the dark faces, near-black on
-  the light ones. Being the only cable without a hue is a stronger distinction than any remaining
-  colour could be, and it works at any zoom and for any kind of colour vision. The extra width is
-  also physically honest: a bundle is a multicore next to a patch lead.
+- **It is neutral** — grey on the dark faces, near-black on the light ones — and the same width as
+  every other cable. Being the only cable without a hue is a stronger distinction than any remaining
+  colour could be, and it works at any zoom and for any kind of colour vision.
+
+  It was drawn heavier at first, which was physically honest and practically wrong: the reshape
+  handle is sized as a multiple of a cable's width, so on the widest cable in the rack it swallowed
+  the grab that unplugs it and the two could not be separated under the pointer.
 - **It is the only cable that changes with the theme**, because its job is to stay legible against
   whatever it crosses rather than to name a domain.
 - **The jack has two concentric rings, at the ordinary jack size.** The ring is greyscale, and the
@@ -89,21 +90,42 @@ a hue at all.**
   and gets worse exactly when the music gets interesting. Overlapping brightness adds up instead of
   colliding, and needs no position along the cable to mean anything.
 
-### What rides in the bundle
+### A note cable carries events, not samples
 
-Two kinds of thing, and the difference matters.
+A note edge is a **logical edge**, like a video edge: the rack records it and forwards messages along
+it, and no Web Audio connection is made. Sequence Out emits note events; Voice In receives them and
+turns each into control voltages inside itself, one set per allocated copy.
 
-**The gate**, which is the note itself: it opens when the note starts and closes when it ends (§4).
+**Three reasons, and any one of them would be enough.**
 
-**Values fixed when the note starts:**
+**A note cannot be ended early otherwise.** A gate carried as a signal can stop, but the note it
+belonged to cannot be named — so a source can never say "end that one and leave the other two
+ringing". With a handle on every note it can, and duration goes back to being the failsafe it was
+designed as rather than the only way a note can end. This is why `control-protocol.md` was built on
+handles in the first place.
 
-- **pitch** — an ordinary 1V/oct control voltage, captured at note-on, and see below.
+**Channels run out.** Seven lanes per note carried as channels means fifty-six channels for eight
+voices, and a browser caps a node at thirty-two. That ceiling arrives at four voices, and trimming
+lanes buys one or two more. An event stream has no ceiling at any voice count.
+
+**It collapses two protocols into one.** `control-protocol.md` already specifies note-on with a
+handle and a mandatory duration, note-off by handle, and note-modify for per-note expression — for an
+external sender. If Sequence Out speaks the same thing, the MIDI or Strudel interface stops being a
+translator and becomes a source like any other (§7).
+
+### What a note carries
+
+**Set when the note starts**, and unchanging for its life:
+
+- **pitch** — a 1V/oct value, and see below.
 - **level** — the note's velocity: how hard it was played, and see below.
 - **duration** — how long, and see §4.
 - **pan** — where in the stereo field. Per-note position is genuinely musical: struck notes
-  scattered across the field, or a phrase that walks. It costs one lane.
+  scattered across the field, or a phrase that walks.
+- **handle** — what names this note so a later message can refer to it. Minted by Sequence Out, which
+  is the note's creator, in the form `control-protocol.md` describes.
 
-**Lanes that keep moving while the note sounds:**
+**Sent as tagged updates while the note sounds**, each carrying the handle of the note it belongs to:
 
 - **bend** — how far the pitch has moved since the note started, as −1 to 1 against a bend range.
 - **pressure** — a continuous amplitude or effort signal. Breath for a wind voice, bow force for a
@@ -112,9 +134,71 @@ Two kinds of thing, and the difference matters.
 This is the line MPE draws between a note's start and its ongoing expression, drawn here on purpose
 rather than arrived at later.
 
+### Updates, and how they become a voltage again
+
+Measured rather than assumed: eight voices with bend and pressure both moving is six thousand updates
+a second, which costs about **half a percent of one core** sent as individual messages, and 0.035%
+batched into a typed array per block. The form can be chosen for clarity; the traffic is not the
+constraint. **Timing is.**
+
+**Sent on change, not on a clock.** A control that is not moving sends nothing at all. Most of them
+are still most of the time, so this is the largest saving available and it costs no fidelity.
+
+**Once per audio block when they are moving** — about three milliseconds, finer than breath or a bend
+wheel needs.
+
+**Linearly interpolated at the receiver**, each update ramping to its value over one interval and
+arriving as the next one does. That removes the steps completely, and unlike a filter it attenuates
+nothing and lags nothing beyond the one interval.
+
+**Not smoothed with a low-pass**, which is the tempting answer and the wrong one: a filter cannot tell
+a step it should remove from a transient it should keep. Tonguing a note is a five to ten millisecond
+dip in pressure, and a filter slow enough to smooth three-millisecond steps is fast enough to blunt
+it.
+
+**The edge runs worklet to worklet, never through the main thread.** The rack makes the connection —
+it owns the cable — but it does so by handing each end a port of a `MessageChannel`, and the events
+themselves never touch the main thread. Main-thread scheduling jitter under load is measured in
+milliseconds, and every one of them would land on a note's timing.
+
+**And a receiver defers by one block and places each event by its timestamp.** A gate edge at sample
+*i* cannot be known before its block has been processed, so an event transport is late by however far
+into the block the edge fell — nothing to 2.7 ms, and *variable*, which smears rhythm rather than
+delaying it. Deferring by exactly one block turns that jitter into constant latency, which is
+inaudible. It is why every message carries the sample it happened on.
+
+An update **may carry a rate of change** as well as a value, letting the receiver fit a curve rather
+than a chord between points. At three milliseconds it buys nothing measurable — linear error is
+already below anything audible — so it is an optional field rather than a required one. It earns its
+place only if updates are ever thinned to ten or twenty milliseconds, where a chord across a curve
+starts to show. Carrying the field in the message costs nothing today and saves a format change then.
+
+### What may ride, and what may not
+
+**The test is whether the value belongs to a note.** Pitch, level, duration, pan, bend and pressure
+do: every sounding note has its own. Anything that belongs to the page instead — transport, tempo, a
+macro, a pedal — is the same for all eight voices, and putting it here would make the note cable mean
+two things and carry the second one eight times over.
+
+**So tempo and transport are not in the bundle.** They cross a tab as an ordinary trigger or control
+cable, exactly as a filter sweep from a sequencer page to a voice page already does (§2). A voice
+never needs the tempo to play a note correctly, because **duration is in seconds rather than beats** —
+it needs a clock only to sync something of its own, and that something wants a clock cable it can
+divide.
+
+**Per-note controls beyond these two are open-ended.** An update carries the **name** of what it
+moves, not one of a fixed pair, so bend and pressure are two well-known names rather than the whole
+vocabulary. `control-protocol.md` already names controls this way for an external sender, so the two
+agree, and allowing it costs one field.
+
+What it defers is the receiving end: Voice In's jacks come from its descriptor, so a name nobody
+anticipated has nowhere to come out. The answer when someone needs one is a few generic outputs that
+take on whatever names arrive, with a readout saying which is which — the shape a MIDI controller
+mapper has. Worth designing then; worth allowing for now.
+
 ### Pitch is a voltage, not a note number
 
-The pitch lane carries the same 1V/oct signal every oscillator in the rack already takes, so the
+Pitch is the same 1V/oct value every oscillator in the rack already takes, so the
 Voice module's pitch output patches straight into one with nothing converting anything. A note
 number would make microtonal music, glissando and any drifting or unquantised source into special
 cases, which is the wrong way round: those are ordinary here.
@@ -123,15 +207,15 @@ Where a sender speaks in note numbers — MIDI does — the conversion happens o
 that sender enters the rack (§7). The bundle never knows MIDI exists.
 
 **Pitch is on the wire twice: the value the note started on, and how far it has moved since.** The
-held lane is captured at note-on and does not move again, because holding is what makes a note a note
+held value is captured at note-on and does not move again, because holding is what makes a note a note
 — a source whose pitch keeps moving after the gate, an unquantised drift or a sequencer's next step
 arriving early, must not drag a sounding note around with it.
 
-The second lane is **bend**: a deviation, not an absolute pitch. That is what a wheel, a wind
+The second is **bend**: a deviation, not an absolute pitch. That is what a wheel, a wind
 controller and MPE all produce, so it behaves the way anyone who has played one expects. It is also
 what suits where it lands — bend is patched into a modulation input, and by the knАck convention
 every one of those carries a depth trim, so **how far a bend bends is a knob that already exists on
-the module being played**. An absolute lane would instead have to be summed with the held pitch, and
+the module being played**. An absolute value would instead have to be summed with the held pitch, and
 an input here takes one cable, so that sum would mean an adder module in every gliding patch.
 
 It runs **−1 to 1 rather than in volts**, like every other modulation signal in the rack, so it is an
@@ -145,10 +229,10 @@ other, and everything between. A quarter-tone bend, a scale that is not twelve-t
 by ear are all ordinary things to want, and a knob that only stopped on integers would refuse all
 three.
 
-**The source still patches one ordinary 1V/oct signal.** Both lanes are derived in the Sequencer
-module, which is where the note-on moment is known: bend is the pitch input minus the value held at
-that moment, so it is exactly zero on every note and nothing on the sending side has to know the
-lane exists.
+**The source still patches one ordinary 1V/oct signal.** Both are derived in Sequence Out, which is
+where the note-on moment is known: bend is the pitch input minus the value held at that moment, so it
+is exactly zero on every note, and a source that patches a plain moving voltage never has to know
+that handles or updates exist.
 
 ### Level and pressure stay separate
 
@@ -160,12 +244,12 @@ A source that wants a velocity out of a continuous signal — a breath controlle
 early peak, say — does that on its own face, where it is visible and can be changed, rather than
 invisibly at the boundary.
 
-**The continuing lanes are per note, not per page.** With three notes sounding there are three
-pressure streams, one per allocated voice — the bundled cable carries a small number of parallel
-streams, as VCV's polyphonic cables do. Inside the page it is simple again, because each allocated
-voice is its own copy of the page and sees only its own lane, as an ordinary control signal.
+**The continuing values are per note, not per page.** With three notes sounding there are three
+pressure streams, each tagged with its own handle. Inside the page it is simple again: every
+allocated voice is its own copy of the page, and Voice In hands each copy the values belonging to the
+note that copy is playing, as ordinary control voltages.
 
-A source that has nothing to put in the continuing lanes leaves them unpatched, and the voice falls
+A source with nothing to say about the continuing values simply never sends any, and the voice falls
 back to its own envelope. A step sequencer should not have to pretend to be a breath controller.
 
 ## 4. Duration is a maximum, not the arbiter
@@ -173,22 +257,46 @@ back to its own envelope. A step sequencer should not have to pretend to be a br
 `control-protocol.md` makes duration mandatory, and it stays mandatory: it is what guarantees that a
 note ends even if the message that should have ended it never arrives.
 
-A pressure lane falling to zero must also be able to end a note early. So the note ends at whichever
-comes first — pressure reaching zero, an explicit note-off, or the duration running out. The
-loss-tolerance guarantee survives and live playing works.
+**A note-off names its note**, which is the whole reason the transport carries handles: a source can
+release one note and leave the others ringing. A pressure update falling to zero ends a note too. So
+a note ends at whichever comes first — an explicit note-off, pressure reaching zero, or the duration
+running out — and the loss-tolerance guarantee survives, because the duration fires even when the
+message that should have ended the note never arrives.
 
 ## 5. Polyphony
 
-**The page is the voice; the Voice module says how many of it to run.** The count is a control on
+**The page is the voice; Voice In says how many of it to run.** The count is a control on
 that module, and the tab shows the multiplier so the cost is visible from the bar.
 
-Allocation happens at the Voice module: notes arriving on the bundle are assigned to free copies,
+Allocation happens at Voice In: notes arriving on the bundle are assigned to free copies,
 and the oldest is stolen when there are none. That is the allocator `control-protocol.md` already
 specifies, sitting at the boundary rather than inside a sender.
 
 The count has a mono setting at one end, and mono needs a second choice: **retrigger or legato.** A
 wind voice wants legato — a new pitch arriving while pressure continues should move to it, not start
 a new note. Stating this now avoids discovering it later as a bug report about clicks.
+
+### The audio inside a page is never polyphonic
+
+The page is a template and the engine runs N copies of it, each an ordinary mono graph of ordinary
+modules. **No module in the rack has to know that polyphony exists**, which is what makes the scheme
+affordable across twenty-six of them and counting, and a polyphonic signal is never a cable you can
+see. The note edge is the only thing that carries several notes at once, and it stops at Voice In.
+
+**So Voice In owns the page's audio exit as well as its note entrance.** It takes the page's audio,
+scales it by the level of the note that copy is playing, places it at that note's pan, sums the
+copies, and sends one stereo signal to the tab. The mixer needs no change: what reaches it is what
+has always reached it.
+
+That placement is forced rather than chosen. **Level and pan are per note, so they are only right if
+they are applied per copy, before anything is summed** — panning at the mixer channel moves all eight
+voices at once. Voice In is the one thing that exists once per copy and knows which note that copy
+holds.
+
+It is a gain and a pan, not a VCA: no response curve, no CV input, no envelope. The rack has a VCA
+module for anything more, and the point of this one is that it does what every voice needs without
+being asked. A level **depth** control turns it out of the way for a drum voice, where velocity
+should change timbre rather than volume.
 
 ## 6. Ports appear when they are used
 
@@ -202,7 +310,7 @@ choose: a page holds one boundary module and its tab holds one note port, so ask
 would be ceremony. Pulling that cable is still allowed — a boundary module with nothing leaving the
 page is a legible state, not a broken one.
 
-This does not extend to the interface module (§7). Its patch into the Sequencer module is a real
+This does not extend to the interface module (§7). Its patch into Sequence Out is a real
 choice, because a page can hold several things that make notes, so that cable stays manual.
 
 Every other port is created on drop and removed deliberately, not automatically when the last cable
@@ -213,14 +321,32 @@ connected, and following a signal through a portal by position would stop workin
 
 ## 7. External sources are ordinary modules
 
-Web MIDI, OSC and Strudel each arrive as a module that anyone can place. Each has a note bundle
-output, plus clock, gate and controller outputs of the ordinary domains.
+Web MIDI, OSC, Strudel and GeoSonix each arrive as a module that anyone can place.
 
-Such a module sits on a sequencer page and patches into the Sequencer module like anything else on
+**The wire protocol is a superset; the note cable is not.** What comes down the link is one stream
+carrying note-ons, note-offs and tagged updates *and* control-set messages belonging to no note, plus
+transport and clock. What comes out of the module is several jacks: a **note output** that feeds
+Sequence Out, a **clock output** as an ordinary trigger, and a **bank of named modulation outputs** as
+ordinary control voltages.
+
+So the superset lives on the module's face rather than in the cable. Anything that is not a note
+leaves as the domain it actually is, crosses tabs like any other cable, and can go to a page with no
+voice on it at all — which is what you want when the sender is driving a filter sweep or a video
+parameter rather than playing notes.
+
+The modulation lanes are **named**, because a sender addressing `cutoff` has to find a lane and the
+catalogue is how it discovers them. That is already specified on the sending end in
+`control-protocol.md`; it holds on the receiving end too.
+
+**The interface module is not a boundary module.** It is an ordinary module that happens to sit on a
+source page, because its note output has to reach Sequence Out. Its other outputs have no such
+constraint.
+
+Such a module sits on a sequencer page and patches into Sequence Out like anything else on
 that page. It is not a special case and it does not make a page anything — only the boundary modules
 do that.
 
-Its bundle output goes into the Sequencer module rather than straight across the tab, and that
+Its bundle output goes into Sequence Out rather than straight across the tab, and that
 patch is doing real work: a page may hold several things that produce notes, and the cable is which
 one leaves. The clock and controller outputs cross the tab as their own ports, per §6.
 
@@ -262,20 +388,32 @@ removal stays a deliberate act.
 Each stage is usable on its own and worth having even if the next one is never built.
 
 1. **The note domain.** The cable and jack appearance above, the patchbay rules, and the one
-   restriction that a note cable may only land on a Voice module's input. Nothing to play yet, but
+   restriction that a note cable may only land on a Voice In module's input. Nothing to play yet, but
    every later stage depends on it.
-2. **The two modules, monophonic.** Sequencer bundles the gate, the held pitch, bend, level,
-   duration and pan; Voice unbundles them; count fixed at one. At this point a hand-built sequencer on one page plays a voice on
-   another, which is the whole idea demonstrated end to end.
+2. **The two modules, monophonic.** Sequence Out makes notes; Voice In turns them back into a gate,
+   a held pitch, bend, level, duration and pan; count fixed at one. At this point a hand-built
+   sequencer on one page plays a voice on another, which is the whole idea demonstrated end to end.
+
+   *Built and working, over a seven-channel Web Audio connection rather than an event stream. That
+   transport is monophonic by construction (§3) and is replaced in stage 5. Everything else about
+   these two modules survives it: the jacks, the held pitch, the bend range and its knob, the panels,
+   the cable and its flash.*
 3. **The page kind and its naming.** Singleton enforcement, the default nicknames, and the refusal to
    hold both modules.
 4. **Ports on demand.** §6, which is independent of everything above and improves ordinary tab
    patching whether or not you ever build a voice.
-5. **Polyphony.** The count, allocation, stealing, and the mono retrigger-or-legato choice. This is
-   the stage that costs real engine work, because a page must be instantiated more than once.
-6. **The continuing lanes.** Bend and pressure per allocated voice, and duration becoming a maximum.
-7. **The external interface module.** The receiver from `control-protocol.md`, with a note bundle
-   output, arriving as an ordinary module on a sequencer page.
+5. **The event transport, then polyphony.** The note edge becomes logical, carrying note-on with a
+   handle, note-off by handle, and tagged updates; Voice In generates the per-copy voltages. Then the
+   count, allocation, stealing, and the mono retrigger-or-legato choice. The transport has to change
+   first, because the channel format cannot reach five voices.
+
+   Voice In's audio exit — the per-copy gain and pan, and the summing — belongs here for the same
+   reason: it is only needed once a page runs more than one copy, and building it earlier would mean
+   building it twice.
+6. **The continuing values.** Bend and pressure per allocated voice, and duration becoming a maximum.
+7. **The external interface module.** The receiver from `control-protocol.md`, arriving as an
+   ordinary module on a sequencer page. After stage 5 it speaks the transport the rack already
+   speaks, so it is a listener rather than a translator.
 
 ## 11. Open questions
 
@@ -283,10 +421,11 @@ Each stage is usable on its own and worth having even if the next one is never b
   eight reverbs. Either that is accepted and documented, or an effect is marked as shared, or effects
   belong on a plain page after the mixer. The last is probably right and the first is probably what
   people will do anyway.
-- **Whether a voice page's audio output is summed across copies before the tab port**, which it must
-  be for the mixer channel to mean anything, and what happens to per-note pan at that point.
-- **Whether the Sequencer module needs a count at all.** A sequencer producing several simultaneous
-  notes is a chord; whether that is one bundled cable carrying parallel streams or several cables is
-  the same question as §3's parallel streams, seen from the other end.
-- **Where allocation actually runs** — inside the Voice module's own code, or in the engine with the
+- **Whether Sequence Out needs a count at all.** A sequencer producing several simultaneous notes is
+  a chord. With an event transport it costs nothing — several note-ons at the same timestamp — so the
+  question is only whether its own panel needs to say anything about it.
+- **Where allocation actually runs** — inside Voice In's own code, or in the engine with the
   module as its face. The answer probably follows from how a page is instantiated more than once.
+- **What a page copy costs to build and tear down.** Allocation is only free if a copy already
+  exists; if the engine builds one on demand, a note would wait for a graph to be assembled. Measured
+  once there is something to measure.
