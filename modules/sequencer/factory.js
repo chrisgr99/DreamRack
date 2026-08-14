@@ -1,16 +1,15 @@
 // factory.js — the Sequencer's realized instance.
 //
-// One worklet, five inputs, one output carrying seven channels. The output is declared explicitly as
-// seven so nothing downmixes it: Web Audio's default would happily fold a seven-channel signal into
-// stereo on its way somewhere, and a bundle that arrives as an average of its own lanes is worse than
-// one that does not arrive at all.
+// One worklet, five inputs, and an output that carries nothing. Notes leave as EVENTS on a port the
+// rack hands to both ends of the cable; the connection itself is a channel of silence, and it exists
+// because a worklet with no path to the destination is not rendered at all.
 
 'use strict';
 
 const PROCESSOR = 'wcoast-sequencer';
 const IN_PORTS = ['gateIn', 'pitchIn', 'levelIn', 'durIn', 'panIn'];
 const KNOBS = new Set(['level', 'duration', 'pan', 'bendRange']);
-const NOTE_CHANNELS = 7;
+const NOTE_CHANNELS = 1;   // one channel of silence: what keeps both ends of the cable rendered
 
 export function create(ctx, services) {
   const { descriptor } = services;
@@ -34,6 +33,12 @@ export function create(ctx, services) {
     const d = e.data || {};
     if (d.note && noteCb) noteCb(d.note);
   };
+  // Called by the rack when a note cable is made or pulled. The port is TRANSFERRED into the worklet,
+  // so the two processors hold the two ends and nothing passes through the main thread.
+  const attachNoteOut = (port) => {
+    if (port) node.port.postMessage({ noteOut: port }, [port]);
+    else node.port.postMessage({ noteOut: null });
+  };
 
   return {
     node,
@@ -47,6 +52,7 @@ export function create(ctx, services) {
     },
     supports: (id) => KNOBS.has(id),
     onNote: (cb) => { noteCb = cb; },
+    attachNoteOut,
     dispose: () => { try { node.port.onmessage = null; node.disconnect(); } catch (_e) { /* already gone */ } },
   };
 }

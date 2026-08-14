@@ -35,6 +35,7 @@ export default {
   category: 'utility',
   scope: 'shared',            // it is the page's boundary, not one voice's worth of it
   hp: 8,
+  worklets: ['modules/voice/voice-processor.js'],
   ports: [
     { id: 'noteIn', name: 'Note', section: 'note', domain: 'note', dir: 'in' },
     { id: 'gateOut', name: 'Gate', section: 'out', domain: 'trigger', dir: 'out' },

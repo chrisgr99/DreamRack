@@ -400,8 +400,12 @@ Each stage is usable on its own and worth having even if the next one is never b
    the cable and its flash.*
 3. **The page kind and its naming.** Singleton enforcement, the default nicknames, and the refusal to
    hold both modules.
-4. **Ports on demand.** §6, which is independent of everything above and improves ordinary tab
-   patching whether or not you ever build a voice.
+4. **The tab's note port.** *Done, as part of stage 3.* Note that this is NOT the general
+   "any port appears when a cable is dropped on a tab" of §6 — `host/rack.js` says plainly that no
+   page owns a terminal, and that this was a retreat from a design where tabs carried real ports and
+   every hard bug lived in that machinery. The two drop targets that earn their keep — the mixer's
+   channels and the note port — each stand for a real jack on a real module. §6 is kept as the
+   description of the idea; the rack's answer to it is a button that stands for a jack.
 5. **The event transport, then polyphony.** The note edge becomes logical, carrying note-on with a
    handle, note-off by handle, and tagged updates; Voice In generates the per-copy voltages. Then the
    count, allocation, stealing, and the mono retrigger-or-legato choice. The transport has to change

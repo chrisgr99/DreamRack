@@ -32,10 +32,13 @@ export const DENY = 'deny';
 const VIDEO = new Set(['luma', 'rgb']);
 export function isVideoDomain(d) { return VIDEO.has(d); }
 
-// The NOTE domain — a bundle, not a signal (design/voice-pages.md). One cable carries the gate, the
-// held pitch, level, duration and pan, plus the bend and pressure lanes, for every note a voice is
-// playing at once. It is an ordinary Web Audio connection: the lanes are channels on one node, which
-// is why nothing here needs a special case the way the video edges do.
+// The NOTE domain — a bundle, not a signal (design/voice-pages.md). A note is an EVENT: a handle, the
+// sample it began on, and what it holds, with tagged updates while it sounds and an off that names
+// it. Those travel down a MessageChannel whose ends this file hands to the two worklets when the
+// cable is made; the Web Audio connection itself carries one channel of silence, and exists because a
+// worklet with no path to the destination is not rendered at all.
+//
+// So a note edge is half logical and half real, and unlike a video edge it needs both halves.
 //
 // IT CONNECTS TO NOTHING ELSE, IN EITHER DIRECTION. That single rule is what makes a page's kind
 // enforce itself: a note source dropped on a voice page has nowhere legal to land, because the only
@@ -148,6 +151,23 @@ export class Patchbay {
       verdict,
     };
 
+    // A NOTE EDGE ALSO CARRIES A PORT. The connection itself is one channel of silence — it exists so
+    // that both worklets stay in the rendering graph and so that the cable is an ordinary edge to
+    // everything else — while the notes travel as messages down a MessageChannel whose two ends are
+    // handed to the two processors. Worklet to worklet: the main thread's scheduling jitter would
+    // otherwise land on every note.
+    //
+    // Done here rather than in the rack because this is the one place an edge is made, and a note
+    // cable that got its port from somewhere else would be a second thing to keep in step.
+    if (isNoteDomain(srcPort.domain) && isNoteDomain(dstPort.domain)
+        && typeof src.instance.attachNoteOut === 'function'
+        && typeof dst.instance.attachNoteIn === 'function') {
+      const ch = new MessageChannel();
+      src.instance.attachNoteOut(ch.port1);
+      dst.instance.attachNoteIn(ch.port2);
+      edge.noteLink = true;
+    }
+
     const nodeIn = dst.instance.getInput(dst.portId);
     if (nodeIn) {
       // Pure signal / exponential CV input: wire straight into the worklet.
@@ -191,6 +211,11 @@ export class Patchbay {
     // the rack rebuilds the render graph from what is left.
     if (edge && edge.video) { this.edges.delete(edge.id); return; }
     if (!edge || !this.edges.has(edge.id)) return;
+    // Take the note port back from both ends, or a pulled cable would go on delivering notes.
+    if (edge.noteLink) {
+      try { edge.src.instance.attachNoteOut(null); } catch (_e) { /* gone */ }
+      try { edge.dst.instance.attachNoteIn(null); } catch (_e) { /* gone */ }
+    }
     try {
       if (edge.nodeIn) edge.out.node.disconnect(edge.nodeIn.node, edge.out.index, edge.nodeIn.index);
       else if (edge.gainNode) { edge.out.node.disconnect(edge.gainNode, edge.out.index, 0); edge.gainNode.disconnect(); }

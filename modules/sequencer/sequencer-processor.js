@@ -1,20 +1,17 @@
 // sequencer-processor.js — the bundler.
 //
-// Five mono inputs in, ONE SEVEN-CHANNEL OUTPUT out. The bundle is not a protocol or a message
-// queue: it is seven channels on one connection, which is why a note cable is an ordinary Web Audio
-// edge and needs no special case in the patchbay the way a video edge does.
+// Five mono inputs in, and NOTES OUT AS EVENTS. It carried them as seven channels on one connection
+// once, which worked and could not scale: seven lanes times eight voices is fifty-six channels
+// against a browser's cap of thirty-two, and a gate carried as a signal can stop but cannot be NAMED,
+// so nothing could ever release one note and leave the others ringing.
 //
-// THE CHANNEL ORDER IS THE FORMAT. Both ends of a note cable have to agree on it, and a worklet is a
-// single file with no imports, so the list below is repeated verbatim in the Voice module's factory.
-// Change it in one place and you must change it in the other.
+// So a note is a message now — note-on with a handle, note-off by that handle, and tagged updates in
+// between — sent down a port the rack hands to both ends when the cable is made. Worklet to worklet:
+// the main thread's scheduling jitter would otherwise land on every note.
 //
-//   0 gate       1 while the note sounds
-//   1 pitch      1V/oct, captured at note-on and held
-//   2 level      velocity, captured at note-on
-//   3 duration   seconds, captured at note-on
-//   4 pan        -1..1, captured at note-on
-//   5 bend       -1..1, how far the pitch has moved since note-on against the bend range
-//   6 pressure   continuous, within the note — silent until stage six
+// THE CABLE IS STILL A WEB AUDIO CONNECTION, carrying one channel of silence. Not ceremony: a worklet
+// that reaches the destination through nothing at all is not rendered, so this module would stop
+// being called the moment its only link was a message port.
 //
 // PITCH IS ON THE WIRE TWICE: the value the note started on, and how far it has moved since. Held is
 // what makes a note a note — a sequencer's next step arriving early must not drag a sounding note
@@ -40,13 +37,17 @@
 
 'use strict';
 
-const CH = { GATE: 0, PITCH: 1, LEVEL: 2, DUR: 3, PAN: 4, BEND: 5, PRESSURE: 6 };
-const NOTE_CHANNELS = 7;
 
 // A cable is present when the runtime hands us a non-empty channel array for that input. Asking the
 // runtime beats being told: the rack has no reliable moment to tell a worklet that a jack was filled,
 // and a module that assumed it was told is a module whose CV inputs silently do nothing.
 const patched = (inp) => !!(inp && inp.length && inp[0] && inp[0].length);
+
+// How often a moving control may speak, in samples — once a block. Finer than breath or a bend wheel
+// needs, and a power of two so the test is a mask.
+const UPDATE_EVERY = 128;
+// Below this, nothing has moved worth saying. A tenth of a percent of the bend range.
+const UPDATE_DEADBAND = 0.001;
 
 class SequencerProcessor extends AudioWorkletProcessor {
   static get parameterDescriptors() {
@@ -70,11 +71,18 @@ class SequencerProcessor extends AudioWorkletProcessor {
     // collisions within a sender, namespaced across senders, and readable when something is wrong.
     this._prefix = 'q' + Math.floor(Math.random() * 46656).toString(36);
     this._noteSeq = 0;
+    this._handle = null;
+    this._bendSent = 0;
+    this._out = null;    // the port to the Voice In at the other end, handed in by the rack
+    this.port.onmessage = (e) => {
+      const d = e.data || {};
+      if (d.noteOut !== undefined) { this._out = d.noteOut || null; if (this._out && this._out.start) this._out.start(); }
+    };
   }
 
   process(inputs, outputs, params) {
     const out = outputs[0];
-    if (!out || out.length < NOTE_CHANNELS) return true;
+    if (!out || !out[0]) return true;
     const n = out[0].length;
 
     const gateIn = inputs[0] && inputs[0][0];
@@ -119,33 +127,45 @@ class SequencerProcessor extends AudioWorkletProcessor {
         // sample lets a receiver defer by one block and place the note exactly, turning that jitter
         // into constant latency.
         const at = (typeof currentFrame === 'number' ? currentFrame : 0) + i;
-        this.port.postMessage({ note: {
-          handle: this._prefix + ':' + (this._noteSeq++),
-          time: at,
-          pitch: held.pitch, level: held.level, duration: held.duration, pan: held.pan,
-        } });
+        this._handle = this._prefix + ':' + (this._noteSeq++);
+        const note = { t: 'on', handle: this._handle, time: at,
+          pitch: held.pitch, level: held.level, duration: held.duration, pan: held.pan };
+        if (this._out) this._out.postMessage(note);
+        this._bendSent = 0;
+        // The same note to the main thread, where the rack lights the cable. One a note, so the cost
+        // is nothing, and keeping it separate means the flash never rides on the audio path.
+        this.port.postMessage({ note });
       }
       gatePrev = g;
 
-      // The note ends at the gate's fall or at the duration, whichever comes first.
+      // The note ends at the gate's fall or at the duration, whichever comes first — and now it can
+      // SAY SO, naming the note, which is what lets a voice release one and leave the others ringing.
+      // The duration is in the note-on as well, so a lost off still cannot leave a voice sounding.
       if (this._on) {
         this._age++;
-        if (g <= 0 || this._age >= this._len) this._on = false;
+        if (g <= 0 || this._age >= this._len) {
+          this._on = false;
+          if (this._out && g <= 0) {
+            this._out.postMessage({ t: 'off', handle: this._handle,
+              time: (typeof currentFrame === 'number' ? currentFrame : 0) + i });
+          }
+        }
       }
 
-      const live = this._on ? 1 : 0;
-      out[CH.GATE][i] = live;
-      // The held values stay on the wire after the gate closes rather than snapping to zero. A voice
-      // reading pitch during its own release stage should find the note it is releasing, not silence.
-      out[CH.PITCH][i] = held.pitch;
-      out[CH.LEVEL][i] = held.level;
-      out[CH.DUR][i] = held.duration;
-      out[CH.PAN][i] = held.pan;
-      // Bend is measured from the held value, so it is zero at note-on by construction and keeps
-      // tracking through the release tail — a note let go mid-scoop falls away from where it was.
-      const dv = ((pitchIn ? pitchIn[i] : 0) - held.pitch) * bendScale;
-      out[CH.BEND][i] = dv > 1 ? 1 : dv < -1 ? -1 : dv;
-      out[CH.PRESSURE][i] = 0;
+      // BEND, SENT ON CHANGE AND NOT ON A CLOCK. A control that is not moving sends nothing at all,
+      // which is most of them most of the time. Measured from the held value, so it is zero at
+      // note-on by construction. The receiver ramps to each new value over one interval, so the steps
+      // between updates never reach anything.
+      if (this._on && (i & (UPDATE_EVERY - 1)) === 0) {
+        const dv = ((pitchIn ? pitchIn[i] : 0) - held.pitch) * bendScale;
+        const v = dv > 1 ? 1 : dv < -1 ? -1 : dv;
+        if (this._out && Math.abs(v - this._bendSent) > UPDATE_DEADBAND) {
+          this._bendSent = v;
+          this._out.postMessage({ t: 'u', handle: this._handle, k: 'bend', v,
+            time: (typeof currentFrame === 'number' ? currentFrame : 0) + i });
+        }
+      }
+      out[0][i] = 0;   // the channel of silence that keeps this module in the rendering graph
     }
 
     this._gatePrev = gatePrev;

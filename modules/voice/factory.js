@@ -1,31 +1,42 @@
-// factory.js — the Voice module's realized instance.
+// factory.js — the Voice In module's realized instance.
 //
-// NO WORKLET. Unbundling a seven-channel connection into seven mono ones is precisely what a
-// ChannelSplitterNode does, and it does it in the audio thread's own C++ rather than in a processor
-// callback. Reaching for a worklet here would cost a scheduling slot to copy numbers.
+// It was a ChannelSplitter, which was exactly right while a note was seven channels on one
+// connection. A note is now an event, so this is a worklet that turns a stream of them back into the
+// voltages the page is patched from — see voice-processor.js for why the cable is still a Web Audio
+// connection even though it carries no data.
 //
-// A splitter's channelCountMode is explicit and its interpretation discrete by specification, which
-// is the behaviour this needs: channel four is pan because it is channel four, not because a
-// downmixer thought it looked like a surround layout.
-//
-// THE CHANNEL ORDER IS THE FORMAT, shared with sequencer-processor.js. A worklet cannot import, so
-// the list lives in both files and both must change together.
+// THE EVENT PORT IS HANDED IN BY THE RACK when the note cable is made: attachNoteIn takes one end of
+// a MessageChannel and passes it into the worklet, TRANSFERRED rather than copied, so the two
+// worklets talk to each other and the main thread is never in the path of a note.
 
 'use strict';
 
-const CH = { gateOut: 0, pitchOut: 1, levelOut: 2, durOut: 3, panOut: 4, bendOut: 5, pressureOut: 6 };
-const NOTE_CHANNELS = 7;
+const PROCESSOR = 'wcoast-voice';
+const OUT_PORTS = ['gateOut', 'pitchOut', 'bendOut', 'levelOut', 'durOut', 'panOut'];
 
 export function create(ctx, _services) {
-  const splitter = ctx.createChannelSplitter(NOTE_CHANNELS);
+  const node = new AudioWorkletNode(ctx, PROCESSOR, {
+    // One input, carrying a channel of silence, whose only job is to keep both ends of the cable in
+    // the rendering graph; six mono outputs, the parts of a note.
+    numberOfInputs: 1,
+    numberOfOutputs: OUT_PORTS.length,
+    outputChannelCount: OUT_PORTS.map(() => 1),
+  });
+
+  const outIndex = new Map(OUT_PORTS.map((id, i) => [id, i]));
 
   return {
-    node: splitter,
-    getOutput: (portId) => { const i = CH[portId]; return i === undefined ? null : { node: splitter, index: i }; },
-    getInput: (portId) => (portId === 'noteIn' ? { node: splitter, index: 0 } : null),
+    node,
+    getOutput: (portId) => { const i = outIndex.get(portId); return i === undefined ? null : { node, index: i }; },
+    getInput: (portId) => (portId === 'noteIn' ? { node, index: 0 } : null),
     getParam: () => null,
     setParam: () => {},
     supports: () => false,
-    dispose: () => { try { splitter.disconnect(); } catch (_e) { /* already gone */ } },
+    // Called by the rack when a note cable is made or pulled: a port to listen on, or null to stop.
+    attachNoteIn: (port) => {
+      if (port) node.port.postMessage({ noteIn: port }, [port]);
+      else node.port.postMessage({ noteIn: null });
+    },
+    dispose: () => { try { node.port.onmessage = null; node.disconnect(); } catch (_e) { /* already gone */ } },
   };
 }
