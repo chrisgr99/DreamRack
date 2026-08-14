@@ -970,6 +970,7 @@ export class Rack {
     this.patchNotes = ''; this.patchNotesOpen = false;   // a fresh/loaded patch starts with no leftover note
     for (const sc of [...this._scopes]) this._closeScope(sc, true);
     for (const m of [...this._monitors]) this._closeMonitor(m, true);
+    this.closeVideoMonitors();
     for (const rec of [...this.records.values()]) {
       if (rec.pinned) this.patchbay.disconnectModule(rec.key);
       else this.deleteModule(rec);
@@ -1168,6 +1169,80 @@ export class Rack {
   // Open the shared pop-up menu at (x, y) — reused by the panel menu's app-menu item.
   // opts.centred treats (x, y) as the menu's CENTRE rather than its top-left (used by F1 ▸ Help).
   openMenu(x, y, items, opts) { this._openMenu(x, y, items, opts); }
+
+  // ---- unplugging, for a scripted demo --------------------------------------
+  // A demo has to be able to take a cable OUT, not only put one in. Inserting a module into a working
+  // chain is the ordinary way a patch grows — the output is already fed, and the new module goes in
+  // the way — and a reel that could only ever add cables had to build every chain backwards or watch
+  // it through side monitors. These three are the same machinery the hand uses: the stretch of cord
+  // just outside a jack is what you take hold of, the end comes away into the pointer, and dropping
+  // it on nothing removes it.
+
+  // The edge plugged into a terminal, or null. An input holds one, so this is unambiguous there; on
+  // an output, which may fan out, it is the first — and a demo that means a particular one of several
+  // should name the input end instead.
+  edgeAt(key, portId) {
+    return this.patchbay.list().find((e) =>
+      (e.dst.key === key && e.dst.portId === portId) || (e.src.key === key && e.src.portId === portId)) || null;
+  }
+
+  // Where to take hold of that cord, in client pixels: on the cord itself, a little way out from the
+  // jack — the same stretch the lit grab handle appears on, so the demo grabs what a reader would.
+  cordGrabPoint(edge, which) {
+    const g = this._cordGeom(edge);
+    if (!g) return null;
+    const near = which === 'src' ? g.pA : g.pB;
+    const far = which === 'src' ? g.pB : g.pA;
+    if (!near || !far) return null;
+    const dx = far.x - near.x, dy = far.y - near.y;
+    const len = Math.hypot(dx, dy) || 1;
+    const outMm = 6;   // clear of the jack and its hit pad, still well short of the belly
+    const t = Math.min(0.4, outMm / len);
+    const mm = { x: near.x + dx * t, y: near.y + dy * t };
+    const r = this.content.getBoundingClientRect();
+    const sc = (this.pxPerMm || 1) * this.zoom;
+    return { x: r.left + mm.x * sc, y: r.top + mm.y * sc, w: 12, h: 12, el: null };
+  }
+
+  // Hand a cord's end to the pointer, as the lit grab does on a press-and-move.
+  startRegrab(edge, which, cx, cy) {
+    const live = this.patchbay.list().find((x) => x.id === edge.id);
+    if (!live) return false;
+    if (live.link) this._startLinkRegrab(live, which === 'src' ? 'anchor' : 'dst', cx, cy, true);
+    else this._startStickyRegrab(live, which, cx, cy, true);
+    return true;
+  }
+
+  // Somewhere near (x, y) with no module under it — where a carried cable end can be dropped to
+  // remove it. Searched outward, so the cord is not flung across the window to be let go of.
+  emptyPointNear(x, y) {
+    const clear = (px, py) => {
+      if (px < 8 || py < 8 || px > window.innerWidth - 8 || py > window.innerHeight - 8) return false;
+      const el = document.elementFromPoint(px, py);
+      return !!el && !el.closest('.rack-module') && !el.closest('.video-monitor') && !el.closest('.video-window');
+    };
+    if (clear(x, y)) return { x, y, w: 12, h: 12, el: null };
+    for (let r = 60; r <= 420; r += 60) {
+      for (const [dx, dy] of [[0, r], [0, -r], [r, 0], [-r, 0], [r, r], [-r, r], [r, -r], [-r, -r]]) {
+        if (clear(x + dx, y + dy)) return { x: x + dx, y: y + dy, w: 12, h: 12, el: null };
+      }
+    }
+    return null;
+  }
+
+  // A module as a target, for a demo that points at one while it is described — and it points at the
+  // TITLE STRIP, not the middle of the faceplate. The strip carries the module's name, so the pointer
+  // and the words agree; and it is the one part of a panel with no control on it, so the pointer is
+  // never left hovering over a knob it is not about to touch (which lights it, and which a reader
+  // reasonably takes as "this is the thing").
+  moduleBox(key) {
+    const rec = this.records.get(key);
+    if (!rec || !rec.el || !this._onPage(rec)) return null;
+    const r = rec.el.getBoundingClientRect();
+    if (!r.width || !r.height) return null;
+    const strip = TITLE_STRIP_MM * (this.pxPerMm || 1) * (this.zoom || 1);
+    return { el: rec.el, x: r.left + r.width / 2, y: r.top + Math.min(strip / 2, r.height / 2), w: r.width, h: strip };
+  }
 
   // ---- menus, for a scripted demo -------------------------------------------
   // A demo drives menus BY NAME rather than by faking clicks: it asks for the item's element so the
@@ -3522,6 +3597,14 @@ export class Rack {
     };
     const onCtx = (ev) => { if (this._ovActive) return; ev.preventDefault(); ev.stopPropagation(); finish(); restore(); };   // right-click aborts → restore
     const onKey = (ev) => { if (this._ovActive) return; if (ev.key === 'Escape') { ev.preventDefault(); finish(); restore(); } };   // Escape aborts → restore
+    // A SCRIPTED DEMO LANDS THE END THROUGH THE SAME PATH A RELEASE TAKES. The fresh-cable carry has
+    // had this hook for as long as demos have existed; this one — taking an END OFF a jack and moving
+    // it somewhere else — never did, and only ever completed on a real pointerup. A demo that carried
+    // an end here therefore had nowhere to put it down: the call was guarded, so it did nothing, the
+    // cord stayed in hand, and the patch was left unfinished with no error anywhere to say so. The
+    // same resolve() the release uses, so a moved cable, one dropped back where it came from, and one
+    // let go over nothing all mean exactly what they mean by hand.
+    this._carryDrop = (clientX, clientY) => { const d = this._jackNear(clientX, clientY); finish(); resolve(d); };
     document.addEventListener('pointermove', onMove, true);
     document.addEventListener('pointerdown', onDown, true);
     document.addEventListener('pointerup', onUp, true);
@@ -4377,7 +4460,12 @@ export class Rack {
     const vPort = this._videoPortMeta(key, portId);
     if (vPort) {
       this._openMenu(ox, oy, [
-        { label: 'Monitor', action: (ev) => this._createVideoMonitor(key, portId, vPort, ev.clientX, ev.clientY) },
+        // The event places the monitor at the press. A SCRIPTED choice has no event — a demo
+        // activates the row by name — so fall back to where the menu itself was opened, which is
+        // the terminal that was right-clicked and the same place a real press would have been.
+        { label: 'Monitor', action: (ev) => this._createVideoMonitor(key, portId, vPort,
+            ev && Number.isFinite(ev.clientX) ? ev.clientX : ox,
+            ev && Number.isFinite(ev.clientY) ? ev.clientY : oy) },
       ]);
       return;
     }
@@ -5853,6 +5941,11 @@ export class Rack {
       try {
         this._videoEngine = new VideoEngine();
         this._videoEngine.start();
+        // Where the output pane may stand: the same free-space search the monitors use, so it lands
+        // beside the rack rather than on top of the last modules in the row.
+        if (typeof this._videoEngine.setPanePlacer === 'function') {
+          this._videoEngine.setPanePlacer((want) => this._videoPaneBox(want));
+        }
       } catch (e) {
         console.warn('[wcoast] video engine unavailable —', e && e.message);
         this._videoEngine = { ok: false, params: {}, setSize() {}, addView() { return () => {}; },
@@ -5897,6 +5990,9 @@ export class Rack {
   _createVideoMonitor(key, portId, port, x, y) {
     const engine = this._ensureVideoEngine();
     if (!engine || !engine.ok || typeof engine.addNodeView !== 'function') return null;
+    // If this is the first thing to want the engine, it has just been built and knows no modules
+    // yet. Ask for the graph before asking for a picture of a node in it.
+    this._rebuildVideoGraph();
     const d = document.createElement('div');
     d.className = 'video-monitor';
     const c = document.createElement('canvas');
@@ -5913,7 +6009,7 @@ export class Rack {
     // Placed only once it is in the document, so its real size is known: dropped at the click
     // point and then pulled back inside the window. A monitor half off the screen is the one
     // thing this object must never be, since seeing it IS its whole purpose.
-    this._placeVideoMonitor(d, x + 12, y + 12);
+    this._placeVideoMonitor(d, x + 12, y + 12, { avoid: true });
     const view = engine.addNodeView(key, port.dir === 'in' ? portId : null, c);
     const entry = { el: d, key, portId, view, remove: null };
     const remove = () => {
@@ -5936,6 +6032,7 @@ export class Rack {
       const move = (m) => {
         if (!moved && Math.hypot(m.clientX - sx, m.clientY - sy) > 3) moved = true;
         if (!moved) return;
+        entry.pinned = true;   // placed by hand: no rule moves it again
         this._placeVideoMonitor(d, m.clientX - ox, m.clientY - oy);
       };
       const up = () => {
@@ -5950,12 +6047,109 @@ export class Rack {
     return entry;
   }
 
-  // Put a monitor at (x, y), clamped so the whole of it stays on screen.
-  _placeVideoMonitor(d, x, y) {
+  // THE RACK GROWS. A monitor put down in clear space stops being in clear space the moment a module
+  // is added beside the one it belongs to, and it is then sitting on the very thing it was opened to
+  // watch. So the auto-placed ones are asked again after any change to the layout, and move only if
+  // they now overlap something. One a reader has dragged is left exactly where they put it.
+  _tidyVideoMonitors() {
+    for (const m of this._videoMonitors) {
+      if (m.pinned || !m.el || !m.el.isConnected) continue;
+      const r = m.el.getBoundingClientRect();
+      if (!r.width || !r.height) continue;
+      const hit = this._monitorObstacles(m.el).some((o) =>
+        r.left < o.right && r.right > o.left && r.top < o.bottom && r.bottom > o.top);
+      if (hit) this._placeVideoMonitor(m.el, r.left, r.top, { avoid: true });
+    }
+  }
+
+  // What a monitor must keep off: the faceplates on the page you are looking at, and the other
+  // monitors. A monitor exists to be watched WHILE something is adjusted, so landing on the module
+  // being adjusted defeats it, and two of them in a stack means one is invisible.
+  _monitorObstacles(except) {
+    const out = [];
+    // FLOATING CHROME COUNTS TOO. The demo transport and its caption card are windows in their own
+    // right, and a picture placed over the controls you are using to drive the demo is as bad as one
+    // placed over a faceplate — worse, because you cannot see what to press to stop it.
+    for (const sel of ['.demo-panel.open', '.demo-card', '.video-window']) {
+      for (const el of document.querySelectorAll(sel)) {
+        if (el === except) continue;
+        const r = el.getBoundingClientRect();
+        if (r.width && r.height) out.push(r);
+      }
+    }
+    for (const rec of this.records.values()) {
+      if (!rec.el || !this._onPage(rec)) continue;
+      const r = rec.el.getBoundingClientRect();
+      if (r.width && r.height) out.push(r);
+    }
+    for (const m of this._videoMonitors) {
+      if (m.el === except || !m.el.isConnected) continue;
+      const r = m.el.getBoundingClientRect();
+      if (r.width && r.height) out.push(r);
+    }
+    return out;
+  }
+
+  // The nearest place to (x, y) where a w by h box sits clear of everything above. Searched on a
+  // grid of the box's own size, so the results line up into rows and columns rather than scattering,
+  // and taken in order of distance from where it was asked for — which puts a monitor beside its own
+  // terminal when there is room there and in the nearest clear space when there is not.
+  //
+  // Returns null when the window is full, and the caller falls back to the point it wanted.
+  _freeMonitorSpot(w, h, x, y, except) {
+    const EDGE = 6, GAP = 8;
+    const obs = this._monitorObstacles(except);
+    const clear = (px, py) => !obs.some((r) => px < r.right && px + w > r.left && py < r.bottom && py + h > r.top);
+    const maxX = Math.max(EDGE, window.innerWidth - w - EDGE);
+    const maxY = Math.max(EDGE, window.innerHeight - h - EDGE);
+    const want = { x: Math.min(maxX, Math.max(EDGE, x)), y: Math.min(maxY, Math.max(EDGE, y)) };
+    if (clear(want.x, want.y)) return want;
+    const spots = [];
+    for (let py = EDGE; py <= maxY; py += h + GAP) {
+      for (let px = EDGE; px <= maxX; px += w + GAP) {
+        if (clear(px, py)) spots.push({ x: px, y: py, d: Math.hypot(px - want.x, py - want.y) });
+      }
+    }
+    spots.sort((a, b) => a.d - b.d);
+    return spots.length ? spots[0] : null;
+  }
+
+  // A BOX FOR THE OUTPUT PANE, clear of the faceplates. It keeps the pane's 16 by 9 shape and shrinks
+  // it until it fits the free space, down to a floor below which the picture stops being worth having
+  // — under that, the corner and an overlap are the better trade, and the reader can drag it.
+  _videoPaneBox(want) {
+    const MIN_W = 300;
+    for (let w = Math.max(MIN_W, want.w); w >= MIN_W; w -= 40) {
+      const h = Math.round(w * (want.h / want.w)) + 22;   // + the title bar
+      const spot = this._freeMonitorSpot(w, h, window.innerWidth - w - 24, window.innerHeight - h - 24, null);
+      if (spot) return { x: spot.x, y: spot.y, w, h: h - 22 };
+    }
+    return null;
+  }
+
+  // CLOSE VIDEO MONITORS — one module's, or all of them. They were the one floating object nothing
+  // ever cleaned up: scopes and ear monitors go when their module goes and when the rack is cleared,
+  // and these did neither, so they outlived the patch that made them. Run a scripted demo twice and
+  // the second run inherited the first run's monitors — every one of them a live pass on the GPU and
+  // a canvas blit per frame, which is what was breaking the audio up. Nothing in the picture said
+  // where they had come from, either: they simply stayed.
+  closeVideoMonitors(key = null) {
+    for (const m of [...this._videoMonitors]) {
+      if (key && m.key !== key) continue;
+      try { m.remove(); } catch (_e) { /* already gone */ }
+    }
+  }
+
+  // Put a monitor at (x, y), clamped so the whole of it stays on screen, and moved clear of the
+  // faceplates and the other monitors when it can be. A monitor the reader has DRAGGED is placed
+  // exactly where they put it: they have said where they want it, and that outranks any rule here.
+  _placeVideoMonitor(d, x, y, { avoid = false } = {}) {
     const EDGE = 6;
     const w = d.offsetWidth || 82, h = d.offsetHeight || 47;
     const maxX = Math.max(EDGE, window.innerWidth - w - EDGE);
     const maxY = Math.max(EDGE, window.innerHeight - h - EDGE);
+    const spot = avoid ? this._freeMonitorSpot(w, h, x, y, d) : null;
+    if (spot) { x = spot.x; y = spot.y; }
     d.style.left = Math.round(Math.min(maxX, Math.max(EDGE, x))) + 'px';
     d.style.top = Math.round(Math.min(maxY, Math.max(EDGE, y))) + 'px';
   }
@@ -7917,6 +8111,13 @@ export class Rack {
     // output page and a loaded patch began sorting itself across pages.
     if (!this._onPage(rec)) { el.style.visibility = 'hidden'; el.classList.add('off-page'); }
     this.relayout();
+    // A VIDEO MODULE JOINS THE ENGINE WHEN IT ARRIVES, not when it is first patched. The graph used
+    // to be rebuilt only from the cabling, so a module standing on its own had no node, no
+    // framebuffer and no shader — and a monitor put on its output found no texture and painted
+    // black, whatever its knobs were doing. Turning them changed nothing because there was nothing
+    // to change. A module is a node from the moment it exists; the cables only say what feeds what.
+    if (rec.instance && typeof rec.instance.videoPass === 'function') this._rebuildVideoGraph();
+    this._tidyVideoMonitors();
     this.onChange();
     return rec;
   }
@@ -7925,6 +8126,29 @@ export class Rack {
 
   // Swap every module's faceplate to the given mode, preserving audio, wiring,
   // and every knob value (only the skin and its per-element handlers change).
+  // RE-SKIN EVERY INSTANCE OF ONE MODULE TYPE from its panel file on disk. The panel editor writes a
+  // new SVG when you save; this is how the rack catches up without reloading the window and throwing
+  // away your view, your undo history and everything else you had in hand. Cache-busted, because the
+  // file it is fetching is the one that changed a moment ago and a cached copy of it is the whole
+  // problem being solved.
+  //
+  // The patch is untouched: a skin swap replaces the drawing and rebinds the controls to the same
+  // records, which is exactly what the light/dark swap below has always done.
+  async reskinType(descriptorId) {
+    const type = this.moduleTypes.find((t) => t.descriptorId === descriptorId);
+    if (!type) return false;
+    const recs = [...this.records.values()].filter((r) => r.descriptorId === descriptorId);
+    if (!recs.length) return false;
+    const url = this._panelUrl(type) + '?t=' + Date.now();
+    for (const rec of recs) {
+      const panel = await loadPanel(url, type.descriptor, { dark: this.dark });
+      this._skinModule(rec, panel);
+    }
+    this.relayout();
+    this._drawCables();
+    return true;
+  }
+
   async setDarkMode(dark) {
     dark = !!dark;
     if (dark === this.dark) return;
@@ -7974,6 +8198,7 @@ export class Rack {
 
   deleteModule(rec) {
     for (const v of this._probesOnModule(rec.key)) this._closeProbe(v, true);   // its scopes/monitors go with it (captured in _moduleSnap for undo)
+    this.closeVideoMonitors(rec.key);   // and its video monitors, which are not probes and were never swept
     if (this._hoverRec === rec) this._hoverRec = null;
     if (this._netOrigin && this._netOrigin.split(':')[0] === rec.key) this._netOrigin = null;
     this.patchbay.disconnectModule(rec.key);   // pull its cords before the nodes go
@@ -7990,6 +8215,9 @@ export class Rack {
     this.host.dispose(rec.instanceId);
     this.records.delete(rec.key);
     this._drawCables();
+    // And it leaves the engine when it goes. Pulling its cords covers the usual case, but a module
+    // with none was never in the cabling to begin with — see addModule for the other half of this.
+    this._rebuildVideoGraph();
     this.onChange();
   }
 
@@ -8864,6 +9092,7 @@ export class Rack {
     let placed = false;
     const finish = () => {
       this._carryingModule = null;
+      this._moduleCarryTrack = null; this._moduleCarryDrop = null;   // a stale carry must never be drivable
       this._viewMovedHook = null;
       document.removeEventListener('pointermove', onMove, true);
       document.removeEventListener('pointerdown', onDown, true);
@@ -8919,15 +9148,18 @@ export class Rack {
     // A press may be a DROP (a click) or a PAN (a drag on the rack): decided on release, exactly as a
     // carried cable decides it.
     let pan = null;
-    const onMove = (ev) => { if (pan) this._viewDragPan(pan, ev); track(ev.clientX, ev.clientY); };
+    const onMove = (ev) => {
+      if (this._demoCarry) return;   // a scripted carry drives track() directly; see below
+      if (pan) this._viewDragPan(pan, ev); track(ev.clientX, ev.clientY);
+    };
     const onDown = (ev) => {
-      if (this._onTabBar(ev.target) || onChrome(ev.target)) return;   // a press on the tabs changes page; the module stays in hand
+      if (this._demoCarry || this._onTabBar(ev.target) || onChrome(ev.target)) return;   // a press on the tabs changes page; the module stays in hand
       if (ev.button !== 0) return;
       ev.preventDefault(); ev.stopPropagation();
       pan = this._viewDragStart(ev);
     };
     const onUp = (ev) => {
-      if (this._onTabBar(ev.target) || onChrome(ev.target)) return;
+      if (this._demoCarry || this._onTabBar(ev.target) || onChrome(ev.target)) return;
       if (ev.button !== 0 || !pan) return;
       const dragged = pan.dragged; pan = null;
       ev.preventDefault(); ev.stopPropagation();
@@ -8944,8 +9176,33 @@ export class Rack {
     // The view can move with a module in hand — the module itself is pinned to the pointer, but the
     // insertion line is anchored in the rack, so re-aim both whenever the transform changes.
     this._viewMovedHook = () => track(lastX, lastY);
+    // A SCRIPTED CARRY MOVES AND PUTS DOWN THROUGH THESE, exactly as a scripted cable does. Without
+    // them a demo could only ever create a module where it wanted one; it could not pick up a module
+    // that already exists, carry it — cables and all — to another page, and set it down there, which
+    // is a thing the rack has always let a hand do.
+    this._moduleCarryTrack = (x, y) => track(x, y);
+    this._moduleCarryDrop = (x, y) => { track(x, y); drop(); };
     if (!opts.atX && !opts.atY) { const c = this.container.getBoundingClientRect(); lastX = c.left + c.width / 2; lastY = c.top + c.height / 2; }
     track(lastX, lastY);
+  }
+
+  // A point in a row, in client pixels — where a scripted carry puts a module down. `xMm` is the
+  // module's own left edge in that row's millimetres; the row packs it flush afterwards, as it does
+  // for a hand.
+  rowPoint(row, xMm = 0) {
+    const r = this._rowEls[Math.min(row, this._rowEls.length - 1)];
+    if (!r) return null;
+    const box = r.getBoundingClientRect();
+    const sz = (this.pxPerMm || 1) * (this.zoom || 1);
+    return { x: box.left + xMm * sz + 40, y: box.top + box.height * 0.25, w: 40, h: 40, el: null };
+  }
+
+  // Pick up a module that is already on the rack, for a demo. Same call the title-bar hold makes.
+  carryModule(key, opts = {}) {
+    const rec = this.records.get(key);
+    if (!rec) return false;
+    this._carryModule({ rec, atX: opts.atX, atY: opts.atY, offFrac: opts.offFrac });
+    return !!this._carryingModule;
   }
 
   // THERE IS NO ARMED MODE ANY MORE. Duplicating or deleting a module used to be chosen from the
@@ -9370,7 +9627,10 @@ export class Rack {
 
     const menu = document.createElement('div');
     menu.className = 'rack-menu' + (this.isDark() ? ' theme-dark' : '');
-    menu.style.maxHeight = 'none';        // it may run off the screen; that is the point
+    // No cap here — place() decides, and only caps when the list genuinely cannot fit on the screen at
+    // any position. It used to run off the top deliberately, on the reasoning that alignment with the
+    // window mattered more; it does not, if the rows you cannot see are the ones you were reaching for.
+    menu.style.maxHeight = 'none';
     menu.style.minWidth = '0';            // no wider than the values in it — see the placement below
     // INERT. Nothing here is a target — the list is a heads-up scale, not a chooser — and once it lies
     // ACROSS the control the pointer is always on a row, so the menu's own hover styling painted a row
@@ -9445,9 +9705,30 @@ export class Rack {
     // opened in a slightly different place every time.
     const rowH = rows[0].offsetHeight || 18;
     const midY = box.top + box.height / 2;
+    // ...AND ALWAYS ON THE SCREEN. Level with the window is where the list WANTS to be; a control near
+    // the top of the rack with a long list put its first values above the top of the window, where they
+    // could not be seen or reached — the list is pointer-transparent, so there is no scrollbar to drag
+    // and no way to get at them. So: if the whole list fits, it is nudged down (or up) until it does,
+    // giving up perfect alignment with the window rather than giving up rows. If it cannot fit at any
+    // position, its height is capped and it scrolls itself to keep the value you are on in view.
+    const EDGE = 8;   // how close to the window's edge the list may come
     const place = () => {
       const first = rows[0].offsetTop;   // the padding above the first row, so the line lands on the ROW
-      menu.style.top = Math.round(midY - first - (rowOf(idx) + 0.5) * rowH) + 'px';
+      const want = midY - first - (rowOf(idx) + 0.5) * rowH;
+      const vh = window.innerHeight || 0;
+      const full = menu.scrollHeight;
+      if (full > vh - EDGE * 2) {
+        // Taller than the screen: cap it, and scroll so the current row sits where it would have been.
+        menu.style.maxHeight = (vh - EDGE * 2) + 'px';
+        menu.style.overflowY = 'auto';
+        menu.style.top = EDGE + 'px';
+        const rowTop = first + rowOf(idx) * rowH;
+        const target = rowTop - (midY - EDGE) + rowH / 2;
+        menu.scrollTop = Math.max(0, Math.min(full - (vh - EDGE * 2), target));
+        return;
+      }
+      const h = menu.offsetHeight || full;
+      menu.style.top = Math.round(Math.max(EDGE, Math.min(want, vh - h - EDGE))) + 'px';
     };
     // A THIN RULE ROUND THE ONE YOU WILL GET, and nothing else — no fill, no accent, no change of
     // colour, because every row is already the colour the value will be. IN THE LIST'S OWN EDGE

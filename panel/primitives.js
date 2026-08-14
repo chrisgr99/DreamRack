@@ -673,9 +673,24 @@ const lampReach = (ledR) => ledR + LAMP_PAD;
 // so a dark region with nothing sliding in it read as the odd thing out on every panel. And short
 // connectors between adjacent lamps: on a tight group like the filter's those are 1.2mm stubs, and
 // being broken they say "linked in pairs" where the truth is "one control".
-function radioGroup(id, cx, cy, { steps = [], orientation = 'v', spacing = 5.6, ledR = 2.16, size = 2.1, outline = true, value = null, led = 'red', theme = {}, labelLeft = false } = {}) {
+// COLUMNS: a vertical stack may be folded into two or more columns, filling the first from the top
+// before starting the next. It is one group, not several side by side, because a parameter can carry
+// exactly ONE control — the loader rejects a second group with the same id, so two stacks would leave
+// the second one dead. Eight named modes is what forced this: as a single column it is 40mm of panel
+// and sets the module's height, folded it is 20mm and lets the module be narrow instead of tall.
+// `colGap` is centre to centre, and has to clear the widest LABEL, not the lamp.
+function radioGroup(id, cx, cy, { steps = [], orientation = 'v', spacing = 5.6, ledR = 2.16, size = 2.1, outline = true, value = null, led = 'red', theme = {}, labelLeft = false, columns = 1, colGap = 0 } = {}) {
   const ink = theme.ink || '#163a69', n = steps.length;
   const tHalf = lampReach(ledR);
+  const cols = orientation === 'h' ? 1 : Math.max(1, Math.round(columns));
+  const perCol = Math.ceil(n / cols);
+  // Where a step sits, as a column and a row within it. One column is the old arithmetic exactly.
+  const place = (i) => {
+    if (cols === 1) return { col: 0, row: i, rows: n };
+    const col = Math.floor(i / perCol);
+    const rows = Math.min(perCol, n - col * perCol);
+    return { col, row: i - col * perCol, rows };
+  };
   let g = `  <g data-wcoast-param="${id}">`;
   // CENTRE TO CENTRE, AND THE LAMPS PAINT OVER IT. Stopping the stem where it touches a lamp on the
   // axis leaves a nick at each of its corners — a circle curves away from its tangent, so at the
@@ -683,15 +698,24 @@ function radioGroup(id, cx, cy, { steps = [], orientation = 'v', spacing = 5.6, 
   // through and drawing the lamps on top hides the overlap and leaves the stem meeting each circle
   // cleanly across its whole width, wrapped by the lamp's own edge.
   if (outline && n > 1) {
-    const half = (n - 1) / 2 * spacing, sw = ledR * 2 * STEM_FRAC;
-    const w = orientation === 'h' ? half * 2 : sw;
-    const h = orientation === 'h' ? sw : half * 2;
+    const sw = ledR * 2 * STEM_FRAC;
     const fill = orientation === 'h' ? 'url(#metalStripH)' : 'url(#metalStripV)';
-    g += `\n    <rect x="${(cx - w / 2).toFixed(2)}" y="${(cy - h / 2).toFixed(2)}" width="${w.toFixed(2)}" height="${h.toFixed(2)}" fill="${fill}"/>`;
+    // ONE STEM PER COLUMN. A single stem spanning both would run through the labels between them.
+    for (let c = 0; c < cols; c++) {
+      const rows = cols === 1 ? n : Math.min(perCol, n - c * perCol);
+      if (rows < 2) continue;
+      const half = (rows - 1) / 2 * spacing;
+      const x0 = cx + (c - (cols - 1) / 2) * colGap;
+      const w = orientation === 'h' ? half * 2 : sw;
+      const h = orientation === 'h' ? sw : half * 2;
+      g += `\n    <rect x="${(x0 - w / 2).toFixed(2)}" y="${(cy - h / 2).toFixed(2)}" width="${w.toFixed(2)}" height="${h.toFixed(2)}" fill="${fill}"/>`;
+    }
   }
   steps.forEach((s, i) => {
-    const off = (i - (n - 1) / 2) * spacing;
-    const lx = orientation === 'h' ? cx + off : cx, ly = orientation === 'h' ? cy : cy + off;
+    const p = place(i);
+    const off = (p.row - (p.rows - 1) / 2) * spacing;
+    const colX = cx + (p.col - (cols - 1) / 2) * colGap;
+    const lx = orientation === 'h' ? cx + (i - (n - 1) / 2) * spacing : colX, ly = orientation === 'h' ? cy : cy + off;
     // ONE LIT, THE REST DARK, in the static art too. Every lamp used to be drawn lit, which on a
     // track reads as a row of indicators all shouting at once rather than as a switch resting in one
     // position. `value` says which; without it, the first. The host repaints from the real value at
@@ -779,10 +803,13 @@ const READOUT_PAD = 1.5;
 const READOUT_ARROW_GAP = 1.1;         // window edge to the chevrons
 const READOUT_GREEN = '#4ee37a';
 
-function readout(id, cx, cy, { chars = 3, value = '', label: lb = null, theme = {}, menu = false, digits = READOUT_GREEN, widest = null, pad = READOUT_PAD, width = 0 } = {}) {
+// `size` scales the whole window — its height and, with it, the digits. The house height suits a
+// value read in passing beside a knob; a module whose PRINCIPAL controls are windows rather than
+// knobs wants them at the size a knob would have been, or the panel has nothing on it to look at.
+function readout(id, cx, cy, { chars = 3, value = '', label: lb = null, theme = {}, menu = false, digits = READOUT_GREEN, widest = null, pad = READOUT_PAD, width = 0, size = 1 } = {}) {
   // This file rounds inline everywhere else; one local helper keeps the path data readable.
   const r2 = (v) => (+v).toFixed(2);
-  const h = READOUT_H;
+  const h = READOUT_H * (size || 1);
   // MEASURED, WHEN THE WIDEST VALUE IS KNOWN. A character count has to assume every character is as
   // wide as the widest one, which for digits is nearly true and for '1/16' is not — a slash and two
   // ones are half the width of two eights, so the delay windows were a third wider than anything they

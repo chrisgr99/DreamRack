@@ -235,12 +235,35 @@ function registerPatchIpc() {
   // looked like the save failed.
   ipcMain.handle('designer:save', async (_e, msg) => {
     const r = await savePanel(__dirname, msg);
-    if (r && !r.error) editorSaved = true;
+    if (r && !r.error) {
+      editorSaved = true;
+      // SAVING IS THE MOMENT THE RACK CATCHES UP. It used to wait for the editor window to close,
+      // on the reasoning that reloading mid-edit pulls the rack out from under you — true of a
+      // window reload, and not true of this: the rack re-skins the one module that changed and
+      // keeps the patch, the view and everything else. `editorSaved` still stands, so closing an
+      // editor whose save somehow did not reach the rack is still a backstop.
+      if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('panel:saved', msg && msg.dir);
+    }
     return r;
   });
   ipcMain.handle('designer:list-modules', () => listModules(__dirname));
   // The source revision, for stamping into saved patches (null from a packaged, git-less build).
   ipcMain.handle('app:build', async () => buildInfo());
+  // WHEN EACH DEMO SCRIPT WAS LAST WRITTEN, so the transport can put the one being worked on at the
+  // top of its list. An author edits one script over and over and runs it after every edit; hunting
+  // for it in a list that grows with every reel is a small tax paid dozens of times an afternoon.
+  // Returns { file: mtimeMs }; a script that cannot be stat'd is simply left out and sorts last.
+  ipcMain.handle('demos:mtimes', async () => {
+    const dir = path.join(__dirname, 'demos', 'scripts');
+    const out = {};
+    try {
+      for (const name of await fs.promises.readdir(dir)) {
+        if (!name.endsWith('.json') || name === 'index.json') continue;
+        try { out[name] = (await fs.promises.stat(path.join(dir, name))).mtimeMs; } catch (_e) { /* skip */ }
+      }
+    } catch (_e) { /* no scripts folder */ }
+    return out;
+  });
   ipcMain.handle('patch:open', async () => {
     const r = await dialog.showOpenDialog(mainWindow, { properties: ['openFile'], filters: PATCH_FILTER, defaultPath: await patchesDir() });
     if (r.canceled || !r.filePaths[0]) return null;
@@ -640,7 +663,11 @@ function createWindow() {
   mainWindow.on('unmaximize', saveWindowState);
   mainWindow.on('close', saveWindowState);
 
-  mainWindow.loadURL(`${APP_ORIGIN}/index.html`);
+  // WCOAST_DEMO=<id> runs that demo as soon as the app is up, with a line per step in this log. It
+  // exists because the alternative is asking the user to run a reel and describe what they saw, and
+  // "it did not animate" cannot be told apart from a dozen different faults by description alone.
+  const autoDemo = process.env.WCOAST_DEMO ? `?demo=${encodeURIComponent(process.env.WCOAST_DEMO)}` : '';
+  mainWindow.loadURL(`${APP_ORIGIN}/index.html${autoDemo}`);
 
   // DEV WATCH. `npm run dev` sets WCOAST_DEV; a normal run carries none of this. Save any renderer
   // file and the window reloads itself — no quitting, no relaunching, and the window stays where it

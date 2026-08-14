@@ -54,6 +54,10 @@ import timeLayout from './modules/time-machine/panel.layout.js';
 import timeDesc from './modules/time-machine/descriptor.js';
 import vmathsLayout from './modules/video-maths/panel.layout.js';
 import vmathsDesc from './modules/video-maths/descriptor.js';
+import voiceLayout from './modules/model-voice/panel.layout.js';
+import voiceDesc from './modules/model-voice/descriptor.js';
+import compositorLayout from './modules/compositor/panel.layout.js';
+import compositorDesc from './modules/compositor/descriptor.js';
 import vidoutLayout from './modules/video-out/panel.layout.js';
 import vidoutDesc from './modules/video-out/descriptor.js';
 import octLayout from './modules/octave/panel.layout.js';
@@ -81,7 +85,7 @@ const MODULES = [
   { name: 'Filter', dir: 'filter', base: filterLayout, desc: filterDesc },
   { name: 'Octave', dir: 'octave', base: octLayout, desc: octDesc },
   { name: 'drClckd', dir: 'clock', base: clockLayout, desc: clockDesc },
-  { name: 'Marbles', dir: 'marbles', base: marblesLayout, desc: marblesDesc },
+  { name: 'Random Sampler', dir: 'marbles', base: marblesLayout, desc: marblesDesc },
   { name: 'Delay', dir: 'delay', base: delayLayout, desc: delayDesc },
   { name: 'Sine Source', dir: 'sine-source', base: sineLayout, desc: sineDesc },
   { name: 'Coordinate Field', dir: 'coordinate-field', base: fieldLayout, desc: fieldDesc },
@@ -89,6 +93,8 @@ const MODULES = [
   { name: 'Shapes', dir: 'shapes', base: shapesLayout, desc: shapesDesc },
   { name: 'Time Machine', dir: 'time-machine', base: timeLayout, desc: timeDesc },
   { name: 'Video Maths', dir: 'video-maths', base: vmathsLayout, desc: vmathsDesc },
+  { name: 'Macro Oscillator 2', dir: 'model-voice', base: voiceLayout, desc: voiceDesc },
+  { name: 'Compositor', dir: 'compositor', base: compositorLayout, desc: compositorDesc },
   { name: 'Video Output', dir: 'video-out', base: vidoutLayout, desc: vidoutDesc },
 ];
 
@@ -1475,7 +1481,10 @@ async function boot() {
   await Promise.all(MODULES.map(async (m) => {
     if (m.editorOwned) return;   // authored modules save flat, no overrides file
     try {
-      const res = await fetch(`/modules/${m.dir}/panel.overrides.json`);
+      // CACHE-BUSTED. This file is the thing you saved a moment ago, and a cached copy of it is a
+      // panel that silently forgets your last session's moves — which is exactly what it looked like
+      // from the outside: drag, save, reopen, everything back where it started.
+      const res = await fetch(`/modules/${m.dir}/panel.overrides.json?t=${Date.now()}`);
       if (res.ok) { const ov = await res.json(); m.overrides = ov; m.saved = clone(ov); }
     } catch (_e) { /* none saved */ }
   }));

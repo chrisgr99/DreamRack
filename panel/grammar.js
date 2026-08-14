@@ -159,8 +159,14 @@ export const button = (id, label, opts = {}) => ({ kind: 'button', id, label, r:
 // a second implementation of a control the radio primitive already drew correctly — every other
 // group on the rack goes through the primitive and always had its labels perpendicular. It now does
 // too, so there is one radio group in the codebase instead of two.
+// `columns` folds a vertical stack into that many columns, filling the first before starting the
+// next, with `colGap` between their centres. The primitive has done this since the Compositor's blend
+// list; the grammar could not ask for it, so a panel wanting two columns of named options had to be
+// hand-authored. Sixteen named models is exactly that panel.
 export const lamps = (param, steps, opts = {}) =>
-  ({ kind: 'lamps', param, steps, dir: opts.dir === 'h' ? 'h' : 'v', ledR: opts.ledR || LAMP_R, spacing: opts.spacing || (opts.dir === 'h' ? 5.6 : 5.2), labelLeft: !!opts.labelLeft });
+  ({ kind: 'lamps', param, steps, dir: opts.dir === 'h' ? 'h' : 'v', ledR: opts.ledR || LAMP_R, spacing: opts.spacing || (opts.dir === 'h' ? 5.6 : 5.2), labelLeft: !!opts.labelLeft,
+     columns: Math.max(1, opts.columns || 1), colGap: opts.colGap || 0, value: opts.value == null ? null : opts.value,
+     outline: opts.outline !== false });
 
 // A DISPLAY: a bordered rectangle the host draws into — an envelope's shape, a wavetable, a scope.
 // The grammar reserves the space and draws the surround; what goes inside is the host's, because it
@@ -176,7 +182,7 @@ export const display = (id, w, h) => ({ kind: 'display', id, w, h, label: null }
 export const readout = (id, label, opts = {}) =>
   ({ kind: 'readout', id, label, chars: opts.chars || 3, value: opts.value || '', menu: !!opts.menu, digits: opts.digits || null,
     widest: opts.widest || null, pad: opts.pad == null ? null : opts.pad, width: opts.width || 0,
-    side: opts.side || null, labelSize: opts.labelSize || null });
+    side: opts.side || null, labelSize: opts.labelSize || null, size: opts.size || 1 });
 
 // Free space in a row, in mm, for when even gaps are not what you want.
 export const gap = (mm) => ({ kind: 'gap', mm });
@@ -304,7 +310,8 @@ function extent(c) {
 // The same width the primitive draws — measured off the widest value when the layout names it.
 function readoutHalf(c) { const pad = c.pad == null ? READOUT_PAD : c.pad;
   if (c.width) return c.width / 2;
-  return (c.widest ? textWidth(c.widest, READOUT_H * 0.78) + pad * 2 : c.chars * READOUT_CH + pad * 2) / 2; }
+  const h = READOUT_H * (c.size || 1);
+  return (c.widest ? textWidth(c.widest, h * 0.78) + pad * 2 : c.chars * READOUT_CH * (c.size || 1) + pad * 2) / 2; }
 
 function halfWidth(c) {
   if (c.kind === 'readout') return readoutHalf(c);
@@ -343,12 +350,13 @@ function rowHeight(r) {
   for (const c of r.controls) {
     if (c.kind === 'knob' || c.kind === 'knack') h = Math.max(h, (sizeOf(c) + (c.style === 'trim' ? TRIM_TIP_OVER : 0) + (c.scale ? SCALE_RING + SCALE_LINE : 0)) * 2);
     else if (c.kind === 'display') h = Math.max(h, c.h);
-    else if (c.kind === 'readout') h = Math.max(h, READOUT_H);
+    else if (c.kind === 'readout') h = Math.max(h, READOUT_H * (c.size || 1));
     else if (c.kind === 'jack') h = Math.max(h, c.r * 2);
     else if (c.kind === 'button') h = Math.max(h, c.r * 2);
     else if (c.kind === 'lamps') {
       const tH = c.ledR + LAMP_PAD;
-      h = Math.max(h, c.dir === 'h' ? tH * 2 + LABEL_H : (c.steps.length - 1) * c.spacing + tH * 2);
+      const perCol = Math.ceil(c.steps.length / Math.max(1, c.columns || 1));
+      h = Math.max(h, c.dir === 'h' ? tH * 2 + LABEL_H : (perCol - 1) * c.spacing + tH * 2);
     }
     if (c.label && c.kind !== 'lamps') h = Math.max(h, h);   // label sits below; counted next
     if (c.sub) sub = SUB_H;
@@ -456,11 +464,14 @@ function emit(items, c, x, y) {
     case 'lamps':
       items.push({ t: 'radio', id: c.param, x, y, opts: {
         orientation: c.dir, spacing: c.spacing, ledR: c.ledR, size: LAMP_LABEL, labelLeft: !!c.labelLeft,
+        ...(c.columns > 1 ? { columns: c.columns, colGap: c.colGap } : {}),
+        ...(c.value == null ? {} : { value: c.value }),
+        ...(c.outline === false ? { outline: false } : {}),
         steps: c.steps.map(([value, label]) => ({ value, label })),
       } });
       break;
     case 'readout':
-      items.push({ t: 'readout', id: c.id, x, y, opts: { chars: c.chars, value: c.value, ...(c.menu ? { menu: true } : {}), ...(c.digits ? { digits: c.digits } : {}), ...(c.widest ? { widest: c.widest } : {}), ...(c.pad == null ? {} : { pad: c.pad }), ...(c.width ? { width: c.width } : {}), ...(lab ? { label: lab } : {}) } });
+      items.push({ t: 'readout', id: c.id, x, y, opts: { chars: c.chars, value: c.value, ...(c.menu ? { menu: true } : {}), ...(c.digits ? { digits: c.digits } : {}), ...(c.widest ? { widest: c.widest } : {}), ...(c.pad == null ? {} : { pad: c.pad }), ...(c.width ? { width: c.width } : {}), ...(c.size && c.size !== 1 ? { size: c.size } : {}), ...(lab ? { label: lab } : {}) } });
       break;
     case 'display': {
       // A recessed well: the frame line, and a group the host fills. The group carries the id so the
@@ -497,6 +508,9 @@ export function panel(opts, bands) {
   const faceW = +(opts.hp * HP_MM).toFixed(2);
   const MARGIN = marginFor(faceW);
   const PAD = opts.pad != null ? opts.pad : BAND_PAD;
+  // `rules: false` — bands still group and space, but no line is drawn between them or above the
+  // outputs. For a panel whose own arrangement is the grouping.
+  const noRules = opts.rules === false;
   const items = [];
   const warnings = [];
 
@@ -587,7 +601,7 @@ export function panel(opts, bands) {
       // the band above was sitting on rather than from anyone's content.
       const intoLast = outBand && bi === stacked.length - 2 && !stacked[bi + 1].header;
       if (intoLast) y = Math.max(y - LAST_BAND_LIFT, y - Math.max(0, extra));
-      items.push({ t: 'divider', x: MARGIN, y: +y.toFixed(2), len: +(faceW - MARGIN * 2).toFixed(2), w: RULE_W });
+      if (!noRules) items.push({ t: 'divider', x: MARGIN, y: +y.toFixed(2), len: +(faceW - MARGIN * 2).toFixed(2), w: RULE_W });
       y += PAD;
     }
   });
@@ -595,7 +609,7 @@ export function panel(opts, bands) {
   // The rule ABOVE the outputs is placed from the output row, not from wherever the bands above
   // happened to finish — flowed, it ran straight across the output jacks whenever the content above
   // ended low.
-  if (outBand) {
+  if (outBand && !noRules) {
     items.push({ t: 'divider', x: MARGIN, y: +(FACE_H - OUT_CY_UP - JACK_R - 2.4).toFixed(2),
       len: +(faceW - MARGIN * 2).toFixed(2), w: RULE_W });
   }

@@ -578,11 +578,20 @@ export class VideoEngine {
   }
 
   // The in-app fallback: a floating pane, draggable by its bar, showing the same view.
+  //
+  // IT KEEPS OFF THE MODULES IF IT CAN. A fixed corner and a fixed size were fine when the window
+  // was the last thing to appear, and wrong the moment anything was meant to be watched WHILE it is
+  // open: at 640 wide in the bottom right it lay over the end of the rack, which on the video page is
+  // the compositor and the output — exactly the modules being talked about. So the host may hand over
+  // a box to avoid; the pane is fitted into the largest clear space, keeping its shape, and only
+  // falls back to the corner when there is nowhere better.
   _openPane(size) {
     const d = document.createElement('div');
     d.className = 'video-window';
-    d.style.width = size.w + 'px';
-    d.style.height = size.h + 'px';
+    const box = this._paneBox ? this._paneBox(size) : null;
+    d.style.width = (box ? box.w : size.w) + 'px';
+    d.style.height = (box ? box.h : size.h) + 'px';
+    if (box) { d.style.left = box.x + 'px'; d.style.top = box.y + 'px'; d.style.right = 'auto'; d.style.bottom = 'auto'; }
     const bar = document.createElement('div');
     bar.className = 'video-window-bar';
     const title = document.createElement('span');
@@ -686,6 +695,11 @@ export class VideoEngine {
 
   // The terminal declares which of its inputs the screen follows. One per rack, like the mixer.
   setTerminal(key, port) { this._terminal = key ? { key, port } : null; }
+
+  // How the host decides where the pane goes: a function taking the size it would have used and
+  // returning { x, y, w, h }, or null to leave it in its corner. Set by the rack, which is the only
+  // thing that knows where the modules are.
+  setPanePlacer(fn) { this._paneBox = typeof fn === 'function' ? fn : null; }
 
   // Size is remembered; POSITION is not, because Document Picture-in-Picture does not accept one
   // — the browser places the window. Storing a position we could never honour would be a lie.

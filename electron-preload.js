@@ -25,6 +25,10 @@ contextBridge.exposeInMainWorld('wcoast', {
   // The source revision this app was built from ({ commit, short, branch, describe, dirty,
   // committedAt } | null), stamped into saved patches for bug-report traceability.
   build: () => ipcRenderer.invoke('app:build'),
+  // When each demo script was last edited, for ordering the transport's list.
+  demoMtimes: () => ipcRenderer.invoke('demos:mtimes'),
+  // The panel editor saved a module's faceplate: which directory, so the rack can re-skin just that one.
+  onPanelSaved: (cb) => ipcRenderer.on('panel:saved', (_e, dir) => cb(dir)),
   versions: {
     electron: process.versions.electron,
     chrome: process.versions.chrome,
