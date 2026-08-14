@@ -62,8 +62,20 @@ const EAR_ICON = '<svg viewBox="0 0 24 24"><g fill="none" stroke="currentColor" 
 // tuned. Missing them was why a luma cord into an rgb input drew in the control colour.
 const STYLE_COLOR = { audio: '#f3c40b', control: '#ff7300', trigger: '#5aa0e6', pitch: '#39a85a',
   luma: '#babab6', rgb: '#e0359b' };
+// THE NOTE BUNDLE IS THE ONE CABLE THAT IS NOT A HUE. Every colour is spoken for, and the ones left
+// over all sit next to something — red beside orange and magenta, cyan beside the trigger blue. So
+// the bundle is told apart by being neutral and THICKER, which reads at any zoom and for any kind of
+// colour vision (design/voice-pages.md §3). It is also the only cable that changes with the theme:
+// its job is to stay legible against whatever it crosses, not to name a domain.
+const NOTE_COLOR = { dark: '#ececed', light: '#141418' };
+const NOTE_WIDTH = 1.8;          // × the usual cable width — a multicore beside a patch lead
+const noteColor = (dark) => (dark ? NOTE_COLOR.dark : NOTE_COLOR.light);
+const styleColor = (style, dark) => (style === 'note' ? noteColor(dark)
+  : STYLE_COLOR[style] || STYLE_COLOR.control);
+const styleWidth = (style, wmm) => (style === 'note' ? wmm * NOTE_WIDTH : wmm);
 const domainStyle = (domain) => (domain === 'audio' ? 'audio'
   : domain === 'trigger' ? 'trigger'
+  : domain === 'note' ? 'note'
   : (domain === 'luma' || domain === 'rgb') ? domain
   : 'control');
 // ---- PAGES ----
@@ -1954,7 +1966,8 @@ export class Rack {
       if (this._edgeIsLifted(e)) continue;
       const g = this._cordGeom(e);
       if (!g) continue;
-      const color = STYLE_COLOR[e.style] || STYLE_COLOR.control;
+      const color = styleColor(e.style, this.dark);
+      const ewmm = styleWidth(e.style, wmm);          // the note bundle is drawn heavier than the rest
       const faded = !!(this._fadedCables && this._fadedCables.has(e.id));   // covering a hovered control → see-through
       const bodyTgt = faded ? Math.min(this._cableOpacity(e), CABLE_HOVER_FADE) : this._cableOpacity(e);
       const dashTgt = faded ? CABLE_HOVER_FADE : 1;
@@ -1973,7 +1986,7 @@ export class Rack {
       const bodyD = `M${r2(g.pA.x)},${r2(g.pA.y)} C${r2(g.c1.x)},${r2(g.c1.y)} ${r2(g.c2.x)},${r2(g.c2.y)} ${r2(g.pB.x)},${r2(g.pB.y)}`;
       // A held cable is the SAME WIDTH as any other; brightness alone marks it, with everything else
       // pulled back. Drawing it heavier as well made it a stripe across the rack.
-      const bp = mk(bodyD, color, wmm, bodyOp, null);
+      const bp = mk(bodyD, color, ewmm, bodyOp, null);
       if (!this._isolateNet) { bp.setAttribute('class', 'cable-body'); bp.dataset.edge = e.id; }
       // Flow direction: black dashes crawl source->dest (path runs pA=src -> pB=dst),
       // full-opacity black so they read over any cable. EVERY cord gets them normally;
@@ -1986,13 +1999,16 @@ export class Rack {
         // either side of black — and next to the solid stub the hover preview just showed you, that
         // reads as the cable shrinking to the dash. Held, the colour should dominate and the dash
         // should be a fine line through it saying which way the signal runs.
-        const dashW = wmm / 2;
-        const fd = mk(bodyD, '#000', dashW, dashOp, null);
+        const dashW = ewmm / 2;
+        // The flow dash is black on every cable but the note bundle, which is itself near-black on
+        // the light faces — black on black says nothing. There the dash inverts with the cable.
+        const dashCol = (e.style === 'note' && !this.dark) ? '#e8e8ea' : '#000';
+        const fd = mk(bodyD, dashCol, dashW, dashOp, null);
         fd.setAttribute('class', 'flow-dash');
         fd.dataset.edge = e.id;
         fd.dataset.src = e.src.key + '|' + e.src.portId;   // source jack tag → its live level drives this cable's crawl in isolate mode
         fd.setAttribute('stroke-linecap', 'butt');
-        fd.setAttribute('stroke-dasharray', `${r2((FLOW_DASH[e.style] || FLOW_DASH.control) * wmm)} ${r2(FLOW_GAP * wmm)}`);
+        fd.setAttribute('stroke-dasharray', `${r2((FLOW_DASH[e.style] || FLOW_DASH.control) * ewmm)} ${r2(FLOW_GAP * ewmm)}`);
         fd.setAttribute('stroke-dashoffset', r2(this._flowOffset()));
       }
       // THE BEND HANDLE, if this is the cord you have been resting on. Drawn from rack state for the
@@ -2682,7 +2698,7 @@ export class Rack {
           if (/^chan[A-Z]$/.test(far.portId || '')) anchor = { x: anchor.x, y: anchor.y + MIXER_BTN_PX / 2 };
         }
         const jx = rect.left + this._tx + jack.x * s, jy = rect.top + this._ty + jack.y * s;
-        const color = STYLE_COLOR[item.e.style] || STYLE_COLOR.control;
+        const color = styleColor(item.e.style, this.dark);
         // HOW A STUB LEAVES THE BAR. It drops STRAIGHT DOWN out of the tab for a fixed distance, and
         // then swoops away toward its jack — TANGENT to that drop, which is the whole trick. Aiming
         // the curve's first control point at the cable's belly instead put a corner exactly where the
@@ -2707,7 +2723,7 @@ export class Rack {
         const L = Math.min(chord * 0.4, STUB_SWOOP_PX * z);
         const cT = { x: T.x, y: T.y + L };                       // straight on down: tangent to the drop
         const cJ = { x: J.x + uJ.x * chord * 0.4, y: J.y + uJ.y * chord * 0.4 };
-        const w = CABLE_PX * (this.zoom || 1) * 0.85;
+        const w = styleWidth(item.e.style, CABLE_PX * (this.zoom || 1) * 0.85);
         // A crossing cable stops at the hole's rim like any other — it was running to the jack's
         // CENTRE, straight over the plug.
         const endPx = (jack.r || 0) * s + w / 2;
@@ -2754,7 +2770,7 @@ export class Rack {
         const fd = document.createElementNS(SVG_NS, 'path');
         fd.setAttribute('d', d);
         fd.setAttribute('fill', 'none');
-        fd.setAttribute('stroke', '#000');
+        fd.setAttribute('stroke', (item.e.style === 'note' && !this.dark) ? '#e8e8ea' : '#000');
         fd.setAttribute('stroke-width', r2(w / 2));
         fd.setAttribute('stroke-linecap', 'butt');
         fd.setAttribute('stroke-dasharray', `${r2((FLOW_DASH[item.e.style] || FLOW_DASH.control) * w)} ${r2(FLOW_GAP * w)}`);
@@ -3392,10 +3408,10 @@ export class Rack {
     const a = this._jackPosMm(key, portId);
     if (!ep || !a) return;
     const meta = ep.meta;
-    const wmm = CABLE_PX / (this._fit || 1);
+    const wmm = styleWidth(domainStyle(meta.domain), CABLE_PX / (this._fit || 1));
     const tmp = document.createElementNS(SVG_NS, 'path');
     tmp.setAttribute('class', 'rack-cable rack-cable-temp');
-    tmp.setAttribute('stroke', STYLE_COLOR[domainStyle(meta.domain)]);
+    tmp.setAttribute('stroke', styleColor(domainStyle(meta.domain), this.dark));
     tmp.setAttribute('stroke-width', r2(wmm));
     this._tempCable = tmp;
     this._carryOrigin = { key, portId, page: this.pageOf(this.records.get(key)) };
@@ -3413,7 +3429,7 @@ export class Rack {
       this._armTarget(this._jackNear(clientX, clientY), wantDir, null, { key, portId }, originIsInput);
     };
     track(cx, cy);
-    this._ovCable = { pos: a, color: STYLE_COLOR[domainStyle(meta.domain)], wmm };   // so the overview can draw the pull over its picture
+    this._ovCable = { pos: a, color: styleColor(domainStyle(meta.domain), this.dark), wmm };   // so the overview can draw the pull over its picture
     // While the overview is up the pointer aims the frame, not the cable — so don't redraw the (hidden) cable,
     // but DO keep following the pointer, so the dive re-arms the cable where the pointer actually ended up.
     let pan = null, edgeRAF = 0;   // pan: press state (click-carry); edgeRAF: drag-mode edge auto-scroll loop
@@ -3511,7 +3527,7 @@ export class Rack {
 
     const tmp = document.createElementNS(SVG_NS, 'path');
     tmp.setAttribute('class', 'rack-cable rack-cable-temp');
-    tmp.setAttribute('stroke', STYLE_COLOR[domainStyle(fixedMeta.domain)]);
+    tmp.setAttribute('stroke', styleColor(domainStyle(fixedMeta.domain), this.dark));
     tmp.setAttribute('stroke-width', r2(wmm));
     this._tempCable = tmp;
     this._carryOrigin = { key: fixed.key, portId: fixed.portId, page: this.pageOf(this.records.get(fixed.key)) };
@@ -3527,7 +3543,7 @@ export class Rack {
       this._armTarget(this._jackNear(clientX, clientY), wantDir, null, null);   // origin null: the cord is already off, so its own port re-arms
     };
     track(cx, cy);
-    this._ovCable = { pos: fixedPos, color: STYLE_COLOR[domainStyle(fixedMeta.domain)], wmm };   // so the overview can draw the pull over its picture
+    this._ovCable = { pos: fixedPos, color: styleColor(domainStyle(fixedMeta.domain), this.dark), wmm };   // so the overview can draw the pull over its picture
     // While the overview is up the pointer aims the frame, not the cable — don't redraw the (hidden) cable,
     // but DO keep following the pointer, so the dive re-arms it where the pointer actually ended up.
     let pan = null, edgeRAF = 0;   // pan: press state (click-carry); edgeRAF: drag-mode edge auto-scroll loop
@@ -3632,7 +3648,7 @@ export class Rack {
 
     const tmp = document.createElementNS(SVG_NS, 'path');
     tmp.setAttribute('class', 'rack-cable rack-cable-temp');
-    tmp.setAttribute('stroke', STYLE_COLOR[edge.style] || STYLE_COLOR.control);
+    tmp.setAttribute('stroke', styleColor(edge.style, this.dark));
     tmp.setAttribute('stroke-width', r2(wmm));
     this._tempCable = tmp;
     this._carryOrigin = { key: fixedRef.key, portId: fixedRef.portId, page: this.pageOf(this.records.get(fixedRef.key)) };
@@ -3673,7 +3689,7 @@ export class Rack {
     let lastX = cx, lastY = cy;
     const track = (x, y) => { lastX = x; lastY = y; armAt(x, y); };
     track(cx, cy);
-    this._ovCable = { pos: fixedPos, color: STYLE_COLOR[edge.style] || STYLE_COLOR.control, wmm };   // so the overview can draw the pull over its picture
+    this._ovCable = { pos: fixedPos, color: styleColor(edge.style, this.dark), wmm };   // so the overview can draw the pull over its picture
     // While the overview navigator is up (Option tapped mid-pull), the pointer aims the frame, not the
     // cable: don't redraw the (hidden) cable, and let neither a click-to-drop nor Escape act on it. Keep
     // FOLLOWING the pointer though, so the dive re-arms the cable where the pointer actually ended up.
@@ -7233,7 +7249,7 @@ export class Rack {
     const port = desc && (desc.ports || []).find((x) => x.id === portId);
     if (!port) return STYLE_COLOR.control;
     const style = (port.role === 'pitch' || port.name === '1V/Oct') ? 'pitch' : domainStyle(port.domain);
-    return STYLE_COLOR[style] || STYLE_COLOR.control;
+    return styleColor(style, this.dark);
   }
 
   _reconcileLinks() {
@@ -7441,7 +7457,7 @@ export class Rack {
         // rasterising scale, including the small overview picture.
         cx.lineWidth = CABLE_PX * cS;
         cx.globalAlpha = 1;
-        cx.strokeStyle = STYLE_COLOR[e.style] || STYLE_COLOR.control;
+        cx.strokeStyle = styleColor(e.style, this.dark);
         cx.beginPath();
         cx.moveTo(g.pA.x * mmC, g.pA.y * mmC);
         cx.bezierCurveTo(g.c1.x * mmC, g.c1.y * mmC, g.c2.x * mmC, g.c2.y * mmC, g.pB.x * mmC, g.pB.y * mmC);

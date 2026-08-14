@@ -128,11 +128,12 @@ learn beyond that.
 Every tab has **one port by default**, its main output. That covers the common case with
 no decision at all, and it is what the mixer subscribes to (§5).
 
-Further ports are added by **right-clicking the tab**, and removed the same way. Ports are
-never created automatically by dragging a cable near a tab: automatic creation that
-persists leaves litter to clean up later, and creation that vanishes when the cable is
-pulled makes a port's position depend on whether it is occupied — which destroys the one
-thing that makes the flip legible (below).
+Further ports are created by **dropping a cable on the tab**, and take the domain of the
+cable dropped on them. They are removed by **right-clicking the tab**, never automatically
+when the last cable comes off: a port that vanished with its occupancy would give a tab a
+different number of ports depending on what happened to be connected, which destroys the
+one thing that makes the flip legible (below). Creation is automatic; removal is a
+deliberate act.
 
 Two or three ports on a tab should be plenty.
 
@@ -242,14 +243,14 @@ than a mute that silently stops a filter sweeping somewhere else.
 
 ## 7. What tabs are not
 
-**Tabs are not polyphony.** A tab is spatial, author-time, arbitrary, one instance each; a
-voice in the polyphonic sense is runtime multiplicity — N copies of one graph differing
-only in what note they play. Building the second out of the first would mean either
-hand-editing eight identical pages, or propagating every edit across them, at which point
-they are not tabs but one thing viewed through an index.
+**A tab is not polyphony by itself.** A tab is spatial, author-time, arbitrary, one
+instance each; a voice in the polyphonic sense is runtime multiplicity — N copies of one
+graph differing only in what note they play. Building the second out of the first by hand
+would mean editing eight identical pages, or propagating every edit across them.
 
-Tabs make a patch's voices *understandable* by giving each one a page. Polyphony, if it
-comes, belongs on a subgraph and is a separate feature.
+A page becomes polyphonic by holding a **Voice module**, which carries the count and the
+note input and instantiates the page that many times. The page is authored once and the
+copies are never edited. See `voice-pages.md`.
 
 ## 8. Layout of a tab
 

@@ -25,7 +25,10 @@
 // channel and three channels, kept apart because building in monochrome and combining three
 // separately processed chains at the end is the compositional idiom of video synthesis, and a
 // single RGBA domain cannot express it. See design/video-synthesis.md §2.
-export const DOMAINS = Object.freeze(['audio', 'control', 'trigger', 'luma', 'rgb']);
+// `note` is the BUNDLE domain: one cable carrying a whole note — gate, held pitch, level, duration,
+// pan, and the bend and pressure lanes — for every note a voice is playing at once. It connects only
+// to itself, which is what makes a page's kind enforce itself. See design/voice-pages.md.
+export const DOMAINS = Object.freeze(['audio', 'control', 'trigger', 'luma', 'rgb', 'note']);
 export const DIRECTIONS = Object.freeze(['in', 'out']);
 
 // Validate a descriptor enough to catch the mistakes that would otherwise

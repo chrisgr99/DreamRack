@@ -32,6 +32,17 @@ export const DENY = 'deny';
 const VIDEO = new Set(['luma', 'rgb']);
 export function isVideoDomain(d) { return VIDEO.has(d); }
 
+// The NOTE domain — a bundle, not a signal (design/voice-pages.md). One cable carries the gate, the
+// held pitch, level, duration and pan, plus the bend and pressure lanes, for every note a voice is
+// playing at once. It is an ordinary Web Audio connection: the lanes are channels on one node, which
+// is why nothing here needs a special case the way the video edges do.
+//
+// IT CONNECTS TO NOTHING ELSE, IN EITHER DIRECTION. That single rule is what makes a page's kind
+// enforce itself: a note source dropped on a voice page has nowhere legal to land, because the only
+// input in the rack that accepts a note bundle is the Voice module's, and a voice page has no
+// Sequencer module to take one. No placement rule, no error message — the cable simply will not go.
+export function isNoteDomain(d) { return d === 'note'; }
+
 // The one place the domain policy lives (see design/video-synthesis.md §2). Among the
 // audio-side domains nothing is denied — same-domain and audio->control (FM) are allowed,
 // oddities warn but still connect. The VIDEO rules are the first real denials, and each
@@ -49,6 +60,11 @@ export function isVideoDomain(d) { return VIDEO.has(d); }
 //   video -> audio/control/trigger   DENY. Extracting CV from an image is the image-to-CV
 //                 module's job, where the reduction and its one frame of latency are visible.
 export function canConnect(srcDomain, dstDomain) {
+  // note -> note and nothing else, either way. See isNoteDomain above for why this is the whole of
+  // the voice-page rule.
+  if (isNoteDomain(srcDomain) || isNoteDomain(dstDomain)) {
+    return srcDomain === dstDomain ? ALLOW : DENY;
+  }
   const sv = VIDEO.has(srcDomain), dv = VIDEO.has(dstDomain);
   if (sv !== dv) {
     if (!sv && dv) return dstDomain && srcDomain === 'control' ? ALLOW : DENY;
@@ -63,6 +79,7 @@ export function canConnect(srcDomain, dstDomain) {
 // A cord takes its DESTINATION port's signal family, so its colour matches the
 // jack it lands on (DESIGN §3): audio, trigger, 1V/oct pitch (green), else control.
 export function familyOfPort(port) {
+  if (isNoteDomain(port.domain)) return 'note';      // its own look: neutral, thicker, double-ringed
   if (port.role === 'pitch' || port.name === '1V/Oct') return 'pitch';
   if (port.domain === 'audio') return 'audio';
   if (port.domain === 'trigger') return 'trigger';

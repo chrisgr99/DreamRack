@@ -34,8 +34,8 @@ export function buildCatalogue(moduleDescriptors, mixerDescriptor) {
   for (const d of moduleDescriptors) modules[d.id] = shapeOf(d);
   return {
     protocolVersion: MIRROR_PROTOCOL,
-    domains: ['audio', 'control', 'trigger'],
-    connectionRules: 'same-domain connects; audio→control is allowed (FM); an input holds one cable; outputs fan out',
+    domains: ['audio', 'control', 'trigger', 'luma', 'rgb', 'note'],
+    connectionRules: 'same-domain connects; audio→control is allowed (FM); control→video is allowed; luma→rgb is allowed and rgb→luma is not; note connects only to note; an input holds one cable; outputs fan out',
     modules,
     mixer: { key: 'mixer', ...shapeOf(mixerDescriptor) },
   };

@@ -1066,6 +1066,12 @@ const JACK = {
                        //   at full brightness a 6 mm block of white shouts louder than a jack
                        //   should on a panel you look at for hours.
   rgb: '#e0359b',      // video, three channels — magenta (black dashes read on it)
+  // The NOTE BUNDLE is the one family that is not a hue: every colour is taken, and what is left
+  // sits next to something. It is neutral instead, and inverts with the theme so it stands off the
+  // face either way — and it carries a SECOND concentric ring, which is what actually identifies it.
+  // Lightness alone would be far too weak a signal beside the neutral grey of unpainted jack art.
+  noteDark: '#ececed',
+  noteLight: '#141418',
   ring: '#000000',     // the direction dashes
   hole: '#2f2f33',     // centre plug-hole
   holeRim: '#cfcfd3',  // hair-thin light rim around the hole
@@ -1085,16 +1091,18 @@ const JACK = {
 //
 // A trim with no tag is left alone: the sequencer's voltage knobs and its ratchets are trims because
 // the shape suits them, not because they attenuate anything.
-function paintTrimAccents(svg, ports) {
+function paintTrimAccents(svg, ports, dark) {
   for (const eye of svg.querySelectorAll('[data-wcoast-role="trim-accent"]')) {
     const g = eye.closest('[data-wcoast-accent-port]');
     const port = g && ports.get(g.getAttribute('data-wcoast-accent-port'));
-    if (port && port.meta) eye.setAttribute('fill', jackFill(port.meta));
+    if (port && port.meta) eye.setAttribute('fill', jackFill(port.meta, dark));
   }
 }
 
 function isPitch(meta) { return meta.role === 'pitch' || meta.name === '1V/Oct'; }
-function jackFill(meta) {
+function isNote(meta) { return meta.domain === 'note'; }
+function jackFill(meta, dark) {
+  if (isNote(meta)) return dark ? JACK.noteDark : JACK.noteLight;
   if (isPitch(meta)) return JACK.pitch;         // 1V/oct pitch stays green
   if (meta.domain === 'audio') return JACK.audio;
   if (meta.domain === 'trigger') return JACK.trigger;
@@ -1114,7 +1122,7 @@ function paintJack(port, dark) {
   const body = port.element.querySelector('rect[data-wcoast-role="jackbody"]');
   if (body && port.meta) {
     const hole = port.element.querySelector('[data-wcoast-role="jackhole"]');
-    body.setAttribute('fill', jackFill(port.meta));
+    body.setAttribute('fill', jackFill(port.meta, dark));
     body.setAttribute('stroke', 'none');
     if (hole) { hole.setAttribute('fill', JACK.hole); hole.setAttribute('stroke', JACK.holeRim); hole.setAttribute('stroke-width', JACK.holeRimW); }
     addSquareDirRing(port, body, hole);
@@ -1124,11 +1132,36 @@ function paintJack(port, dark) {
   if (!circles.length || !port.meta) return;
   let outer = circles[0], hole = circles[0], ro = -1, rh = Infinity;
   for (const c of circles) { const r = parseFloat(c.getAttribute('r')) || 0; if (r > ro) { ro = r; outer = c; } if (r < rh) { rh = r; hole = c; } }
-  outer.setAttribute('fill', jackFill(port.meta));
+  outer.setAttribute('fill', jackFill(port.meta, dark));
   if (!dark) { outer.setAttribute('stroke', JACK.edge); outer.setAttribute('stroke-width', JACK.edgeW); }
   else { outer.setAttribute('stroke', 'none'); outer.setAttribute('stroke-width', '0'); }
   if (hole !== outer) { hole.setAttribute('fill', JACK.hole); hole.setAttribute('stroke', JACK.holeRim); hole.setAttribute('stroke-width', JACK.holeRimW); }
-  addDirRing(port, outer, ro, rh);
+  // A NOTE JACK CARRIES A SECOND RING, and its direction dashes invert. The family colour here is a
+  // neutral, so lightness would be the only thing separating it from unpainted jack art — far too
+  // weak on its own — and black dashes on the near-black light-mode face would say nothing at all.
+  // The extra ring sits in the middle third, between the two the dashes can occupy, so a note socket
+  // reads as two concentric rings whether it is an input or an output.
+  const noteInk = isNote(port.meta) ? (dark ? JACK.noteLight : JACK.noteDark) : null;
+  if (noteInk) addNoteRing(port, outer, ro, rh, noteInk);
+  addDirRing(port, outer, ro, rh, noteInk || JACK.ring);
+}
+
+// The second ring on a note jack: solid, the middle third of the coloured surround, in the inverse of
+// the jack's own neutral. Idempotent, like the direction ring it sits beside.
+function addNoteRing(port, outer, ro, rh, col) {
+  const old = port.element.querySelector('.jack-note-ring');
+  if (old) old.remove();
+  if (!(ro > 0) || !(rh < ro)) return;
+  const w = (ro - rh) / 3;
+  const ring = port.element.ownerDocument.createElementNS(SVG_NS, 'circle');
+  ring.setAttribute('class', 'jack-note-ring');
+  ring.setAttribute('cx', outer.getAttribute('cx') || 0);
+  ring.setAttribute('cy', outer.getAttribute('cy') || 0);
+  ring.setAttribute('r', round3(rh + w * 1.5));
+  ring.setAttribute('fill', 'none');
+  ring.setAttribute('stroke', col);
+  ring.setAttribute('stroke-width', round3(w * 0.62));
+  port.element.appendChild(ring);
 }
 
 // The direction ring: a bold black dashed band a THIRD of the coloured surround
@@ -1136,7 +1169,7 @@ function paintJack(port, dark) {
 // INNER third (touching the hole) for an input — so one family colour reads as in
 // or out. Dashes are equal and short, fitted to a whole number of periods so the
 // ring closes cleanly. Idempotent: a re-paint (e.g. dark-mode toggle) replaces it.
-function addDirRing(port, outer, ro, rh) {
+function addDirRing(port, outer, ro, rh, col) {
   const old = port.element.querySelector('.jack-dir-ring');
   if (old) old.remove();
   if (!(ro > 0) || !(rh < ro) || !port.meta.dir) return;
@@ -1151,7 +1184,7 @@ function addDirRing(port, outer, ro, rh) {
   ring.setAttribute('class', 'jack-dir-ring');
   ring.setAttribute('cx', round3(cx)); ring.setAttribute('cy', round3(cy)); ring.setAttribute('r', round3(ringR));
   ring.setAttribute('fill', 'none');
-  ring.setAttribute('stroke', JACK.ring);
+  ring.setAttribute('stroke', col || JACK.ring);
   ring.setAttribute('stroke-width', round3(w));
   ring.setAttribute('stroke-dasharray', round3(seg) + ' ' + round3(seg));
   port.element.appendChild(ring);
@@ -1256,7 +1289,7 @@ function paintKnAck(port, dark) {
   const band = port.element.ownerDocument.createElementNS(SVG_NS, 'circle');
   band.setAttribute('class', 'knack-band');
   band.setAttribute('cx', round3(cx)); band.setAttribute('cy', round3(cy)); band.setAttribute('r', round3(ro));
-  band.setAttribute('fill', jackFill(port.meta));
+  band.setAttribute('fill', jackFill(port.meta, dark));
   if (!dark) { band.setAttribute('stroke', JACK.edge); band.setAttribute('stroke-width', JACK.edgeW); }   // thin black edge on the light face only
   port.element.insertBefore(band, hole);
   addDirRing(port, band, ro, rh);   // input dashes hugging the hole (dir='in' → inner third)
@@ -1311,13 +1344,13 @@ function dimColor(hex, f) {
   return '#' + to(m[1]) + to(m[2]) + to(m[3]);
 }
 
-function moduleIdentityColors(descriptor, ports) {
+function moduleIdentityColors(descriptor, ports, dark) {
   const decl = descriptor && descriptor.signalIdentity;
   if (Array.isArray(decl) && decl.length) return decl.map((k) => IDENTITY_KEY_COLOR[k] || JACK.cv).slice(0, 3);
   const tally = new Map();
   for (const p of ports.values()) {
     if (!p.meta || p.meta.dir !== 'out') continue;
-    const c = jackFill(p.meta);
+    const c = jackFill(p.meta, dark);
     tally.set(c, (tally.get(c) || 0) + 1);
   }
   return [...tally.entries()].sort((a, b) => b[1] - a[1]).map(([c]) => c).slice(0, 3);   // primary (most outputs) first
@@ -1334,10 +1367,10 @@ function minusGap(a, b, ga, gb) {
 
 let stripClipSeq = 0;   // clipPath ids are document-global; keep each panel's unique
 
-function drawIdentityStrip(svg, descriptor, ports, name) {
+function drawIdentityStrip(svg, descriptor, ports, name, dark) {
   const old = svg.querySelector('.module-identity');
   if (old) old.remove();
-  const colors = moduleIdentityColors(descriptor, ports);
+  const colors = moduleIdentityColors(descriptor, ports, dark);
   const doc = svg.ownerDocument;
   const g = doc.createElementNS(SVG_NS, 'g');
   g.setAttribute('class', 'module-identity');
@@ -1449,10 +1482,10 @@ function decoratePanel(parsed, descriptor, opts) {
     if (port.element.hasAttribute('data-wcoast-param')) paintKnAck(port, opts.dark);
     else paintJack(port, opts.dark);
   }
-  paintTrimAccents(svg, ports);
+  paintTrimAccents(svg, ports, opts.dark);
   // Horizontal title in the 4mm strip above the face, centred on the module's width.
   const name = (descriptor && descriptor.name) || '';
-  drawIdentityStrip(svg, descriptor, ports, name);   // colour band in the title strip (breaks around the label below)
+  drawIdentityStrip(svg, descriptor, ports, name, opts.dark);   // colour band in the title strip (breaks around the label below)
   if (name) {
     const vbT = (svg.getAttribute('viewBox') || '').trim().split(/\s+/).map(Number);
     const wT = vbT.length === 4 ? vbT[2] : 142;
