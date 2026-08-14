@@ -39,8 +39,8 @@ knack('key', 'Key', 0, 1, 1);
 // The blend. Eight kinds, not eight degrees — a switch, and nothing here means anything swept.
 // The order runs from gentlest to most violent, which is how you hunt through them.
 params.push({ id: 'mode', name: 'Blend', section: 'mix', curve: 'stepped', default: 'mix',
-  steps: [{ value: 'mix' }, { value: 'add' }, { value: 'mult' }, { value: 'screen' },
-    { value: 'diff' }, { value: 'light' }, { value: 'dark' }, { value: 'over' }] });
+  steps: [{ value: 'mix' }, { value: 'over' }, { value: 'add' }, { value: 'screen' },
+    { value: 'mult' }, { value: 'dark' }, { value: 'light' }, { value: 'diff' }] });
 
 ports.push({ id: 'aIn', name: 'A', section: 'mix', domain: 'rgb', dir: 'in' });
 ports.push({ id: 'bIn', name: 'B', section: 'mix', domain: 'rgb', dir: 'in' });
@@ -53,6 +53,7 @@ export default {
   name: 'Compositor',
   abbreviation: 'Comp',
   worklets: [],
+  category: 'video',   // module library grouping
   signalIdentity: ['rgb'],
   ports,
   params,

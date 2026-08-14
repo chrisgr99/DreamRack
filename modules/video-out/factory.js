@@ -88,7 +88,24 @@ export function create(ctx, services) {
       // while this very push is still running.
       const want = String(value) === 'on';
       if (want === engine.windowOpen()) return;
-      if (want) engine.openWindow(() => { values.set('window', 'off'); if (onParam) onParam('window', 'off'); });
+      if (want) {
+        // SAY SO IF IT DID NOT OPEN. openWindow has two routes — a real window and the in-app pane —
+        // and the failure mode of the first is silence: the request resolves and nothing is ever
+        // shown. A lamp lit over no window is the worst of both, so the lamp goes back off and the
+        // reason is printed rather than left to be guessed at from the outside.
+        Promise.resolve(engine.openWindow(() => { values.set('window', 'off'); if (onParam) onParam('window', 'off'); }))
+          .then(() => {
+            // Only when it went wrong. The running commentary was for one investigation and it is
+            // answered: the window opens, and what looked like a failure to open was a window that
+            // had opened over the modules it was meant to sit beside.
+            const el = document.querySelector('.video-window');
+            if (engine.windowOpen() && el) return;
+            if (engine.windowOpen() && !el) console.warn('[wcoast] video window: engine says open but there is no pane on the page');
+            if (engine.windowOpen()) return;
+            console.warn('[wcoast] the video window did not open');
+            values.set('window', 'off'); if (onParam) onParam('window', 'off');
+          });
+      }
       else engine.closeWindow();
       return;
     }
