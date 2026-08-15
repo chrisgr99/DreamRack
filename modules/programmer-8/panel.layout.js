@@ -74,7 +74,8 @@ const X_START = 49.2;              // loop-window start selector (green)
 const X_END = 54.7;                // loop-window end selector (red)
 const X_RPT = 62.5;                // ratchet trim
 const X_SEL = 70.7;                // stage select in
-const X_PULSE = 77.0;              // stage pulse out
+const X_PULSE = 73.6;              // stage pulse out — moved in from 77.0, where its OUT heading
+                                   // sat in the corner the poly lamp is drawn in
 
 const KNOB_R = 4.3;                // the largest the row allows, tip to rim; the old knob was 4.2
 // The ratchet is a trim too, and the clearest case on the rack for one: it was already at trim size,

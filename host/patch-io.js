@@ -132,6 +132,10 @@ export function serialize(rack, mixer) {
     const m = { id: rec.key, type: rec.descriptorId, row: rec.row, x: round2(rec.x) };
     const page = rack.pageOf ? rack.pageOf(rec) : null;
     if (page && page !== 'a1') m.page = page;
+    // PER NOTE OR SHARED, written only when it differs from what the descriptor would have chosen —
+    // so a file records a decision someone made rather than repeating a default on every module.
+    if (rack.perNote && rack._perNoteDefault && rec.perNote !== undefined
+        && rec.perNote !== rack._perNoteDefault(rec.descriptorId)) m.perNote = !!rec.perNote;
     return m;
   });
 
@@ -237,7 +241,11 @@ export async function restore(obj, rack, mixer, opts = {}) {
     // that somehow holds two would open as it is rather than losing a module on load.
     const rec = await rack.addModule(m.type, m.row, m.x,
       opts.keepKeys ? { page, key: m.id, restoring: true } : { page, restoring: true });
-    if (rec) { idToKey.set(m.id, rec.key); if (opts.keepKeys && rack.reserveKey) rack.reserveKey(rec.key); }
+    if (rec) {
+      idToKey.set(m.id, rec.key);
+      if (m.perNote !== undefined) rec.perNote = !!m.perNote;
+      if (opts.keepKeys && rack.reserveKey) rack.reserveKey(rec.key);
+    }
   }
   // Put the pinned mixer back where it was saved (it survives rack.clear() at its boot x=0 otherwise).
   if (obj.mixerPos) rack.placeModule(mixer.key, obj.mixerPos.row, obj.mixerPos.x);

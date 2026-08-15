@@ -9,7 +9,7 @@
 
 'use strict';
 
-import { panel, band, row, knob, jack, outputs } from '../../panel/grammar.js';
+import { panel, band, row, knob, jack, lamps, outputs } from '../../panel/grammar.js';
 
 export default panel({ hp: 8 }, [
   band('NOTE', [
@@ -17,6 +17,10 @@ export default panel({ hp: 8 }, [
     row([jack('levelIn', 'level'), jack('durIn', 'dur')]),
     row([knob('pan', 'PAN', { size: 'small' }), knob('bendRange', 'BEND', { size: 'small' })]),
     row([jack('panIn', 'pan')]),
+    // WHAT ENDS A NOTE, and it has to be on the panel: nothing else can say whether a step's length
+    // is the gate's or the duration's, and only HOLD lets notes overlap at all.
+    // Spaced at 8mm rather than the house 5.6: the two labels are 5.7mm wide and were touching.
+    row([lamps('ends', [['gate', 'GATE'], ['hold', 'HOLD']], { dir: 'h', spacing: 8 })]),
     row([jack('gateIn', 'gate'), jack('pitchIn', 'v/oct')]),
   ]),
   outputs([jack('noteOut', 'note')]),

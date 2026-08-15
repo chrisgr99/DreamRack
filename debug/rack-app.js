@@ -960,6 +960,53 @@ async function boot() {
     catch (e) { window.alert(`Could not open the patch: ${e.message}`); }
   }
 
+  // THE HANDOFF ASKS IN OUR OWN DIALOG, not the browser's. window.confirm is a native modal whose
+  // dismissal rules are the platform's — a stray keystroke closes it — and a handoff dismissed by
+  // accident is gone: the mirror has already given up the file, so the proposal has to be sent again.
+  // This one answers to two keys and two buttons and NOTHING ELSE. No click-outside, no Tab, no
+  // space bar: Return applies, Escape cancels.
+  function askApply(summary) {
+    return new Promise((resolve) => {
+      const dark = rack.isDark();
+      const wrap = document.createElement('div');
+      wrap.style.cssText = 'position:fixed;inset:0;z-index:9000;display:flex;align-items:center;'
+        + 'justify-content:center;background:rgba(0,0,0,0.45)';
+      const box = document.createElement('div');
+      box.style.cssText = 'min-width:340px;max-width:520px;padding:18px 20px 16px;border-radius:10px;'
+        + `background:${dark ? '#25252a' : '#f2f2f4'};color:${dark ? '#e8e8ec' : '#1b1b1f'};`
+        + 'font:14px/1.45 system-ui,sans-serif;box-shadow:0 12px 40px rgba(0,0,0,0.5)';
+      box.innerHTML = `<div style="font-weight:600;margin-bottom:6px">Apply the proposed patch?</div>
+        <div style="opacity:0.8">${summary}</div>
+        <div style="opacity:0.6;margin-top:10px;font-size:12px">Return to apply · Escape to cancel</div>`;
+      const row = document.createElement('div');
+      row.style.cssText = 'display:flex;gap:10px;justify-content:flex-end;margin-top:16px';
+      const mk = (label, primary) => {
+        const b = document.createElement('button');
+        b.textContent = label;
+        b.style.cssText = 'padding:6px 16px;border-radius:6px;font:inherit;cursor:pointer;'
+          + (primary ? 'background:#2f7fd0;color:#fff;border:1px solid #2f7fd0'
+            : `background:transparent;color:inherit;border:1px solid ${dark ? '#585860' : '#b0b0b8'}`);
+        return b;
+      };
+      const cancel = mk('Cancel', false), ok = mk('Apply', true);
+      row.append(cancel, ok); box.appendChild(row); wrap.appendChild(box); document.body.appendChild(wrap);
+      const done = (yes) => {
+        document.removeEventListener('keydown', onKey, true);
+        wrap.remove();
+        resolve(yes);
+      };
+      const onKey = (e) => {
+        if (e.key !== 'Enter' && e.key !== 'Escape') { e.stopPropagation(); return; }
+        e.preventDefault(); e.stopPropagation();
+        done(e.key === 'Enter');
+      };
+      document.addEventListener('keydown', onKey, true);
+      cancel.addEventListener('click', () => done(false));
+      ok.addEventListener('click', () => done(true));
+      ok.focus();
+    });
+  }
+
   // Apply an AI-proposed patch (the mirror's inbox.json handoff, in patch.json's
   // format): validate it against the descriptors, confirm with the user, then restore it.
   async function applyEdit(text) {
@@ -969,7 +1016,7 @@ async function boot() {
     if (!v.ok) return v;
     const cur = serialize(rack, mixerIO);
     const summary = `${cur.modules.length} → ${obj.modules.length} modules, ${cur.wiring.length} → ${obj.wiring.length} cables`;
-    if (!window.confirm(`Apply the AI-proposed patch?\n\n${summary}`)) return { ok: false, error: 'cancelled by the user' };
+    if (!await askApply(summary)) return { ok: false, error: 'cancelled by the user' };
     try { await restore(obj, rack, mixerIO); afterLoad(); } catch (e) { return { ok: false, error: `apply failed: ${e.message}` }; }
     markDirty();
     return { ok: true };

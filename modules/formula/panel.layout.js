@@ -24,7 +24,9 @@ items.push({ t: 'rect', x: 0, y: 0, w: FACE_W, h: FACE_H, rx: 2.5, fill: 'face' 
 items.push({ t: 'rect', x: 0.5, y: 0.5, w: FACE_W - 1, h: FACE_H - 1, rx: 2.2, fill: 'none', stroke: 'frame', sw: 0.5 });
 
 // The expression well. Matches the `readout` rect in the descriptor.
-const RO = { x: 3, y: 8, w: 32, h: 20 };
+// The readout was 32 wide and reached x=35, which is inside the top-right corner the rack draws the
+// poly lamp in. Narrowed rather than moved: it is left-aligned with everything below it.
+const RO = { x: 3, y: 8, w: 29, h: 20 };
 ink(FACE_W / 2, 5.8, 'EXPRESSION', { size: 1.9 });
 items.push({ t: 'rect', x: RO.x - 0.7, y: RO.y - 0.7, w: RO.w + 1.4, h: RO.h + 1.4, rx: 1,
   fill: 'none', stroke: 'frame', sw: 0.45 });

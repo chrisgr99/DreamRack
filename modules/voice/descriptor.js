@@ -20,9 +20,14 @@
 // DURATION COMES OUT AS A JACK because a voice usually wants it. Patch it into an envelope's decay
 // and short notes get short envelopes without a second cable from the sequencer page.
 //
-// NO VOICE COUNT YET. The count belongs on this module — the page is the voice and this says how many
-// of it to run — but instantiating a page more than once is stage five, and a knob that does nothing
-// is worse than no knob.
+// POLY AND ROLLOVER LIVE HERE, because the page is the voice and this module is its edge. POLY says
+// how many copies of the page to run; ROLLOVER says what gives when a note arrives and none is free.
+//
+// The five rollover choices mean something at every count, which is why they are printed lamps rather
+// than a list that changes. OLDEST at POLY 1 is simply retrigger, QUIETEST comes to the same, IGNORE
+// is a drum machine that cannot be interrupted, GLIDE keeps one voice and moves its pitch, and LEGATO
+// hands each note to the next voice while releasing the one before — the crossfade a wind instrument
+// makes, which is why it wants two voices.
 
 'use strict';
 
@@ -49,5 +54,21 @@ export default {
     { id: 'durOut', name: 'Duration', section: 'out', domain: 'control', dir: 'out' },
     { id: 'panOut', name: 'Pan', section: 'out', domain: 'control', dir: 'out', polarity: 'bipolar' },
   ],
-  params: [],
+  params: [
+    // Detented: eight positions you can count by feel as well as read. Eight is a ceiling for CPU
+    // rather than principle — the count multiplies every per-note module on the page.
+    { id: 'poly', name: 'Poly', section: 'note', curve: 'detent', min: 1, max: 8, default: 1, glideMs: 0 },
+    { id: 'rollover', name: 'Rollover', section: 'note', curve: 'stepped', default: 'oldest',
+      steps: [{ value: 'oldest' }, { value: 'quietest' }, { value: 'ignore' }, { value: 'glide' },
+        { value: 'legato' }] },
+    // HOW LONG THE HAND-OVER TAKES, and it means the right thing in both modes because both are the
+    // same question. In GLIDE it is the portamento time — how long the pitch takes to travel. In
+    // LEGATO it is the overlap: how long the voice being left keeps sounding after the new one has
+    // begun, which is the crossfade a wind instrument makes and the whole reason legato needs two
+    // voices. Zero in either mode is an instant change, which is what the other three rollovers do.
+    // TWO SECONDS AT THE TOP, not the half second a portamento wants. Long crossfades are how you hear
+    // what this control does at all, and a range you cannot reach the end of teaches nothing.
+    { id: 'time', name: 'Time', section: 'note', curve: 'linear', min: 0, max: 2, default: 0.06,
+      unit: 's', glideMs: 0 },
+  ],
 };

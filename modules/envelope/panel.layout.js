@@ -38,7 +38,8 @@ const TOP = 10.8, BOT = 30.8;
 
 export default panel({ hp: 10, tight: true, pad: 1.4 }, [
   band('ADSR', [
-    row([display('env', 41.8, 'fill')]),
+    row([display('env', 40.4, 'fill')]),   // 41.8 before: the last millimetre and a half of it ran
+                                          // under the corner the poly lamp is drawn in.
   ]),
   band(null, [
     placed([

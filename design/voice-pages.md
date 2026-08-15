@@ -276,6 +276,73 @@ The count has a mono setting at one end, and mono needs a second choice: **retri
 wind voice wants legato — a new pitch arriving while pressure continues should move to it, not start
 a new note. Stating this now avoids discovering it later as a bug report about clicks.
 
+### What Voice In carries
+
+A knob and a row of lamps.
+
+**POLY** — a detented knob, one to eight, so the count can be read at a glance and felt through the
+detents. Eight is a ceiling for the sake of CPU rather than principle: the count multiplies every
+per-note module on the page, so it is the page's cost, not an oscillator's. The word is the one a
+synth player already knows, and saying it on the panel advertises what this rack does.
+
+**ROLLOVER** — what happens when a note arrives and no voice is free. Four radio lamps, printed, so
+the setting reads from across the room rather than hiding in a menu:
+
+- **OLDEST** — take the voice that has sounded longest, which is what almost every instrument does.
+  At POLY 1 that is simply retrigger, since the one voice is always the oldest.
+- **QUIETEST** — take the one furthest into its decay, which is kinder on sustained material. At
+  POLY 1 it is the same as oldest, which is honest rather than confusing.
+- **IGNORE** — drop the new note. At POLY 1 that is a drum machine: the pattern runs and cannot be
+  interrupted.
+- **GLIDE** — keep the one voice, hold the gate up, and travel the pitch to the new note. Portamento.
+- **LEGATO** — hand over between **two voices and no more**: notes alternate between a pair, the one
+  being left fading out while the new one fades in over TIME. Two is all the mode can use, since only
+  one note is ever giving way to one other, so POLY above two is ignored here rather than pretended
+  into. At POLY 1 there is no pair, so the notes **butt**: the old ends exactly where the new begins.
+
+  **This is what a wind instrument does.** Changing the length of a vibrating column does not move the
+  pitch: one resonance dies while the next establishes, which is why a slurred saxophone line sounds
+  nothing like a portamento. It is the VL1-m's alternating mono mode, and it is why that mode needs
+  two voices — with one there is nothing to hand over to, and LEGATO falls back to GLIDE.
+
+**TIME** is one knob for both, because both are the same question: how long the pitch takes to travel
+in GLIDE, and how long the crossfade lasts in LEGATO. Zero is an instant change.
+
+The LEGATO overlap is a **level crossfade** — the voice being left fades to nothing while the new one
+rises from nothing over the same span. Holding the old note at full and releasing it at the end of the
+overlap was the first attempt and sounded like what it was: two notes at once, then a drop.
+
+Five options that mean something at every count, so nothing on the panel has to change with the knob
+beside it and no lamp is ever greyed. The name is not quite literal for legato, and it is the word
+that carries the idea: all four answer what gives when the polyphony is exceeded.
+
+Both controls are printed rather than listed. A value window hides its options until it is opened, and
+how many voices there are and what happens when they run out are settings you want to read at a
+glance.
+
+### Per note or shared, and who decides
+
+**Not the module's author.** `scope` in a descriptor is fixed per module TYPE, and whether a delay is
+per-note or shared is not a property of delays — the same delay is a voice's character in one patch
+and a shared send in another. (The field is also not to be trusted as it stands: thirteen modules
+leave it unset and the clock declares itself per-voice, which would give eight free-running clocks
+drifting apart.)
+
+**So it is a per-instance setting, stored in the patch**, with the descriptor's `scope` supplying only
+the default: sources, filters, envelopes and VCAs per note; clocks, sequencers and anything a page has
+one of, shared.
+
+**Set from a button the host draws** at the left of the module's title strip — three dots for per
+note, one for shared — which appears only while that module is on a voice page. It cannot be in the
+faceplate: panels are generated ahead of time and identical for every instance, so a control that
+comes and goes has to be painted at runtime, as the bipolar dot and the note ring already are. Voice
+In and Sequence Out have no such button; there is one of each by definition.
+
+**And one rule has to be said out loud: a shared module is where per-note ends.** Eight voices
+reaching a shared reverb are summed at its input, and everything past it is a mix — a per-note module
+downstream of a shared one cannot un-mix what it is given. The setting is really "where does this
+page stop being eight things", and the panel should say so rather than leave it to be discovered.
+
 ### The audio inside a page is never polyphonic
 
 The page is a template and the engine runs N copies of it, each an ordinary mono graph of ordinary
@@ -430,6 +497,10 @@ Each stage is usable on its own and worth having even if the next one is never b
   question is only whether its own panel needs to say anything about it.
 - **Where allocation actually runs** — inside Voice In's own code, or in the engine with the
   module as its face. The answer probably follows from how a page is instantiated more than once.
+- **A TIMBRAL crossfade across the legato overlap.** Amplitude alone is what the hand-over gives
+  today. Fading the timbre of the outgoing voice into the incoming one over the same TIME is closer
+  still to what an instrument does, and it is worth experimenting with once there is something to
+  play — the control is already there and the two voices already overlap.
 - **What a page copy costs to build and tear down.** Allocation is only free if a copy already
   exists; if the engine builds one on demand, a note would wait for a graph to be assembled. Measured
   once there is something to measure.

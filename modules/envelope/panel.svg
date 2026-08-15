@@ -18,8 +18,8 @@
   <rect x="0" y="0" width="50.8" height="113.5912" rx="2.5" fill="#cfcfcf"/>
   <rect x="0.5" y="0.5" width="49.8" height="112.5912" rx="2.2" fill="none" stroke="#7d7d7d" stroke-width="0.5"/>
   <text x="7.188000000000001" y="7.4" font-size="3.106" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">ADSR</text>
-  <rect x="4.5" y="9.4" width="41.8" height="30.79119999999999" rx="1.2" fill="none" stroke="#7d7d7d" stroke-width="0.355"/>
-  <g data-wcoast-display="env" data-x="4.5" data-y="9.4" data-w="41.8" data-h="30.79119999999999"></g>
+  <rect x="5.2" y="9.4" width="40.4" height="30.79119999999999" rx="1.2" fill="none" stroke="#7d7d7d" stroke-width="0.355"/>
+  <g data-wcoast-display="env" data-x="5.2" data-y="9.4" data-w="40.4" data-h="30.79119999999999"></g>
   <line x1="4.5" y1="41.59" x2="46.3" y2="41.59" stroke="#7d7d7d" stroke-width="0.355"/>
   <g data-wcoast-param="decay" data-wcoast-cx="15.399999999999999" data-wcoast-cy="53.79119999999999" data-wcoast-angle-min="-150" data-wcoast-angle-max="150" data-wcoast-port="decayCv">
     <circle cx="15.399999999999999" cy="53.79119999999999" r="8.5" fill="url(#blueRing)" stroke="#004b7a" stroke-width="0.3748"/>

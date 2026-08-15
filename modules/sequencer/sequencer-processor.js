@@ -56,6 +56,8 @@ class SequencerProcessor extends AudioWorkletProcessor {
       { name: 'duration', defaultValue: 0.25, minValue: 0.01, maxValue: 8, automationRate: 'k-rate' },
       { name: 'pan', defaultValue: 0, minValue: -1, maxValue: 1, automationRate: 'k-rate' },
       { name: 'bendRange', defaultValue: 2, minValue: 0.1, maxValue: 24, automationRate: 'k-rate' },
+      // 0 = the gate ends the note, 1 = the duration does and the gate's fall is ignored.
+      { name: 'ends', defaultValue: 0, minValue: 0, maxValue: 1, automationRate: 'k-rate' },
     ];
   }
 
@@ -98,6 +100,7 @@ class SequencerProcessor extends AudioWorkletProcessor {
     // against a divide by zero, not against a small range: a tenth of a semitone is a setting anyone
     // working microtonally may well want.
     const bendScale = 12 / Math.max(0.01, params.bendRange[0]);
+    const holds = params.ends && params.ends[0] > 0.5;
 
     const held = this._held;
     let gatePrev = this._gatePrev;
@@ -143,9 +146,11 @@ class SequencerProcessor extends AudioWorkletProcessor {
       // The duration is in the note-on as well, so a lost off still cannot leave a voice sounding.
       if (this._on) {
         this._age++;
-        if (g <= 0 || this._age >= this._len) {
+        // HOLD lets the duration decide alone, so a note outlives its gate and the next one can begin
+        // while it is still sounding. That overlap is what a page needs to play more than one note.
+        if ((g <= 0 && !holds) || this._age >= this._len) {
           this._on = false;
-          if (this._out && g <= 0) {
+          if (this._out && g <= 0 && !holds) {
             this._out.postMessage({ t: 'off', handle: this._handle,
               time: (typeof currentFrame === 'number' ? currentFrame : 0) + i });
           }

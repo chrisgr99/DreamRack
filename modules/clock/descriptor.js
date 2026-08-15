@@ -49,7 +49,10 @@ export default {
   abbreviation: 'CLK',
   // A numeric readout in the panel's display box: the tempo the engine is actually running at.
   graph: 'readout',
-  scope: 'voice',
+  // SHARED. A clock duplicated per voice would be eight free-running clocks drifting apart — the
+  // page has one tempo, not one per note. This said `voice` and nothing read the field until
+  // polyphony did.
+  scope: 'shared',
   hp: 15,
   worklets: ['modules/clock/clock-processor.js'],
   ports: [

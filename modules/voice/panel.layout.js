@@ -10,11 +10,27 @@
 
 'use strict';
 
-import { panel, band, row, jack, outputs } from '../../panel/grammar.js';
+import { panel, band, row, knob, jack, lamps, outputs } from '../../panel/grammar.js';
 
-export default panel({ hp: 8 }, [
+// The count printed round the knob, one to eight. A detented knob shows its position by where it
+// points, which tells you it has moved; a gauge tells you WHAT IT SAYS, and how many voices a page is
+// running is a number you want to read rather than infer.
+// Plain strings: a scale entry that is an ARRAY is two printed lines, which is how the frequency
+// knobs show hertz above a note name. A count wants one line.
+const COUNT = ['1', '2', '3', '4', '5', '6', '7', '8'];
+
+export default panel({ hp: 10 }, [
   band('NOTE', [
-    row([jack('noteIn', 'note')]),
+    row([jack('noteIn', 'note'), knob('poly', 'POLY', { size: 6.6, scale: COUNT })]),
+  ]),
+  // Its own band, so the word sits above the lamps at header size. Printed lamps rather than a list:
+  // how many voices there are and what happens when they run out are settings you want to read from
+  // across the room, not open a menu to find.
+  band('ROLLOVER', [
+    row([lamps('rollover', [['oldest', 'OLDEST'], ['quietest', 'QUIET'], ['ignore', 'IGNORE'],
+      ['glide', 'GLIDE'], ['legato', 'LEGATO']]),
+      // One knob for both: the pitch's travel time in GLIDE, the notes' overlap in LEGATO.
+      knob('time', 'TIME', { size: 'small' })]),
   ]),
   band(null, [
     row([jack('levelOut', 'level'), jack('durOut', 'dur')]),

@@ -13,14 +13,19 @@
 
 const PROCESSOR = 'wcoast-voice';
 const OUT_PORTS = ['gateOut', 'pitchOut', 'bendOut', 'levelOut', 'durOut', 'panOut'];
+// EIGHT GROUPS OF SIX. Group zero is what the panel's jacks show; the rest are what the copies of a
+// duplicated page will be wired to, so the allocator lives in one worklet rather than being spread
+// across eight of them. Unused groups cost a block of silence each.
+const MAX_VOICES = 8;
+const ROLLOVER = ['oldest', 'quietest', 'ignore', 'glide', 'legato'];
 
 export function create(ctx, _services) {
   const node = new AudioWorkletNode(ctx, PROCESSOR, {
     // One input, carrying a channel of silence, whose only job is to keep both ends of the cable in
-    // the rendering graph; six mono outputs, the parts of a note.
+    // the rendering graph; six mono outputs per voice, the parts of a note.
     numberOfInputs: 1,
-    numberOfOutputs: OUT_PORTS.length,
-    outputChannelCount: OUT_PORTS.map(() => 1),
+    numberOfOutputs: OUT_PORTS.length * MAX_VOICES,
+    outputChannelCount: new Array(OUT_PORTS.length * MAX_VOICES).fill(1),
   });
 
   const outIndex = new Map(OUT_PORTS.map((id, i) => [id, i]));
@@ -29,9 +34,22 @@ export function create(ctx, _services) {
     node,
     getOutput: (portId) => { const i = outIndex.get(portId); return i === undefined ? null : { node, index: i }; },
     getInput: (portId) => (portId === 'noteIn' ? { node, index: 0 } : null),
-    getParam: () => null,
-    setParam: () => {},
-    supports: () => false,
+    // The engine asks for a copy's outputs by voice number; the panel's jacks are voice zero.
+    getVoiceOutput: (portId, voice) => {
+      const i = outIndex.get(portId);
+      if (i === undefined || !(voice >= 0 && voice < MAX_VOICES)) return null;
+      return { node, index: voice * OUT_PORTS.length + i };
+    },
+    getParam: (paramId) => node.parameters.get(paramId) || null,
+    setParam: (paramId, value, atTime) => {
+      const ap = node.parameters.get(paramId);
+      if (!ap) return;
+      // ROLLOVER is a word on the panel and a number in the worklet: a stepped param arrives here as
+      // its step value, and an AudioParam only carries numbers.
+      const v = paramId === 'rollover' ? Math.max(0, ROLLOVER.indexOf(String(value))) : value;
+      ap.setValueAtTime(v, atTime === undefined ? ctx.currentTime : atTime);
+    },
+    supports: (id) => id === 'poly' || id === 'rollover' || id === 'time',
     // Called by the rack when a note cable is made or pulled: a port to listen on, or null to stop.
     attachNoteIn: (port) => {
       if (port) node.port.postMessage({ noteIn: port }, [port]);

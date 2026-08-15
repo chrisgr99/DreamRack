@@ -9,6 +9,7 @@
 const PROCESSOR = 'wcoast-sequencer';
 const IN_PORTS = ['gateIn', 'pitchIn', 'levelIn', 'durIn', 'panIn'];
 const KNOBS = new Set(['level', 'duration', 'pan', 'bendRange']);
+const ENDS = ['gate', 'hold'];   // a word on the panel, a number in the worklet
 const NOTE_CHANNELS = 1;   // one channel of silence: what keeps both ends of the cable rendered
 
 export function create(ctx, services) {
@@ -48,9 +49,10 @@ export function create(ctx, services) {
     setParam: (paramId, value, atTime) => {
       const ap = node.parameters.get(paramId);
       if (!ap) return;
-      ap.setValueAtTime(value, atTime === undefined ? ctx.currentTime : atTime);
+      const v = paramId === 'ends' ? Math.max(0, ENDS.indexOf(String(value))) : value;
+      ap.setValueAtTime(v, atTime === undefined ? ctx.currentTime : atTime);
     },
-    supports: (id) => KNOBS.has(id),
+    supports: (id) => KNOBS.has(id) || id === 'ends',
     onNote: (cb) => { noteCb = cb; },
     attachNoteOut,
     dispose: () => { try { node.port.onmessage = null; node.disconnect(); } catch (_e) { /* already gone */ } },

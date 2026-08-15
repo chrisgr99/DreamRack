@@ -45,6 +45,15 @@ export default {
     { id: 'noteOut', name: 'Note', section: 'out', domain: 'note', dir: 'out' },
   ],
   params: [
+    // WHAT ENDS A NOTE. GATE is the plain reading — the note lasts as long as the gate is up, which is
+    // what a step sequencer means. HOLD ignores the gate's fall and lets the duration decide, so a
+    // note can still be sounding when the next one arrives.
+    //
+    // That overlap is not a detail: without it a single gate input can only ever produce one note at
+    // a time, so a page could never play a chord however many voices it had, and LEGATO would have
+    // nothing to hand over from.
+    { id: 'ends', name: 'Note ends', section: 'note', curve: 'stepped', default: 'gate',
+      steps: [{ value: 'gate' }, { value: 'hold' }] },
     { id: 'level', name: 'Level', section: 'note', curve: 'linear', min: 0, max: 1, default: 0.8, glideMs: 10 },
     // Seconds, exponential: the useful range runs from a click to a held drone, and a linear knob
     // would spend most of its travel above a second.

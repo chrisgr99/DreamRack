@@ -184,6 +184,34 @@ const BOUNDARY = {
   'wcoast.sequencer': { dir: 'out', port: 'noteOut', label: 'Sequencer', kind: 'a sequence' },
   'wcoast.voice': { dir: 'in', port: 'noteIn', label: 'Voice', kind: 'a voice' },
 };
+// ---- PER NOTE OR SHARED ----------------------------------------------------------------------
+// On a voice page, a module is either one of eight or one of one. Sources, filters, envelopes and
+// VCAs are per note; a clock, a sequencer, or a reverb you want the whole page to share is not.
+//
+// IT IS A SETTING ON THE MODULE, NOT ON ITS TYPE. Whether a delay is per-note or shared is not a
+// property of delays — the same delay is a voice's character in one patch and a shared send in
+// another. The descriptor's `scope` supplies only the DEFAULT.
+//
+// AND A SHARED MODULE IS WHERE PER-NOTE ENDS: eight voices reaching one reverb are summed at its
+// input, and nothing past it can be un-mixed.
+// A button at the TOP RIGHT OF THE FACE, which is clear on twenty-four of the twenty-six panels —
+// where the top left is a band header on seven of them. Green, because green is what this rack says
+// about notes; a ROUNDED RECTANGLE and not a disc, so that green never reads as a pitch jack.
+// A LAMP, not a button with art in it: 4mm across, green, with the glyph printed close in to its LEFT
+// the way a lamp's label sits beside it. A lamp has no hole, so green here cannot be read as a
+// terminal — which is what ruled out a green disc that looked like a jack.
+//
+// The state is said twice: the lamp is lit for per note and dark for shared, and the glyph beside it
+// is a tied pair of notes or a single one. Redundant on purpose — under magnification a small lamp's
+// brightness is the first thing to become hard to judge.
+const PER_NOTE_LAMP = 4.0;                  // mm across
+const PER_NOTE_LABEL = 3.2;                 // mm of glyph, to its LEFT and close in
+const PER_NOTE_GAP = 0.4;
+const PER_NOTE_W = PER_NOTE_LABEL + PER_NOTE_GAP + PER_NOTE_LAMP;
+const PER_NOTE_H = PER_NOTE_LAMP;
+const PER_NOTE_MARGIN = 2.0;                // mm in from the face's right edge
+const PER_NOTE_GREEN = '#39a85a';
+const PER_NOTE_DARK = '#2b3a30';            // the lamp unlit — a green that has gone out, not a hole
 const NOTE_BTN_PX = Math.round(2.9 * 96 / 25.4);   // the tab's note port, in the bar's own scale
 // The port's surround: the note neutral knocked back, since a filled disc carries far more of a
 // colour than a line of it does. The dashes and the hole are the jacks' own black.
@@ -363,7 +391,14 @@ export class Rack {
     this.container = container;   // the scrolling viewport
     this.host = opts.host;
     this.moduleTypes = opts.moduleTypes;
-    this.onChange = opts.onChange || (() => {});
+    // EVERY EDIT PASSES THROUGH HERE, so this is where the voice copies are kept in step with the
+    // page they copy. A knob move must not rebuild anything — that would be a gap in the sound every
+    // time you turned something — so what actually triggers a rebuild is a change to the page's
+    // SHAPE: its modules, its cables, which of them are per note, and how many voices there are.
+    // Compared as a signature rather than tracked as events: one cheap string beats a hook on every
+    // one of the seven places a cable can be pulled.
+    const notify = opts.onChange || (() => {});
+    this.onChange = () => { notify(); this._maybeRebuildVoices(); };
     // Fired whenever the view moves, so the host can remember where you were looking. A VIEW setting,
     // not patch data: it belongs to the app the way dark mode does, and should survive a restart even
     // when the patch itself was never saved.
@@ -1566,6 +1601,8 @@ export class Rack {
 
   // ---- geometry / scaling ----
   relayout() {
+    // The per-note dots are placed in millimetres scaled to the view, so they follow zoom and fit.
+    if (this.records && this.records.size) queueMicrotask(() => this._drawAllPerNote());
     const vpH = this.container.clientHeight || 600;
     const vpW = this.container.clientWidth || 800;
     // No top/bottom padding — the first row sits flush with the top of the window; rows
@@ -2626,6 +2663,280 @@ export class Rack {
   //
   // It is not a new kind of connection. The button stands for the module's own note jack, and a cord
   // dropped on it connects through the ordinary path, the way the mixer's channel buttons already do.
+  // The default, from the descriptor: anything that declares itself shared, and both boundary modules,
+  // are one per page; everything else is one per voice. A descriptor that says nothing is per note,
+  // which is the commoner case and the safer default — a duplicated filter is a filter, while a
+  // shared one that should have been per note is a patch that cannot play a chord.
+  _perNoteDefault(descriptorId) {
+    if (BOUNDARY[descriptorId]) return false;
+    const d = this.host.registry.descriptor(descriptorId);
+    return !(d && d.scope === 'shared');
+  }
+
+  perNote(rec) {
+    if (!rec) return false;
+    if (rec.perNote === undefined) rec.perNote = this._perNoteDefault(rec.descriptorId);
+    return rec.perNote;
+  }
+
+  // Only on a voice page: polyphony is a voice-page idea, and a page with nothing to duplicate has
+  // nothing to ask. Not on the boundary modules themselves — there is one of each by definition.
+  _showsPerNote(rec) {
+    return !!(rec && !BOUNDARY[rec.descriptorId] && this._boundaryOn(this.pageOf(rec))
+      && this._boundaryOn(this.pageOf(rec)).dir === 'in');
+  }
+
+  setPerNote(rec, on) {
+    if (!rec || !this._showsPerNote(rec)) return;
+    rec.perNote = !!on;
+    this._drawPerNote(rec);
+    this.onChange();
+  }
+
+  // THREE DOTS FOR PER NOTE, ONE FOR SHARED, at the left of the title strip — the one place every
+  // module has free and where nothing is drawn but its name. Painted by the host rather than built
+  // into the faceplate: panels are generated ahead of time and identical for every instance, so a
+  // control that comes and goes with the page cannot be in the SVG. The same route the bipolar dot
+  // and the note ring already take.
+  _drawPerNote(rec) {
+    if (!rec || !rec.el) return;
+    const old = rec.el.querySelector('.per-note-btn');
+    if (old) old.remove();
+    if (!this._showsPerNote(rec)) return;
+    const on = this.perNote(rec);
+    // THE MODULE'S BOX IS SIZED AT THE BASE SCALE — the rack content is CSS-transformed for zoom
+    // afterwards, so a millimetre inside this element is pxPerMm and multiplying by zoom as well
+    // counts it twice. That is what pushed the lamp off the right-hand edge.
+    const s = this.pxPerMm;
+    const el = document.createElement('div');
+    el.className = 'per-note-btn';
+    // SHORT. A tooltip you have to read is a tooltip that has already cost you more than it gave.
+    el.title = on ? 'Poly module' : 'Shared module';
+    el.style.cssText = 'position:absolute;cursor:pointer;z-index:6;display:flex;align-items:center;'
+      + 'gap:' + r2(PER_NOTE_GAP * s) + 'px;';
+    // THE ELEMENT IS WIDER THAN THE FACE IT SHOWS. Every panel file carries a viewBox beginning at
+    // FACE_LEFT_MM — the cropped ear — while the faceplate rectangle inside it is drawn from zero, so
+    // the visible face ends that far short of the element's right edge. Anchoring to the element put
+    // the lamp in the dead strip, which on screen is the gap between two modules.
+    el.style.right = r2((PER_NOTE_MARGIN + FACE_LEFT_MM) * s) + 'px';
+    // VERTICALLY THE CROP RUNS THE OTHER WAY: the same viewBox starts 3.1mm INTO the face, so the
+    // element's top edge is already below the faceplate's own top and there is nothing to add. Six and
+    // three quarter millimetres puts the lamp clear of the title band on every panel.
+    el.style.top = r2(6.75 * s) + 'px';
+    el.style.height = r2(PER_NOTE_H * s) + 'px';
+    // TWO NOTES TIED FOR POLY, ONE FOR SHARED — printed under the lamp, as every lamp's label is.
+    const ink = this.dark ? '#d0d0d4' : '#1b1b1f';
+    // The viewBox HUGS THE INK. Drawn in a box wider than the glyph, the notes floated away from the
+    // lamp with nothing between them, which is what a centred aspect ratio does with slack.
+    const glyph = on
+      ? { vb: '0 0 25 24',
+          d: '<ellipse cx="4.6" cy="19.6" rx="4.3" ry="3.2" transform="rotate(-20 4.6 19.6)"/>'
+            + '<ellipse cx="17.4" cy="16.6" rx="4.3" ry="3.2" transform="rotate(-20 17.4 16.6)"/>'
+            + '<rect x="7.8" y="2.6" width="1.8" height="17"/><rect x="20.6" y="0" width="1.8" height="17"/>'
+            + '<rect x="7.8" y="2.6" width="14.6" height="2.5"/>' }
+      : { vb: '0 0 14 24',
+          d: '<ellipse cx="4.6" cy="19.6" rx="4.3" ry="3.2" transform="rotate(-20 4.6 19.6)"/>'
+            + '<rect x="7.8" y="1.6" width="1.9" height="18"/>'
+            + '<path d="M9.7 1.6 q6.2 3 4.8 9.2 q-1-4.6-4.8-5.7z"/>' };
+    const lampPx = r2(PER_NOTE_LAMP * s);
+    el.innerHTML = `<svg viewBox="${glyph.vb}" height="${r2(PER_NOTE_H * s)}px"
+        style="display:block;flex:0 0 auto" preserveAspectRatio="xMaxYMid meet">
+        <g fill="${ink}">${glyph.d}</g></svg>
+      <div style="width:${lampPx}px;height:${lampPx}px;flex:0 0 auto;border-radius:50%;
+        background:${on ? PER_NOTE_GREEN : PER_NOTE_DARK};
+        box-shadow:${on ? `0 0 ${r2(1.2 * s)}px ${PER_NOTE_GREEN}` : 'none'};"></div>`;
+    el.addEventListener('pointerdown', (e) => { e.preventDefault(); e.stopPropagation(); });
+    el.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); this.setPerNote(rec, !this.perNote(rec)); });
+    rec.el.appendChild(el);
+  }
+
+  _drawAllPerNote() { for (const rec of this.records.values()) this._drawPerNote(rec); }
+
+  // ---- BUILDING A PAGE MORE THAN ONCE -----------------------------------------------------------
+  //
+  // POLY on a page's Voice In says how many copies of that page to run. The screen goes on showing
+  // ONE page — the template — and the engine builds N-1 more of every module marked per note, wiring
+  // each copy exactly as the template is wired.
+  //
+  // TORN DOWN AND REBUILT WHOLE whenever anything relevant changes: the count, a per-note flag, a
+  // cable, a module. Rebuilding costs a brief gap in the sound, the same as loading a patch, and it
+  // is the difference between code you can reason about and a web of incremental updates where the
+  // seventh case is always the one that is wrong.
+  //
+  // THE RULES FOR A CABLE inside a voice page:
+  //   per note  -> per note   copy k joins copy k. Eight parallel voices, never touching.
+  //   shared    -> per note   the one source fans out to every copy.
+  //   per note  -> shared     every copy arrives at the one destination, which SUMS them — and that
+  //                           is where per-note ends, because nothing downstream can un-mix it.
+  //   Voice In  -> per note   copy k is fed from output group k: the note that copy is playing.
+  // A cable leaving the page from a per-note module carries every copy, summed, for the same reason.
+  async _rebuildVoiceCopies() {
+    if (this._voiceRebuilding) { this._voiceRebuildAgain = true; return; }
+    this._voiceRebuilding = true;
+    try {
+      await this._teardownVoiceCopies();
+      for (const p of this.pages) {
+        const b = this._boundaryOn(p.id);
+        if (!b || b.dir !== 'in') continue;
+        const poly = this._effectivePoly(b.rec);
+        if (poly < 2) continue;
+        await this._buildVoiceCopies(p.id, b, poly);
+      }
+    } finally {
+      this._voiceRebuilding = false;
+      if (this._voiceRebuildAgain) { this._voiceRebuildAgain = false; queueMicrotask(() => this._rebuildVoiceCopies()); }
+    }
+  }
+
+  _structureSig() {
+    const parts = [];
+    for (const p of this.pages) {
+      const b = this._boundaryOn(p.id);
+      if (b && b.dir === 'in') parts.push('P' + p.id + ':' + this._effectivePoly(b.rec));
+    }
+    for (const rec of this.records.values()) parts.push(rec.key + (this.perNote(rec) ? '+' : '-') + this.pageOf(rec));
+    for (const e of this.patchbay.list()) parts.push(e.src.key + '.' + e.src.portId + '>' + e.dst.key + '.' + e.dst.portId);
+    return parts.join('|');
+  }
+
+  _maybeRebuildVoices() {
+    clearTimeout(this._voiceSigTimer);
+    this._voiceSigTimer = setTimeout(() => {
+      const sig = this._structureSig();
+      if (sig === this._voiceSig) return;
+      this._voiceSig = sig;
+      this._rebuildVoiceCopies();
+    }, 60);
+  }
+
+  // HOW MANY COPIES A PAGE ACTUALLY NEEDS. Two of the rollover modes decide this for themselves —
+  // GLIDE is monophonic by nature and LEGATO alternates between a pair — so building what the knob
+  // says would be four copies of a page to sound one of them. The knob is greyed to match.
+  _effectivePoly(rec) {
+    const poly = Math.max(1, Math.round(rec.values.get('poly') || 1));
+    const roll = rec.values.get('rollover') || 'oldest';
+    if (roll === 'glide') return 1;
+    if (roll === 'legato') return Math.min(2, poly);
+    return poly;
+  }
+
+  // TIME means something only while GLIDE or LEGATO is chosen, and POLY only while they are NOT — so
+  // each is greyed when it has nothing to say, and does not turn while it is. The same treatment a
+  // knАck's trim gets when no cable is patched into it: the panel says what is live.
+  _gateVoiceControls(rec) {
+    if (!rec || !BOUNDARY[rec.descriptorId] || BOUNDARY[rec.descriptorId].dir !== 'in') return;
+    const roll = rec.values.get('rollover') || 'oldest';
+    const timeLive = roll === 'glide' || roll === 'legato';
+    const polyLive = roll !== 'glide';
+    for (const [id, live] of [['time', timeLive], ['poly', polyLive]]) {
+      const b = rec.panel && rec.panel.controls.get(id);
+      if (!b) continue;
+      b.gated = !live;
+      if (b.group) b.group.style.opacity = live ? '' : String(DEPTH_TRIM_DIM);
+    }
+  }
+
+  async _teardownVoiceCopies() {
+    for (const c of (this._voiceWires || [])) {
+      try { c.out.node.disconnect(c.in.node, c.out.index, c.in.index); } catch (_e) { /* already gone */ }
+    }
+    this._voiceWires = [];
+    for (const c of (this._voiceGains || [])) {
+      try {
+        if (c.gain) { c.out.node.disconnect(c.gain, c.out.index, 0); c.gain.disconnect(); }
+        else c.out.node.disconnect(c.param, c.out.index);
+      } catch (_e) { /* already gone */ }
+    }
+    this._voiceGains = [];
+    for (const rec of this.records.values()) {
+      for (const extra of (rec.copies || [])) {
+        try { extra.instance.dispose(); } catch (_e) { /* already gone */ }
+        try { this.host.dispose(extra.instanceId); } catch (_e) { /* already gone */ }
+      }
+      rec.copies = null;
+    }
+  }
+
+  async _buildVoiceCopies(pageId, boundary, poly) {
+    const onPage = [...this.records.values()].filter((r) => this.pageOf(r) === pageId);
+    const perNote = onPage.filter((r) => !BOUNDARY[r.descriptorId] && this.perNote(r));
+    if (!perNote.length) return;
+
+    // 1. The copies themselves, each set to the template's current knob values.
+    for (const rec of perNote) {
+      rec.copies = [];
+      for (let k = 1; k < poly; k++) {
+        const { instanceId, instance } = await this.host.instantiate(rec.descriptorId);
+        for (const [id, v] of rec.values) if (instance.supports(id)) instance.setParam(id, v);
+        rec.copies.push({ instanceId, instance, voice: k });
+      }
+    }
+    const copyOf = (rec, k) => (k === 0 ? rec.instance : (rec.copies && rec.copies[k - 1] && rec.copies[k - 1].instance));
+    const isCopied = (rec) => perNote.includes(rec);
+
+    // 2. The cables, once per copy.
+    const wire = (out, inp) => {
+      if (!out || !inp) return;
+      try { out.node.connect(inp.node, out.index, inp.index); this._voiceWires.push({ out, in: inp }); } catch (_e) { /* refused */ }
+    };
+    // A LINEAR CV INPUT HAS NO NODE — it drives a parameter, through the destination's own attenuator
+    // if it declares one. Copies were wired only where getInput returned something, so every cable
+    // landing on a parameter was silently skipped: on a voice page that meant each copy's VCA never
+    // opened, and only the notes that fell to voice zero could be heard. Half the speed at POLY 2, a
+    // third at POLY 3, which is exactly what it sounded like.
+    const wireParam = (out, rec, copy, portId) => {
+      const port = this.host.registry.portById(rec.descriptorId, portId);
+      if (!out || !port || !port.target) return false;
+      const param = copy.getParam(port.target);
+      if (!param) return false;
+      if (port.via) {
+        const g = this.host.ctx.createGain();
+        g.gain.value = rec.values.has(port.via) ? rec.values.get(port.via) : 1;
+        out.node.connect(g, out.index, 0);
+        g.connect(param);
+        this._voiceGains.push({ out, gain: g, param, viaKey: rec.key + '.' + port.via });
+      } else {
+        out.node.connect(param, out.index);
+        this._voiceGains.push({ out, gain: null, param });
+      }
+      return true;
+    };
+    for (const e of this.patchbay.list()) {
+      if (e.video) continue;
+      const src = this.records.get(e.src.key), dst = this.records.get(e.dst.key);
+      if (!src || !dst) continue;
+      const srcHere = this.pageOf(src) === pageId, dstHere = this.pageOf(dst) === pageId;
+      if (!srcHere && !dstHere) continue;
+      for (let k = 1; k < poly; k++) {
+        const dstCopy = isCopied(dst) ? copyOf(dst, k) : null;
+        const dstIn = dstCopy ? dstCopy.getInput(e.dst.portId) : null;
+        // Voice In feeds copy k from its own group k — the note that copy is playing.
+        if (src === boundary.rec && dstCopy) {
+          const from = src.instance.getVoiceOutput && src.instance.getVoiceOutput(e.src.portId, k);
+          if (dstIn) wire(from, dstIn); else wireParam(from, dst, dstCopy, e.dst.portId);
+          continue;
+        }
+        const srcOut = isCopied(src) ? (copyOf(src, k) && copyOf(src, k).getOutput(e.src.portId)) : null;
+        if (srcOut && dstCopy) {                                          // per note -> per note
+          if (dstIn) wire(srcOut, dstIn); else wireParam(srcOut, dst, dstCopy, e.dst.portId);
+          continue;
+        }
+        if (!srcOut && dstCopy) {                                         // shared -> per note
+          const from = src.instance.getOutput(e.src.portId);
+          if (dstIn) wire(from, dstIn); else wireParam(from, dst, dstCopy, e.dst.portId);
+          continue;
+        }
+        if (srcOut && !dstIn) {
+          // per note -> shared, and per note -> off the page: every copy arrives at the one input,
+          // which sums them. A linear CV input has no node, and summing eight of those into one
+          // AudioParam would be eight times the modulation — so those are left to the template alone.
+          const inp = dst.instance.getInput(e.dst.portId);
+          if (inp) wire(srcOut, inp);
+        }
+      }
+    }
+  }
+
   _boundaryOn(pageId) {
     for (const rec of this.records.values()) {
       const b = BOUNDARY[rec.descriptorId];
@@ -8190,6 +8501,7 @@ export class Rack {
     // are set from the values this module already holds, so a restored patch is right before anything
     // is touched.
     this._applyPolarity(rec);
+    this._gateVoiceControls(rec);
     const btnGrow = this._buttonGrowMap(svg);   // adaptive hit-pad size per single push button
     for (const b of panel.controls.values()) {
       const v = rec.values.get(b.id);
@@ -8374,6 +8686,8 @@ export class Rack {
       this._nameForBoundary(rec.page, descriptorId);
       this._drawPageStubs();
     }
+    // Adding a Voice In tells every other module on that page what it is; adding anything else asks.
+    if (BOUNDARY[descriptorId]) this._drawAllPerNote(); else this._drawPerNote(rec);
     this.onChange();
     return rec;
   }
@@ -8422,6 +8736,21 @@ export class Rack {
   _setParam(rec, id, value) {
     rec.values.set(id, value);
     if (rec.instance.supports(id)) rec.instance.setParam(id, value);
+    // THE COPIES FOLLOW THE TEMPLATE. One page is drawn and N are running, so a knob you turn has to
+    // reach all of them or the voices drift apart from the thing you are looking at.
+    for (const c of (rec.copies || [])) if (c.instance.supports(id)) c.instance.setParam(id, value);
+    // ...including the attenuators that live on the CORD rather than in the module: a copy's inline
+    // gain is not a param of anything, so it has to be told separately.
+    if (this._voiceGains && this._voiceGains.length) {
+      for (const g of this._voiceGains) if (g.gain && g.viaKey === rec.key + '.' + id) g.gain.gain.value = value;
+    }
+    // Changing how many voices there are rebuilds them — through the same signature check as every
+    // other structural change, so the two paths cannot disagree about what is running. ROLLOVER too:
+    // it decides how many copies are worth building at all.
+    if ((id === 'poly' || id === 'rollover') && BOUNDARY[rec.descriptorId]) {
+      this._maybeRebuildVoices();
+      this._gateVoiceControls(rec);
+    }
     const b = rec.panel.controls.get(id);
     if (b) showValue(b, value);
     this._mirrorMixerEnable(rec, id);   // the tab's buttons are the panel's lamps, seen twice
@@ -8454,6 +8783,12 @@ export class Rack {
   }
 
   deleteModule(rec) {
+    // Its copies go with it, or a disposed template leaves seven orphans running and audible.
+    for (const c of (rec.copies || [])) {
+      try { c.instance.dispose(); } catch (_e) { /* already gone */ }
+      try { this.host.dispose(c.instanceId); } catch (_e) { /* already gone */ }
+    }
+    rec.copies = null;
     for (const v of this._probesOnModule(rec.key)) this._closeProbe(v, true);   // its scopes/monitors go with it (captured in _moduleSnap for undo)
     this.closeVideoMonitors(rec.key);   // and its video monitors, which are not probes and were never swept
     if (this._hoverRec === rec) this._hoverRec = null;

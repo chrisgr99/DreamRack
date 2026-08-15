@@ -18,7 +18,7 @@
   <rect x="0" y="0" width="38" height="113.5912" rx="2.5" fill="#262629"/>
   <rect x="0.5" y="0.5" width="37" height="112.5912" rx="2.2" fill="none" stroke="#808085" stroke-width="0.5"/>
   <text x="19" y="5.8" font-size="2.606" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">EXPRESSION</text>
-  <rect x="2.3" y="7.3" width="33.4" height="21.4" rx="1" fill="none" stroke="#808085" stroke-width="0.45"/>
+  <rect x="2.3" y="7.3" width="30.4" height="21.4" rx="1" fill="none" stroke="#808085" stroke-width="0.45"/>
   <line x1="3" y1="32" x2="35" y2="32" stroke="#808085" stroke-width="0.355"/>
   <g data-wcoast-port="aIn" data-wcoast-cx="12" data-wcoast-cy="38.5">
     <rect x="9.00" y="35.50" width="6.00" height="6.00" rx="1.02" fill="#8a8a8a" data-wcoast-role="jackbody"/>
