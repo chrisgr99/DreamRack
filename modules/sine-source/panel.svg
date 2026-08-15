@@ -32,18 +32,18 @@
       <line x1="12.7" y1="16.6" x2="12.7" y2="11.42" stroke="#163a69" stroke-width="0.55"/>
     </g>
   </g>
-  <text x="12.7" y="27.34832" font-size="2.706" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">FREQ</text>
+  <text x="12.7" y="27.34832" font-size="2.706" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="freq">FREQ</text>
   <g data-wcoast-port="pitchIn" data-wcoast-cx="12.7" data-wcoast-cy="59">
     <circle cx="12.7" cy="59" r="3" fill="#8a8a8a" stroke="#000000" stroke-width="0.3"/>
     <circle cx="12.7" cy="59" r="1.6" fill="#000000"/>
   </g>
-  <text x="12.7" y="65.40432" font-size="2.5060000000000002" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">1V/oct</text>
+  <text x="12.7" y="65.40432" font-size="2.5060000000000002" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="pitchIn">1V/oct</text>
   <line x1="2.794" y1="97.99" x2="22.604" y2="97.99" stroke="#7d7d7d" stroke-width="0.355"/>
   <text x="2.29" y="104.59" font-size="2.906" font-weight="700" font-style="italic" fill="#163a69" text-anchor="start" font-family="Arial Narrow, Helvetica, Arial, sans-serif">OUT</text>
   <g data-wcoast-port="out" data-wcoast-cx="11.99" data-wcoast-cy="103.3912">
     <circle cx="11.99" cy="103.3912" r="3" fill="#8a8a8a" stroke="#000000" stroke-width="0.3"/>
     <circle cx="11.99" cy="103.3912" r="1.6" fill="#000000"/>
   </g>
-  <text x="11.99" y="109.79552" font-size="2.5060000000000002" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">out</text>
+  <text x="11.99" y="109.79552" font-size="2.5060000000000002" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="out">out</text>
   </g>
 </svg>

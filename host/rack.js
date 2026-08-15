@@ -263,7 +263,18 @@ const LIT_HOVER_MS = 300;    // dwell before the stretch reveals itself
 // statement of intent, while the body of a cord is most of the rack and is crossed constantly on
 // the way to somewhere else. A second of staying put is what separates meaning it from passing over.
 const BEND_HOVER_MS = 1000;
-const CABLE_HOVER_FADE = 0.28;   // opacity a cable drops to while it obscures a control you're hovering
+// WHAT A CABLE FADES TO OVER A CONTROL YOU ARE HOVERING — and it fades only THERE, not along its
+// length. A whole cable dimmed is a cable you can no longer follow across the rack, which is the one
+// thing you are doing when you look at a patch; a cable dimmed just where it crosses the knob you are
+// reading costs nothing and reveals the label underneath.
+//
+// NOT TO NOTHING. Left at zero the cable you are holding vanishes exactly where you are working, and
+// with it the clue about where it was going. A tenth is enough to see that something crosses the word
+// without the letters having to fight through it — and the region is one block of lettering, so the
+// cable is at full strength a few millimetres either side.
+const CTRL_FADE_FLOOR = 0;       // how much of the cable still shows inside the region — none
+const CTRL_FADE_PAD = 2.0;       // mm of margin round a word, so the cable clears the letters
+const CTRL_FADE_FEATHER = 0.9;   // mm of blur on the region's edge — a cable dissolves, not cut
 const CABLE_FADE_TAU = 0.3;      // opacity easing time constant — cables brighten/dim over ~1s so quick sweeps don't flash
 // How far a cord may set off from the straight line between its two jacks. Beyond this it would be
 // heading away from where it is going, and would have to loop back over the port to arrive.
@@ -437,6 +448,9 @@ export class Rack {
     this._ovDown = this._overviewDown.bind(this);
     this._hoverRec = null;   // module under the pointer
     this._noteFlash = new Map();  // module key -> 0..1 note glow, decayed in the flow loop
+    // Where cables run translucent: every word on the page, measured in mm and cached until the rack
+    // is laid out again. See _labelMaskBoxes.
+    this._labelMask = null; this._fadeMaskG = null;
     this._cableCur = new Map();   // edge id -> current (eased) { body, dash } opacity, animated toward _cableTgt in the flow loop
     this._cableTgt = new Map();   // edge id -> target { body, dash } opacity set each _drawCables
     this._isolateNet = null; // Set of edge ids when isolating one terminal's subnet (else null)
@@ -598,7 +612,6 @@ export class Rack {
     });
     this.container.addEventListener('pointerleave', () => {
       let redraw = false;
-      if (this._fadedCables) { this._fadedCables = null; this._cableFadeCtrl = null; redraw = true; }
       if (this._netOrigin !== null) { this._netOrigin = null; this._rebuildHoverFocus(); redraw = true; }
       if (redraw) this._drawCables();
     });
@@ -651,7 +664,6 @@ export class Rack {
         // Full brightness while navigating: clear any current hover dim/fade (per-move hover work is
         // skipped while Option is held; see the container pointermove handler).
         if (this._netOrigin !== null) { this._netOrigin = null; this._rebuildHoverFocus(); }
-        if (this._fadedCables) { this._fadedCables = null; this._cableFadeCtrl = null; this._drawCables(); }
         this._freezeView();
         this._armPanWheel(true);
         document.addEventListener('pointermove', this._navMove, true);         // pointer motion pans while held
@@ -1828,6 +1840,11 @@ export class Rack {
 
     this.content.style.width = (contentWmm * s) + 'px';
     this.content.style.height = (contentHmm * s) + 'px';
+    // Every word may have moved: drop the measured label boxes so the cable mask is rebuilt from
+    // where they are now. Measuring is the expensive half of this, and it happens here rather than on
+    // the redraws that follow.
+    this._clearControlFade();
+    this._labelCache = new WeakMap();
     for (let i = 0; i < this.rowCount; i++) {
       const el = this._rowEls[i];
       el.style.top = (i * (PANEL_H_MM + ROW_GAP_MM) * s) + 'px';
@@ -2242,9 +2259,13 @@ export class Rack {
     this.cables.style.width = (this._contentWmm * s) + 'px';
     this.cables.style.height = (this._contentHmm * s) + 'px';
     this.cables.textContent = '';
+    // The fade region's mask, rebuilt with the layer because the layer is cleared. Null while nothing
+    // is hovered, and then no path references a mask at all — an idle rack pays nothing for this.
+    const fadeMask = this._buildControlFadeDefs();
     const wmm = CABLE_PX / (this._fit || 1);   // mm width -> CABLE_PX at zoom 1, scales with zoom
     const mk = (d, stroke, sw, opacity, pe) => {
       const p = document.createElementNS(SVG_NS, 'path');
+      if (fadeMask) p.setAttribute('mask', fadeMask);
       p.setAttribute('d', d);
       p.setAttribute('fill', 'none');
       p.setAttribute('stroke', stroke);
@@ -2267,9 +2288,11 @@ export class Rack {
       if (!g) continue;
       const color = styleColor(e.style, this.dark);
       const ewmm = styleWidth(e.style, wmm);          // the note bundle is drawn heavier than the rest
-      const faded = !!(this._fadedCables && this._fadedCables.has(e.id));   // covering a hovered control → see-through
-      const bodyTgt = faded ? Math.min(this._cableOpacity(e), CABLE_HOVER_FADE) : this._cableOpacity(e);
-      const dashTgt = faded ? CABLE_HOVER_FADE : 1;
+      // No per-cable dimming here any more: the fade over a hovered control is a MASK on the layer
+      // (see _drawControlFadeMask), which costs the same whether one cable crosses the control or ten
+      // and leaves the rest of every cable exactly as bright as it was.
+      const bodyTgt = this._cableOpacity(e);
+      const dashTgt = 1;
       // Cables EASE toward their target opacity (in the flow loop) instead of snapping, so sweeping
       // the pointer quickly across controls/modules doesn't make them flash. Isolate keeps its own look.
       let bodyOp = bodyTgt, dashOp = dashTgt;
@@ -3343,6 +3366,7 @@ export class Rack {
     if (this._stubMorph && performance.now() - this._stubMorph.t0 >= CARRY_MORPH_MS) this._stubMorph = null;
     const svg = this._ensureStubLayer();
     svg.textContent = '';
+    const stubMask = this._buildStubFadeDefs(svg);
     this._stubCurves = [];   // rebuilt every draw; what the bend dwell measures against
     if (!this._tabBarEl) return;
     // Group the crossing cables by the page they are bound for, so each tab's stubs can be spread
@@ -3462,6 +3486,7 @@ export class Rack {
         p.setAttribute('stroke', color);
         p.setAttribute('stroke-width', r2(w));
         p.setAttribute('stroke-linecap', 'round');
+        if (stubMask) p.setAttribute('mask', stubMask);   // clear of the lettering, like any other cable
         p.style.opacity = op;
         p.dataset.edge = item.e.id;
         svg.appendChild(p);
@@ -3487,6 +3512,7 @@ export class Rack {
         fd.setAttribute('stroke-dasharray', `${r2((FLOW_DASH[item.e.style] || FLOW_DASH.control) * w)} ${r2(FLOW_GAP * w)}`);
         fd.setAttribute('stroke-dashoffset', r2(this._flowOffset() * (this.pxPerMm || 1) * (this.zoom || 1)));
         fd.setAttribute('class', 'flow-dash-stub');
+        if (stubMask) fd.setAttribute('mask', stubMask);
         fd.dataset.edge = item.e.id;
         fd.style.opacity = op;
         svg.appendChild(fd);
@@ -3812,49 +3838,194 @@ export class Rack {
     return CABLE_BRIGHT;
   }
 
-  // While the pointer sits on a control (knob/button/switch), fade any OPAQUE cable drawn over it
-  // so the control shows through. The cable body is pointer-events:none, so the control already
-  // receives the hover; we just find which cables cross its box and mark them for a lighter draw.
-  _updateControlCableFade(e) {
-    let ctrl = (e.target && e.target.closest) ? e.target.closest('[data-wcoast-param]') : null;
-    // Faders opt out of cable-fading: their track is long, so a cable never blocks reaching the handle,
-    // and dimming cables as the pointer travels a fader's length just reads as flicker.
-    if (ctrl && ctrl.getAttribute('data-wcoast-role') === 'slider') ctrl = null;
-    if (ctrl === this._cableFadeCtrl) return;   // still on the same control (or still off any) → nothing changed
-    this._cableFadeCtrl = ctrl;
-    const faded = ctrl ? this._cablesOverControl(ctrl) : null;
-    if (this._sameFadeSet(faded, this._fadedCables)) return;
-    this._fadedCables = faded;
-    this._drawCables();
-  }
-  _sameFadeSet(a, b) {
-    if (a === b) return true;
-    if (!a || !b || a.size !== b.size) return false;
-    for (const x of a) if (!b.has(x)) return false;
-    return true;
-  }
-  // The set of module-cable edge ids whose curve passes over `el`'s box (null if none). Samples each
-  // cord's cubic every ~2mm and maps the points to screen space to test against the control's rect.
-  _cablesOverControl(el) {
-    const rect = el.getBoundingClientRect();
-    if (!rect.width || !rect.height) return null;
-    const pad = 2, L = rect.left - pad, R = rect.right + pad, T = rect.top - pad, B = rect.bottom + pad;
-    const cr = this.cables.getBoundingClientRect(), s = this.pxPerMm || 1;
-    const set = new Set();
-    for (const e of this.patchbay.list()) {
-      const g = this._cordGeom(e);
-      if (!g) continue;
-      const chord = Math.hypot(g.pB.x - g.pA.x, g.pB.y - g.pA.y);
-      const n = Math.max(24, Math.ceil(chord / 2));   // a sample every ~2mm — finer than any control
-      for (let i = 0; i <= n; i++) {
-        const t = i / n, mt = 1 - t;
-        const x = mt * mt * mt * g.pA.x + 3 * mt * mt * t * g.c1.x + 3 * mt * t * t * g.c2.x + t * t * t * g.pB.x;
-        const y = mt * mt * mt * g.pA.y + 3 * mt * mt * t * g.c1.y + 3 * mt * t * t * g.c2.y + t * t * t * g.pB.y;
-        const sx = cr.left + x * s, sy = cr.top + y * s;
-        if (sx >= L && sx <= R && sy >= T && sy <= B) { set.add(e.id); break; }
-      }
+  // ---- CABLES ARE TRANSLUCENT WHERE THEY CROSS LETTERING -----------------------------------------
+  //
+  // Not on hover — ALWAYS. A cable is opaque everywhere except over a word, where it drops to a tenth,
+  // so every label on the rack stays readable and every cable stays followable, with nothing to
+  // discover and no state to be in.
+  //
+  // The versions before this were both hovers, and both were worse. Fading whatever crossed the
+  // control you hovered hid the cable arriving at the knob you were adjusting — the one you wanted to
+  // see. Fading on hovering the label itself answered that, but it made a readable panel something you
+  // had to go and ask for, one word at a time. A label is either legible or it is not; it should not
+  // depend on where the pointer is.
+  //
+  // THE BOXES ARE THE WORDS THEMSELVES, not their bounding rectangles: a knob's numerals wrap right
+  // round it, and their bounding rectangle would be the knob.
+  //
+  // IT IS ONE MASK ON THE LAYER, so this costs the same whether one cable crosses the rack or thirty,
+  // and the shapes are measured once per layout rather than per redraw — cables redraw on every pan,
+  // and hundreds of box measurements per frame would be felt.
+  _clearControlFade() { this._labelMask = null; }
+
+  // Every word on every module of the current page, in the cable layer's millimetres. Cached: measuring
+  // is a few hundred DOM reads, and none of it changes until the rack is laid out again.
+  _labelMaskBoxes() {
+    const cr = this.cables.getBoundingClientRect(), s = this._layerScale(cr);
+    if (!s) return null;
+    const basis = `${r2(cr.left)},${r2(cr.top)},${r2(s)},${this.currentPage()}`;
+    if (this._labelMask && this._labelMask.basis === basis) return this._labelMask.boxes;
+    const boxes = [];
+    for (const rec of this.records.values()) {
+      if (!rec.el || !this._onPage(rec)) continue;
+      for (const g of (this._labelBlocks(rec.el) || [])) boxes.push(...g.boxes);
     }
-    return set.size ? set : null;
+    this._labelMask = { basis, boxes };
+    return boxes;
+  }
+
+  // SCREEN PIXELS PER MILLIMETRE OF THE CABLE LAYER, measured from the layer itself rather than taken
+  // from pxPerMm. Zoom is a transform on a parent, so pxPerMm is the scale at zoom 1 while the rect
+  // this converts against is the scaled one — using the unscaled number put every box out by the zoom
+  // factor, which is why the clear patches slid off the words the moment you zoomed.
+  _layerScale(cr) {
+    const rect = cr || this.cables.getBoundingClientRect();
+    if (rect.width && this._contentWmm) return rect.width / this._contentWmm;
+    return this.pxPerMm || 1;
+  }
+
+  // Every block of lettering on one module, measured in the cable layer's millimetres and cached.
+  // Grouped by the control each label belongs to — the panel grammar stamps every label and every
+  // scale numeral with data-wcoast-label-for — which is what makes a knob's calibration one thing
+  // rather than eight loose numerals.
+  _labelBlocks(modEl) {
+    const cr = this.cables.getBoundingClientRect(), s = this._layerScale(cr);
+    if (!s) return null;
+    const basis = `${r2(cr.left)},${r2(cr.top)},${r2(s)}`;
+    const cache = this._labelCache || (this._labelCache = new WeakMap());
+    const hit = cache.get(modEl);
+    if (hit && hit.basis === basis) return hit.groups;
+    const byKey = new Map();
+    let loose = 0;
+    const push = (key, node) => {
+      const r = node.getBoundingClientRect();
+      if (!r.width || !r.height) return;
+      const b = { x: (r.left - cr.left) / s, y: (r.top - cr.top) / s, w: r.width / s, h: r.height / s };
+      if (!byKey.has(key)) byKey.set(key, { key, boxes: [] });
+      byKey.get(key).boxes.push(b);
+    };
+    for (const t of modEl.querySelectorAll('text')) {
+      let key = t.getAttribute('data-wcoast-label-for');
+      if (!key) {
+        const own = t.closest('[data-wcoast-param],[data-wcoast-port]');
+        key = own ? (own.getAttribute('data-wcoast-param') || own.getAttribute('data-wcoast-port')) : `#${loose++}`;
+      }
+      push(key, t);
+    }
+    // The name on the title strip is not part of the faceplate drawing, so it is asked for by name.
+    const title = modEl.querySelector('.module-title');
+    if (title) push('#title', title);
+    const groups = [...byKey.values()];
+    cache.set(modEl, { basis, groups });
+    return groups;
+  }
+
+  // Paint the mask's shapes: one rounded box per word, at the fade pad. The mask is white everywhere
+  // else (the cable drawn as it is) and these boxes are grey — a mask reads by LUMINANCE, so grey at
+  // CTRL_FADE_FLOOR leaves that fraction of the cable showing. What animates is the group's opacity,
+  // eased in the flow loop.
+  _drawControlFadeMask() {
+    const g = this._fadeMaskG;
+    if (!g) return;
+    g.textContent = '';
+    const p = CTRL_FADE_PAD, v = Math.round(CTRL_FADE_FLOOR * 255);
+    for (const b of (this._labelMaskBoxes() || [])) {
+      const r = document.createElementNS(SVG_NS, 'rect');
+      const w = b.w + p * 2, h = b.h + p * 2;
+      r.setAttribute('x', r2(b.x - p)); r.setAttribute('y', r2(b.y - p));
+      r.setAttribute('width', r2(w)); r.setAttribute('height', r2(h));
+      r.setAttribute('rx', r2(Math.min(w, h) / 2));
+      r.setAttribute('fill', `rgb(${v},${v},${v})`);
+      g.appendChild(r);
+    }
+  }
+
+  // THE SAME CLEARING FOR THE CABLES THAT CROSS TO A TAB. Stubs live in their own layer, pinned to the
+  // window and drawn in window pixels rather than in the rack's millimetres, so they cannot share the
+  // cable layer's mask — the shapes have to be converted. Same boxes, same feather, expressed in px.
+  //
+  // Without this a crossing cable was the one kind that still lay over the lettering, which is exactly
+  // where it goes: a stub leaves its jack and runs across the face of every module between there and
+  // the tab bar.
+  _buildStubFadeDefs(svg) {
+    const boxes = this._labelMaskBoxes();
+    if (!boxes || !boxes.length) return null;
+    const cr = this.cables.getBoundingClientRect(), s = this._layerScale(cr);
+    if (!s) return null;
+    const defs = document.createElementNS(SVG_NS, 'defs');
+    const filt = document.createElementNS(SVG_NS, 'filter');
+    filt.setAttribute('id', 'stub-fade-blur');
+    filt.setAttribute('x', '-50%'); filt.setAttribute('y', '-50%');
+    filt.setAttribute('width', '200%'); filt.setAttribute('height', '200%');
+    const blur = document.createElementNS(SVG_NS, 'feGaussianBlur');
+    blur.setAttribute('stdDeviation', String(r2(CTRL_FADE_FEATHER * s)));
+    filt.appendChild(blur);
+    const mask = document.createElementNS(SVG_NS, 'mask');
+    mask.setAttribute('id', 'stub-fade');
+    mask.setAttribute('maskUnits', 'userSpaceOnUse');
+    const W = window.innerWidth, H = window.innerHeight;
+    mask.setAttribute('x', '0'); mask.setAttribute('y', '0');
+    mask.setAttribute('width', String(W)); mask.setAttribute('height', String(H));
+    const bg = document.createElementNS(SVG_NS, 'rect');
+    bg.setAttribute('x', '0'); bg.setAttribute('y', '0');
+    bg.setAttribute('width', String(W)); bg.setAttribute('height', String(H));
+    bg.setAttribute('fill', '#ffffff');
+    const g = document.createElementNS(SVG_NS, 'g');
+    g.setAttribute('filter', 'url(#stub-fade-blur)');
+    const p = CTRL_FADE_PAD * s, v = Math.round(CTRL_FADE_FLOOR * 255);
+    // The stub layer is fixed to the viewport, so its own coordinates ARE client coordinates: a box in
+    // rack millimetres becomes one here by scaling and shifting by where the cable layer sits.
+    for (const b of boxes) {
+      const x = cr.left + b.x * s - p, y = cr.top + b.y * s - p;
+      const w = b.w * s + p * 2, h = b.h * s + p * 2;
+      if (x + w < 0 || y + h < 0 || x > W || y > H) continue;   // off screen: not worth a shape
+      const r = document.createElementNS(SVG_NS, 'rect');
+      r.setAttribute('x', r2(x)); r.setAttribute('y', r2(y));
+      r.setAttribute('width', r2(w)); r.setAttribute('height', r2(h));
+      r.setAttribute('rx', r2(Math.min(w, h) / 2));
+      r.setAttribute('fill', `rgb(${v},${v},${v})`);
+      g.appendChild(r);
+    }
+    mask.appendChild(bg); mask.appendChild(g);
+    defs.appendChild(filt); defs.appendChild(mask);
+    svg.appendChild(defs);
+    return 'url(#stub-fade)';
+  }
+
+  // The mask itself, rebuilt with the layer (which is cleared on every redraw). Returns the mask id
+  // for the cable paths to reference, or null when nothing is being faded — an idle rack pays nothing.
+  _buildControlFadeDefs() {
+    this._fadeMaskG = null;
+    const boxes = this._labelMaskBoxes();
+    if (!boxes || !boxes.length) return null;
+    const defs = document.createElementNS(SVG_NS, 'defs');
+    const filt = document.createElementNS(SVG_NS, 'filter');
+    filt.setAttribute('id', 'ctrl-fade-blur');
+    filt.setAttribute('x', '-50%'); filt.setAttribute('y', '-50%');
+    filt.setAttribute('width', '200%'); filt.setAttribute('height', '200%');
+    const blur = document.createElementNS(SVG_NS, 'feGaussianBlur');
+    blur.setAttribute('stdDeviation', String(CTRL_FADE_FEATHER));
+    filt.appendChild(blur);
+    const mask = document.createElementNS(SVG_NS, 'mask');
+    mask.setAttribute('id', 'ctrl-fade');
+    mask.setAttribute('maskUnits', 'userSpaceOnUse');
+    mask.setAttribute('x', '0'); mask.setAttribute('y', '0');
+    mask.setAttribute('width', String(r2(this._contentWmm)));
+    mask.setAttribute('height', String(r2(this._contentHmm)));
+    const bg = document.createElementNS(SVG_NS, 'rect');
+    bg.setAttribute('x', '0'); bg.setAttribute('y', '0');
+    bg.setAttribute('width', String(r2(this._contentWmm)));
+    bg.setAttribute('height', String(r2(this._contentHmm)));
+    bg.setAttribute('fill', '#ffffff');
+    const g = document.createElementNS(SVG_NS, 'g');
+    g.setAttribute('filter', 'url(#ctrl-fade-blur)');
+    g.setAttribute('opacity', '1');   // standing, not eased: there is no state to animate between
+    mask.appendChild(bg); mask.appendChild(g);
+    defs.appendChild(filt); defs.appendChild(mask);
+    this.cables.appendChild(defs);
+    this._fadeMaskG = g;
+    this._drawControlFadeMask();
+    return 'url(#ctrl-fade)';
   }
 
   // Nearest module-to-module cable to a point (mm), within a small pixel radius,
@@ -3951,6 +4122,12 @@ export class Rack {
   _watchCableHover() {
     document.addEventListener('pointermove', (e) => {
       if (this._tempCable || this._reshaping || this._optDown || this._carryingModule) { this._clearBend(); return; }
+      // NO HANDLE OVER A CONTROL. The cable body already ignores the pointer, so the bend handle is the
+      // only thing that can stand between you and a knob you are trying to reach — and it appears
+      // exactly where a cable crosses one, which is exactly where you are least able to spare it.
+      // Following a cable means travelling along it; resting on a knob means you want the knob.
+      if (e.target && e.target.closest
+          && e.target.closest('[data-wcoast-param],[data-wcoast-port]')) { this._clearBend(); return; }
       const edge = this._cordAtPoint(this._clientToMm(e.clientX, e.clientY));
       if (!edge) { this._clearBend(); return; }
       const mm = this._clientToMm(e.clientX, e.clientY);

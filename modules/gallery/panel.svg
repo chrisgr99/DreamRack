@@ -175,32 +175,32 @@
     <circle cx="130" cy="86" r="7" fill="url(#blueRing)" stroke="#004b7a" stroke-width="0.355"/>
     <circle cx="130" cy="86" r="5.5" fill="url(#knobCap)" stroke="#666666" stroke-width="0.2366"/>
     <line x1="124.20" y1="96.05" x2="123.65" y2="97.00" stroke="#163a69" stroke-width="0.355"/>
-      <text x="122.27571" y="98.93766273239619" font-size="2.206" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">27.5</text>
-      <text x="122.27571" y="101.36426273239618" font-size="2.206" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">A1</text>
+      <text x="122.27571" y="98.93766273239619" font-size="2.206" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="knobSkirt">27.5</text>
+      <text x="122.27571" y="101.36426273239618" font-size="2.206" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="knobSkirt">A1</text>
     <line x1="119.28" y1="90.44" x2="118.27" y2="90.86" stroke="#163a69" stroke-width="0.355"/>
-      <text x="115.60578922537249" y="91.52107732250764" font-size="2.206" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">55</text>
-      <text x="115.60578922537249" y="93.94767732250763" font-size="2.206" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">A2</text>
+      <text x="115.60578922537249" y="91.52107732250764" font-size="2.206" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="knobSkirt">55</text>
+      <text x="115.60578922537249" y="93.94767732250763" font-size="2.206" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="knobSkirt">A2</text>
     <line x1="118.80" y1="83.00" x2="117.73" y2="82.71" stroke="#163a69" stroke-width="0.355"/>
-      <text x="114.45040600352783" y="81.39229884601345" font-size="2.206" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">110</text>
-      <text x="114.45040600352783" y="83.81889884601344" font-size="2.206" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">A3</text>
+      <text x="114.45040600352783" y="81.39229884601345" font-size="2.206" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="knobSkirt">110</text>
+      <text x="114.45040600352783" y="83.81889884601344" font-size="2.206" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="knobSkirt">A3</text>
     <line x1="122.94" y1="76.80" x2="122.27" y2="75.92" stroke="#163a69" stroke-width="0.355"/>
-      <text x="120.55981733443461" y="73.25611442597945" font-size="2.206" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">220</text>
-      <text x="120.55981733443461" y="75.68271442597944" font-size="2.206" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">A4</text>
+      <text x="120.55981733443461" y="73.25611442597945" font-size="2.206" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="knobSkirt">220</text>
+      <text x="120.55981733443461" y="75.68271442597944" font-size="2.206" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="knobSkirt">A4</text>
     <line x1="130.00" y1="74.40" x2="130.00" y2="73.30" stroke="#163a69" stroke-width="0.355"/>
-      <text x="130" y="71.05879999999999" font-size="2.206" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">440</text>
-      <text x="130" y="73.48539999999998" font-size="2.206" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">A5</text>
+      <text x="130" y="71.05879999999999" font-size="2.206" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="knobSkirt">440</text>
+      <text x="130" y="73.48539999999998" font-size="2.206" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="knobSkirt">A5</text>
     <line x1="137.06" y1="76.80" x2="137.73" y2="75.92" stroke="#163a69" stroke-width="0.355"/>
-      <text x="139.4401826655654" y="73.25611442597945" font-size="2.206" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">880</text>
-      <text x="139.4401826655654" y="75.68271442597944" font-size="2.206" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">A6</text>
+      <text x="139.4401826655654" y="73.25611442597945" font-size="2.206" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="knobSkirt">880</text>
+      <text x="139.4401826655654" y="75.68271442597944" font-size="2.206" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="knobSkirt">A6</text>
     <line x1="141.20" y1="83.00" x2="142.27" y2="82.71" stroke="#163a69" stroke-width="0.355"/>
-      <text x="146.06415050156573" y="81.25442384601344" font-size="2.206" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">1760</text>
-      <text x="146.06415050156573" y="83.68102384601343" font-size="2.206" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">A7</text>
+      <text x="146.06415050156573" y="81.25442384601344" font-size="2.206" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="knobSkirt">1760</text>
+      <text x="146.06415050156573" y="83.68102384601343" font-size="2.206" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="knobSkirt">A7</text>
     <line x1="140.72" y1="90.44" x2="141.73" y2="90.86" stroke="#163a69" stroke-width="0.355"/>
-      <text x="145.27919200106243" y="91.88764854894255" font-size="2.206" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">3520</text>
-      <text x="145.27919200106243" y="94.31424854894254" font-size="2.206" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">A8</text>
+      <text x="145.27919200106243" y="91.88764854894255" font-size="2.206" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="knobSkirt">3520</text>
+      <text x="145.27919200106243" y="94.31424854894254" font-size="2.206" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="knobSkirt">A8</text>
     <line x1="135.80" y1="96.05" x2="136.35" y2="97.00" stroke="#163a69" stroke-width="0.355"/>
-      <text x="137.8015" y="99.07139437524859" font-size="2.206" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">7040</text>
-      <text x="137.8015" y="101.49799437524858" font-size="2.206" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">A9</text>
+      <text x="137.8015" y="99.07139437524859" font-size="2.206" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="knobSkirt">7040</text>
+      <text x="137.8015" y="101.49799437524858" font-size="2.206" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="knobSkirt">A9</text>
     <g data-wcoast-role="indicator">
       <line x1="130" y1="86" x2="130" y2="80.50" stroke="#163a69" stroke-width="0.55"/>
       <line x1="130" y1="79.00" x2="130" y2="75.00" stroke="#163a69" stroke-width="0.55"/>

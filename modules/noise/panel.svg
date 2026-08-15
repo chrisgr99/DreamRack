@@ -22,26 +22,26 @@
     <circle cx="12.7" cy="12.4" r="3" fill="#8a8a8a" stroke="#000000" stroke-width="0.3"/>
     <circle cx="12.7" cy="12.4" r="1.6" fill="#000000"/>
   </g>
-  <text x="12.7" y="18.80432" font-size="2.5060000000000002" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">violet</text>
+  <text x="12.7" y="18.80432" font-size="2.5060000000000002" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="violetOut">violet</text>
   <g data-wcoast-port="blueOut" data-wcoast-cx="12.7" data-wcoast-cy="32.36">
     <circle cx="12.7" cy="32.36" r="3" fill="#8a8a8a" stroke="#000000" stroke-width="0.3"/>
     <circle cx="12.7" cy="32.36" r="1.6" fill="#000000"/>
   </g>
-  <text x="12.7" y="38.76432" font-size="2.5060000000000002" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">blue</text>
+  <text x="12.7" y="38.76432" font-size="2.5060000000000002" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="blueOut">blue</text>
   <g data-wcoast-port="whiteOut" data-wcoast-cx="12.7" data-wcoast-cy="52.32">
     <circle cx="12.7" cy="52.32" r="3" fill="#8a8a8a" stroke="#000000" stroke-width="0.3"/>
     <circle cx="12.7" cy="52.32" r="1.6" fill="#000000"/>
   </g>
-  <text x="12.7" y="58.72432" font-size="2.5060000000000002" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">white</text>
+  <text x="12.7" y="58.72432" font-size="2.5060000000000002" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="whiteOut">white</text>
   <g data-wcoast-port="pinkOut" data-wcoast-cx="12.7" data-wcoast-cy="72.27">
     <circle cx="12.7" cy="72.27" r="3" fill="#8a8a8a" stroke="#000000" stroke-width="0.3"/>
     <circle cx="12.7" cy="72.27" r="1.6" fill="#000000"/>
   </g>
-  <text x="12.7" y="78.67432" font-size="2.5060000000000002" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">pink</text>
+  <text x="12.7" y="78.67432" font-size="2.5060000000000002" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="pinkOut">pink</text>
   <g data-wcoast-port="redOut" data-wcoast-cx="12.7" data-wcoast-cy="92.23">
     <circle cx="12.7" cy="92.23" r="3" fill="#8a8a8a" stroke="#000000" stroke-width="0.3"/>
     <circle cx="12.7" cy="92.23" r="1.6" fill="#000000"/>
   </g>
-  <text x="12.7" y="98.63432" font-size="2.5060000000000002" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">red</text>
+  <text x="12.7" y="98.63432" font-size="2.5060000000000002" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="redOut">red</text>
   </g>
 </svg>

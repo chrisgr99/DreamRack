@@ -22,7 +22,7 @@
     <circle cx="20.32" cy="12.4" r="3" fill="#8a8a8a" stroke="#000000" stroke-width="0.3"/>
     <circle cx="20.32" cy="12.4" r="1.6" fill="#000000"/>
   </g>
-  <text x="20.32" y="18.80432" font-size="2.5060000000000002" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">in</text>
+  <text x="20.32" y="18.80432" font-size="2.5060000000000002" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="audioIn">in</text>
   <line x1="4.4704" y1="23.1" x2="36.1704" y2="23.1" stroke="#808085" stroke-width="0.355"/>
   <text x="4.4704" y="29.9" font-size="3.906" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="start" font-family="Arial Narrow, Helvetica, Arial, sans-serif">DUAL VCA</text>
   <g data-wcoast-param="levelA" data-wcoast-cx="24" data-wcoast-cy="37.9" data-wcoast-angle-min="-150" data-wcoast-angle-max="150" data-wcoast-port="levelACv">
@@ -41,7 +41,7 @@
       <line x1="24" y1="35.54" x2="24" y2="32.30" stroke="#ffffff" stroke-width="0.3478"/>
     </g>
   </g>
-  <text x="16.8" y="38.874159999999996" font-size="2.706" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="end" font-family="Arial Narrow, Helvetica, Arial, sans-serif">LEVEL A</text>
+  <text x="16.8" y="38.874159999999996" font-size="2.706" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="end" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="levelA">LEVEL A</text>
   <g data-wcoast-param="levelADepth" data-wcoast-cx="33" data-wcoast-cy="43.97" data-wcoast-angle-min="-150" data-wcoast-angle-max="150" data-wcoast-accent-port="levelACv">
     <circle cx="33" cy="43.97" r="2.8" fill="url(#blueRing)" stroke="#6fa8d6" stroke-width="0.355"/>
     <line x1="33" y1="40.82" x2="33" y2="38.67" stroke="#b8b8bc" stroke-width="0.4" data-wcoast-role="trim-tick" data-tick-top="38.67"/>
@@ -71,7 +71,7 @@
       <line x1="24" y1="65.54" x2="24" y2="62.30" stroke="#ffffff" stroke-width="0.3478"/>
     </g>
   </g>
-  <text x="16.8" y="68.87416" font-size="2.706" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="end" font-family="Arial Narrow, Helvetica, Arial, sans-serif">LEVEL B</text>
+  <text x="16.8" y="68.87416" font-size="2.706" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="end" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="levelB">LEVEL B</text>
   <g data-wcoast-param="levelBDepth" data-wcoast-cx="33" data-wcoast-cy="73.97" data-wcoast-angle-min="-150" data-wcoast-angle-max="150" data-wcoast-accent-port="levelBCv">
     <circle cx="33" cy="73.97" r="2.8" fill="url(#blueRing)" stroke="#6fa8d6" stroke-width="0.355"/>
     <line x1="33" y1="70.82" x2="33" y2="68.67" stroke="#b8b8bc" stroke-width="0.4" data-wcoast-role="trim-tick" data-tick-top="68.67"/>
@@ -101,7 +101,7 @@
       <line x1="24" y1="84.64" x2="24" y2="81.40" stroke="#ffffff" stroke-width="0.3478"/>
     </g>
   </g>
-  <text x="24" y="96.14431999999998" font-size="2.706" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">PAN</text>
+  <text x="24" y="96.14431999999998" font-size="2.706" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="pan">PAN</text>
   <g data-wcoast-param="panDepth" data-wcoast-cx="33" data-wcoast-cy="93.07" data-wcoast-angle-min="-150" data-wcoast-angle-max="150" data-wcoast-accent-port="panCv">
     <circle cx="33" cy="93.07" r="2.8" fill="url(#blueRing)" stroke="#6fa8d6" stroke-width="0.355"/>
     <line x1="33" y1="89.92" x2="33" y2="87.77" stroke="#b8b8bc" stroke-width="0.4" data-wcoast-role="trim-tick" data-tick-top="87.77"/>
@@ -119,16 +119,16 @@
     <circle cx="13.67" cy="103.3912" r="3" fill="#8a8a8a" stroke="#000000" stroke-width="0.3"/>
     <circle cx="13.67" cy="103.3912" r="1.6" fill="#000000"/>
   </g>
-  <text x="13.67" y="109.79552" font-size="2.5060000000000002" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">L</text>
+  <text x="13.67" y="109.79552" font-size="2.5060000000000002" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="outL">L</text>
   <g data-wcoast-port="outR" data-wcoast-cx="23.42" data-wcoast-cy="103.3912">
     <circle cx="23.42" cy="103.3912" r="3" fill="#8a8a8a" stroke="#000000" stroke-width="0.3"/>
     <circle cx="23.42" cy="103.3912" r="1.6" fill="#000000"/>
   </g>
-  <text x="23.42" y="109.79552" font-size="2.5060000000000002" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">R</text>
+  <text x="23.42" y="109.79552" font-size="2.5060000000000002" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="outR">R</text>
   <g data-wcoast-port="outMono" data-wcoast-cx="33.17" data-wcoast-cy="103.3912">
     <circle cx="33.17" cy="103.3912" r="3" fill="#8a8a8a" stroke="#000000" stroke-width="0.3"/>
     <circle cx="33.17" cy="103.3912" r="1.6" fill="#000000"/>
   </g>
-  <text x="33.17" y="109.79552" font-size="2.5060000000000002" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">mono</text>
+  <text x="33.17" y="109.79552" font-size="2.5060000000000002" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="outMono">mono</text>
   </g>
 </svg>

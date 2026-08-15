@@ -21,32 +21,32 @@
     <circle cx="19.176" cy="27.084" r="11" fill="url(#blueRing)" stroke="#004b7a" stroke-width="0.4851"/>
     <circle cx="19.176" cy="27.084" r="7.92" fill="url(#knobCap)" stroke="#666666" stroke-width="0.3233"/>
     <line x1="13.38" y1="37.13" x2="12.83" y2="38.08" stroke="#163a69" stroke-width="0.355"/>
-      <text x="11.71571" y="39.48440131919802" font-size="2.606" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">27.5</text>
-      <text x="11.71571" y="42.35100131919802" font-size="2.606" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">A1</text>
+      <text x="11.71571" y="39.48440131919802" font-size="2.606" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="freq">27.5</text>
+      <text x="11.71571" y="42.35100131919802" font-size="2.606" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="freq">A1</text>
     <line x1="8.46" y1="31.52" x2="7.44" y2="31.94" stroke="#163a69" stroke-width="0.355"/>
-      <text x="5.2475515793246235" y="32.332152238657855" font-size="2.606" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">55</text>
-      <text x="5.2475515793246235" y="35.19875223865786" font-size="2.606" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">A2</text>
+      <text x="5.2475515793246235" y="32.332152238657855" font-size="2.606" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="freq">55</text>
+      <text x="5.2475515793246235" y="35.19875223865786" font-size="2.606" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="freq">A2</text>
     <line x1="7.97" y1="24.08" x2="6.91" y2="23.80" stroke="#163a69" stroke-width="0.355"/>
-      <text x="4.022650271362515" y="22.50247217758521" font-size="2.606" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">110</text>
-      <text x="4.022650271362515" y="25.369072177585213" font-size="2.606" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">A3</text>
+      <text x="4.022650271362515" y="22.50247217758521" font-size="2.606" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="freq">110</text>
+      <text x="4.022650271362515" y="25.369072177585213" font-size="2.606" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="freq">A3</text>
     <line x1="12.11" y1="17.88" x2="11.44" y2="17.01" stroke="#163a69" stroke-width="0.355"/>
-      <text x="10.050773191506092" y="14.670572890239965" font-size="2.606" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">220</text>
-      <text x="10.050773191506092" y="17.53717289023996" font-size="2.606" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">A4</text>
+      <text x="10.050773191506092" y="14.670572890239965" font-size="2.606" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="freq">220</text>
+      <text x="10.050773191506092" y="17.53717289023996" font-size="2.606" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="freq">A4</text>
     <line x1="19.18" y1="15.48" x2="19.18" y2="14.38" stroke="#163a69" stroke-width="0.355"/>
-      <text x="19.176" y="12.7628" font-size="2.606" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">440</text>
-      <text x="19.176" y="15.6294" font-size="2.606" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">A5</text>
+      <text x="19.176" y="12.7628" font-size="2.606" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="freq">440</text>
+      <text x="19.176" y="15.6294" font-size="2.606" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="freq">A5</text>
     <line x1="26.24" y1="17.88" x2="26.91" y2="17.01" stroke="#163a69" stroke-width="0.355"/>
-      <text x="28.301226808493904" y="14.670572890239965" font-size="2.606" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">880</text>
-      <text x="28.301226808493904" y="17.53717289023996" font-size="2.606" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">A6</text>
+      <text x="28.301226808493904" y="14.670572890239965" font-size="2.606" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="freq">880</text>
+      <text x="28.301226808493904" y="17.53717289023996" font-size="2.606" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="freq">A6</text>
     <line x1="30.38" y1="24.08" x2="31.44" y2="23.80" stroke="#163a69" stroke-width="0.355"/>
-      <text x="34.93720750392026" y="22.339597177585212" font-size="2.606" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">1760</text>
-      <text x="34.93720750392026" y="25.206197177585214" font-size="2.606" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">A7</text>
+      <text x="34.93720750392026" y="22.339597177585212" font-size="2.606" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="freq">1760</text>
+      <text x="34.93720750392026" y="25.206197177585214" font-size="2.606" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="freq">A7</text>
     <line x1="29.89" y1="31.52" x2="30.91" y2="31.94" stroke="#163a69" stroke-width="0.355"/>
-      <text x="34.14989768454183" y="32.76519150252431" font-size="2.606" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">3520</text>
-      <text x="34.14989768454183" y="35.631791502524315" font-size="2.606" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">A8</text>
+      <text x="34.14989768454183" y="32.76519150252431" font-size="2.606" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="freq">3520</text>
+      <text x="34.14989768454183" y="35.631791502524315" font-size="2.606" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="freq">A8</text>
     <line x1="24.98" y1="37.13" x2="25.53" y2="38.08" stroke="#163a69" stroke-width="0.355"/>
-      <text x="26.727499999999996" y="39.642381673356375" font-size="2.606" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">7040</text>
-      <text x="26.727499999999996" y="42.508981673356374" font-size="2.606" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">A9</text>
+      <text x="26.727499999999996" y="39.642381673356375" font-size="2.606" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="freq">7040</text>
+      <text x="26.727499999999996" y="42.508981673356374" font-size="2.606" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="freq">A9</text>
     <circle cx="19.176" cy="27.084" r="2.8" fill="#ff7300"/>
     <circle cx="19.176" cy="27.084" r="1.8" fill="#000000" data-wcoast-role="jackhole"/>
     <g data-wcoast-role="indicator">
@@ -60,7 +60,7 @@
       <line x1="19.176" y1="24.28" x2="19.176" y2="16.08" stroke="#ffffff" stroke-width="0.6832"/>
     </g>
   </g>
-  <text x="19.176" y="48.018501673356376" font-size="4.7059999999999995" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">FREQ</text>
+  <text x="19.176" y="48.018501673356376" font-size="4.7059999999999995" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="freq">FREQ</text>
   <g data-wcoast-param="fmDepth" data-wcoast-cx="36.25" data-wcoast-cy="41.444" data-wcoast-angle-min="-150" data-wcoast-angle-max="150" data-wcoast-accent-port="fmCv">
     <circle cx="36.25" cy="41.444" r="2.8" fill="url(#blueRing)" stroke="#004b7a" stroke-width="0.355"/>
     <line x1="36.25" y1="38.29" x2="36.25" y2="36.14" stroke="#163a69" stroke-width="0.4" data-wcoast-role="trim-tick" data-tick-top="36.14"/>
@@ -75,18 +75,18 @@
   <g data-wcoast-param="model" data-wcoast-role="readout" data-wcoast-menu="1" data-wcoast-cx="53.94" data-wcoast-cy="21.37" data-wcoast-w="27.37">
     <rect x="40.25" y="15.17" width="27.37" height="12.4" rx="1.2" fill="#15171c" stroke="#7d7d7d" stroke-width="0.3"/>
     <text x="53.94" y="25.21" data-wcoast-role="readout-text" font-size="8.96" font-weight="700" fill="#4ee37a" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">string</text>
-      <text x="53.94" y="13.571" font-size="5.7059999999999995" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">MODEL</text>
+      <text x="53.94" y="13.571" font-size="5.7059999999999995" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="model">MODEL</text>
   </g>
   <g data-wcoast-port="modelCv" data-wcoast-cx="52.620000000000005" data-wcoast-cy="34">
     <circle cx="52.620000000000005" cy="34" r="3" fill="#8a8a8a" stroke="#000000" stroke-width="0.3"/>
     <circle cx="52.620000000000005" cy="34" r="1.6" fill="#000000"/>
   </g>
-  <text x="52.620000000000005" y="40.40432" font-size="2.5060000000000002" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">cv</text>
+  <text x="52.620000000000005" y="40.40432" font-size="2.5060000000000002" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="modelCv">cv</text>
   <g data-wcoast-port="pitchIn" data-wcoast-cx="7.964" data-wcoast-cy="47.141">
     <circle cx="7.964" cy="47.141" r="3" fill="#8a8a8a" stroke="#000000" stroke-width="0.3"/>
     <circle cx="7.964" cy="47.141" r="1.6" fill="#000000"/>
   </g>
-  <text x="7.964" y="53.54532" font-size="2.5060000000000002" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">v/oct</text>
+  <text x="7.964" y="53.54532" font-size="2.5060000000000002" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="pitchIn">v/oct</text>
   <g data-wcoast-param="morph" data-wcoast-cx="35.56" data-wcoast-cy="57.662" data-wcoast-angle-min="-150" data-wcoast-angle-max="150" data-wcoast-port="morphCv">
     <circle cx="35.56" cy="57.662" r="8" fill="url(#blueRing)" stroke="#004b7a" stroke-width="0.3528"/>
     <circle cx="35.56" cy="57.662" r="5.76" fill="url(#knobCap)" stroke="#666666" stroke-width="0.2351"/>
@@ -103,7 +103,7 @@
       <line x1="35.56" y1="54.86" x2="35.56" y2="49.66" stroke="#ffffff" stroke-width="0.4969"/>
     </g>
   </g>
-  <text x="35.56" y="69.21032" font-size="2.706" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">MORPH</text>
+  <text x="35.56" y="69.21032" font-size="2.706" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="morph">MORPH</text>
   <g data-wcoast-param="morphDepth" data-wcoast-cx="47.017" data-wcoast-cy="66.108" data-wcoast-angle-min="-150" data-wcoast-angle-max="150" data-wcoast-accent-port="morphCv">
     <circle cx="47.017" cy="66.108" r="2.8" fill="url(#blueRing)" stroke="#004b7a" stroke-width="0.355"/>
     <line x1="47.017" y1="62.96" x2="47.017" y2="60.81" stroke="#163a69" stroke-width="0.4" data-wcoast-role="trim-tick" data-tick-top="60.81"/>
@@ -131,7 +131,7 @@
       <line x1="17.18" y1="76.70" x2="17.18" y2="71.50" stroke="#ffffff" stroke-width="0.4969"/>
     </g>
   </g>
-  <text x="17.18" y="91.05331999999999" font-size="2.706" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">HARM</text>
+  <text x="17.18" y="91.05331999999999" font-size="2.706" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="harmonics">HARM</text>
   <g data-wcoast-param="harmonicsDepth" data-wcoast-cx="28.25" data-wcoast-cy="87.47" data-wcoast-angle-min="-150" data-wcoast-angle-max="150" data-wcoast-accent-port="harmonicsCv">
     <circle cx="28.25" cy="87.47" r="2.8" fill="url(#blueRing)" stroke="#004b7a" stroke-width="0.355"/>
     <line x1="28.25" y1="84.32" x2="28.25" y2="82.17" stroke="#163a69" stroke-width="0.4" data-wcoast-role="trim-tick" data-tick-top="82.17"/>
@@ -159,7 +159,7 @@
       <line x1="53.94" y1="76.70" x2="53.94" y2="71.50" stroke="#ffffff" stroke-width="0.4969"/>
     </g>
   </g>
-  <text x="53.94" y="91.05331999999999" font-size="2.706" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">TIMBRE</text>
+  <text x="53.94" y="91.05331999999999" font-size="2.706" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="timbre">TIMBRE</text>
   <g data-wcoast-param="timbreDepth" data-wcoast-cx="65.01" data-wcoast-cy="87.47" data-wcoast-angle-min="-150" data-wcoast-angle-max="150" data-wcoast-accent-port="timbreCv">
     <circle cx="65.01" cy="87.47" r="2.8" fill="url(#blueRing)" stroke="#004b7a" stroke-width="0.355"/>
     <line x1="65.01" y1="84.32" x2="65.01" y2="82.17" stroke="#163a69" stroke-width="0.4" data-wcoast-role="trim-tick" data-tick-top="82.17"/>
@@ -185,7 +185,7 @@
       <line x1="10.5" y1="102" x2="10.5" y2="98.40" stroke="#163a69" stroke-width="0.55"/>
     </g>
   </g>
-  <text x="10.5" y="110.54831999999999" font-size="2.706" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">DECAY</text>
+  <text x="10.5" y="110.54831999999999" font-size="2.706" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="decay">DECAY</text>
   <g data-wcoast-param="colour" data-wcoast-cx="25.38" data-wcoast-cy="102" data-wcoast-angle-min="-150" data-wcoast-angle-max="150">
     <circle cx="25.38" cy="102" r="5" fill="url(#blueRing)" stroke="#004b7a" stroke-width="0.355"/>
     <circle cx="25.38" cy="102" r="3.6" fill="url(#knobCap)" stroke="#666666" stroke-width="0.2366"/>
@@ -200,26 +200,26 @@
       <line x1="25.38" y1="102" x2="25.38" y2="98.40" stroke="#163a69" stroke-width="0.55"/>
     </g>
   </g>
-  <text x="25.38" y="110.54831999999999" font-size="2.706" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">COLOUR</text>
+  <text x="25.38" y="110.54831999999999" font-size="2.706" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="colour">COLOUR</text>
   <g data-wcoast-port="trigIn" data-wcoast-cx="38.5" data-wcoast-cy="102">
     <circle cx="38.5" cy="102" r="3" fill="#8a8a8a" stroke="#000000" stroke-width="0.3"/>
     <circle cx="38.5" cy="102" r="1.6" fill="#000000"/>
   </g>
-  <text x="38.5" y="108.40432" font-size="2.5060000000000002" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">trig</text>
+  <text x="38.5" y="108.40432" font-size="2.5060000000000002" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="trigIn">trig</text>
   <g data-wcoast-port="levelIn" data-wcoast-cx="48.12" data-wcoast-cy="102">
     <circle cx="48.12" cy="102" r="3" fill="#8a8a8a" stroke="#000000" stroke-width="0.3"/>
     <circle cx="48.12" cy="102" r="1.6" fill="#000000"/>
   </g>
-  <text x="48.12" y="108.40432" font-size="2.5060000000000002" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">level</text>
+  <text x="48.12" y="108.40432" font-size="2.5060000000000002" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="levelIn">level</text>
   <g data-wcoast-port="out" data-wcoast-cx="57.75" data-wcoast-cy="102">
     <circle cx="57.75" cy="102" r="3" fill="#8a8a8a" stroke="#000000" stroke-width="0.3"/>
     <circle cx="57.75" cy="102" r="1.6" fill="#000000"/>
   </g>
-  <text x="57.75" y="108.62031999999999" font-size="2.806" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">out</text>
+  <text x="57.75" y="108.62031999999999" font-size="2.806" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="out">out</text>
   <g data-wcoast-port="auxOut" data-wcoast-cx="65.18" data-wcoast-cy="102">
     <circle cx="65.18" cy="102" r="3" fill="#8a8a8a" stroke="#000000" stroke-width="0.3"/>
     <circle cx="65.18" cy="102" r="1.6" fill="#000000"/>
   </g>
-  <text x="65.18" y="108.62031999999999" font-size="2.806" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">aux</text>
+  <text x="65.18" y="108.62031999999999" font-size="2.806" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="auxOut">aux</text>
   </g>
 </svg>

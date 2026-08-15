@@ -94,11 +94,11 @@
   <g data-wcoast-param="play1"><circle cx="43" cy="16.661949999999997" r="2.50" fill="url(#metalDisc)" pointer-events="none" data-wcoast-role="button-metal"/><circle cx="43" cy="16.661949999999997" r="1.8" fill="#505055" stroke="#4a4a4a" stroke-width="0.2366" data-wcoast-role="step-indicator" data-wcoast-step="on" data-wcoast-led="orange"/><circle cx="42.50" cy="16.16" r="0.54" fill="#ffdcb0" opacity="0" data-wcoast-role="led-gloss" pointer-events="none"/></g>
   <g data-wcoast-param="rpt1" data-wcoast-cx="62.5" data-wcoast-cy="17.661949999999997" data-wcoast-angle-min="-50" data-wcoast-angle-max="50">
     <circle cx="62.5" cy="17.661949999999997" r="3.6" fill="url(#blueRing)" stroke="#6fa8d6" stroke-width="0.355"/>
-      <text x="57.65670430060637" y="14.3700423649563" font-size="2.206" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">0</text>
-      <text x="59.90805093910094" y="12.875597301293704" font-size="2.206" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">1</text>
-      <text x="62.5" y="12.534049999999997" font-size="2.206" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">2</text>
-      <text x="65.09194906089907" y="12.875597301293704" font-size="2.206" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">3</text>
-      <text x="67.34329569939362" y="14.3700423649563" font-size="2.206" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">4</text>
+      <text x="57.65670430060637" y="14.3700423649563" font-size="2.206" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="rpt1">0</text>
+      <text x="59.90805093910094" y="12.875597301293704" font-size="2.206" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="rpt1">1</text>
+      <text x="62.5" y="12.534049999999997" font-size="2.206" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="rpt1">2</text>
+      <text x="65.09194906089907" y="12.875597301293704" font-size="2.206" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="rpt1">3</text>
+      <text x="67.34329569939362" y="14.3700423649563" font-size="2.206" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="rpt1">4</text>
     <g data-wcoast-role="indicator">
       <line x1="62.5" y1="17.66" x2="62.5" y2="12.86" stroke="#06253d" stroke-width="1" stroke-linecap="round"/>
       <line x1="62.5" y1="17.66" x2="62.5" y2="12.86" stroke="#ffffff" stroke-width="0.5"/>
@@ -130,11 +130,11 @@
   <g data-wcoast-param="play2"><circle cx="43" cy="29.585849999999997" r="2.50" fill="url(#metalDisc)" pointer-events="none" data-wcoast-role="button-metal"/><circle cx="43" cy="29.585849999999997" r="1.8" fill="#505055" stroke="#4a4a4a" stroke-width="0.2366" data-wcoast-role="step-indicator" data-wcoast-step="on" data-wcoast-led="orange"/><circle cx="42.50" cy="29.08" r="0.54" fill="#ffdcb0" opacity="0" data-wcoast-role="led-gloss" pointer-events="none"/></g>
   <g data-wcoast-param="rpt2" data-wcoast-cx="62.5" data-wcoast-cy="30.585849999999997" data-wcoast-angle-min="-50" data-wcoast-angle-max="50">
     <circle cx="62.5" cy="30.585849999999997" r="3.6" fill="url(#blueRing)" stroke="#6fa8d6" stroke-width="0.355"/>
-      <text x="57.65670430060637" y="27.293942364956298" font-size="2.206" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">0</text>
-      <text x="59.90805093910094" y="25.7994973012937" font-size="2.206" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">1</text>
-      <text x="62.5" y="25.457949999999993" font-size="2.206" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">2</text>
-      <text x="65.09194906089907" y="25.7994973012937" font-size="2.206" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">3</text>
-      <text x="67.34329569939362" y="27.293942364956298" font-size="2.206" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">4</text>
+      <text x="57.65670430060637" y="27.293942364956298" font-size="2.206" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="rpt2">0</text>
+      <text x="59.90805093910094" y="25.7994973012937" font-size="2.206" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="rpt2">1</text>
+      <text x="62.5" y="25.457949999999993" font-size="2.206" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="rpt2">2</text>
+      <text x="65.09194906089907" y="25.7994973012937" font-size="2.206" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="rpt2">3</text>
+      <text x="67.34329569939362" y="27.293942364956298" font-size="2.206" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="rpt2">4</text>
     <g data-wcoast-role="indicator">
       <line x1="62.5" y1="30.59" x2="62.5" y2="25.79" stroke="#06253d" stroke-width="1" stroke-linecap="round"/>
       <line x1="62.5" y1="30.59" x2="62.5" y2="25.79" stroke="#ffffff" stroke-width="0.5"/>
@@ -166,11 +166,11 @@
   <g data-wcoast-param="play3"><circle cx="43" cy="42.50975" r="2.50" fill="url(#metalDisc)" pointer-events="none" data-wcoast-role="button-metal"/><circle cx="43" cy="42.50975" r="1.8" fill="#505055" stroke="#4a4a4a" stroke-width="0.2366" data-wcoast-role="step-indicator" data-wcoast-step="on" data-wcoast-led="orange"/><circle cx="42.50" cy="42.01" r="0.54" fill="#ffdcb0" opacity="0" data-wcoast-role="led-gloss" pointer-events="none"/></g>
   <g data-wcoast-param="rpt3" data-wcoast-cx="62.5" data-wcoast-cy="43.50975" data-wcoast-angle-min="-50" data-wcoast-angle-max="50">
     <circle cx="62.5" cy="43.50975" r="3.6" fill="url(#blueRing)" stroke="#6fa8d6" stroke-width="0.355"/>
-      <text x="57.65670430060637" y="40.2178423649563" font-size="2.206" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">0</text>
-      <text x="59.90805093910094" y="38.72339730129371" font-size="2.206" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">1</text>
-      <text x="62.5" y="38.38185" font-size="2.206" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">2</text>
-      <text x="65.09194906089907" y="38.72339730129371" font-size="2.206" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">3</text>
-      <text x="67.34329569939362" y="40.2178423649563" font-size="2.206" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">4</text>
+      <text x="57.65670430060637" y="40.2178423649563" font-size="2.206" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="rpt3">0</text>
+      <text x="59.90805093910094" y="38.72339730129371" font-size="2.206" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="rpt3">1</text>
+      <text x="62.5" y="38.38185" font-size="2.206" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="rpt3">2</text>
+      <text x="65.09194906089907" y="38.72339730129371" font-size="2.206" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="rpt3">3</text>
+      <text x="67.34329569939362" y="40.2178423649563" font-size="2.206" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="rpt3">4</text>
     <g data-wcoast-role="indicator">
       <line x1="62.5" y1="43.51" x2="62.5" y2="38.71" stroke="#06253d" stroke-width="1" stroke-linecap="round"/>
       <line x1="62.5" y1="43.51" x2="62.5" y2="38.71" stroke="#ffffff" stroke-width="0.5"/>
@@ -202,11 +202,11 @@
   <g data-wcoast-param="play4"><circle cx="43" cy="55.43365" r="2.50" fill="url(#metalDisc)" pointer-events="none" data-wcoast-role="button-metal"/><circle cx="43" cy="55.43365" r="1.8" fill="#505055" stroke="#4a4a4a" stroke-width="0.2366" data-wcoast-role="step-indicator" data-wcoast-step="on" data-wcoast-led="orange"/><circle cx="42.50" cy="54.93" r="0.54" fill="#ffdcb0" opacity="0" data-wcoast-role="led-gloss" pointer-events="none"/></g>
   <g data-wcoast-param="rpt4" data-wcoast-cx="62.5" data-wcoast-cy="56.43365" data-wcoast-angle-min="-50" data-wcoast-angle-max="50">
     <circle cx="62.5" cy="56.43365" r="3.6" fill="url(#blueRing)" stroke="#6fa8d6" stroke-width="0.355"/>
-      <text x="57.65670430060637" y="53.1417423649563" font-size="2.206" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">0</text>
-      <text x="59.90805093910094" y="51.64729730129371" font-size="2.206" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">1</text>
-      <text x="62.5" y="51.30575" font-size="2.206" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">2</text>
-      <text x="65.09194906089907" y="51.64729730129371" font-size="2.206" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">3</text>
-      <text x="67.34329569939362" y="53.1417423649563" font-size="2.206" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">4</text>
+      <text x="57.65670430060637" y="53.1417423649563" font-size="2.206" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="rpt4">0</text>
+      <text x="59.90805093910094" y="51.64729730129371" font-size="2.206" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="rpt4">1</text>
+      <text x="62.5" y="51.30575" font-size="2.206" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="rpt4">2</text>
+      <text x="65.09194906089907" y="51.64729730129371" font-size="2.206" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="rpt4">3</text>
+      <text x="67.34329569939362" y="53.1417423649563" font-size="2.206" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="rpt4">4</text>
     <g data-wcoast-role="indicator">
       <line x1="62.5" y1="56.43" x2="62.5" y2="51.63" stroke="#06253d" stroke-width="1" stroke-linecap="round"/>
       <line x1="62.5" y1="56.43" x2="62.5" y2="51.63" stroke="#ffffff" stroke-width="0.5"/>
@@ -238,11 +238,11 @@
   <g data-wcoast-param="play5"><circle cx="43" cy="68.35755" r="2.50" fill="url(#metalDisc)" pointer-events="none" data-wcoast-role="button-metal"/><circle cx="43" cy="68.35755" r="1.8" fill="#505055" stroke="#4a4a4a" stroke-width="0.2366" data-wcoast-role="step-indicator" data-wcoast-step="on" data-wcoast-led="orange"/><circle cx="42.50" cy="67.85" r="0.54" fill="#ffdcb0" opacity="0" data-wcoast-role="led-gloss" pointer-events="none"/></g>
   <g data-wcoast-param="rpt5" data-wcoast-cx="62.5" data-wcoast-cy="69.35755" data-wcoast-angle-min="-50" data-wcoast-angle-max="50">
     <circle cx="62.5" cy="69.35755" r="3.6" fill="url(#blueRing)" stroke="#6fa8d6" stroke-width="0.355"/>
-      <text x="57.65670430060637" y="66.0656423649563" font-size="2.206" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">0</text>
-      <text x="59.90805093910094" y="64.57119730129371" font-size="2.206" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">1</text>
-      <text x="62.5" y="64.22965" font-size="2.206" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">2</text>
-      <text x="65.09194906089907" y="64.57119730129371" font-size="2.206" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">3</text>
-      <text x="67.34329569939362" y="66.0656423649563" font-size="2.206" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">4</text>
+      <text x="57.65670430060637" y="66.0656423649563" font-size="2.206" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="rpt5">0</text>
+      <text x="59.90805093910094" y="64.57119730129371" font-size="2.206" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="rpt5">1</text>
+      <text x="62.5" y="64.22965" font-size="2.206" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="rpt5">2</text>
+      <text x="65.09194906089907" y="64.57119730129371" font-size="2.206" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="rpt5">3</text>
+      <text x="67.34329569939362" y="66.0656423649563" font-size="2.206" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="rpt5">4</text>
     <g data-wcoast-role="indicator">
       <line x1="62.5" y1="69.36" x2="62.5" y2="64.56" stroke="#06253d" stroke-width="1" stroke-linecap="round"/>
       <line x1="62.5" y1="69.36" x2="62.5" y2="64.56" stroke="#ffffff" stroke-width="0.5"/>
@@ -274,11 +274,11 @@
   <g data-wcoast-param="play6"><circle cx="43" cy="81.28145" r="2.50" fill="url(#metalDisc)" pointer-events="none" data-wcoast-role="button-metal"/><circle cx="43" cy="81.28145" r="1.8" fill="#505055" stroke="#4a4a4a" stroke-width="0.2366" data-wcoast-role="step-indicator" data-wcoast-step="on" data-wcoast-led="orange"/><circle cx="42.50" cy="80.78" r="0.54" fill="#ffdcb0" opacity="0" data-wcoast-role="led-gloss" pointer-events="none"/></g>
   <g data-wcoast-param="rpt6" data-wcoast-cx="62.5" data-wcoast-cy="82.28145" data-wcoast-angle-min="-50" data-wcoast-angle-max="50">
     <circle cx="62.5" cy="82.28145" r="3.6" fill="url(#blueRing)" stroke="#6fa8d6" stroke-width="0.355"/>
-      <text x="57.65670430060637" y="78.9895423649563" font-size="2.206" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">0</text>
-      <text x="59.90805093910094" y="77.49509730129371" font-size="2.206" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">1</text>
-      <text x="62.5" y="77.15355" font-size="2.206" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">2</text>
-      <text x="65.09194906089907" y="77.49509730129371" font-size="2.206" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">3</text>
-      <text x="67.34329569939362" y="78.9895423649563" font-size="2.206" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">4</text>
+      <text x="57.65670430060637" y="78.9895423649563" font-size="2.206" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="rpt6">0</text>
+      <text x="59.90805093910094" y="77.49509730129371" font-size="2.206" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="rpt6">1</text>
+      <text x="62.5" y="77.15355" font-size="2.206" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="rpt6">2</text>
+      <text x="65.09194906089907" y="77.49509730129371" font-size="2.206" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="rpt6">3</text>
+      <text x="67.34329569939362" y="78.9895423649563" font-size="2.206" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="rpt6">4</text>
     <g data-wcoast-role="indicator">
       <line x1="62.5" y1="82.28" x2="62.5" y2="77.48" stroke="#06253d" stroke-width="1" stroke-linecap="round"/>
       <line x1="62.5" y1="82.28" x2="62.5" y2="77.48" stroke="#ffffff" stroke-width="0.5"/>
@@ -310,11 +310,11 @@
   <g data-wcoast-param="play7"><circle cx="43" cy="94.20535" r="2.50" fill="url(#metalDisc)" pointer-events="none" data-wcoast-role="button-metal"/><circle cx="43" cy="94.20535" r="1.8" fill="#505055" stroke="#4a4a4a" stroke-width="0.2366" data-wcoast-role="step-indicator" data-wcoast-step="on" data-wcoast-led="orange"/><circle cx="42.50" cy="93.70" r="0.54" fill="#ffdcb0" opacity="0" data-wcoast-role="led-gloss" pointer-events="none"/></g>
   <g data-wcoast-param="rpt7" data-wcoast-cx="62.5" data-wcoast-cy="95.20535" data-wcoast-angle-min="-50" data-wcoast-angle-max="50">
     <circle cx="62.5" cy="95.20535" r="3.6" fill="url(#blueRing)" stroke="#6fa8d6" stroke-width="0.355"/>
-      <text x="57.65670430060637" y="91.9134423649563" font-size="2.206" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">0</text>
-      <text x="59.90805093910094" y="90.4189973012937" font-size="2.206" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">1</text>
-      <text x="62.5" y="90.07744999999998" font-size="2.206" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">2</text>
-      <text x="65.09194906089907" y="90.4189973012937" font-size="2.206" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">3</text>
-      <text x="67.34329569939362" y="91.9134423649563" font-size="2.206" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">4</text>
+      <text x="57.65670430060637" y="91.9134423649563" font-size="2.206" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="rpt7">0</text>
+      <text x="59.90805093910094" y="90.4189973012937" font-size="2.206" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="rpt7">1</text>
+      <text x="62.5" y="90.07744999999998" font-size="2.206" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="rpt7">2</text>
+      <text x="65.09194906089907" y="90.4189973012937" font-size="2.206" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="rpt7">3</text>
+      <text x="67.34329569939362" y="91.9134423649563" font-size="2.206" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="rpt7">4</text>
     <g data-wcoast-role="indicator">
       <line x1="62.5" y1="95.21" x2="62.5" y2="90.41" stroke="#06253d" stroke-width="1" stroke-linecap="round"/>
       <line x1="62.5" y1="95.21" x2="62.5" y2="90.41" stroke="#ffffff" stroke-width="0.5"/>
@@ -346,11 +346,11 @@
   <g data-wcoast-param="play8"><circle cx="43" cy="107.12925" r="2.50" fill="url(#metalDisc)" pointer-events="none" data-wcoast-role="button-metal"/><circle cx="43" cy="107.12925" r="1.8" fill="#505055" stroke="#4a4a4a" stroke-width="0.2366" data-wcoast-role="step-indicator" data-wcoast-step="on" data-wcoast-led="orange"/><circle cx="42.50" cy="106.63" r="0.54" fill="#ffdcb0" opacity="0" data-wcoast-role="led-gloss" pointer-events="none"/></g>
   <g data-wcoast-param="rpt8" data-wcoast-cx="62.5" data-wcoast-cy="108.12925" data-wcoast-angle-min="-50" data-wcoast-angle-max="50">
     <circle cx="62.5" cy="108.12925" r="3.6" fill="url(#blueRing)" stroke="#6fa8d6" stroke-width="0.355"/>
-      <text x="57.65670430060637" y="104.8373423649563" font-size="2.206" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">0</text>
-      <text x="59.90805093910094" y="103.3428973012937" font-size="2.206" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">1</text>
-      <text x="62.5" y="103.00134999999999" font-size="2.206" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">2</text>
-      <text x="65.09194906089907" y="103.3428973012937" font-size="2.206" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">3</text>
-      <text x="67.34329569939362" y="104.8373423649563" font-size="2.206" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">4</text>
+      <text x="57.65670430060637" y="104.8373423649563" font-size="2.206" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="rpt8">0</text>
+      <text x="59.90805093910094" y="103.3428973012937" font-size="2.206" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="rpt8">1</text>
+      <text x="62.5" y="103.00134999999999" font-size="2.206" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="rpt8">2</text>
+      <text x="65.09194906089907" y="103.3428973012937" font-size="2.206" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="rpt8">3</text>
+      <text x="67.34329569939362" y="104.8373423649563" font-size="2.206" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="rpt8">4</text>
     <g data-wcoast-role="indicator">
       <line x1="62.5" y1="108.13" x2="62.5" y2="103.33" stroke="#06253d" stroke-width="1" stroke-linecap="round"/>
       <line x1="62.5" y1="108.13" x2="62.5" y2="103.33" stroke="#ffffff" stroke-width="0.5"/>

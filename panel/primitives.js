@@ -84,7 +84,10 @@ function vjack(id, cx, cy, { r = 3.0, hole = 1.6, fill = JACK_NEUTRAL, label: la
 // mark's angle (from `at` 0..1 along the sweep, or an explicit `angle`), the label one
 // or more lines. Optional 12-o'clock index triangle. Static (not rotated). Shared by
 // knob() and knack().
-function dialScale(cx, cy, outerR, scale, angleMin, angleMax, ink) {
+// `owner` — the id of the knob this scale belongs to. Stamped on every numeral so the host can treat
+// a knob's whole calibration as ONE block of lettering: hovering any part of it clears the cables over
+// all of it, rather than one numeral at a time.
+function dialScale(cx, cy, outerR, scale, angleMin, angleMax, ink, owner = null) {
   if (!scale) return '';
   let scaleSvg = '';
   const gap = scale.tickGap ?? 0.6, tlen = scale.tickLen ?? 1.1, lgap = scale.labelGap ?? 1.8;
@@ -110,7 +113,7 @@ function dialScale(cx, cy, outerR, scale, angleMin, angleMax, ink) {
       const rlm = rl + Math.abs(sn) * wHalf;
       const lx = cx + sn * rlm, ly = cy - cs * rlm;
       lines.forEach((ln, i) => {
-        scaleSvg += '\n    ' + label(lx, ly - (lines.length - 1) * lh / 2 + i * lh + bSc * 0.35, ln, { size: scSize, fill: scCol });
+        scaleSvg += '\n    ' + label(lx, ly - (lines.length - 1) * lh / 2 + i * lh + bSc * 0.35, ln, { size: scSize, fill: scCol, owner });
       });
     }
   }
@@ -208,7 +211,7 @@ function knob(id, cx, cy, opts = {}) {
   // each mark's angle (from `at` 0..1 along the sweep, or an explicit `angle`), the
   // label one or more lines. Optional 12-o'clock index triangle. Static (not rotated).
   const outerR = hasSkirt ? skirt : radius;
-  const scaleSvg = dialScale(cx, cy, outerR, scale, angleMin, angleMax, ink);
+  const scaleSvg = dialScale(cx, cy, outerR, scale, angleMin, angleMax, ink, id);
   // The ring and the cap are rotationally
   // symmetric, so they stay put. The ticks and the pointer ARE the knob face — they
   // sit in the indicator group and rotate together, so the ticks turn with the knob.
@@ -271,7 +274,7 @@ function knack(id, cx, cy, opts = {}) {
   const pointerW = +(radius * KNACK_POINTER_W).toFixed(4);
   const ringW = +(radius * KNACK_RING_W).toFixed(4);
   const capW = +(radius * KNACK_CAP_W).toFixed(4);
-  const scaleSvg = dialScale(cx, cy, radius, scale, angleMin, angleMax, ink);
+  const scaleSvg = dialScale(cx, cy, radius, scale, angleMin, angleMax, ink, id);
   // Static preview of the live dress: 7 grip dashes evenly around the rim (the app
   // re-draws these, reading the FIRST white line's length as the dash length — so the
   // grips must precede the pointer here), then a pointer from the jack band to the rim.
@@ -427,7 +430,7 @@ function trim(id, cx, cy, opts = {}) {
   const eyeEdge = lightestCapTone(theme);
   const tip = +(cy - (radius + overhang)).toFixed(2);
   // `scale.r` defaults to the tip's radius, so the numerals clear the pointer at every angle.
-  const scaleSvg = scale ? dialScale(cx, cy, radius + overhang, scale, angleMin, angleMax, ink) : '';
+  const scaleSvg = scale ? dialScale(cx, cy, radius + overhang, scale, angleMin, angleMax, ink, id) : '';
   let markSvg = '';
   if (centreMark) {
     const y0 = +(cy - radius - TRIM_MARK_IN).toFixed(2), y1 = +(cy - radius - TRIM_MARK_OUT).toFixed(2);
@@ -536,10 +539,15 @@ function wrapLines(text, size, maxWidth) {
 const LABEL_BUMP = 0.706;
 
 // Label. `x,y` is the anchor of the FIRST line; extra lines stack downward.
-function label(x, y, text, { size = 2.4, fill = '#000000', anchor = 'middle', rotation = 0, maxWidth = 0, lineHeight = 1.15, weight = 700, italic = true } = {}) {
+function label(x, y, text, { size = 2.4, fill = '#000000', anchor = 'middle', rotation = 0, maxWidth = 0, lineHeight = 1.15, weight = 700, italic = true, owner = null } = {}) {
   size += LABEL_BUMP;
   const lines = wrapLines(text, size, maxWidth);
-  const style = `font-size="${size}" font-weight="${weight}"${italic ? ' font-style="italic"' : ''} fill="${fill}" text-anchor="${anchor}" font-family="Arial Narrow, Helvetica, Arial, sans-serif"`;
+  // `owner` NAMES THE CONTROL THIS LABEL BELONGS TO. A label is a sibling of its control's group, not
+  // a child of it — nesting it would change what a press on the name does — so without this the host
+  // has no way to ask "where is this jack's name", which is what the cable fade needs: a cable lying
+  // across a label makes it just as unreadable as one across the jack.
+  const own = owner ? ` data-wcoast-label-for="${owner}"` : '';
+  const style = `font-size="${size}" font-weight="${weight}"${italic ? ' font-style="italic"' : ''} fill="${fill}" text-anchor="${anchor}" font-family="Arial Narrow, Helvetica, Arial, sans-serif"${own}`;
   const rot = rotation ? ` transform="rotate(${rotation} ${x} ${y})"` : '';
   if (lines.length === 1) return `  <text x="${x}" y="${y}" ${style}${rot}>${esc(lines[0])}</text>`;
   const dy = +(size * lineHeight).toFixed(2);
@@ -553,7 +561,7 @@ function label(x, y, text, { size = 2.4, fill = '#000000', anchor = 'middle', ro
 // control that names itself calls this, so placement and wrapping behave the same
 // everywhere. Returns the label SVG.
 function attachedLabel(cx, cy, hw, hh, spec = {}) {
-  const { text, placement = 'below', gap = 1.6, size = 2.4, maxWidth = 0, fill = '#000000', lineHeight = 1.15 } = spec;
+  const { text, placement = 'below', gap = 1.6, size = 2.4, maxWidth = 0, fill = '#000000', lineHeight = 1.15, owner = null } = spec;
   const bs = size + LABEL_BUMP;   // label() bumps too; position/wrap at the same size
   const lines = wrapLines(text, bs, maxWidth);
   const n = lines.length, lh = bs * lineHeight, cap = bs * 0.72;
@@ -569,7 +577,7 @@ function attachedLabel(cx, cy, hw, hh, spec = {}) {
     anchor = 'middle'; x = cx;
     y = cy + hh + gap + cap;                          // first line sits just below the control
   }
-  return label(x, y, lines.join('\n'), { size, fill, anchor, lineHeight });
+  return label(x, y, lines.join('\n'), { size, fill, anchor, lineHeight, owner });
 }
 
 // --- LED lamp · buttons · radio groups · slider -------------------------------

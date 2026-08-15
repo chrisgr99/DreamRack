@@ -84,21 +84,21 @@
     <circle cx="100.13" cy="15.95" r="6.4" fill="url(#blueRing)" stroke="#6fa8d6" stroke-width="0.2822"/>
     <circle cx="100.13" cy="15.95" r="4.61" fill="url(#knobCap)" stroke="#b8b8bc" stroke-width="0.1881"/>
     <line x1="96.63" y1="22.01" x2="96.08" y2="22.96" stroke="#b8b8bc" stroke-width="0.355"/>
-      <text x="95.360875" y="25.15746680764692" font-size="2.706" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">1</text>
+      <text x="95.360875" y="25.15746680764692" font-size="2.706" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="divA">1</text>
     <line x1="93.44" y1="18.01" x2="92.39" y2="18.34" stroke="#b8b8bc" stroke-width="0.355"/>
-      <text x="90.72100492135512" y="19.799390614220336" font-size="2.706" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">2</text>
+      <text x="90.72100492135512" y="19.799390614220336" font-size="2.706" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="divA">2</text>
     <line x1="93.82" y1="12.91" x2="92.83" y2="12.44" stroke="#b8b8bc" stroke-width="0.355"/>
-      <text x="91.29194098981903" y="12.640915101173656" font-size="2.706" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">3</text>
+      <text x="91.29194098981903" y="12.640915101173656" font-size="2.706" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="divA">3</text>
     <line x1="97.57" y1="9.43" x2="97.17" y2="8.41" stroke="#b8b8bc" stroke-width="0.355"/>
-      <text x="96.6785673714756" y="8.102993083922309" font-size="2.706" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">4</text>
+      <text x="96.6785673714756" y="8.102993083922309" font-size="2.706" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="divA">4</text>
     <line x1="102.69" y1="9.43" x2="103.09" y2="8.41" stroke="#b8b8bc" stroke-width="0.355"/>
-      <text x="103.58143262852438" y="8.102993083922309" font-size="2.706" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">5</text>
+      <text x="103.58143262852438" y="8.102993083922309" font-size="2.706" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="divA">5</text>
     <line x1="106.44" y1="12.91" x2="107.43" y2="12.44" stroke="#b8b8bc" stroke-width="0.355"/>
-      <text x="108.96805901018097" y="12.640915101173652" font-size="2.706" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">6</text>
+      <text x="108.96805901018097" y="12.640915101173652" font-size="2.706" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="divA">6</text>
     <line x1="106.82" y1="18.01" x2="107.87" y2="18.34" stroke="#b8b8bc" stroke-width="0.355"/>
-      <text x="109.53899507864487" y="19.799390614220332" font-size="2.706" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">7</text>
+      <text x="109.53899507864487" y="19.799390614220332" font-size="2.706" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="divA">7</text>
     <line x1="103.63" y1="22.01" x2="104.18" y2="22.96" stroke="#b8b8bc" stroke-width="0.355"/>
-      <text x="104.899125" y="25.15746680764692" font-size="2.706" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">8</text>
+      <text x="104.899125" y="25.15746680764692" font-size="2.706" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="divA">8</text>
     <circle cx="100.13" cy="15.95" r="2.55" fill="#ff7300"/>
     <circle cx="100.13" cy="15.95" r="1.55" fill="#000000" data-wcoast-role="jackhole"/>
     <g data-wcoast-role="indicator">
@@ -188,21 +188,21 @@
     <circle cx="100.13" cy="37.65" r="6.4" fill="url(#blueRing)" stroke="#6fa8d6" stroke-width="0.2822"/>
     <circle cx="100.13" cy="37.65" r="4.61" fill="url(#knobCap)" stroke="#b8b8bc" stroke-width="0.1881"/>
     <line x1="96.63" y1="43.71" x2="96.08" y2="44.66" stroke="#b8b8bc" stroke-width="0.355"/>
-      <text x="95.360875" y="46.85746680764692" font-size="2.706" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">1</text>
+      <text x="95.360875" y="46.85746680764692" font-size="2.706" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="divB">1</text>
     <line x1="93.44" y1="39.71" x2="92.39" y2="40.04" stroke="#b8b8bc" stroke-width="0.355"/>
-      <text x="90.72100492135512" y="41.49939061422033" font-size="2.706" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">2</text>
+      <text x="90.72100492135512" y="41.49939061422033" font-size="2.706" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="divB">2</text>
     <line x1="93.82" y1="34.61" x2="92.83" y2="34.14" stroke="#b8b8bc" stroke-width="0.355"/>
-      <text x="91.29194098981903" y="34.34091510117366" font-size="2.706" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">3</text>
+      <text x="91.29194098981903" y="34.34091510117366" font-size="2.706" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="divB">3</text>
     <line x1="97.57" y1="31.13" x2="97.17" y2="30.11" stroke="#b8b8bc" stroke-width="0.355"/>
-      <text x="96.6785673714756" y="29.802993083922306" font-size="2.706" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">4</text>
+      <text x="96.6785673714756" y="29.802993083922306" font-size="2.706" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="divB">4</text>
     <line x1="102.69" y1="31.13" x2="103.09" y2="30.11" stroke="#b8b8bc" stroke-width="0.355"/>
-      <text x="103.58143262852438" y="29.802993083922306" font-size="2.706" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">5</text>
+      <text x="103.58143262852438" y="29.802993083922306" font-size="2.706" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="divB">5</text>
     <line x1="106.44" y1="34.61" x2="107.43" y2="34.14" stroke="#b8b8bc" stroke-width="0.355"/>
-      <text x="108.96805901018097" y="34.34091510117365" font-size="2.706" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">6</text>
+      <text x="108.96805901018097" y="34.34091510117365" font-size="2.706" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="divB">6</text>
     <line x1="106.82" y1="39.71" x2="107.87" y2="40.04" stroke="#b8b8bc" stroke-width="0.355"/>
-      <text x="109.53899507864487" y="41.49939061422033" font-size="2.706" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">7</text>
+      <text x="109.53899507864487" y="41.49939061422033" font-size="2.706" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="divB">7</text>
     <line x1="103.63" y1="43.71" x2="104.18" y2="44.66" stroke="#b8b8bc" stroke-width="0.355"/>
-      <text x="104.899125" y="46.85746680764692" font-size="2.706" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">8</text>
+      <text x="104.899125" y="46.85746680764692" font-size="2.706" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="divB">8</text>
     <circle cx="100.13" cy="37.65" r="2.55" fill="#ff7300"/>
     <circle cx="100.13" cy="37.65" r="1.55" fill="#000000" data-wcoast-role="jackhole"/>
     <g data-wcoast-role="indicator">
@@ -292,21 +292,21 @@
     <circle cx="100.13" cy="59.35" r="6.4" fill="url(#blueRing)" stroke="#6fa8d6" stroke-width="0.2822"/>
     <circle cx="100.13" cy="59.35" r="4.61" fill="url(#knobCap)" stroke="#b8b8bc" stroke-width="0.1881"/>
     <line x1="96.63" y1="65.41" x2="96.08" y2="66.36" stroke="#b8b8bc" stroke-width="0.355"/>
-      <text x="95.360875" y="68.55746680764693" font-size="2.706" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">1</text>
+      <text x="95.360875" y="68.55746680764693" font-size="2.706" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="divC">1</text>
     <line x1="93.44" y1="61.41" x2="92.39" y2="61.74" stroke="#b8b8bc" stroke-width="0.355"/>
-      <text x="90.72100492135512" y="63.199390614220334" font-size="2.706" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">2</text>
+      <text x="90.72100492135512" y="63.199390614220334" font-size="2.706" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="divC">2</text>
     <line x1="93.82" y1="56.31" x2="92.83" y2="55.84" stroke="#b8b8bc" stroke-width="0.355"/>
-      <text x="91.29194098981903" y="56.04091510117366" font-size="2.706" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">3</text>
+      <text x="91.29194098981903" y="56.04091510117366" font-size="2.706" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="divC">3</text>
     <line x1="97.57" y1="52.83" x2="97.17" y2="51.81" stroke="#b8b8bc" stroke-width="0.355"/>
-      <text x="96.6785673714756" y="51.50299308392231" font-size="2.706" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">4</text>
+      <text x="96.6785673714756" y="51.50299308392231" font-size="2.706" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="divC">4</text>
     <line x1="102.69" y1="52.83" x2="103.09" y2="51.81" stroke="#b8b8bc" stroke-width="0.355"/>
-      <text x="103.58143262852438" y="51.50299308392231" font-size="2.706" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">5</text>
+      <text x="103.58143262852438" y="51.50299308392231" font-size="2.706" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="divC">5</text>
     <line x1="106.44" y1="56.31" x2="107.43" y2="55.84" stroke="#b8b8bc" stroke-width="0.355"/>
-      <text x="108.96805901018097" y="56.04091510117365" font-size="2.706" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">6</text>
+      <text x="108.96805901018097" y="56.04091510117365" font-size="2.706" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="divC">6</text>
     <line x1="106.82" y1="61.41" x2="107.87" y2="61.74" stroke="#b8b8bc" stroke-width="0.355"/>
-      <text x="109.53899507864487" y="63.199390614220334" font-size="2.706" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">7</text>
+      <text x="109.53899507864487" y="63.199390614220334" font-size="2.706" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="divC">7</text>
     <line x1="103.63" y1="65.41" x2="104.18" y2="66.36" stroke="#b8b8bc" stroke-width="0.355"/>
-      <text x="104.899125" y="68.55746680764693" font-size="2.706" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">8</text>
+      <text x="104.899125" y="68.55746680764693" font-size="2.706" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="divC">8</text>
     <circle cx="100.13" cy="59.35" r="2.55" fill="#ff7300"/>
     <circle cx="100.13" cy="59.35" r="1.55" fill="#000000" data-wcoast-role="jackhole"/>
     <g data-wcoast-role="indicator">
@@ -396,21 +396,21 @@
     <circle cx="100.13" cy="81.05" r="6.4" fill="url(#blueRing)" stroke="#6fa8d6" stroke-width="0.2822"/>
     <circle cx="100.13" cy="81.05" r="4.61" fill="url(#knobCap)" stroke="#b8b8bc" stroke-width="0.1881"/>
     <line x1="96.63" y1="87.11" x2="96.08" y2="88.06" stroke="#b8b8bc" stroke-width="0.355"/>
-      <text x="95.360875" y="90.25746680764692" font-size="2.706" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">1</text>
+      <text x="95.360875" y="90.25746680764692" font-size="2.706" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="divD">1</text>
     <line x1="93.44" y1="83.11" x2="92.39" y2="83.44" stroke="#b8b8bc" stroke-width="0.355"/>
-      <text x="90.72100492135512" y="84.89939061422034" font-size="2.706" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">2</text>
+      <text x="90.72100492135512" y="84.89939061422034" font-size="2.706" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="divD">2</text>
     <line x1="93.82" y1="78.01" x2="92.83" y2="77.54" stroke="#b8b8bc" stroke-width="0.355"/>
-      <text x="91.29194098981903" y="77.74091510117366" font-size="2.706" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">3</text>
+      <text x="91.29194098981903" y="77.74091510117366" font-size="2.706" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="divD">3</text>
     <line x1="97.57" y1="74.53" x2="97.17" y2="73.51" stroke="#b8b8bc" stroke-width="0.355"/>
-      <text x="96.6785673714756" y="73.20299308392231" font-size="2.706" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">4</text>
+      <text x="96.6785673714756" y="73.20299308392231" font-size="2.706" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="divD">4</text>
     <line x1="102.69" y1="74.53" x2="103.09" y2="73.51" stroke="#b8b8bc" stroke-width="0.355"/>
-      <text x="103.58143262852438" y="73.20299308392231" font-size="2.706" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">5</text>
+      <text x="103.58143262852438" y="73.20299308392231" font-size="2.706" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="divD">5</text>
     <line x1="106.44" y1="78.01" x2="107.43" y2="77.54" stroke="#b8b8bc" stroke-width="0.355"/>
-      <text x="108.96805901018097" y="77.74091510117366" font-size="2.706" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">6</text>
+      <text x="108.96805901018097" y="77.74091510117366" font-size="2.706" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="divD">6</text>
     <line x1="106.82" y1="83.11" x2="107.87" y2="83.44" stroke="#b8b8bc" stroke-width="0.355"/>
-      <text x="109.53899507864487" y="84.89939061422034" font-size="2.706" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">7</text>
+      <text x="109.53899507864487" y="84.89939061422034" font-size="2.706" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="divD">7</text>
     <line x1="103.63" y1="87.11" x2="104.18" y2="88.06" stroke="#b8b8bc" stroke-width="0.355"/>
-      <text x="104.899125" y="90.25746680764692" font-size="2.706" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">8</text>
+      <text x="104.899125" y="90.25746680764692" font-size="2.706" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="divD">8</text>
     <circle cx="100.13" cy="81.05" r="2.55" fill="#ff7300"/>
     <circle cx="100.13" cy="81.05" r="1.55" fill="#000000" data-wcoast-role="jackhole"/>
     <g data-wcoast-role="indicator">

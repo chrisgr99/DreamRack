@@ -91,33 +91,33 @@
   <text x="46" y="65.14" font-size="4.106" font-weight="700" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">R</text>
   <line x1="4.5" y1="86.29" x2="46.3" y2="86.29" stroke="#7d7d7d" stroke-width="0.355"/>
   <g data-wcoast-param="gateBtn"><circle cx="6.74" cy="90.69" r="2.70" fill="url(#metalDisc)" pointer-events="none" data-wcoast-role="button-metal"/><circle cx="6.74" cy="90.69" r="2" fill="#505055" stroke="#4a4a4a" stroke-width="0.2366" data-wcoast-role="step-indicator" data-wcoast-step="on"/><circle cx="6.18" cy="90.13" r="0.60" fill="#ffb4b4" opacity="0" data-wcoast-role="led-gloss" pointer-events="none"/>
-      <text x="6.74" y="96.23831999999999" font-size="2.706" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">PUSH</text></g>
+      <text x="6.74" y="96.23831999999999" font-size="2.706" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="gateBtn">PUSH</text></g>
   <g data-wcoast-port="gateIn" data-wcoast-cx="24.64" data-wcoast-cy="90.69">
     <circle cx="24.64" cy="90.69" r="3" fill="#8a8a8a" stroke="#000000" stroke-width="0.3"/>
     <circle cx="24.64" cy="90.69" r="1.6" fill="#000000"/>
   </g>
-  <text x="24.64" y="97.09432" font-size="2.5060000000000002" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">gate</text>
+  <text x="24.64" y="97.09432" font-size="2.5060000000000002" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="gateIn">gate</text>
   <g data-wcoast-port="retrigIn" data-wcoast-cx="43.3" data-wcoast-cy="90.69">
     <circle cx="43.3" cy="90.69" r="3" fill="#8a8a8a" stroke="#000000" stroke-width="0.3"/>
     <circle cx="43.3" cy="90.69" r="1.6" fill="#000000"/>
   </g>
-  <text x="43.3" y="97.09432" font-size="2.5060000000000002" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">retrig</text>
+  <text x="43.3" y="97.09432" font-size="2.5060000000000002" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="retrigIn">retrig</text>
   <line x1="4.5" y1="97.99" x2="46.3" y2="97.99" stroke="#7d7d7d" stroke-width="0.355"/>
   <text x="4" y="104.59" font-size="2.906" font-weight="700" font-style="italic" fill="#163a69" text-anchor="start" font-family="Arial Narrow, Helvetica, Arial, sans-serif">OUT</text>
   <g data-wcoast-port="envOut" data-wcoast-cx="13.7" data-wcoast-cy="103.3912">
     <circle cx="13.7" cy="103.3912" r="3" fill="#8a8a8a" stroke="#000000" stroke-width="0.3"/>
     <circle cx="13.7" cy="103.3912" r="1.6" fill="#000000"/>
   </g>
-  <text x="13.7" y="110.08352" font-size="2.906" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">env</text>
+  <text x="13.7" y="110.08352" font-size="2.906" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="envOut">env</text>
   <g data-wcoast-port="invOut" data-wcoast-cx="28.5" data-wcoast-cy="103.3912">
     <circle cx="28.5" cy="103.3912" r="3" fill="#8a8a8a" stroke="#000000" stroke-width="0.3"/>
     <circle cx="28.5" cy="103.3912" r="1.6" fill="#000000"/>
   </g>
-  <text x="28.5" y="110.08352" font-size="2.906" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">inv</text>
+  <text x="28.5" y="110.08352" font-size="2.906" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="invOut">inv</text>
   <g data-wcoast-port="eocOut" data-wcoast-cx="43.3" data-wcoast-cy="103.3912">
     <circle cx="43.3" cy="103.3912" r="3" fill="#8a8a8a" stroke="#000000" stroke-width="0.3"/>
     <circle cx="43.3" cy="103.3912" r="1.6" fill="#000000"/>
   </g>
-  <text x="43.3" y="110.08352" font-size="2.906" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">eoc</text>
+  <text x="43.3" y="110.08352" font-size="2.906" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="eocOut">eoc</text>
   </g>
 </svg>

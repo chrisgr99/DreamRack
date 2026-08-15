@@ -22,17 +22,17 @@
     <circle cx="16" cy="22" r="9.5" fill="url(#blueRing)" stroke="#6fa8d6" stroke-width="0.355"/>
     <circle cx="16" cy="22" r="6.84" fill="url(#knobCap)" stroke="#b8b8bc" stroke-width="0.2366"/>
     <line x1="10.95" y1="30.75" x2="10.40" y2="31.70" stroke="#b8b8bc" stroke-width="0.355"/>
-      <text x="9.524250000000002" y="34.12842801711416" font-size="2.606" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">20</text>
+      <text x="9.524250000000002" y="34.12842801711416" font-size="2.606" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="coarse">20</text>
     <line x1="5.90" y1="22.00" x2="4.80" y2="22.00" stroke="#b8b8bc" stroke-width="0.355"/>
-      <text x="2.397000000000002" y="22.9121" font-size="2.606" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">60</text>
+      <text x="2.397000000000002" y="22.9121" font-size="2.606" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="coarse">60</text>
     <line x1="10.95" y1="13.25" x2="10.40" y2="12.30" stroke="#b8b8bc" stroke-width="0.355"/>
-      <text x="9.361375000000002" y="11.413664207603063" font-size="2.606" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">220</text>
+      <text x="9.361375000000002" y="11.413664207603063" font-size="2.606" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="coarse">220</text>
     <line x1="21.05" y1="13.25" x2="21.60" y2="12.30" stroke="#b8b8bc" stroke-width="0.355"/>
-      <text x="22.638624999999998" y="11.413664207603063" font-size="2.606" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">800</text>
+      <text x="22.638624999999998" y="11.413664207603063" font-size="2.606" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="coarse">800</text>
     <line x1="26.10" y1="22.00" x2="27.20" y2="22.00" stroke="#b8b8bc" stroke-width="0.355"/>
-      <text x="29.55088" y="22.9121" font-size="2.606" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">3k</text>
+      <text x="29.55088" y="22.9121" font-size="2.606" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="coarse">3k</text>
     <line x1="21.05" y1="30.75" x2="21.60" y2="31.70" stroke="#b8b8bc" stroke-width="0.355"/>
-      <text x="22.462719999999997" y="34.105859395091535" font-size="2.606" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">8k</text>
+      <text x="22.462719999999997" y="34.105859395091535" font-size="2.606" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="coarse">8k</text>
     <g data-wcoast-role="indicator">
     <line x1="11.84" y1="29.21" x2="10.95" y2="30.74" stroke="#ffffff" stroke-width="0.472"/>
     <line x1="7.81" y1="23.44" x2="6.06" y2="23.75" stroke="#ffffff" stroke-width="0.472"/>

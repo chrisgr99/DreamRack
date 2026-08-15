@@ -21,32 +21,32 @@
     <circle cx="16.13" cy="8.83" r="3" fill="#8a8a8a" stroke="#000000" stroke-width="0.3"/>
     <circle cx="16.13" cy="8.83" r="1.6" fill="#000000"/>
   </g>
-  <text x="16.13" y="15.23432" font-size="2.5060000000000002" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">RESET</text>
+  <text x="16.13" y="15.23432" font-size="2.5060000000000002" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="resetIn">RESET</text>
   <g data-wcoast-port="runIn" data-wcoast-cx="24.13" data-wcoast-cy="8.83">
     <circle cx="24.13" cy="8.83" r="3" fill="#8a8a8a" stroke="#000000" stroke-width="0.3"/>
     <circle cx="24.13" cy="8.83" r="1.6" fill="#000000"/>
   </g>
-  <text x="24.13" y="15.23432" font-size="2.5060000000000002" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">RUN</text>
+  <text x="24.13" y="15.23432" font-size="2.5060000000000002" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="runIn">RUN</text>
   <g data-wcoast-port="bpmIn" data-wcoast-cx="32.13" data-wcoast-cy="8.83">
     <circle cx="32.13" cy="8.83" r="3" fill="#8a8a8a" stroke="#000000" stroke-width="0.3"/>
     <circle cx="32.13" cy="8.83" r="1.6" fill="#000000"/>
   </g>
-  <text x="32.13" y="15.23432" font-size="2.5060000000000002" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">BPM</text>
+  <text x="32.13" y="15.23432" font-size="2.5060000000000002" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="bpmIn">BPM</text>
   <g data-wcoast-param="bpm" data-wcoast-role="readout" data-wcoast-menu="1" data-wcoast-cx="43.45" data-wcoast-cy="8.83" data-wcoast-w="10.65">
     <rect x="38.13" y="5.73" width="10.65" height="6.2" rx="1.2" fill="#15171c" stroke="#7d7d7d" stroke-width="0.3"/>
     <text x="43.45" y="10.75" data-wcoast-role="readout-text" font-size="4.84" font-weight="700" fill="#4ee37a" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">120</text>
-      <text x="43.45" y="15.47832" font-size="2.706" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">BPM</text>
+      <text x="43.45" y="15.47832" font-size="2.706" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="bpm">BPM</text>
   </g>
   <g data-wcoast-param="lamp"><circle cx="52.92" cy="8.83" r="1.85" fill="url(#metalDisc)" pointer-events="none" data-wcoast-role="button-metal"/><circle cx="52.92" cy="8.83" r="1.15" fill="#505055" stroke="#4a4a4a" stroke-width="0.2366" data-wcoast-role="step-indicator" data-wcoast-step="on"/><circle cx="52.60" cy="8.51" r="0.34" fill="#ffb4b4" opacity="0" data-wcoast-role="led-gloss" pointer-events="none"/></g>
   <g data-wcoast-port="clkOut" data-wcoast-cx="60.07" data-wcoast-cy="8.83">
     <circle cx="60.07" cy="8.83" r="3" fill="#8a8a8a" stroke="#000000" stroke-width="0.3"/>
     <circle cx="60.07" cy="8.83" r="1.6" fill="#000000"/>
   </g>
-  <text x="60.07" y="15.23432" font-size="2.5060000000000002" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">CLK</text>
+  <text x="60.07" y="15.23432" font-size="2.5060000000000002" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="clkOut">CLK</text>
   <g data-wcoast-param="reset"><circle cx="7.3" cy="26.29" r="2.70" fill="url(#metalDisc)" pointer-events="none" data-wcoast-role="button-metal"/><circle cx="7.3" cy="26.29" r="2" fill="#505055" stroke="#4a4a4a" stroke-width="0.2366" data-wcoast-role="step-indicator" data-wcoast-step="on"/><circle cx="6.74" cy="25.73" r="0.60" fill="#ffb4b4" opacity="0" data-wcoast-role="led-gloss" pointer-events="none"/>
-      <text x="7.3" y="31.83832" font-size="2.706" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">RESET</text></g>
+      <text x="7.3" y="31.83832" font-size="2.706" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="reset">RESET</text></g>
   <g data-wcoast-param="run"><circle cx="14.88" cy="26.29" r="2.70" fill="url(#metalDisc)" pointer-events="none" data-wcoast-role="button-metal"/><circle cx="14.88" cy="26.29" r="2" fill="#505055" stroke="#4a4a4a" stroke-width="0.2366" data-wcoast-role="step-indicator" data-wcoast-step="on"/><circle cx="14.32" cy="25.73" r="0.60" fill="#ffb4b4" opacity="0" data-wcoast-role="led-gloss" pointer-events="none"/>
-      <text x="14.88" y="31.83832" font-size="2.706" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">RUN</text></g>
+      <text x="14.88" y="31.83832" font-size="2.706" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="run">RUN</text></g>
   <g data-wcoast-param="bpmMode">
     <rect x="23.26" y="25.29" width="5.60" height="2.00" fill="url(#metalStripH)"/>
     <circle cx="23.259999999999998" cy="26.29" r="2" fill="url(#redLed)" stroke="#7c0000" stroke-width="0.2366" data-wcoast-role="step-indicator" data-wcoast-step="cv"/><circle cx="22.70" cy="25.73" r="0.60" fill="#ffb4b4" opacity="0.85" data-wcoast-role="led-gloss" pointer-events="none"/>
@@ -57,7 +57,7 @@
   <g data-wcoast-param="ppqn" data-wcoast-role="readout" data-wcoast-menu="1" data-wcoast-cx="39.29" data-wcoast-cy="26.29" data-wcoast-w="8.1">
     <rect x="35.24" y="23.19" width="8.1" height="6.2" rx="1.2" fill="#15171c" stroke="#7d7d7d" stroke-width="0.3"/>
     <text x="39.29" y="28.21" data-wcoast-role="readout-text" font-size="4.84" font-weight="700" fill="#4ee37a" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">4</text>
-      <text x="39.29" y="32.938320000000004" font-size="2.706" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">PPQN</text>
+      <text x="39.29" y="32.938320000000004" font-size="2.706" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="ppqn">PPQN</text>
   </g>
   <g data-wcoast-param="swing" data-wcoast-cx="51.82" data-wcoast-cy="26.29" data-wcoast-angle-min="-150" data-wcoast-angle-max="150">
     <circle cx="51.82" cy="26.29" r="5.7" fill="url(#orangeRing)" stroke="#8a4700" stroke-width="0.355"/>
@@ -73,7 +73,7 @@
       <line x1="51.82" y1="26.29" x2="51.82" y2="22.19" stroke="#163a69" stroke-width="0.55"/>
     </g>
   </g>
-  <text x="51.82" y="35.53832" font-size="2.706" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">SWING</text>
+  <text x="51.82" y="35.53832" font-size="2.706" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="swing">SWING</text>
   <g data-wcoast-param="pw" data-wcoast-cx="66" data-wcoast-cy="26.29" data-wcoast-angle-min="-150" data-wcoast-angle-max="150">
     <circle cx="66" cy="26.29" r="5.7" fill="url(#greenRing)" stroke="#0b5b2c" stroke-width="0.355"/>
     <circle cx="66" cy="26.29" r="4.1" fill="url(#knobCap)" stroke="#666666" stroke-width="0.2366"/>
@@ -88,11 +88,11 @@
       <line x1="66" y1="26.29" x2="66" y2="22.19" stroke="#163a69" stroke-width="0.55"/>
     </g>
   </g>
-  <text x="66" y="35.53832" font-size="2.706" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">PW</text>
+  <text x="66" y="35.53832" font-size="2.706" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="pw">PW</text>
   <g data-wcoast-param="ratio1" data-wcoast-role="readout" data-wcoast-menu="1" data-wcoast-cx="10.81" data-wcoast-cy="46.25" data-wcoast-w="10.65">
     <rect x="5.49" y="43.15" width="10.65" height="6.2" rx="1.2" fill="#15171c" stroke="#7d7d7d" stroke-width="0.3"/>
     <text x="10.81" y="48.17" data-wcoast-role="readout-text" font-size="4.84" font-weight="700" fill="#4ee37a" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">×1</text>
-      <text x="10.81" y="52.898320000000005" font-size="2.706" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">RATIO</text>
+      <text x="10.81" y="52.898320000000005" font-size="2.706" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="ratio1">RATIO</text>
   </g>
   <g data-wcoast-param="lamp1"><circle cx="20.28" cy="46.25" r="1.85" fill="url(#metalDisc)" pointer-events="none" data-wcoast-role="button-metal"/><circle cx="20.28" cy="46.25" r="1.15" fill="#505055" stroke="#4a4a4a" stroke-width="0.2366" data-wcoast-role="step-indicator" data-wcoast-step="on"/><circle cx="19.96" cy="45.93" r="0.34" fill="#ffb4b4" opacity="0" data-wcoast-role="led-gloss" pointer-events="none"/></g>
   <g data-wcoast-param="swing1" data-wcoast-cx="30.13" data-wcoast-cy="46.25" data-wcoast-angle-min="-150" data-wcoast-angle-max="150">
@@ -109,7 +109,7 @@
       <line x1="30.13" y1="46.25" x2="30.13" y2="42.15" stroke="#163a69" stroke-width="0.55"/>
     </g>
   </g>
-  <text x="30.13" y="55.49832000000001" font-size="2.706" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">SWING 1</text>
+  <text x="30.13" y="55.49832000000001" font-size="2.706" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="swing1">SWING 1</text>
   <g data-wcoast-param="pw1" data-wcoast-cx="44.54" data-wcoast-cy="46.25" data-wcoast-angle-min="-150" data-wcoast-angle-max="150">
     <circle cx="44.54" cy="46.25" r="5.7" fill="url(#greenRing)" stroke="#0b5b2c" stroke-width="0.355"/>
     <circle cx="44.54" cy="46.25" r="4.1" fill="url(#knobCap)" stroke="#666666" stroke-width="0.2366"/>
@@ -124,17 +124,17 @@
       <line x1="44.54" y1="46.25" x2="44.54" y2="42.15" stroke="#163a69" stroke-width="0.55"/>
     </g>
   </g>
-  <text x="44.54" y="55.49832000000001" font-size="2.706" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">PW 1</text>
+  <text x="44.54" y="55.49832000000001" font-size="2.706" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="pw1">PW 1</text>
   <g data-wcoast-param="delay1" data-wcoast-role="readout" data-wcoast-menu="1" data-wcoast-cx="57.48" data-wcoast-cy="46.25" data-wcoast-w="8.48">
     <rect x="53.24" y="43.15" width="8.48" height="6.2" rx="1.2" fill="#15171c" stroke="#7d7d7d" stroke-width="0.3"/>
     <text x="57.48" y="48.17" data-wcoast-role="readout-text" font-size="3.82" font-weight="700" fill="#4ee37a" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">0</text>
-      <text x="57.48" y="52.898320000000005" font-size="2.706" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">DELAY 1</text>
+      <text x="57.48" y="52.898320000000005" font-size="2.706" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="delay1">DELAY 1</text>
   </g>
   <g data-wcoast-port="clk1Out" data-wcoast-cx="67.72" data-wcoast-cy="46.25">
     <circle cx="67.72" cy="46.25" r="3" fill="#8a8a8a" stroke="#000000" stroke-width="0.3"/>
     <circle cx="67.72" cy="46.25" r="1.6" fill="#000000"/>
   </g>
-  <text x="67.72" y="52.65432" font-size="2.5060000000000002" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">CLK 1</text>
+  <text x="67.72" y="52.65432" font-size="2.5060000000000002" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="clk1Out">CLK 1</text>
   <g data-wcoast-param="ratio2" data-wcoast-role="readout" data-wcoast-menu="1" data-wcoast-cx="10.81" data-wcoast-cy="66.20" data-wcoast-w="10.65">
     <rect x="5.49" y="63.1" width="10.65" height="6.2" rx="1.2" fill="#15171c" stroke="#7d7d7d" stroke-width="0.3"/>
     <text x="10.81" y="68.12" data-wcoast-role="readout-text" font-size="4.84" font-weight="700" fill="#4ee37a" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">×1</text>
@@ -154,7 +154,7 @@
       <line x1="30.13" y1="66.2" x2="30.13" y2="62.10" stroke="#163a69" stroke-width="0.55"/>
     </g>
   </g>
-  <text x="30.13" y="75.44832" font-size="2.706" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">SWING 2</text>
+  <text x="30.13" y="75.44832" font-size="2.706" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="swing2">SWING 2</text>
   <g data-wcoast-param="pw2" data-wcoast-cx="44.54" data-wcoast-cy="66.2" data-wcoast-angle-min="-150" data-wcoast-angle-max="150">
     <circle cx="44.54" cy="66.2" r="5.7" fill="url(#greenRing)" stroke="#0b5b2c" stroke-width="0.355"/>
     <circle cx="44.54" cy="66.2" r="4.1" fill="url(#knobCap)" stroke="#666666" stroke-width="0.2366"/>
@@ -169,17 +169,17 @@
       <line x1="44.54" y1="66.2" x2="44.54" y2="62.10" stroke="#163a69" stroke-width="0.55"/>
     </g>
   </g>
-  <text x="44.54" y="75.44832" font-size="2.706" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">PW 2</text>
+  <text x="44.54" y="75.44832" font-size="2.706" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="pw2">PW 2</text>
   <g data-wcoast-param="delay2" data-wcoast-role="readout" data-wcoast-menu="1" data-wcoast-cx="57.48" data-wcoast-cy="66.20" data-wcoast-w="8.48">
     <rect x="53.24" y="63.1" width="8.48" height="6.2" rx="1.2" fill="#15171c" stroke="#7d7d7d" stroke-width="0.3"/>
     <text x="57.48" y="68.12" data-wcoast-role="readout-text" font-size="3.82" font-weight="700" fill="#4ee37a" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">0</text>
-      <text x="57.48" y="72.84831999999999" font-size="2.706" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">DELAY 2</text>
+      <text x="57.48" y="72.84831999999999" font-size="2.706" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="delay2">DELAY 2</text>
   </g>
   <g data-wcoast-port="clk2Out" data-wcoast-cx="67.72" data-wcoast-cy="66.2">
     <circle cx="67.72" cy="66.2" r="3" fill="#8a8a8a" stroke="#000000" stroke-width="0.3"/>
     <circle cx="67.72" cy="66.2" r="1.6" fill="#000000"/>
   </g>
-  <text x="67.72" y="72.60432" font-size="2.5060000000000002" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">CLK 2</text>
+  <text x="67.72" y="72.60432" font-size="2.5060000000000002" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="clk2Out">CLK 2</text>
   <g data-wcoast-param="ratio3" data-wcoast-role="readout" data-wcoast-menu="1" data-wcoast-cx="10.81" data-wcoast-cy="86.16" data-wcoast-w="10.65">
     <rect x="5.49" y="83.06" width="10.65" height="6.2" rx="1.2" fill="#15171c" stroke="#7d7d7d" stroke-width="0.3"/>
     <text x="10.81" y="88.08" data-wcoast-role="readout-text" font-size="4.84" font-weight="700" fill="#4ee37a" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">×1</text>
@@ -199,7 +199,7 @@
       <line x1="30.13" y1="86.16" x2="30.13" y2="82.06" stroke="#163a69" stroke-width="0.55"/>
     </g>
   </g>
-  <text x="30.13" y="95.40831999999999" font-size="2.706" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">SWING 3</text>
+  <text x="30.13" y="95.40831999999999" font-size="2.706" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="swing3">SWING 3</text>
   <g data-wcoast-param="pw3" data-wcoast-cx="44.54" data-wcoast-cy="86.16" data-wcoast-angle-min="-150" data-wcoast-angle-max="150">
     <circle cx="44.54" cy="86.16" r="5.7" fill="url(#greenRing)" stroke="#0b5b2c" stroke-width="0.355"/>
     <circle cx="44.54" cy="86.16" r="4.1" fill="url(#knobCap)" stroke="#666666" stroke-width="0.2366"/>
@@ -214,32 +214,32 @@
       <line x1="44.54" y1="86.16" x2="44.54" y2="82.06" stroke="#163a69" stroke-width="0.55"/>
     </g>
   </g>
-  <text x="44.54" y="95.40831999999999" font-size="2.706" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">PW 3</text>
+  <text x="44.54" y="95.40831999999999" font-size="2.706" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="pw3">PW 3</text>
   <g data-wcoast-param="delay3" data-wcoast-role="readout" data-wcoast-menu="1" data-wcoast-cx="57.48" data-wcoast-cy="86.16" data-wcoast-w="8.48">
     <rect x="53.24" y="83.06" width="8.48" height="6.2" rx="1.2" fill="#15171c" stroke="#7d7d7d" stroke-width="0.3"/>
     <text x="57.48" y="88.08" data-wcoast-role="readout-text" font-size="3.82" font-weight="700" fill="#4ee37a" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">0</text>
-      <text x="57.48" y="92.80831999999998" font-size="2.706" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">DELAY 3</text>
+      <text x="57.48" y="92.80831999999998" font-size="2.706" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="delay3">DELAY 3</text>
   </g>
   <g data-wcoast-port="clk3Out" data-wcoast-cx="67.72" data-wcoast-cy="86.16">
     <circle cx="67.72" cy="86.16" r="3" fill="#8a8a8a" stroke="#000000" stroke-width="0.3"/>
     <circle cx="67.72" cy="86.16" r="1.6" fill="#000000"/>
   </g>
-  <text x="67.72" y="92.56432" font-size="2.5060000000000002" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">CLK 3</text>
+  <text x="67.72" y="92.56432" font-size="2.5060000000000002" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="clk3Out">CLK 3</text>
   <line x1="4.5" y1="97.99" x2="71.7" y2="97.99" stroke="#7d7d7d" stroke-width="0.355"/>
   <g data-wcoast-port="runOut" data-wcoast-cx="30.1" data-wcoast-cy="103.3912">
     <circle cx="30.1" cy="103.3912" r="3" fill="#8a8a8a" stroke="#000000" stroke-width="0.3"/>
     <circle cx="30.1" cy="103.3912" r="1.6" fill="#000000"/>
   </g>
-  <text x="30.1" y="109.79552" font-size="2.5060000000000002" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">run</text>
+  <text x="30.1" y="109.79552" font-size="2.5060000000000002" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="runOut">run</text>
   <g data-wcoast-port="resetOut" data-wcoast-cx="38.1" data-wcoast-cy="103.3912">
     <circle cx="38.1" cy="103.3912" r="3" fill="#8a8a8a" stroke="#000000" stroke-width="0.3"/>
     <circle cx="38.1" cy="103.3912" r="1.6" fill="#000000"/>
   </g>
-  <text x="38.1" y="109.79552" font-size="2.5060000000000002" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">rst</text>
+  <text x="38.1" y="109.79552" font-size="2.5060000000000002" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="resetOut">rst</text>
   <g data-wcoast-port="bpmOut" data-wcoast-cx="46.1" data-wcoast-cy="103.3912">
     <circle cx="46.1" cy="103.3912" r="3" fill="#8a8a8a" stroke="#000000" stroke-width="0.3"/>
     <circle cx="46.1" cy="103.3912" r="1.6" fill="#000000"/>
   </g>
-  <text x="46.1" y="109.79552" font-size="2.5060000000000002" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">bpm</text>
+  <text x="46.1" y="109.79552" font-size="2.5060000000000002" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="bpmOut">bpm</text>
   </g>
 </svg>

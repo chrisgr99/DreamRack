@@ -449,7 +449,8 @@ function placeRow(r, faceW, pack) {
 
 function emit(items, c, x, y) {
   const lab = c.label ? { text: c.label, placement: c.side || (c.above ? 'above' : 'below'),
-    size: c.labelSize || (c.kind === 'jack' ? JACK_LABEL : LABEL_SIZE), gap: 1.6 } : null;
+    size: c.labelSize || (c.kind === 'jack' ? JACK_LABEL : LABEL_SIZE), gap: 1.6,
+    owner: c.id || c.param || null } : null;
   switch (c.kind) {
     case 'knob':
       items.push({ t: c.style === 'trim' ? 'trim' : 'knob', id: c.id, x, y, opts: {
