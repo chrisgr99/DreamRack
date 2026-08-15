@@ -541,13 +541,21 @@
        nothing on it yet is a real place you can go to, and dimming it said "disabled" instead of
        "empty". Which page you are on is carried entirely by the current tab joining the window
        below it; that is enough, and it needs no second signal shouted over the top of it. */
-    /* The CURRENT tab stands taller, is filled with the rack's own background, and reaches down far
-       enough to paint over the rule. So there is no bright line between it and the window — the tab
-       and the page below it are one shape, and the line appears to detour up and around it. */
-    /* The current tab is lifted off black rather than sunk into it: a 75% grey ground, which is
-       enough to find at a glance without turning the tab into a button. */
-    .rack-tab.current { margin: 0; padding: 7px 9px 2.5px 9px; background: #6e6e6e; color: #fff;
-      border-color: var(--tab-edge); opacity: 1; }
+    /* The CURRENT tab stands taller and reaches down far enough to paint over the rule, and it is
+       filled with THE RACK'S OWN BACKGROUND — the same colour as the page below it. So the tab and
+       its page are one shape and the bright line appears to detour up and around the tab.
+       NOT A LIGHTER GROUND, and not white lettering. A filled tab reads as a button, and a page you
+       are already looking at does not need to be shouted; the open bottom joining it to the window
+       is the whole signal, which is what a folder tab has always done. The name is set in the same
+       ink as every other tab for the same reason. */
+    /* A HALF AGAIN THICKER, GROWING INWARD. 1.5px becomes 2.25px and the padding gives back the same
+       0.75 on each bordered side, so the tab's outer silhouette does not move: it still meets the rule
+       where it did and still lines up with its neighbours. The weight reads as emphasis without any
+       fill, so the interior goes on belonging to the page below. */
+    .rack-tab.current { margin: 0; padding: 6.25px 8.25px 2.5px 8.25px; background: var(--bg);
+      color: var(--ink); border-width: 2.25px; border-color: var(--tab-edge); opacity: 1; }
+    /* ...and it does not take the hover fill either, which would put back the ground just removed. */
+    .rack-tab.current:hover { background: var(--bg); }
     /* The + that adds a page, dressed as a tab so it belongs to the strip, but narrow: it is an
        action rather than a place, and it should not read as one more page you can be on. */
     .rack-tab-add { min-width: 0; padding-left: 12px; padding-right: 12px; }

@@ -19,7 +19,7 @@ import { panel, band, row, knob, jack, lamps, outputs } from '../../panel/gramma
 // knobs show hertz above a note name. A count wants one line.
 const COUNT = ['1', '2', '3', '4', '5', '6', '7', '8'];
 
-export default panel({ hp: 10 }, [
+export default panel({ hp: 12 }, [
   band('NOTE', [
     row([jack('noteIn', 'note'), knob('poly', 'POLY', { size: 6.6, scale: COUNT })]),
   ]),
@@ -27,16 +27,20 @@ export default panel({ hp: 10 }, [
   // how many voices there are and what happens when they run out are settings you want to read from
   // across the room, not open a menu to find.
   band('ROLLOVER', [
+    // TWO COLUMNS. Five lamps in a single column is 26mm of panel, which pushed the audio band clean
+    // off the bottom of the face — where its jacks were still drawn, and cables ran down to them
+    // through empty rack. The gap between the columns is 8mm: at 13 the block was wider than the
+    // panel and hung over its left border.
     row([lamps('rollover', [['oldest', 'OLDEST'], ['quietest', 'QUIET'], ['ignore', 'IGNORE'],
-      ['glide', 'GLIDE'], ['legato', 'LEGATO']]),
+      ['glide', 'GLIDE'], ['legato', 'LEGATO']], { columns: 2, colGap: 8 }),
       // One knob for both: the pitch's travel time in GLIDE, the notes' overlap in LEGATO.
       knob('time', 'TIME', { size: 'small' })]),
   ]),
+  // ONE ROW OF FOUR, not two of two: the second row was ten millimetres this panel does not have, and
+  // it pushed the audio band's labels off the bottom of the face. Bend sits among these rather than on
+  // the out rail because it is an orange control signal, not a second pitch.
   band(null, [
-    row([jack('levelOut', 'level'), jack('durOut', 'dur')]),
-    // Bend sits beside pan, among the other modulation outputs: it is an orange control signal, not a
-    // second pitch, and putting it on the rail beside the green v/oct would say the opposite.
-    row([jack('panOut', 'pan'), jack('bendOut', 'bend')]),
+    row([jack('levelOut', 'level'), jack('durOut', 'dur'), jack('panOut', 'pan'), jack('bendOut', 'bend')]),
   ]),
   band('AUDIO', [
     row([jack('audioIn', 'in'), jack('audioL', 'L'), jack('audioR', 'R')]),

@@ -182,7 +182,14 @@ export function serialize(rack, mixer) {
     rack: { rows: rack.rowCount },
     // The pages themselves: their order and their names. The two fixed ones are rebuilt from the
     // code rather than trusted from the file, so a patch can never arrive without them.
-    pages: rack.pageList ? rack.pageList().filter((p) => p.kind === 'audio').map((p) => ({ id: p.id, name: p.name })) : undefined,
+    // A page carries its ROW STOPS — where each of its rows begins. Written only when one has been
+    // moved, so a rack that has never been slid reads exactly as it did before stops existed.
+    pages: rack.pageList ? rack.pageList().filter((p) => p.kind === 'audio').map((p) => {
+      const o = { id: p.id, name: p.name };
+      const stops = rack.rowStops ? rack.rowStops(p.id) : [];
+      if (stops.some((v) => v > 0)) o.stops = stops.map((v) => v || 0);
+      return o;
+    }) : undefined,
     mixerPos: mixRec ? { row: mixRec.row, x: round2(mixRec.x) } : null,
     modules,
     wiring,

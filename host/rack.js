@@ -27,6 +27,7 @@ import { showReadout, hideReadout, readoutPinned, formatParamValue } from './kno
 import { Patchbay } from './patchbay.js';
 import { VideoEngine } from './video-engine.js';
 
+const HP_MM = 5.08;             // one horizontal pitch — what a rack counts module widths in
 const PANEL_H_MM = FACE_H_MM + TITLE_STRIP_MM;   // the cropped functional face plus the 4mm title strip above it
 const ROW_GAP_MM = 0;           // vertical gap between rows (0 = flush, faceplates touch)
 const GAP_MM = 4;               // horizontal margin at the right of the case, in mm
@@ -717,6 +718,47 @@ export class Rack {
     return port ? { key, portId, instance: rec.instance, descriptorId: rec.descriptorId, meta: port.meta, rec } : null;
   }
 
+  // ---- ROW STOPS ---------------------------------------------------------------
+  // Where a row begins. Modules pack from the stop exactly as they packed from the left edge, so a
+  // row can be slid right to bring its far end alongside something on the row above — which is the
+  // whole point: patching between two rows without travelling to find them.
+  //
+  // ONE LINE MAKES THIS WORK. Every position in the rack derives from rec.x, and rec.x is set in a
+  // single packing loop that started at zero; starting it at the stop instead carries the element
+  // placement, the jack positions, the cable geometry, the drop targeting and the overview with it.
+  //
+  // Patch data, not view state: it is stored with the patch so a rack opens arranged as you left it,
+  // which means dragging a stop is an edit and belongs in undo. Never negative — a row cannot begin
+  // before the rack does. Snapped to whole HP, because a module is a whole number of HP wide and a
+  // stop between two of them would leave a gap nothing could ever fill.
+  _rowStop(pageId, row) {
+    const p = this.pages.find((x) => x.id === pageId);
+    return (p && p.stops && p.stops[row]) || 0;
+  }
+
+  setRowStop(pageId, row, mm) {
+    const p = this.pages.find((x) => x.id === pageId);
+    if (!p) return;
+    if (!p.stops) p.stops = [];
+    const snapped = Math.max(0, Math.round(mm / HP_MM)) * HP_MM;
+    if (p.stops[row] === snapped) return;
+    p.stops[row] = snapped;
+    // REPACK THE ROW. relayout() recomputes the scale and redraws from the positions modules already
+    // have; _resolveRow is what turns a stop into those positions. Through _settleLayout so the row
+    // SLIDES to its new place rather than jumping — the same glide a module gets when a row closes
+    // behind it.
+    this._settleLayout(() => this._resolveRow(this.rows[row] || []));
+    this.relayout();
+    this._drawRowFurniture();
+    this._drawCables();
+    this.onChange();
+  }
+
+  rowStops(pageId) {
+    const p = this.pages.find((x) => x.id === pageId);
+    return (p && p.stops) ? p.stops.slice() : [];
+  }
+
   // ---- pages -----------------------------------------------------------------
   pageList() { return this.pages.map((p) => ({ ...p, count: this._pageCount(p.id) })); }
   currentPage() { return this.page; }
@@ -795,7 +837,10 @@ export class Rack {
     const audio = (Array.isArray(saved) ? saved : [])
       .filter((p) => p && typeof p.id === 'string' && p.id !== 'video' && p.id !== 'output')
       .slice(0, PAGE_MAX_AUDIO)
-      .map((p, i) => ({ id: p.id, kind: 'audio', name: typeof p.name === 'string' && p.name ? p.name : `Audio ${i + 1}` }));
+      .map((p, i) => ({ id: p.id, kind: 'audio', name: typeof p.name === 'string' && p.name ? p.name : `Audio ${i + 1}`,
+        // Where each of this page's rows begins. Absent in every patch written before stops existed,
+        // which reads as flush left — the behaviour those files were saved with.
+        stops: Array.isArray(p.stops) ? p.stops.map((v) => (Number.isFinite(v) && v > 0 ? v : 0)) : [] }));
     this.pages = [...this._sortAudio(audio.length ? audio : [{ id: 'a1', kind: 'audio', name: 'Audio 1' }]), ...PAGE_FIXED.map((p) => ({ ...p }))];
     if (!this._hasPage(this.page)) this.page = this.pages[0].id;
     this._pageBack = null;
@@ -806,6 +851,7 @@ export class Rack {
   // it, so a look at the mixer is a there-and-back rather than a one-way trip you have to undo.
   selectPage(id) {
     if (!this._hasPage(id)) return false;
+    queueMicrotask(() => this._drawRowFurniture());   // stops belong to the page, so they change with it
     if (id === this.page) {
       if (!this._pageBack || this._pageBack === id) return false;
       id = this._pageBack;
@@ -1579,6 +1625,124 @@ export class Rack {
     this.relayout();
   }
 
+  // ---- THE ROW'S FURNITURE: its boundary, its stop, and the space before it -------------------
+  //
+  // Drawn in the content layer, so it pans and zooms with the rack and is measured in millimetres
+  // like everything else there. Three things, none of which the rack had:
+  //
+  //   THE LINE BETWEEN ROWS. Every other modular environment draws it, and without it a two-row rack
+  //   reads as one tall field of modules.
+  //   THE STOP, a bright vertical line at the row's left edge with a wide invisible grab area — three
+  //   pixels of ink is not something anyone can catch under magnification.
+  //   THE SPACE BEFORE IT, faintly grey, saying the row does not begin here.
+  _drawRowFurniture() {
+    if (!this.content) return;
+    let layer = this._furniture;
+    if (!layer) {
+      layer = this._furniture = document.createElementNS(SVG_NS, 'svg');
+      layer.setAttribute('class', 'rack-furniture');
+      layer.style.cssText = 'position:absolute;left:0;top:0;pointer-events:none;overflow:visible';
+      // ABOVE THE ROWS, below the cords. A row's rail is an OPAQUE background, so furniture drawn
+      // under it is furniture nobody sees — which is exactly what happened the first time.
+      this.content.insertBefore(layer, this.cables || null);
+    }
+    const s = this.pxPerMm;
+    layer.style.width = (this._contentWmm * s) + 'px';
+    layer.style.height = (this._contentHmm * s) + 'px';
+    layer.setAttribute('viewBox', `0 0 ${r2(this._contentWmm)} ${r2(this._contentHmm)}`);
+    layer.textContent = '';
+    const mk = (tag, attrs, pe) => {
+      const el = document.createElementNS(SVG_NS, tag);
+      for (const [k, v] of Object.entries(attrs)) el.setAttribute(k, v);
+      if (pe) { el.style.pointerEvents = 'auto'; el.style.cursor = 'col-resize'; }
+      layer.appendChild(el);
+      return el;
+    };
+    const rowH = PANEL_H_MM + ROW_GAP_MM;
+    const ink = this.dark ? '#5a5a60' : '#b9b9c0';
+    for (let i = 0; i < this.rowCount; i++) {
+      const top = i * rowH;
+      if (i > 0) mk('line', { x1: 0, y1: r2(top), x2: r2(this._contentWmm), y2: r2(top),
+        stroke: ink, 'stroke-width': 0.35 });
+      const stop = this._rowStop(this.page, i);
+      if (stop > 0) {
+        // NOT AVAILABLE SPACE, said the way every drawing says it: a diagonal hatch. It reads at any
+        // width, at any zoom, and can never be mistaken for something in the rack — where a flat tint
+        // just looks like a slightly different background, which is what the first attempt was at 4.5%
+        // opacity: present in the code and invisible on the screen.
+        mk('rect', { x: 0, y: r2(top), width: r2(stop), height: r2(PANEL_H_MM),
+          fill: this.dark ? '#000000' : '#ffffff', opacity: 0.5 });
+        // DRAWN AS LINES, not as an SVG pattern. A pattern is the tidier way to say it and it did not
+        // appear at all — and a fill that silently renders nothing is not worth the debugging when
+        // the band is a few dozen strokes. Each runs at 45 degrees and is clipped to the band by
+        // arithmetic rather than by a clipPath, which is one less thing that can quietly fail.
+        // SPACED AND WEIGHTED TO BE SEEN. The first version was a mid grey at 30% opacity — present in
+        // the DOM, measurable in the layer, and invisible on the screen. "Subtle" is not a virtue if
+        // it means nobody can tell whether the feature is working.
+        const H = PANEL_H_MM, GAP = 4.2;
+        for (let x0 = -H; x0 < stop; x0 += GAP) {
+          // The line runs from (x0, bottom) up-right to (x0 + H, top); keep the part inside the band.
+          const ax = Math.max(x0, 0), ay = top + H - (ax - x0);
+          const bx = Math.min(x0 + H, stop), by = top + H - (bx - x0);
+          if (bx <= ax) continue;
+          mk('line', { x1: r2(ax), y1: r2(ay), x2: r2(bx), y2: r2(by),
+            stroke: this.dark ? '#585d66' : '#8d919a', 'stroke-width': 0.7, opacity: 0.62 });
+        }
+      }
+      // The line down the row's left edge...
+      const px = (n) => n / (this.pxPerMm * (this.zoom || 1));   // n screen pixels, in millimetres
+      const stopInk = this.dark ? '#d8d8dc' : '#3a3a42';   // brighter than the row divider beside it
+      mk('line', { x1: r2(stop), y1: r2(top + 1), x2: r2(stop), y2: r2(top + PANEL_H_MM - 1),
+        stroke: stopInk, 'stroke-width': r2(px(3)), 'stroke-linecap': 'round' });
+      // ...AND A THUMB, reaching to the RIGHT from the top of it. A three-pixel line at the very left
+      // of the window shares its pixels with the window's own resize edge, so the thing you grab has
+      // to be INSIDE the rack. It reads as a tab stop on a ruler: the line marks the position, the
+      // thumb is what you take hold of.
+      const TH_W = 9, TH_H = 5.6;
+      const g = mk('g', { 'data-stop': String(i) }, true);
+      const add = (tag, attrs) => { const el = document.createElementNS(SVG_NS, tag);
+        for (const [k, v] of Object.entries(attrs)) el.setAttribute(k, v); g.appendChild(el); return el; };
+      add('path', { d: `M${r2(stop)},${r2(top + 1)} h${TH_W - 2} a2,2 0 0 1 2,2 v${TH_H - 4}`
+        + ` a2,2 0 0 1 -2,2 h${-(TH_W - 2)} z`,
+        fill: this.dark ? '#4a4a52' : '#c9c9d1', stroke: stopInk, 'stroke-width': r2(px(1)) });
+      for (let k = 0; k < 3; k++) {                       // grips, so it reads as something to hold
+        const gx = stop + 3.2 + k * 1.7;
+        add('line', { x1: r2(gx), y1: r2(top + 2.4), x2: r2(gx), y2: r2(top + TH_H - 0.8),
+          stroke: stopInk, 'stroke-width': r2(px(1)), opacity: 0.75 });
+      }
+      // The line keeps a grab area of its own, so the whole left edge of the row still answers.
+      mk('rect', { x: r2(stop - px(5)), y: r2(top + TH_H), width: r2(px(10)),
+        height: r2(PANEL_H_MM - TH_H), fill: 'transparent', 'data-stop': String(i) }, true);
+    }
+  }
+
+  _watchRowStops() {
+    if (!this.content || this._stopWatched) return;
+    this._stopWatched = true;
+    this.content.addEventListener('pointerdown', (e) => {
+      const el = e.target && e.target.closest ? e.target.closest('[data-stop]') : null;
+      if (!el) return;
+      e.preventDefault(); e.stopPropagation();
+      const row = +el.getAttribute('data-stop');
+      const page = this.page;
+      const start = this._clientToMm(e.clientX, e.clientY).x - this._rowStop(page, row);
+      const move = (m) => this.setRowStop(page, row, this._clientToMm(m.clientX, m.clientY).x - start);
+      const up = () => {
+        document.removeEventListener('pointermove', move, true);
+        document.removeEventListener('pointerup', up, true);
+      };
+      document.addEventListener('pointermove', move, true);
+      document.addEventListener('pointerup', up, true);
+    }, true);
+    // Back to flush left. It cannot go negative, so without this the only way home is a careful drag.
+    this.content.addEventListener('dblclick', (e) => {
+      const el = e.target && e.target.closest ? e.target.closest('[data-stop]') : null;
+      if (!el) return;
+      e.preventDefault(); e.stopPropagation();
+      this.setRowStop(this.page, +el.getAttribute('data-stop'), 0);
+    }, true);
+  }
+
   _buildRows() {
     this.content.textContent = '';
     this._rowEls = [];
@@ -1592,6 +1756,9 @@ export class Rack {
     }
     for (const rec of this.records.values()) this._rowEls[rec.row].appendChild(rec.el);
     this.content.appendChild(this.cables);   // cords paint above the panels
+    this._furniture = null;                  // rebuilt below, under the panels
+    this._drawRowFurniture();
+    this._watchRowStops();
     // A STAND-IN for the live rack, used while the Option key is held. It sits OUTSIDE the transformed
     // content and carries its own transform, so panning and zooming it is a single GPU composite.
     this.frozen = document.createElement('canvas');
@@ -1603,6 +1770,7 @@ export class Rack {
   relayout() {
     // The per-note dots are placed in millimetres scaled to the view, so they follow zoom and fit.
     if (this.records && this.records.size) queueMicrotask(() => this._drawAllPerNote());
+    queueMicrotask(() => this._drawRowFurniture());   // row lines and stops are in the same scale
     const vpH = this.container.clientHeight || 600;
     const vpW = this.container.clientWidth || 800;
     // No top/bottom padding — the first row sits flush with the top of the window; rows
@@ -8396,9 +8564,10 @@ export class Rack {
       if (!byPage.has(p)) byPage.set(p, []);
       byPage.get(p).push(rec);
     }
-    for (const list of byPage.values()) {
+    for (const [pageId, list] of byPage) {
       list.sort((a, b) => a.x - b.x);
-      let x = 0;
+      // THE ROW BEGINS AT ITS STOP. One line, and every position in the rack follows.
+      let x = this._rowStop(pageId, row.length ? row[0].row : 0);
       // A LIFTED module is one you are holding: it has left the row even though its record is still
       // here, so the row closes up behind it. That gap closing is what tells you the thing on the
       // pointer is the very module that was there — and it frees the right-hand end of the row, so

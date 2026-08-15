@@ -571,6 +571,7 @@ async function boot() {
   try { const s = localStorage.getItem('wcoast.dark'); if (s !== null) darkMode = s === '1'; } catch (_e) { /* no storage */ }
   // Where the view was left, remembered like dark mode: an app preference, not part of any patch.
   const VIEW_KEY = 'wcoast.view';
+  const PAGE_KEY = 'wcoast.page';   // the tab last looked at
   // Unsaved-changes state, declared BEFORE the rack: its onChange fires during
   // relayout and the mixer addModule below, calling onEdit -> markDirty, which
   // reads `dirty` — so `dirty` must already be initialized (no temporal dead zone).
@@ -585,7 +586,13 @@ async function boot() {
     // pan, and this only needs to be right by the time the app closes.
     // The tab bar re-homes itself when the menu bar docks or undocks, and the page is part of what
     // the session remembers, so a switch is worth an autosave.
-    onPageChange: () => { pushMenuState(); onEdit(); },
+    onPageChange: () => {
+      pushMenuState(); onEdit();
+      // WHICH TAB YOU WERE ON IS PART OF THE VIEW, and belongs to the app rather than to the patch —
+      // the same standing as dark mode and the zoom. Reopening on Audio 1 after an evening spent on
+      // a voice page is a small thing that has to be undone by hand every time.
+      try { localStorage.setItem(PAGE_KEY, rack.currentPage()); } catch (_e) { /* no storage */ }
+    },
     onViewChange: () => {
       clearTimeout(viewSaveTimer);
       viewSaveTimer = setTimeout(() => {
@@ -1404,6 +1411,10 @@ async function boot() {
   // Put the view back where it was left. AFTER the modules exist, since relayout resets the transform
   // as it fits the rows — restoring earlier would simply be overwritten.
   try {
+    // The tab first: selecting a page redraws the cables and the stubs, and doing it after the pan
+    // and zoom were restored would leave the view fighting a layout it had not seen.
+    const pg = localStorage.getItem(PAGE_KEY);
+    if (pg && rack._hasPage(pg)) rack.selectPage(pg);
     const v = localStorage.getItem(VIEW_KEY);
     if (v) rack.setViewState(JSON.parse(v));
   } catch (_e) { /* no storage, or nonsense in it — the default view is fine */ }
