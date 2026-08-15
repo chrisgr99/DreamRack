@@ -4,31 +4,85 @@ DreamRack is a modular synthesizer that runs in a web browser, built on Web Audi
 
 More than that, it's an exploration. It began as an attempt to build the modular I've always wished I could patch on, and to try out ideas for making one easier to use and more powerful. It's a personal project: free software, source on GitHub under the GNU General Public License v3, and shared in the hope that others enjoy it as much as I do. Your mileage may vary. 😌
 
-## My goals — the dream list
+<!-- A picture of the rack belongs here — one wide screenshot with a patch on it, light mode. -->
 
-- **A consistent design language across every module**, so knowledge carries from one to the next — input/output terminals colour-coded by signal type (a hint, not a restriction), inputs and outputs told apart instantly, panels compact and consistent in light and dark. *(done)*
-- **Have a control that folds a jack into a knob to save rack space** — a single control you turn *and* plug a cable straight into, so a parameter and its CV input share one spot instead of a separate knob and jack; I call it the **knAck** (knob-jack). The Function Generator's attack and decay and the Low Pass Gate's level, decay, clock ratio and rate are all knAcks, and each can carry an optional built-in **attenuverter** — switched on per knob from its right-click menu — to dial how deeply, and in which direction, the plugged signal moves the knob. *(done)*
-- **Interaction kept drag-free** — a click, on a mouse or trackpad, is easier on the wrist than a drag, so controls turn with the scroll wheel and patching is click to grab, click to drop, with nothing held down. *(done)*
+## A few things you won't find elsewhere
+
+**A tab can be a voice.** The rack splits into tabs, and a tab is not just somewhere to put modules — it can be an instrument. Drop a **Voice In** module on a tab and that tab becomes a voice; set its POLYPHONY knob to eight and the whole tab runs eight times over, one copy per sounding note, wired exactly as you wired it once. Every module on the tab says whether it is *per note* or *shared*, so an oscillator becomes eight oscillators while the reverb next to it stays one. A single cable carries a whole note between tabs — pitch, velocity, length, position, and how the note moves while it sounds — so the tab that plays the notes and the tab that makes the sound stay separate things.
+
+**Video and audio in the same rack.** Video is a full second signal family here, with its own modules, its own cable colours and its own rules about what may plug into what: control voltage may drive a video parameter, an image may not be summed into an audio input. Build a shape, move it with the same envelopes and clocks driving your sound, and watch it on a Video Output module in the rack.
+
+**Instruments, not guesswork.** Listen at any terminal without unplugging anything. Clip a scope onto any jack — as many as you like at once — and drag it beside the knob that's shaping it to watch the trace as you turn. Read the frequency, the maximum and minimum, and the DC offset at any point. Ask what feeds a module, what it feeds, and what shapes any one signal, and see just that chain lit up.
+
+**The knAck.** A control you turn *and* plug a cable straight into, so a parameter and its CV input share one spot instead of costing a knob and a jack. Each can carry an attenuverter — switched on per knob — to set how far, and in which direction, the plugged signal moves it.
+
+**Modules are plug-ins, and you can draw one.** Every module is a self-contained folder of plain JavaScript that drops in without touching the core and without a build step. The faceplate comes with it: describe the panel in a small layout grammar, or draw it in the built-in panel editor and let it write the file. See the [module-authoring reference](MODULE-AUTHORING.md).
+
+**A rack an AI can read.** DreamRack writes its whole live state — every module, every cable, every knob — to a folder as plain JSON, and reads a patch back from the same place. An assistant can look at what you have built, describe it, and hand you a change to approve.
+
+## What's in it today
+
+Twenty-seven modules ship:
+
+- **Sources** — Complex Oscillator, VCO, Macro Oscillator 2, Sine Source, Noise
+- **Shaping** — Quad Low Pass Gate, Filter, VCA, Quad Function Generator, ADSR, Delay, Octave
+- **Timing and sequencing** — drClckd, Sequencer / Programmer Eight, Random Sampler
+- **Voices** — Sequence Out, Voice In, Poly to Stereo
+- **Video** — Coordinate Field, Shapes, Formula, Video Maths, Compositor, Time, Video Output
+- **Utility** — Control Gallery, Mixer / Output
+
+They lean West Coast — Buchla- and Serge-flavoured — which is where my own interest lies and where the earliest work went. Nothing in the architecture ties DreamRack to that style: modules of any kind drop in as plug-ins, with or without a hardware ancestor. Many more are planned, and suggestions are welcome.
+
+## The visual language
+
+I think this is the cleanest visual language of any modular of this kind, and it is worth a minute of your time because everything below is true of **every** module, including ones you write yourself.
+
+**A jack tells you what it is without a word of panel art.** Its colour is the signal family. Its dashed ring says which way the signal runs — an output's dashes hug the outer rim, an input's hug the hole — so you never hunt for an arrow or a heading. A white dot in the middle marks a jack that deals in a signal swinging either side of zero, and the absence of one is a promise: no dot means unipolar, by design.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/img/jacks-dark.svg">
+  <img alt="An input jack, an output jack, a bipolar output and an audio output" src="docs/img/jacks-light.svg" width="480">
+</picture>
+
+**A cable's colour is the job it does where it lands**, so the same signal can be audio at one end of the rack and modulation at the other and each end reads correctly. Video is a family of its own, and the note bundle — the one cable carrying events rather than a continuous signal — is the one with no hue at all, which is what tells it apart at any zoom and for any kind of colour vision.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/img/signals-dark.svg">
+  <img alt="The signal families and their cable colours" src="docs/img/signals-light.svg" width="480">
+</picture>
+
+**Cables never hide the panel.** Crawling dashes along each one show which way the signal runs, and every cable turns transparent exactly where it crosses lettering — so a dense patch still reads, and you can follow one cable across the rack without anything being dimmed to let you.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/img/cables-dark.svg">
+  <img alt="A cable running clear of the label it crosses" src="docs/img/cables-light.svg" width="480">
+</picture>
+
+**Every panel is drawn from code, not painted.** A faceplate is a short description — this knob here, that jack there, these lamps — and the light and dark versions are generated from it. That is what keeps the language consistent: nobody is redrawing a jack by eye, a proportion changed centrally changes everywhere, and a check refuses any panel whose art has drifted from its description or spilled off its own face. It is also why a module you write looks like one that shipped.
+
+## How it feels to use
+
+Controls turn with the scroll wheel and patching is click to grab, click to drop, with nothing held down — a click is easier on the wrist than a drag, and once you've patched this way for an hour the hardware gesture starts to feel like work.
+
+Everything works the same in light and dark, and the rack remembers where you left it — the tab you were on, the view, and the patch — so reopening it puts you back where you were.
+
+## Where it's going
+
+- **A consistent design language across every module**, so knowledge carries from one to the next. *(done)*
+- **Polyphony** — more than one voice at a time. *(done — see the tab-is-a-voice note above)*
+- **Video synthesis sharing the rack with audio.** *(done)*
+- **Hear the signal at any terminal**, effortlessly, without rewiring. *(done)*
+- **See the signal at any terminal** — scopes you clip on and take off, as many as you want at once. *(partly TBD — dual trace still to come)*
+- **Know the numbers at any terminal** — frequency, maximum and minimum, DC offset. *(done)*
 - **See what affects what** — what feeds a module, what it feeds, and the whole chain shaping any one point. *(done)*
-- **See at a glance what every cable is doing** — where it runs from and to, and the role it plays at the end it plugs into. *(done)*
-- **Hear the signal at any terminal** effortlessly, without rewiring. *(done)*
-- **See the signal at any terminal** just as easily — scopes you clip on and take off, as many as you want at once, and can pull up beside any knob that affects that terminal to watch the trace as you turn it — full featured dual trace, triggered, sampling scopes. *(partly TBD — dual trace still to come)*
-- **Know the numbers at any terminal** effortlessly — its frequency in cycles per second, the maximum and minimum level of the signal, and its DC offset. *(done)*
-- **Inject a signal into any jack** without disturbing the patch cables — a button to fire a trigger, a toggle to hold a gate, or a simple sine or square wave — to drive or probe any input from outside the patch. *(TBD)*
-- **Take input from outside** — an interface module that receives events from Web Audio sequencers and hosts and converts them into DreamRack signals to play. *(TBD)*
-- **Play it polyphonically** — more than one voice at a time, not the single voice it is today. *(TBD)*
-- **Let any developer create new modules, and anyone snap them into their rack** — each a self-contained folder of plain JavaScript that drops in without altering the core framework and without a build step or separate development tools; see the [module-authoring reference](MODULE-AUTHORING.md). *(done)*
-- **Explore how AI might help understand and create patches** — describing what a patch does, suggesting changes, or building one from a request. *(partly TBD)*
+- **Let any developer create new modules, and anyone snap them into their rack.** *(done)*
+- **Explore how AI might help understand and create patches** — describing what a patch does, suggesting changes, or building one from a request. *(partly done — the rack is readable and writable; the assistant side is early)*
+- **Inject a signal into any jack** without disturbing the patch cables — a button to fire a trigger, a toggle to hold a gate, or a simple sine or square wave. *(TBD)*
+- **Take input from outside** — an interface module that receives events from other sequencers and hosts and converts them into DreamRack notes to play. *(TBD)*
 
 ## Current state
 
-DreamRack is in alpha — fully usable, but expect rough edges and things to change. Each goal above is tagged with where it stands: *(done)*, *(partly TBD)*, or *(TBD — to be done)*. Even the parts marked done may still change as I work on perfecting the design and receive feedback from users.
-
-The modules that ship today are a Complex Oscillator, a Quad Low Pass Gate, a Quad Function Generator, and a Mixer. Many more modules are planned; suggestions are welcome.
-
-## Background
-
-The modules that ship today lean West Coast — Buchla- and Serge-flavoured — which is where my own interest lies and where the earliest work went. But nothing in the architecture ties DreamRack to that style: modules of any kind drop in as plug-ins, with or without a hardware ancestor.
+DreamRack is in alpha — fully usable, but expect rough edges and things to change. Even the parts marked done may still change as I work on perfecting the design and receive feedback from users.
 
 Share thoughts, bugs, and ideas in the [discussions](https://github.com/chrisgr99/DreamRack/discussions).
 
