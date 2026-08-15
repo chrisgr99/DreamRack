@@ -49,6 +49,9 @@ function renderItem(it, th, dark) {
     // A divider — a horizontal rule anchored at (x,y) running `len` to the right. Same
     // art as `line`, but positioned by a single point so the editor can place/move it.
     case 'divider':      return `  <line x1="${it.x}" y1="${it.y}" x2="${it.x + it.len}" y2="${it.y}" stroke="${th.frame}" stroke-width="${it.w != null ? it.w : 0.355}"/>`;
+    // A themed open path — brackets and any other plain stroked line-work. Never filled.
+    case 'path':
+      return `  <path d="${it.d}" fill="none" stroke="${th.frame}" stroke-width="${it.w != null ? it.w : 0.355}" stroke-linecap="round" stroke-linejoin="round"/>`;
     // A themed outline circle — the ring round a caption's sign, and anything else that wants a
     // plain stroked round. Stroke resolves from the theme so it inverts with the panel.
     case 'circle':

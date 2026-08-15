@@ -206,6 +206,16 @@ export const caption = (text, opts = {}) => {
     ring: opts.ring ? (opts.ringR || +(size * 0.85).toFixed(2)) : 0 };
 };
 
+// A BRACKET — the spine with a short arm turning in at each end, the notation a panel uses to say
+// "these belong together". Voice In's TIME knob only means anything under GLIDE and LEGATO, and a
+// control whose relevance depends on a setting three centimetres away has to say so on the face:
+// greying out tells you AFTER you have wondered, and the panel should tell you before.
+//
+// `h` is the span it encloses; `arm` how far the ends turn in. Placed by its CENTRE like everything
+// else, with the arms reaching to the RIGHT of the spine.
+export const bracket = (h, opts = {}) =>
+  ({ kind: 'bracket', h, arm: opts.arm || 2.2, w: opts.w || 0.355 });
+
 // Free space in a row, in mm, for when even gaps are not what you want.
 export const gap = (mm) => ({ kind: 'gap', mm });
 
@@ -349,6 +359,7 @@ function halfWidth(c) {
   else if (c.kind === 'display') art = c.w / 2;
   else if (c.kind === 'jack') art = c.r;
   else if (c.kind === 'caption') art = Math.max(textWidth(c.text, c.size) / 2, c.ring);
+  else if (c.kind === 'bracket') art = c.arm / 2;
   else if (c.kind === 'button') art = c.r;
   else if (c.kind === 'lamps') {
     const tH = c.ledR + LAMP_PAD;
@@ -376,6 +387,7 @@ function rowHeight(r) {
     else if (c.kind === 'readout') h = Math.max(h, READOUT_H * (c.size || 1));
     else if (c.kind === 'jack') h = Math.max(h, c.r * 2);
     else if (c.kind === 'caption') h = Math.max(h, c.ring ? c.ring * 2 : c.size);
+    else if (c.kind === 'bracket') h = Math.max(h, c.h);
     else if (c.kind === 'button') h = Math.max(h, c.r * 2);
     else if (c.kind === 'lamps') {
       const tH = c.ledR + LAMP_PAD;
@@ -513,6 +525,11 @@ function emit(items, c, x, y) {
       items.push({ t: 'label', x, y: +(y + c.size * 0.36).toFixed(2), text: c.text,
         opts: { size: c.size, italic: c.italic } });
       break;
+    case 'bracket': {
+      const t = +(y - c.h / 2).toFixed(2), b = +(y + c.h / 2).toFixed(2), a = +(x + c.arm).toFixed(2);
+      items.push({ t: 'path', d: `M${a},${t} L${x},${t} L${x},${b} L${a},${b}`, w: c.w });
+      break;
+    }
     case 'gap': break;
     default: throw new Error(`grammar: unknown control kind "${c.kind}"`);
   }

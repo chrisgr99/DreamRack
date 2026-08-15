@@ -2897,6 +2897,7 @@ export class Rack {
   _perNoteDefault(descriptorId) {
     if (BOUNDARY[descriptorId]) return false;
     const d = this.host.registry.descriptor(descriptorId);
+    if (d && d.perNoteFixed) return true;    // no lamp, and no way to be anything else
     return !(d && d.scope === 'shared');
   }
 
@@ -2909,7 +2910,13 @@ export class Rack {
   // Only on a voice page: polyphony is a voice-page idea, and a page with nothing to duplicate has
   // nothing to ask. Not on the boundary modules themselves — there is one of each by definition.
   _showsPerNote(rec) {
-    return !!(rec && !BOUNDARY[rec.descriptorId] && this._boundariesOn(this.pageOf(rec)).in);
+    if (!rec || BOUNDARY[rec.descriptorId]) return false;
+    // A MODULE THAT IS ONLY EVER PER NOTE DOES NOT ASK. Poly to Stereo is the page's exit: shared, it
+    // would sum the voices before each one's level and pan had been applied, which is the single thing
+    // it exists to prevent. A switch with one sane position is a switch that only ever goes wrong.
+    const d = this.host.registry.descriptor(rec.descriptorId);
+    if (d && d.perNoteFixed) return false;
+    return !!this._boundariesOn(this.pageOf(rec)).in;
   }
 
   setPerNote(rec, on) {

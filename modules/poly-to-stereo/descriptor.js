@@ -39,9 +39,12 @@ export default {
   name: 'Poly to Stereo',
   abbreviation: 'P2S',
   category: 'processor',
-  // PER NOTE by default. It is the last per-note thing on a page: whatever it feeds is shared, and
-  // the copies are summed at that input.
+  // PER NOTE, AND NOTHING ELSE — so it carries no per-note lamp (perNoteFixed). It is the last
+  // per-note thing on a page: whatever it feeds is shared, and the copies are summed at that input.
+  // Made shared it would sum the voices before each one's level and pan had been applied, which is the
+  // one thing it exists to prevent, so the choice has only ever had one right answer.
   scope: 'voice',
+  perNoteFixed: true,
   hp: 8,
   worklets: ['modules/poly-to-stereo/poly-to-stereo-processor.js'],
   menuSectionOrder: ['io', 'out'],
