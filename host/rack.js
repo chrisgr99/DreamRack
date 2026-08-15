@@ -182,7 +182,8 @@ const SLOT_INSET = 6;
 // source of notes, and holding one is the whole of what makes it so — there is no page TYPE anywhere.
 // One per page and never both, so a page can be trusted to be one thing.
 const BOUNDARY = {
-  'wcoast.sequencer': { dir: 'out', port: 'noteOut', label: 'Sequencer', kind: 'a sequence' },
+  // SEQ rather than Sequencer: the name goes on a tab, and tabs are the scarcest width in the window.
+  'wcoast.sequencer': { dir: 'out', port: 'noteOut', label: 'SEQ', kind: 'a sequence' },
   'wcoast.voice': { dir: 'in', port: 'noteIn', label: 'Voice', kind: 'a voice' },
 };
 // ---- PER NOTE OR SHARED ----------------------------------------------------------------------
@@ -803,15 +804,45 @@ export class Rack {
     this._confirm(msg, 'Close page', () => this.deletePage(id));   // deletePage fires onChange itself
   }
 
-  renamePage(id, name) {
+  // A NAME YOU TYPED IS YOURS AND IS NEVER TAKEN BACK. Anything else is derived from what the page
+  // holds — see _autoNamePages — so `custom` is what tells the two apart, and it travels in the patch.
+  renamePage(id, name, opts = {}) {
     const p = this.pages.find((x) => x.id === id);
     if (!p || p.kind !== 'audio') return false;
     const clean = String(name || '').trim().slice(0, 24);
     if (!clean || clean === p.name) { this._renderTabBar(); return false; }
     p.name = clean;
+    if (!opts.auto) p.custom = true;
     this._renderTabBar();
     this.onChange();
     return true;
+  }
+
+  // WHAT A PAGE IS CALLED FOLLOWS FROM WHAT IT HOLDS, and is recomputed after every edit rather than
+  // set when a module lands. Naming on the event left a restart with the old names, and left a page
+  // called Voice 1 after its Voice In had been deleted — a label describing something that had
+  // happened rather than something that is true.
+  //
+  //   a Voice In alone      -> Voice 1, 2, 3 ...   this page plays notes sent to it
+  //   a Sequence Out alone  -> SEQ 1, 2, 3 ...     this page sends notes elsewhere
+  //   BOTH, or neither      -> Audio n             it is a self-contained instrument, or an ordinary
+  //                                               page: either way nothing crosses its boundary and
+  //                                               there is nothing for the name to advertise
+  _autoNamePages() {
+    const seen = { in: 0, out: 0 };
+    for (const p of this.pages) {
+      if (p.kind !== 'audio') continue;
+      const b = this._boundariesOn(p.id);
+      const only = (b.in && b.out) ? null : (b.in || b.out);
+      if (only) seen[only.dir]++;
+      const want = only ? `${only.label} ${seen[only.dir]}` : this._defaultPageName(p.id);
+      if (!p.custom && p.name !== want) this.renamePage(p.id, want, { auto: true });
+    }
+  }
+
+  _defaultPageName(id) {
+    const n = parseInt(String(id).slice(1), 10);
+    return `Audio ${Number.isFinite(n) ? n : 1}`;
   }
 
   // Deleting a page takes its modules with it — there is nowhere else for them to go while modules
@@ -833,6 +864,9 @@ export class Rack {
   // Rebuild the audio pages from a patch. Video and Output are NOT taken from the file — they are
   // rebuilt from the code and appended, so a patch written before they existed, or one hand-edited
   // into nonsense, still arrives with them present and in the right order.
+  // Called when a patch has finished loading: everything is in place, so the names can be derived.
+  afterRestore() { this._autoNamePages(); this._drawPageStubs(); this._drawAllPerNote(); }
+
   restorePages(saved) {
     const audio = (Array.isArray(saved) ? saved : [])
       .filter((p) => p && typeof p.id === 'string' && p.id !== 'video' && p.id !== 'output')
@@ -840,7 +874,9 @@ export class Rack {
       .map((p, i) => ({ id: p.id, kind: 'audio', name: typeof p.name === 'string' && p.name ? p.name : `Audio ${i + 1}`,
         // Where each of this page's rows begins. Absent in every patch written before stops existed,
         // which reads as flush left — the behaviour those files were saved with.
-        stops: Array.isArray(p.stops) ? p.stops.map((v) => (Number.isFinite(v) && v > 0 ? v : 0)) : [] }));
+        stops: Array.isArray(p.stops) ? p.stops.map((v) => (Number.isFinite(v) && v > 0 ? v : 0)) : [],
+        // A name you typed is yours; one the rack derived is not, and will be recomputed.
+        custom: !!p.custom }));
     this.pages = [...this._sortAudio(audio.length ? audio : [{ id: 'a1', kind: 'audio', name: 'Audio 1' }]), ...PAGE_FIXED.map((p) => ({ ...p }))];
     if (!this._hasPage(this.page)) this.page = this.pages[0].id;
     this._pageBack = null;
@@ -2850,8 +2886,7 @@ export class Rack {
   // Only on a voice page: polyphony is a voice-page idea, and a page with nothing to duplicate has
   // nothing to ask. Not on the boundary modules themselves — there is one of each by definition.
   _showsPerNote(rec) {
-    return !!(rec && !BOUNDARY[rec.descriptorId] && this._boundaryOn(this.pageOf(rec))
-      && this._boundaryOn(this.pageOf(rec)).dir === 'in');
+    return !!(rec && !BOUNDARY[rec.descriptorId] && this._boundariesOn(this.pageOf(rec)).in);
   }
 
   setPerNote(rec, on) {
@@ -2944,8 +2979,8 @@ export class Rack {
     try {
       await this._teardownVoiceCopies();
       for (const p of this.pages) {
-        const b = this._boundaryOn(p.id);
-        if (!b || b.dir !== 'in') continue;
+        const b = this._boundariesOn(p.id).in;
+        if (!b) continue;
         const poly = this._effectivePoly(b.rec);
         if (poly < 2) continue;
         await this._buildVoiceCopies(p.id, b, poly);
@@ -2959,8 +2994,8 @@ export class Rack {
   _structureSig() {
     const parts = [];
     for (const p of this.pages) {
-      const b = this._boundaryOn(p.id);
-      if (b && b.dir === 'in') parts.push('P' + p.id + ':' + this._effectivePoly(b.rec));
+      const b = this._boundariesOn(p.id).in;
+      if (b) parts.push('P' + p.id + ':' + this._effectivePoly(b.rec));
     }
     for (const rec of this.records.values()) parts.push(rec.key + (this.perNote(rec) ? '+' : '-') + this.pageOf(rec));
     for (const e of this.patchbay.list()) parts.push(e.src.key + '.' + e.src.portId + '>' + e.dst.key + '.' + e.dst.portId);
@@ -2973,6 +3008,10 @@ export class Rack {
       const sig = this._structureSig();
       if (sig === this._voiceSig) return;
       this._voiceSig = sig;
+      // The same signal renames the pages: both answer the question "what does this page hold now",
+      // and both were being asked at the moment a module landed rather than of the state that
+      // followed. A restart re-derives the names from the rack it has, which is why they were wrong.
+      this._autoNamePages();
       this._rebuildVoiceCopies();
     }, 60);
   }
@@ -2992,7 +3031,7 @@ export class Rack {
   // each is greyed when it has nothing to say, and does not turn while it is. The same treatment a
   // knАck's trim gets when no cable is patched into it: the panel says what is live.
   _gateVoiceControls(rec) {
-    if (!rec || !BOUNDARY[rec.descriptorId] || BOUNDARY[rec.descriptorId].dir !== 'in') return;
+    if (!rec || !BOUNDARY[rec.descriptorId] || BOUNDARY[rec.descriptorId].dir !== 'in') return;   // Voice In only
     const roll = rec.values.get('rollover') || 'oldest';
     const timeLive = roll === 'glide' || roll === 'legato';
     const polyLive = roll !== 'glide';
@@ -3095,12 +3134,6 @@ export class Rack {
           continue;
         }
         if (srcOut && !dstCopy) {
-          // PER NOTE INTO VOICE IN'S AUDIO: copy k has its own input there, so its audio can be scaled
-          // by the level of the note IT is playing and placed at that note's pan before the sum.
-          if (dst === boundary.rec && dst.instance.getVoiceInput) {
-            const vin = dst.instance.getVoiceInput(e.dst.portId, k);
-            if (vin) { wire(srcOut, vin); continue; }
-          }
           // per note -> shared, and per note -> off the page: every copy arrives at the one input,
           // which sums them. A linear CV input has no node, and summing eight of those into one
           // AudioParam would be eight times the modulation — so those are left to the template alone.
@@ -3111,12 +3144,24 @@ export class Rack {
     }
   }
 
-  _boundaryOn(pageId) {
+  // What a page holds, by direction. A page may hold one of each — a sequencer feeding the voice
+  // beside it — which is the smallest complete instrument there is.
+  _boundariesOn(pageId) {
+    const out = { in: null, out: null };
     for (const rec of this.records.values()) {
       const b = BOUNDARY[rec.descriptorId];
-      if (b && this.pageOf(rec) === pageId) return { rec, ...b };
+      if (b && this.pageOf(rec) === pageId) out[b.dir] = { rec, ...b };
     }
-    return null;
+    return out;
+  }
+
+  // THE PAGE'S NOTE PORT, and there is none when the page holds both. Nothing crosses the boundary of
+  // a page that makes its own notes and plays them: the cable runs from one module to the other
+  // inside the page, and a port on the tab would stand for a journey nothing takes.
+  _boundaryOn(pageId) {
+    const b = this._boundariesOn(pageId);
+    if (b.in && b.out) return null;
+    return b.in || b.out;
   }
 
   // On the LEFT of the tab, before the slots that crossing cables count off — a fixed place, so it is
@@ -8857,10 +8902,7 @@ export class Rack {
     this._tidyVideoMonitors();
     // A boundary module names its page and gives its tab a note port. Not while restoring: a saved
     // patch has already said what its pages are called, and renaming them on load would overwrite it.
-    if (BOUNDARY[descriptorId] && !opts.restoring) {
-      this._nameForBoundary(rec.page, descriptorId);
-      this._drawPageStubs();
-    }
+    if (BOUNDARY[descriptorId]) this._drawPageStubs();
     // Adding a Voice In tells every other module on that page what it is; adding anything else asks.
     if (BOUNDARY[descriptorId]) this._drawAllPerNote(); else this._drawPerNote(rec);
     this.onChange();
@@ -9099,17 +9141,17 @@ export class Rack {
   // build reads the tab bar and knows the shape of it, and that only holds if a page is one thing.
   // Said out loud rather than silently undone — a module that vanished on being dropped would read
   // as a bug.
+  // ONE OF EACH, NEVER TWO OF ONE. A page holding a sequencer and a voice is a self-contained
+  // instrument — convenient for a small patch and for testing — while two voices on one page is a
+  // page that cannot say which of them a note is for.
   _boundaryRefusal(descriptorId, pageId, exceptRec) {
     const want = BOUNDARY[descriptorId];
     if (!want) return null;
     for (const rec of this.records.values()) {
       if (rec === exceptRec) continue;
       const has = BOUNDARY[rec.descriptorId];
-      if (!has || this.pageOf(rec) !== pageId) continue;
-      const name = this._pageName(pageId);
-      return has.dir === want.dir
-        ? `${name} already has a ${has.label} module. A page has one.`
-        : `${name} is ${has.kind}. A page is one thing or the other, not both.`;
+      if (!has || this.pageOf(rec) !== pageId || has.dir !== want.dir) continue;
+      return `${this._pageName(pageId)} already has a ${has.label} module. A page has one.`;
     }
     return null;
   }
@@ -9128,23 +9170,6 @@ export class Rack {
   _pageName(id) {
     const p = this.pages.find((x) => x.id === id);
     return (p && p.name) || 'This page';
-  }
-
-  // THE PAGE TAKES ITS NAME FROM THE MODULE, unless you have already named it yourself. Voice 1,
-  // Sequencer 1, numbered by how many pages of that kind there are — so the tab bar explains the
-  // idea before any documentation does. A name you chose is never overwritten, and deleting the
-  // module leaves the name alone: renaming a page out from under someone is worse than a stale name.
-  _nameForBoundary(pageId, descriptorId) {
-    const b = BOUNDARY[descriptorId];
-    const p = this.pages.find((x) => x.id === pageId);
-    if (!b || !p) return;
-    if (!/^Audio \d+$/.test(p.name || '')) return;   // already named, by you or by another module
-    let n = 0;
-    for (const q of this.pages) {
-      const on = this._boundaryOn(q.id);
-      if (on && on.label === b.label && q.id !== pageId) n++;
-    }
-    this.renamePage(pageId, `${b.label} ${n + 1}`);
   }
 
   _placeAtIndex(key, row, page, index) {
@@ -9953,9 +9978,7 @@ export class Rack {
         rec.el.style.display = '';
         // ...and it lands on the page you are LOOKING at, which is how a module crosses pages at all:
         // pick it up here, click a tab, put it down there.
-        const cameFrom = this.pageOf(rec);
         rec.page = this.page;
-        if (BOUNDARY[rec.descriptorId] && cameFrom !== this.page) this._nameForBoundary(this.page, rec.descriptorId);
         finish();
         // IT STARTS WHERE YOUR HAND LET GO and eases from there into its slot — so a module dropped
         // past the end of a row is seen to travel back and nestle against the last one, rather than

@@ -46,7 +46,7 @@ const patched = (inp) => !!(inp && inp.length && inp[0] && inp[0].length);
 // How often a moving control may speak, in samples — once a block. Finer than breath or a bend wheel
 // needs, and a power of two so the test is a mask.
 const UPDATE_EVERY = 128;
-// Below this, nothing has moved worth saying. A tenth of a percent of the bend range.
+// Below this, nothing has moved worth saying — a thousandth of a volt, which is under two cents.
 const UPDATE_DEADBAND = 0.001;
 
 class SequencerProcessor extends AudioWorkletProcessor {
@@ -75,6 +75,7 @@ class SequencerProcessor extends AudioWorkletProcessor {
     this._noteSeq = 0;
     this._handle = null;
     this._bendSent = 0;
+    this._sent = { pressure: null, timbre: null };
     this._out = null;    // the port to the Voice In at the other end, handed in by the rack
     this.port.onmessage = (e) => {
       const d = e.data || {};
@@ -92,14 +93,12 @@ class SequencerProcessor extends AudioWorkletProcessor {
     const levelIn = patched(inputs[2]) ? inputs[2][0] : null;
     const durIn = patched(inputs[3]) ? inputs[3][0] : null;
     const panIn = patched(inputs[4]) ? inputs[4][0] : null;
+    const pressIn = patched(inputs[5]) ? inputs[5][0] : null;
+    const timbIn = patched(inputs[6]) ? inputs[6][0] : null;
 
     const kLevel = params.level[0];
     const kDur = params.duration[0];
     const kPan = params.pan[0];
-    // Semitones to volts, as the reciprocal so the per-sample work is a multiply. The floor guards
-    // against a divide by zero, not against a small range: a tenth of a semitone is a setting anyone
-    // working microtonally may well want.
-    const bendScale = 12 / Math.max(0.01, params.bendRange[0]);
     const holds = params.ends && params.ends[0] > 0.5;
 
     const held = this._held;
@@ -132,9 +131,15 @@ class SequencerProcessor extends AudioWorkletProcessor {
         const at = (typeof currentFrame === 'number' ? currentFrame : 0) + i;
         this._handle = this._prefix + ':' + (this._noteSeq++);
         const note = { t: 'on', handle: this._handle, time: at,
-          pitch: held.pitch, level: held.level, duration: held.duration, pan: held.pan };
+          pitch: held.pitch, level: held.level, duration: held.duration, pan: held.pan,
+          // What full bend is worth, in semitones, so the far end can give the same movement in
+          // volts as well as normalised without knowing this module's knob.
+          bendRange: params.bendRange[0] };
         if (this._out) this._out.postMessage(note);
         this._bendSent = 0;
+        // The continuing values start the note where the source has them, so a note begun mid-breath
+        // does not have to wait for the next change before it is heard.
+        this._sent = { pressure: null, timbre: null };
         // The same note to the main thread, where the rack lights the cable. One a note, so the cost
         // is nothing, and keeping it separate means the flash never rides on the audio path.
         this.port.postMessage({ note });
@@ -161,13 +166,28 @@ class SequencerProcessor extends AudioWorkletProcessor {
       // which is most of them most of the time. Measured from the held value, so it is zero at
       // note-on by construction. The receiver ramps to each new value over one interval, so the steps
       // between updates never reach anything.
-      if (this._on && (i & (UPDATE_EVERY - 1)) === 0) {
-        const dv = ((pitchIn ? pitchIn[i] : 0) - held.pitch) * bendScale;
-        const v = dv > 1 ? 1 : dv < -1 ? -1 : dv;
-        if (this._out && Math.abs(v - this._bendSent) > UPDATE_DEADBAND) {
-          this._bendSent = v;
-          this._out.postMessage({ t: 'u', handle: this._handle, k: 'bend', v,
-            time: (typeof currentFrame === 'number' ? currentFrame : 0) + i });
+      //
+      // SENT IN VOLTS, RAW. The bend RANGE belongs to the control-voltage output — it says how many
+      // semitones count as full deflection there — and not to the pitch itself. Scaling here would
+      // make the volts-per-octave output a clamped copy of the CV one, when the whole point of it is
+      // that held pitch plus it is exactly where the source has gone.
+      if (this._on && (i & (UPDATE_EVERY - 1)) === 0 && this._out) {
+        const at = (typeof currentFrame === 'number' ? currentFrame : 0) + i;
+        const dv = (pitchIn ? pitchIn[i] : 0) - held.pitch;
+        if (Math.abs(dv - this._bendSent) > UPDATE_DEADBAND) {
+          this._bendSent = dv;
+          this._out.postMessage({ t: 'u', handle: this._handle, k: 'bend', v: dv, time: at });
+        }
+        // PRESSURE AND TIMBRE, on the same terms: on change, once a block at most, nothing while
+        // they are still. An unpatched input says nothing at all rather than sending zeros — a voice
+        // with no breath behind it should fall back to its own envelope, not be held shut by a lane.
+        for (const [k, src] of [['pressure', pressIn], ['timbre', timbIn]]) {
+          if (!src) continue;
+          const v = src[i];
+          if (this._sent[k] === null || Math.abs(v - this._sent[k]) > UPDATE_DEADBAND) {
+            this._sent[k] = v;
+            this._out.postMessage({ t: 'u', handle: this._handle, k, v, time: at });
+          }
         }
       }
       out[0][i] = 0;   // the channel of silence that keeps this module in the rendering graph

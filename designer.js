@@ -34,6 +34,8 @@ import envLayout from './modules/envelope/panel.layout.js';
 import envDesc from './modules/envelope/descriptor.js';
 import vcaLayout from './modules/vca/panel.layout.js';
 import vcaDesc from './modules/vca/descriptor.js';
+import polyStereoLayout from './modules/poly-to-stereo/panel.layout.js';
+import polyStereoDesc from './modules/poly-to-stereo/descriptor.js';
 import filterLayout from './modules/filter/panel.layout.js';
 import filterDesc from './modules/filter/descriptor.js';
 import clockLayout from './modules/clock/panel.layout.js';
@@ -86,6 +88,7 @@ const MODULES = [
   { name: 'Noise', dir: 'noise', base: noiseLayout, desc: noiseDesc },
   { name: 'ADSR', dir: 'envelope', base: envLayout, desc: envDesc },
   { name: 'VCA', dir: 'vca', base: vcaLayout, desc: vcaDesc },
+  { name: 'Poly to Stereo', dir: 'poly-to-stereo', base: polyStereoLayout, desc: polyStereoDesc },
   { name: 'Filter', dir: 'filter', base: filterLayout, desc: filterDesc },
   { name: 'Octave', dir: 'octave', base: octLayout, desc: octDesc },
   { name: 'drClckd', dir: 'clock', base: clockLayout, desc: clockDesc },
@@ -1099,6 +1102,17 @@ function buildSettingsBody(id) {
   if (it.t === 'radio' || it.t === 'stepButton') {
     addP('orientation', selectInput(optVal(id, 'orientation', 'v'), [['h', 'horizontal'], ['v', 'vertical']], (v) => setOptAll(id, 'orientation', v)));
     addP('spacing', numberInput(optVal(id, 'spacing', 5.6), (v) => setOptAll(id, 'spacing', v)));
+    // COLUMNS IS A LAYOUT PROPERTY LIKE SPACING, and was reachable only by editing the layout file —
+    // an arbitrary line to draw between two settings that do the same kind of job. Folding a long
+    // list of lamps into two or three columns is exactly the sort of thing you decide while looking
+    // at the panel, which is what this editor is for.
+    //
+    // Shown only for a VERTICAL group, because a horizontal one is a single row by definition and the
+    // primitive ignores the number — a control that silently does nothing is worse than no control.
+    if (optVal(id, 'orientation', 'v') !== 'h') {
+      addP('columns', numberInput(optVal(id, 'columns', 1), (v) => setOptAll(id, 'columns', Math.max(1, Math.round(v)))));
+      addP('column gap', numberInput(optVal(id, 'colGap', 0), (v) => setOptAll(id, 'colGap', v)));
+    }
     addP('LED radius', numberInput(optVal(id, 'ledR', 2.16), (v) => setOptAll(id, 'ledR', v)));
     addP('LED colour', selectInput(optVal(id, 'led', 'red'), LED_KINDS, (v) => setOptAll(id, 'led', v)));
     // The grouping line alongside the lamps. Right for a short row; on a column as tall

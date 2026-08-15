@@ -17,7 +17,7 @@
   <g transform="translate(3.9 7.0994)">
   <rect x="0" y="0" width="30.48" height="113.5912" rx="2.5" fill="#cfcfcf"/>
   <rect x="0.5" y="0.5" width="29.48" height="112.5912" rx="2.2" fill="none" stroke="#7d7d7d" stroke-width="0.5"/>
-  <text x="5.3688" y="7.4" font-size="3.106" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">VCA</text>
+  <text x="3.3528000000000002" y="7.4" font-size="3.106" font-weight="700" font-style="italic" fill="#163a69" text-anchor="start" font-family="Arial Narrow, Helvetica, Arial, sans-serif">VCA</text>
   <g data-wcoast-param="level" data-wcoast-cx="12.25" data-wcoast-cy="17.9" data-wcoast-angle-min="-150" data-wcoast-angle-max="150" data-wcoast-port="levelCv">
     <circle cx="12.25" cy="17.9" r="8.5" fill="url(#blueRing)" stroke="#004b7a" stroke-width="0.3748"/>
     <circle cx="12.25" cy="17.9" r="6.12" fill="url(#knobCap)" stroke="#666666" stroke-width="0.2498"/>

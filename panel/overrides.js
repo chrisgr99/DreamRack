@@ -24,6 +24,10 @@ export function applyOverrides(layout, overrides) {
     if (typeof o.y === 'number') it.y = o.y;
     if (o.opts) it.opts = mergeOpts(it.opts || {}, o.opts);
   }
+  // HIDDEN ITEMS ARE DROPPED, not drawn transparent: a band rule that is in the way of a jack should
+  // leave no space and no hit target behind it. Only generated furniture is ever hidden this way —
+  // a control you did not want would be deleted from the layout instead.
+  layout.items = layout.items.filter((it) => !(it.id && overrides[it.id] && overrides[it.id].hidden));
   return layout;
 }
 

@@ -37,20 +37,14 @@ const RETRIG = 48;          // samples the gate is held low — a millisecond, e
 // at once, because a step to zero is a click.
 const LEVEL_FALL = 96;
 const RAMP = 128;           // samples an update takes to reach its value — one update interval
-const OUT = { GATE: 0, PITCH: 1, BEND: 2, LEVEL: 3, DUR: 4, PAN: 5 };
-const LANES = 6;
+const OUT = { GATE: 0, PITCH: 1, BEND: 2, BENDV: 3, LEVEL: 4, DUR: 5, PAN: 6, PRESSURE: 7, TIMBRE: 8 };
+const LANES = 9;
 const MAX_VOICES = 8;       // the panel's ceiling, and how many output groups this node carries
-// After the note groups come the page's own audio, summed to a stereo pair.
-const AUDIO_L = MAX_VOICES * LANES, AUDIO_R = AUDIO_L + 1;
-// Input 0 is the note cable's channel of silence; 1..8 are the audio of each copy of the page.
-const AUDIO_IN = 1;
-// EQUAL POWER, so a voice panned hard is no louder than one in the middle — a linear pan dips by
-// three decibels in the centre, which on a phrase that walks across the field is an audible pumping.
-const PAN_L = [], PAN_R = [];
-for (let i = 0; i <= 256; i++) {
-  const a = (i / 256) * (Math.PI / 2);
-  PAN_L.push(Math.cos(a)); PAN_R.push(Math.sin(a));
-}
+// THE PAGE'S AUDIO DOES NOT COME HERE. It did — each copy scaled by its note's level, placed at its
+// note's pan and summed — and that is the Poly to Stereo module now. This end deals in events and lanes
+// only. What made the move safe is that the LEVEL lane below already carries the exact value the
+// internal gain used, including the legato crossfade and the fall at the end of a note, so an
+// external amp driven by that lane does what the internal one did, sample for sample.
 
 // ---- ALLOCATION -------------------------------------------------------------------------------
 // One set of outputs per voice, in groups of six: group k is the note the k-th copy of the page is
@@ -105,6 +99,10 @@ class VoiceProcessor extends AudioWorkletProcessor {
       pitch: 0, level: 0, dur: 0, pan: 0,
       pitchTo: 0, pitchStep: 0, pitchLeft: 0,   // the glide, when a voice is carried to a new note
       levelTo: 0, levelStep: 0, levelLeft: 0,   // the crossfade, over the overlap
+      bendV: 0,                                 // the same bend in volts per octave
+      scale: 1 / 6,                             // volts per unit of bend — the note's own bend range
+      pressure: 0, pressTo: 0, pressStep: 0, pressLeft: 0,
+      timbre: 0, timbTo: 0, timbStep: 0, timbLeft: 0,
       hold: 0,                                  // samples this voice keeps its gate up after being left
       retrig: 0,                                // samples the gate is held low, to make an edge
       bend: 0, bendTo: 0, bendStep: 0, bendLeft: 0,
@@ -199,7 +197,11 @@ class VoiceProcessor extends AudioWorkletProcessor {
       } else { v.level = m.level; v.levelLeft = 0; }
       v.dur = m.duration; v.pan = m.pan;
       // Bend belongs to the note that is starting, so it begins at nothing however the last one ended.
-      v.bend = 0; v.bendTo = 0; v.bendLeft = 0; v.bendStep = 0;
+      v.bend = 0; v.bendTo = 0; v.bendLeft = 0; v.bendStep = 0; v.bendV = 0;
+      v.pressure = 0; v.pressLeft = 0; v.timbre = 0; v.timbLeft = 0;
+      // The note carries the range it was made with, so the volts lane can be recovered from the
+      // normalised one without this end having to know what the sending knob says.
+      v.scale = (m.bendRange || 2) / 12;
     } else if (m.t === 'off') {
       const i = this._slotOf(m.handle);
       if (i >= 0) this._v[i].note = null;
@@ -209,7 +211,11 @@ class VoiceProcessor extends AudioWorkletProcessor {
       const v = this._v[i];
       // Linear over one update interval, so the steps between updates never reach the output. A
       // filter would lag and blunt a fast move; this only delays it by the interval itself.
-      if (m.k === 'bend') { v.bendTo = m.v; v.bendLeft = RAMP; v.bendStep = (m.v - v.bend) / RAMP; }
+      // The update arrives in VOLTS. One ramp, on the volts; the control-voltage lane is derived from
+      // it each sample against the note's range, so the range scales the CV and never the pitch.
+      if (m.k === 'bend') { v.bendTo = m.v; v.bendLeft = RAMP; v.bendStep = (m.v - v.bendV) / RAMP; }
+      else if (m.k === 'pressure') { v.pressTo = m.v; v.pressLeft = RAMP; v.pressStep = (m.v - v.pressure) / RAMP; }
+      else if (m.k === 'timbre') { v.timbTo = m.v; v.timbLeft = RAMP; v.timbStep = (m.v - v.timbre) / RAMP; }
     }
   }
 
@@ -239,7 +245,14 @@ class VoiceProcessor extends AudioWorkletProcessor {
         // DURATION ENDS A NOTE THAT WAS NEVER ENDED. It is the failsafe the protocol is built on: an
         // off that never arrives cannot leave a voice sounding for ever.
         if (v.note && f >= v.note.endFrame + DEFER) v.note = null;
-        if (v.bendLeft > 0) { v.bend += v.bendStep; v.bendLeft--; if (v.bendLeft === 0) v.bend = v.bendTo; }
+        if (v.bendLeft > 0) { v.bendV += v.bendStep; v.bendLeft--; if (v.bendLeft === 0) v.bendV = v.bendTo; }
+        // The CV lane is the volts measured against the range, and CLAMPED — a source that bends
+        // further than the range says has run out of control voltage, but its pitch has not run out
+        // of movement, so the volts lane keeps going.
+        const bn = v.bendV / v.scale;
+        v.bend = bn > 1 ? 1 : bn < -1 ? -1 : bn;
+        if (v.pressLeft > 0) { v.pressure += v.pressStep; v.pressLeft--; if (v.pressLeft === 0) v.pressure = v.pressTo; }
+        if (v.timbLeft > 0) { v.timbre += v.timbStep; v.timbLeft--; if (v.timbLeft === 0) v.timbre = v.timbTo; }
         if (v.pitchLeft > 0) { v.pitch += v.pitchStep; v.pitchLeft--; if (v.pitchLeft === 0) v.pitch = v.pitchTo; }
         if (v.levelLeft > 0) { v.level += v.levelStep; v.levelLeft--; if (v.levelLeft === 0) v.level = v.levelTo; }
         else if (!v.note && v.level !== 0) { v.levelTo = 0; v.levelLeft = LEVEL_FALL; v.levelStep = -v.level / LEVEL_FALL; }
@@ -251,29 +264,12 @@ class VoiceProcessor extends AudioWorkletProcessor {
         // release should find the note it is releasing, not silence.
         outputs[o + OUT.PITCH][0][i] = v.pitch;
         outputs[o + OUT.BEND][0][i] = v.bend;
+        outputs[o + OUT.BENDV][0][i] = v.bendV;
+        outputs[o + OUT.PRESSURE][0][i] = v.pressure;
+        outputs[o + OUT.TIMBRE][0][i] = v.timbre;
         outputs[o + OUT.LEVEL][0][i] = v.level;
         outputs[o + OUT.DUR][0][i] = v.dur;
         outputs[o + OUT.PAN][0][i] = v.pan;
-      }
-    }
-    // ---- THE PAGE'S AUDIO, once per copy and then summed.
-    //
-    // Each copy is scaled by the level of the note IT is playing and placed at that note's pan, which
-    // is the whole reason this happens here rather than at the mixer: level and pan belong to a note,
-    // so they have to be applied before anything is summed. Panning a mixer channel moves all eight.
-    const outL = outputs[AUDIO_L] && outputs[AUDIO_L][0];
-    const outR = outputs[AUDIO_R] && outputs[AUDIO_R][0];
-    if (outL && outR) {
-      for (let k = 0; k < groups; k++) {
-        const src = _inputs[AUDIO_IN + k] && _inputs[AUDIO_IN + k][0];
-        if (!src || !src.length) continue;
-        const v = this._v[k];
-        // The same numbers the lanes carry, so a page that patches level and pan itself and one that
-        // lets this module do it come to the same place.
-        const p = v.pan < -1 ? -1 : v.pan > 1 ? 1 : v.pan;
-        const idx = Math.round((p + 1) * 128);
-        const gl = PAN_L[idx] * v.level, gr = PAN_R[idx] * v.level;
-        for (let i = 0; i < n; i++) { outL[i] += src[i] * gl; outR[i] += src[i] * gr; }
       }
     }
     return true;

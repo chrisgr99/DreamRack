@@ -128,8 +128,11 @@ translator and becomes a source like any other (§7).
 **Sent as tagged updates while the note sounds**, each carrying the handle of the note it belongs to:
 
 - **bend** — how far the pitch has moved since the note started, as −1 to 1 against a bend range.
-- **pressure** — a continuous amplitude or effort signal. Breath for a wind voice, bow force for a
-  string one.
+- **pressure** — how hard the note is being played now: breath for a wind voice, bow force for a
+  string one. Distinct from level, which is how hard it was struck.
+- **timbre** — brightness, vowel, position along the string. MPE's third per-note dimension, sent by
+  every expressive controller and expected by every expressive instrument, which is why it is named
+  rather than left to a general-purpose lane.
 
 This is the line MPE draws between a note's start and its ongoing expression, drawn here on purpose
 rather than arrived at later.
@@ -218,11 +221,21 @@ every one of those carries a depth trim, so **how far a bend bends is a knob tha
 the module being played**. An absolute value would instead have to be summed with the held pitch, and
 an input here takes one cable, so that sum would mean an adder module in every gliding patch.
 
-It runs **−1 to 1 rather than in volts**, like every other modulation signal in the rack, so it is an
-ordinary control signal in the ordinary control colour and its depth trim behaves as it does for any
-other CV. The Sequencer's **bend range** knob is what turns volts into that number: how many
-semitones of movement count as full deflection, defaulting to the two a MIDI instrument ships with.
-Movement past the range clamps, as a wheel at its stop does.
+**Bend leaves on two jacks, and they are not two views of one number.**
+
+The **control voltage** runs −1 to 1 like every other modulation signal here, scaled by Sequence Out's
+**bend range** — how many semitones count as full deflection — and clamped there, as a wheel at its
+stop is.
+
+The **volts per octave** output carries the pitch's real movement, unscaled and unclamped. Our
+modulation inputs sum in the exponent, so patching it into one with the depth at unity reconstructs
+the source's pitch exactly rather than approximately: held pitch plus this is where the source has
+gone. **The range knob does not touch it** — a range describes a control signal, not a pitch — so a
+source that bends further than the range still arrives whole on this jack while the control voltage
+has run out at 1.
+
+Two jacks rather than a switch: no mode to remember, and green against orange already says which is a
+pitch and which is a modulation signal.
 
 The range is **semitones but not whole ones** — a tenth of a semitone at one end, two octaves at the
 other, and everything between. A quarter-tone bend, a scale that is not twelve-tone, and a range set
@@ -347,31 +360,53 @@ page stop being eight things", and the panel should say so rather than leave it 
 
 The page is a template and the engine runs N copies of it, each an ordinary mono graph of ordinary
 modules. **No module in the rack has to know that polyphony exists**, which is what makes the scheme
-affordable across twenty-six of them and counting, and a polyphonic signal is never a cable you can
+affordable across twenty-seven of them and counting, and a polyphonic signal is never a cable you can
 see. The note edge is the only thing that carries several notes at once, and it stops at Voice In.
 
-**So Voice In owns the page's audio exit as well as its note entrance.** It takes the page's audio,
-scales it by the level of the note that copy is playing, places it at that note's pan, sums the
-copies, and sends one stereo signal to the tab. The mixer needs no change: what reaches it is what
-has always reached it.
+### Poly to Stereo — where a page's voices become one signal
 
-That placement is forced rather than chosen. **Level and pan are per note, so they are only right if
-they are applied per copy, before anything is summed** — panning at the mixer channel moves all eight
-voices at once. Voice In is the one thing that exists once per copy and knows which note that copy
-holds.
+Level and pan belong to a note, so they are **only right if they are applied per copy, before
+anything is summed**: panning at a mixer channel moves all eight voices at once. But that does not
+mean Voice In has to do it. It means the module that does it has to be **per note**, which is a
+property any module on the page can have.
 
-It is a gain and a pan, not a VCA: no response curve, no CV input, no envelope. The rack has a VCA
-module for anything more, and the point of this one is that it does what every voice needs without
-being asked.
+So the gain and the pan are their own module, **Poly to Stereo**, and the summing across copies is the rack
+rule that already exists — per note into shared sums, so eight copies patched to one mixer channel
+arrive summed at its input like eight of anything else.
 
-**A stereo pair out**, because per-note pan has nowhere to go in one signal. Patch L alone for a mono
-voice and the sum arrives whole; patch both for the field. The pan law is **equal power**, so a voice
-panned hard is no louder than one in the middle — a linear law dips three decibels in the centre,
-which on a phrase that walks across the field is an audible pumping.
+Voice In is left with one idea: turn an event into voltages. It has no audio jacks at all.
 
-Using it is optional. A page that patches its own VCA from the level lane and ignores these jacks
-behaves exactly as it did; what it cannot do that way is pan per note, because a mixer channel's pan
-moves every voice at once.
+**Two level inputs, multiplied**, each a knAck with the CV in the knob. A voice has two amplitudes
+that mean different things — the envelope, which is the note's shape over time, and the velocity,
+which is how hard it was struck, one number for the whole note — and their product is what a
+polysynth computes. With one input you would need a separate VCA to compute it, which is the module
+this replaced. They are **A and B**, not "env" and "vel": multiplication is symmetric, and naming one
+of them would say something false about the other, since pressure or a second envelope belongs in
+either. **The faceplate prints a multiplication sign between them**, because two jacks with the same
+name and no sign would leave the user to guess, and the guess would be that they sum.
+
+Each knob is the offset, so nothing patched with the knobs at the top is unity — a freshly placed
+module passes audio through untouched, and that is the one state the panel has to be readable for.
+
+**Pan sums rather than replaces.** Voice In's PAN into the jack puts each note where its source said;
+the knob offsets the page; anything else summed in moves the voices while they sound. On a per-note
+page an LFO is eight LFOs, one per copy, each free-running with its own phase — which is the swarm
+effect for the cost of one cable and no change to any worklet. Everything is computed **per sample**,
+including the pan gain, so a moving pan slides rather than stepping once per block.
+
+**A stereo pair out**, because per-note pan has nowhere to go in one signal — and a **mono** sum
+beside it, taken before the panning. L and R are halves: patching one of them gives half a voice, not
+a mono one. The pan law is **equal power**, so a voice panned hard is no louder than one in the
+middle — a linear law dips three decibels in the centre, which on a phrase that walks across the
+field is an audible pumping.
+
+Nothing else belongs in it. No filter, no saturation, no mute: each of those is a module already, and
+each would be worse for being tied to the voice's exit. And nothing per-note can follow a shared
+module, so Poly to Stereo is the natural end of the per-note world — its outputs fanning out, mono into a
+shared reverb and L and R dry to the mixer, is how you keep both.
+
+Using it is optional. A page can patch its own VCA from the level lane and reach the mixer that way;
+what it cannot do is pan per note, because a mixer channel's pan moves every voice at once.
 
 ## 6. Ports appear when they are used
 
@@ -486,9 +521,8 @@ Each stage is usable on its own and worth having even if the next one is never b
    count, allocation, stealing, and the mono retrigger-or-legato choice. The transport has to change
    first, because the channel format cannot reach five voices.
 
-   Voice In's audio exit — the per-copy gain and pan, and the summing — belongs here for the same
-   reason: it is only needed once a page runs more than one copy, and building it earlier would mean
-   building it twice.
+   Poly to Stereo — the per-copy gain and pan — belongs here for the same reason: it is only needed once a
+   page runs more than one copy, and building it earlier would mean building it twice.
 6. **The continuing values.** Bend and pressure per allocated voice, and duration becoming a maximum.
 7. **The external interface module.** The receiver from `control-protocol.md`, arriving as an
    ordinary module on a sequencer page. After stage 5 it speaks the transport the rack already
@@ -509,6 +543,8 @@ Each stage is usable on its own and worth having even if the next one is never b
   today. Fading the timbre of the outgoing voice into the incoming one over the same TIME is closer
   still to what an instrument does, and it is worth experimenting with once there is something to
   play — the control is already there and the two voices already overlap.
+- **A source for pressure and timbre.** The lanes and their jacks exist; nothing in the rack produces
+  them yet, which waits on the external interface module (§7) or on a controller module of our own.
 - **What a page copy costs to build and tear down.** Allocation is only free if a copy already
   exists; if the engine builds one on demand, a note would wait for a graph to be assembled. Measured
   once there is something to measure.

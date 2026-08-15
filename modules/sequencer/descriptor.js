@@ -42,6 +42,16 @@ export default {
     { id: 'levelIn', name: 'Level', section: 'note', domain: 'control', dir: 'in' },
     { id: 'durIn', name: 'Duration', section: 'note', domain: 'control', dir: 'in' },
     { id: 'panIn', name: 'Pan', section: 'note', domain: 'control', dir: 'in', polarity: 'bipolar' },
+    // ---- THE TWO THAT KEEP MOVING. Everything above is read once, at the gate's edge, and held;
+    // these are followed for as long as the note sounds and sent as updates.
+    //
+    // PRESSURE is how hard the note is being played RIGHT NOW — breath for a wind voice, bow force
+    // for a string one — as against level, which is how hard it was struck. TIMBRE is the third
+    // dimension an expressive controller has: brightness, vowel, position along the string. MPE sends
+    // exactly these two per note alongside bend, which is not a coincidence — it is what a physical
+    // instrument gives a player.
+    { id: 'pressureIn', name: 'Pressure', section: 'note', domain: 'control', dir: 'in' },
+    { id: 'timbreIn', name: 'Timbre', section: 'note', domain: 'control', dir: 'in' },
     { id: 'noteOut', name: 'Note', section: 'out', domain: 'note', dir: 'out' },
   ],
   params: [
@@ -69,6 +79,10 @@ export default {
     // ear rather than by arithmetic are all ordinary things to want. The curve is exponential because
     // the span is 240 to 1, and on a linear knob almost the whole travel would be spent above the
     // handful of semitones most playing uses.
-    { id: 'bendRange', name: 'Bend range', section: 'note', curve: 'exp', min: 0.1, max: 24, default: 2, unit: 'st', glideMs: 0 },
+    // DETENTED IN SEMITONES, nought to twelve, so a range can be SET rather than approached. It reads
+    // its value off a printed gauge, and it scales the control-voltage bend output alone — the volts
+    // per octave output carries the pitch's real movement and is not this knob's business.
+    { id: 'bendRange', name: 'Bend range', section: 'note', curve: 'detent', min: 0, max: 12, default: 2,
+      unit: 'st', glideMs: 0 },
   ],
 };

@@ -17,7 +17,7 @@
   <g transform="translate(3.9 7.0994)">
   <rect x="0" y="0" width="25.4" height="113.5912" rx="2.5" fill="#262629"/>
   <rect x="0.5" y="0.5" width="24.4" height="112.5912" rx="2.2" fill="none" stroke="#808085" stroke-width="0.5"/>
-  <text x="5.746" y="7.4" font-size="3.106" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">NOISE</text>
+  <text x="2.794" y="7.4" font-size="3.106" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="start" font-family="Arial Narrow, Helvetica, Arial, sans-serif">NOISE</text>
   <g data-wcoast-port="violetOut" data-wcoast-cx="12.7" data-wcoast-cy="12.4">
     <circle cx="12.7" cy="12.4" r="3" fill="#8a8a8a" stroke="#000000" stroke-width="0.3"/>
     <circle cx="12.7" cy="12.4" r="1.6" fill="#000000"/>

@@ -12,24 +12,23 @@
 'use strict';
 
 const PROCESSOR = 'wcoast-voice';
-const OUT_PORTS = ['gateOut', 'pitchOut', 'bendOut', 'levelOut', 'durOut', 'panOut'];
-// EIGHT GROUPS OF SIX. Group zero is what the panel's jacks show; the rest are what the copies of a
+const OUT_PORTS = ['gateOut', 'pitchOut', 'bendOut', 'bendVOut', 'levelOut', 'durOut', 'panOut',
+  'pressureOut', 'timbreOut'];
+// EIGHT GROUPS OF NINE. Group zero is what the panel's jacks show; the rest are what the copies of a
 // duplicated page will be wired to, so the allocator lives in one worklet rather than being spread
 // across eight of them. Unused groups cost a block of silence each.
 const MAX_VOICES = 8;
 const ROLLOVER = ['oldest', 'quietest', 'ignore', 'glide', 'legato'];
-// Input 0 is the note cable — a channel of silence that keeps both ends rendered. Then one audio
-// input per copy of the page, and after the note groups, the summed stereo pair.
-const AUDIO_IN = 1;
-const AUDIO_OUT = { audioL: MAX_VOICES * OUT_PORTS.length, audioR: MAX_VOICES * OUT_PORTS.length + 1 };
+// The ONE input is the note cable: a channel of silence whose only job is to keep both worklets in
+// the rendering graph. The page's audio never comes here — see Poly to Stereo.
 
 export function create(ctx, _services) {
   const node = new AudioWorkletNode(ctx, PROCESSOR, {
     // One input, carrying a channel of silence, whose only job is to keep both ends of the cable in
-    // the rendering graph; six mono outputs per voice, the parts of a note.
-    numberOfInputs: 1 + MAX_VOICES,
-    numberOfOutputs: OUT_PORTS.length * MAX_VOICES + 2,
-    outputChannelCount: new Array(OUT_PORTS.length * MAX_VOICES + 2).fill(1),
+    // the rendering graph; one mono output per lane per voice, the parts of a note.
+    numberOfInputs: 1,
+    numberOfOutputs: OUT_PORTS.length * MAX_VOICES,
+    outputChannelCount: new Array(OUT_PORTS.length * MAX_VOICES).fill(1),
   });
 
   const outIndex = new Map(OUT_PORTS.map((id, i) => [id, i]));
@@ -37,18 +36,10 @@ export function create(ctx, _services) {
   return {
     node,
     getOutput: (portId) => {
-      if (AUDIO_OUT[portId] !== undefined) return { node, index: AUDIO_OUT[portId] };
       const i = outIndex.get(portId);
       return i === undefined ? null : { node, index: i };
     },
-    getInput: (portId) => {
-      if (portId === 'noteIn') return { node, index: 0 };
-      if (portId === 'audioIn') return { node, index: AUDIO_IN };   // copy zero, which is the template
-      return null;
-    },
-    // Copy k's audio arrives on its own input, so it can be scaled and placed before the sum.
-    getVoiceInput: (portId, voice) => (portId === 'audioIn' && voice >= 0 && voice < MAX_VOICES
-      ? { node, index: AUDIO_IN + voice } : null),
+    getInput: (portId) => (portId === 'noteIn' ? { node, index: 0 } : null),
     // The engine asks for a copy's outputs by voice number; the panel's jacks are voice zero.
     getVoiceOutput: (portId, voice) => {
       const i = outIndex.get(portId);

@@ -98,6 +98,8 @@ const LETTER_SIZE = 3.4;     // a single letter on a knob's rim
 const LETTER_OUT = 2.9;      // how far past the rim its centre sits
 const SUB_SIZE = 1.6;        // the small note under a label ("through zero")
 const JACK_LABEL = 1.8;
+// A caption is a sign rather than a name, so it is drawn larger than a label or it reads as a smudge.
+const CAPTION_SIZE = 3.4;
 const HEADER_SIZE = 2.4;
 const RULE_W = 0.355;
 
@@ -134,14 +136,21 @@ export const knob = (id, label, opts = {}) =>
 export const knack = (id, label, port, opts = {}) =>
   ({ kind: 'knack', id, label, port, depth: opts.depth || null, trimBelow: !!opts.trimBelow, size: opts.size || 'medium',
      scale: opts.scale || null, sub: opts.sub || null, above: !!opts.above,
+     // `side` puts the name BESIDE the knob rather than under it — for a name too long to sit under a
+     // small knob without claiming the space of whatever is below it.
+     side: opts.side === 'left' || opts.side === 'right' ? opts.side : null,
      letter: opts.letter || null, at: opts.at || 12 });
 
 // `labelSize` overrides the default label size — worth it on a module's principal outputs, which are
 // read more often than anything else on the panel. NOT called `size`: on a knob that name already
 // means the size NAME ('big', 'large'), and reusing it fed a string into textWidth and produced a NaN
 // position — a knob drawn off the edge of its own panel, with nothing warning about it.
+// `side: 'left'|'right'` puts the label BESIDE the jack instead of under it, which is what a tall
+// column of jacks needs: the label no longer claims the gap to the next jack, so the spacing is set
+// by the jacks themselves. Voice In's output column is the case that asked for it.
 export const jack = (id, label, opts = {}) =>
-  ({ kind: 'jack', id, label, r: opts.r || JACK_R, labelSize: opts.labelSize || null });
+  ({ kind: 'jack', id, label, r: opts.r || JACK_R, labelSize: opts.labelSize || null,
+    side: opts.side === 'left' || opts.side === 'right' ? opts.side : null });
 
 export const button = (id, label, opts = {}) => ({ kind: 'button', id, label, r: opts.r || 2.0 });
 
@@ -183,6 +192,19 @@ export const readout = (id, label, opts = {}) =>
   ({ kind: 'readout', id, label, chars: opts.chars || 3, value: opts.value || '', menu: !!opts.menu, digits: opts.digits || null,
     widest: opts.widest || null, pad: opts.pad == null ? null : opts.pad, width: opts.width || 0,
     side: opts.side || null, labelSize: opts.labelSize || null, size: opts.size || 1 });
+
+// A WORD OR A SIGN ON ITS OWN, belonging to no control. Poly to Stereo's two level inputs multiply,
+// and a
+// multiplication sign between them is the only thing that says so — the panel has to be readable
+// without the manual. It carries no id and no port: it is ink, and the host never looks at it.
+// `ring: true` draws a circle round it. An operator wants to look like an operator: a bare multiplication
+// sign between two knobs reads as a stray mark or a letter, and the ring is what makes it a SYMBOL —
+// the same reason a mixing desk rings its phase and mute glyphs.
+export const caption = (text, opts = {}) => {
+  const size = opts.size || CAPTION_SIZE;
+  return { kind: 'caption', text, size, italic: opts.italic !== false,
+    ring: opts.ring ? (opts.ringR || +(size * 0.85).toFixed(2)) : 0 };
+};
 
 // Free space in a row, in mm, for when even gaps are not what you want.
 export const gap = (mm) => ({ kind: 'gap', mm });
@@ -326,6 +348,7 @@ function halfWidth(c) {
   }
   else if (c.kind === 'display') art = c.w / 2;
   else if (c.kind === 'jack') art = c.r;
+  else if (c.kind === 'caption') art = Math.max(textWidth(c.text, c.size) / 2, c.ring);
   else if (c.kind === 'button') art = c.r;
   else if (c.kind === 'lamps') {
     const tH = c.ledR + LAMP_PAD;
@@ -352,6 +375,7 @@ function rowHeight(r) {
     else if (c.kind === 'display') h = Math.max(h, c.h);
     else if (c.kind === 'readout') h = Math.max(h, READOUT_H * (c.size || 1));
     else if (c.kind === 'jack') h = Math.max(h, c.r * 2);
+    else if (c.kind === 'caption') h = Math.max(h, c.ring ? c.ring * 2 : c.size);
     else if (c.kind === 'button') h = Math.max(h, c.r * 2);
     else if (c.kind === 'lamps') {
       const tH = c.ledR + LAMP_PAD;
@@ -481,6 +505,13 @@ function emit(items, c, x, y) {
       items.push({ t: 'raw', svg: `  <g data-wcoast-display="${c.id}" data-x="${x0}" data-y="${y0}" data-w="${c.w}" data-h="${c.h}"></g>` });
       break;
     }
+    case 'caption':
+      // y is the CENTRE of the sign, so the baseline drops by roughly a third of its size — the same
+      // correction the rim letters make.
+      if (c.ring) items.push({ t: 'circle', x, y, r: c.ring, sw: 0.4 });
+      items.push({ t: 'label', x, y: +(y + c.size * 0.36).toFixed(2), text: c.text,
+        opts: { size: c.size, italic: c.italic } });
+      break;
     case 'gap': break;
     default: throw new Error(`grammar: unknown control kind "${c.kind}"`);
   }
@@ -566,7 +597,15 @@ export function panel(opts, bands) {
       const slack = avail - bandContentH(b);
       if (slack > 0) y += slack / 2;
     }
-    if (b.header) { items.push({ t: 'label', x: MARGIN + textWidth(b.header, HEADER_SIZE) / 2, y: +(y + 3.4).toFixed(2), text: b.header, opts: { size: HEADER_SIZE } }); }
+    // A HEADER CARRIES AN ID, like the rules do, so the panel editor can select it and an override can
+    // restyle it — a header is presentation, and presentation belongs to the panel rather than to the
+    // grammar's one global size. Numbered by band position, which is stable while the panel's sections
+    // are: renaming a header does not move it.
+    //
+    // ANCHORED AT ITS LEFT EDGE rather than centred on a precomputed middle. Identical on screen, but
+    // a centred header drawn from a width worked out at emit time drifts left as soon as its size is
+    // overridden — the very thing the id is there to allow.
+    if (b.header) { items.push({ t: 'label', id: `header${bi + 1}`, x: MARGIN, y: +(y + 3.4).toFixed(2), text: b.header, opts: { size: HEADER_SIZE, anchor: 'start' } }); }
     let ry = y + (b.header ? HEADER_H : 0);
     b.rows.forEach((r, ri) => {
       const h = rowHeight(r);
@@ -601,7 +640,10 @@ export function panel(opts, bands) {
       // the band above was sitting on rather than from anyone's content.
       const intoLast = outBand && bi === stacked.length - 2 && !stacked[bi + 1].header;
       if (intoLast) y = Math.max(y - LAST_BAND_LIFT, y - Math.max(0, extra));
-      if (!noRules) items.push({ t: 'divider', x: MARGIN, y: +y.toFixed(2), len: +(faceW - MARGIN * 2).toFixed(2), w: RULE_W });
+      // AN ID, so the panel editor can address this one rule. A divider is generated by the band
+      // structure rather than placed by hand, so without a name the only way to be rid of one was to
+      // turn every rule on the panel off in the layout file.
+      if (!noRules) items.push({ t: 'divider', id: `rule${bi + 1}`, x: MARGIN, y: +y.toFixed(2), len: +(faceW - MARGIN * 2).toFixed(2), w: RULE_W });
       y += PAD;
     }
   });
@@ -610,7 +652,7 @@ export function panel(opts, bands) {
   // happened to finish — flowed, it ran straight across the output jacks whenever the content above
   // ended low.
   if (outBand && !noRules) {
-    items.push({ t: 'divider', x: MARGIN, y: +(FACE_H - OUT_CY_UP - JACK_R - 2.4).toFixed(2),
+    items.push({ t: 'divider', id: 'ruleOut', x: MARGIN, y: +(FACE_H - OUT_CY_UP - JACK_R - 2.4).toFixed(2),
       len: +(faceW - MARGIN * 2).toFixed(2), w: RULE_W });
   }
 
@@ -641,7 +683,7 @@ export function panel(opts, bands) {
       headX = MARGIN + ((x1 - MARGIN) - groupW) / 2;
       cur = headX + headW + headGap;
     }
-    if (outBand.header) items.push({ t: 'label', x: +headX.toFixed(2), y: +(cy + 1.2).toFixed(2), text: outBand.header, opts: { size: 2.2, anchor: 'start' } });
+    if (outBand.header) items.push({ t: 'label', id: 'headerOut', x: +headX.toFixed(2), y: +(cy + 1.2).toFixed(2), text: outBand.header, opts: { size: 2.2, anchor: 'start' } });
     jacks.forEach((c, i) => { emit(items, c, +(cur + hw[i].l).toFixed(2), cy); cur += hw[i].l + hw[i].r + g; });
   }
 

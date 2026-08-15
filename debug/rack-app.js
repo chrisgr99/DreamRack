@@ -33,6 +33,8 @@ import envDescriptor from '../modules/envelope/descriptor.js';
 import { create as envCreate } from '../modules/envelope/factory.js';
 import vcaDescriptor from '../modules/vca/descriptor.js';
 import { create as vcaCreate } from '../modules/vca/factory.js';
+import polyStereoDescriptor from '../modules/poly-to-stereo/descriptor.js';
+import { create as polyStereoCreate } from '../modules/poly-to-stereo/factory.js';
 import filterDescriptor from '../modules/filter/descriptor.js';
 import { create as filterCreate } from '../modules/filter/factory.js';
 import octDescriptor from '../modules/octave/descriptor.js';
@@ -93,6 +95,7 @@ registry.register({ descriptor: vcoDescriptor, create: vcoCreate });
 registry.register({ descriptor: noiseDescriptor, create: noiseCreate });
 registry.register({ descriptor: envDescriptor, create: envCreate });
 registry.register({ descriptor: vcaDescriptor, create: vcaCreate });
+registry.register({ descriptor: polyStereoDescriptor, create: polyStereoCreate });
 registry.register({ descriptor: filterDescriptor, create: filterCreate });
 registry.register({ descriptor: octDescriptor, create: octCreate });
 registry.register({ descriptor: clockDescriptor, create: clockCreate });
@@ -202,6 +205,15 @@ const MODULE_TYPES = [{
   hp: 6,
   panelUrl: 'modules/vca/panel.svg',
   descriptor: vcaDescriptor,
+}, {
+  // Poly to Stereo — where a voice page's audio leaves: two gains multiplied, then an equal-power
+  // pan. Per note, so on a duplicated page each copy scales and places its own note and the copies
+  // sum at whatever it feeds. See design/voice-pages.md.
+  descriptorId: polyStereoDescriptor.id,
+  name: 'Poly to Stereo',
+  hp: 8,
+  panelUrl: 'modules/poly-to-stereo/panel.svg',
+  descriptor: polyStereoDescriptor,
 }, {
   // Sine Source — authored in the panel editor (panel + descriptor drawn), factory
   // hand-written. The Phase 6 closed-loop proof: a drawn module that loads and plays.

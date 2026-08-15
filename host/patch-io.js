@@ -186,6 +186,9 @@ export function serialize(rack, mixer) {
     // moved, so a rack that has never been slid reads exactly as it did before stops existed.
     pages: rack.pageList ? rack.pageList().filter((p) => p.kind === 'audio').map((p) => {
       const o = { id: p.id, name: p.name };
+      // Whether that name was typed or derived. Without it a reopened patch would either lose the
+      // name you chose or keep a derived one that no longer describes the page.
+      if (p.custom) o.custom = true;
       const stops = rack.rowStops ? rack.rowStops(p.id) : [];
       if (stops.some((v) => v > 0)) o.stops = stops.map((v) => v || 0);
       return o;
@@ -296,6 +299,10 @@ export async function restore(obj, rack, mixer, opts = {}) {
   }
   if (rack.reconcileLinks) rack.reconcileLinks();   // fix link styles/sources now that every cord exists
   rack.redrawCables();
+  // Every module is placed and every cable is laid, so the pages can be named from what they hold —
+  // rather than from the name a file happened to be saved with, which is how a page kept calling
+  // itself Voice 1 after its Voice In had gone.
+  if (rack.afterRestore) rack.afterRestore();
 
   // Probes last: modules and wiring exist now, so an input probe finds its feeding cord.
   // Remap each saved endpoint id to the fresh session key.
@@ -385,10 +392,28 @@ export function validate(obj, registry) {
     if (!w || !w.from || !w.to) return bad('a wiring entry is missing from/to');
     if (!descOf.has(w.from.module)) return bad(`wiring from unknown module "${w.from.module}"`);
     if (!descOf.has(w.to.module)) return bad(`wiring to unknown module "${w.to.module}"`);
-    if (!portOf(w.from.module, w.from.port, 'out')) return bad(`no output "${w.from.port}" on "${w.from.module}"`);
-    if (!portOf(w.to.module, w.to.port, 'in')) return bad(`no input "${w.to.port}" on "${w.to.module}"`);
+    // A CABLE TO A PORT THAT NO LONGER EXISTS IS DROPPED, NOT FATAL. This was fatal, and the cost of
+    // that was the whole patch: remove a port from a module — Voice In's audio jacks moving out to
+    // Poly to Stereo — and every saved session mentioning it is refused entire, so the app comes up with
+    // the default rack and the autosave then writes that over the user's work. One stale cable must
+    // not cost twenty good ones. restore() already survives a cable that will not come back, and it
+    // says which; this makes the two agree.
+    //
+    // An unknown module TYPE is still fatal, above: a module that cannot be placed leaves a hole
+    // nothing else in the patch makes sense around.
+    if (!portOf(w.from.module, w.from.port, 'out')) {
+      warnings.push(`cable from "${w.from.module}.${w.from.port}" dropped — that output no longer exists`);
+      continue;
+    }
+    if (!portOf(w.to.module, w.to.port, 'in')) {
+      warnings.push(`cable to "${w.to.module}.${w.to.port}" dropped — that input no longer exists`);
+      continue;
+    }
     const key = `${w.to.module}|${w.to.port}`;
-    if (usedInputs.has(key)) return bad(`input "${w.to.port}" on "${w.to.module}" has more than one cable`);
+    if (usedInputs.has(key)) {
+      warnings.push(`a second cable into "${w.to.module}.${w.to.port}" dropped — an input takes one`);
+      continue;
+    }
     usedInputs.add(key);
   }
   return { ok: true, warnings };

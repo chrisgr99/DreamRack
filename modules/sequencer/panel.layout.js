@@ -11,12 +11,16 @@
 
 import { panel, band, row, knob, jack, lamps, outputs } from '../../panel/grammar.js';
 
-export default panel({ hp: 8 }, [
+export default panel({ hp: 10 }, [
   band('NOTE', [
     row([knob('level', 'LEVEL', { size: 'small' }), knob('duration', 'DUR', { size: 'small' })]),
     row([jack('levelIn', 'level'), jack('durIn', 'dur')]),
-    row([knob('pan', 'PAN', { size: 'small' }), knob('bendRange', 'BEND', { size: 'small' })]),
-    row([jack('panIn', 'pan')]),
+    // The bend range reads off a printed gauge, every other semitone so the numbers have room.
+    row([knob('pan', 'PAN', { size: 'small' }),
+      knob('bendRange', 'BEND', { size: 'small', scale: ['0', '', '2', '', '4', '', '6', '', '8', '', '10', '', '12'] })]),
+    // Pan with the two continuing values beside it: three jacks fit across ten HP, and the row saves
+    // the height that pushed the gate and pitch labels off the bottom of the face.
+    row([jack('panIn', 'pan'), jack('pressureIn', 'press'), jack('timbreIn', 'timb')]),
     // WHAT ENDS A NOTE, and it has to be on the panel: nothing else can say whether a step's length
     // is the gate's or the duration's, and only HOLD lets notes overlap at all.
     // Spaced at 8mm rather than the house 5.6: the two labels are 5.7mm wide and were touching.

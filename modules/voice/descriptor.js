@@ -3,6 +3,12 @@
 // One note cable in, and the note's parts come back out as ordinary jacks: gate, 1V/oct pitch, bend,
 // level, duration and pan. Patch those into whatever the page is built from and the page plays.
 //
+// NO AUDIO PASSES THROUGH HERE. It used to: the page's sound came back in, was scaled by each copy's
+// level, placed at its pan and summed. That is the Poly to Stereo module now (modules/poly-to-stereo), and the
+// reason is that it was a second idea inside a module with one — this end turns events into voltages,
+// full stop. Nothing was lost by moving it: the LEVEL lane carries the same value the internal gain
+// used, crossfade and end-of-note fall included, so an external amp reproduces both exactly.
+//
 // UNBUNDLING HAPPENS HERE AND NOWHERE ELSE, exactly as bundling happens only in the Sequence Out module
 // (design/voice-pages.md §3). That is the rule that keeps the note domain out of general patching,
 // and with the domain rule in the patchbay it is also what makes a page's kind enforce itself: a note
@@ -50,22 +56,22 @@ export default {
     // CV. Patch it into a pitch modulation input and the note scoops, glides or bends; leave it and
     // notes play at the pitch they started on, which is the ordinary case.
     { id: 'bendOut', name: 'Pitch bend', section: 'out', domain: 'control', dir: 'out', polarity: 'bipolar' },
+    // THE SAME BEND IN VOLTS. Our modulation inputs sum in the exponent — the Macro Oscillator's FM
+    // multiplies frequency by two to the power of (CV × depth) — so a bend expressed in volts per
+    // octave, patched there with the depth at unity, reconstructs the source's pitch EXACTLY. Held
+    // pitch plus this is arithmetic rather than an approximation calibrated by ear.
+    //
+    // Two jacks rather than a switch: no mode to remember, and green against orange already says
+    // which is a pitch and which is a modulation signal.
+    { id: 'bendVOut', name: 'Bend 1V/Oct', role: 'pitch', section: 'out', domain: 'control', dir: 'out',
+      polarity: 'bipolar' },
     { id: 'levelOut', name: 'Level', section: 'out', domain: 'control', dir: 'out' },
     { id: 'durOut', name: 'Duration', section: 'out', domain: 'control', dir: 'out' },
     { id: 'panOut', name: 'Pan', section: 'out', domain: 'control', dir: 'out', polarity: 'bipolar' },
-    // ---- THE PAGE'S AUDIO EXIT. Patch the end of the voice's chain in here and the page leaves
-    // through this module: each copy scaled by the level of the note IT is playing, placed at that
-    // note's pan, and the copies summed.
-    //
-    // IT HAS TO BE HERE. Level and pan belong to a note, so they are only right if they are applied
-    // per copy, before anything is summed — panning at the mixer channel moves all eight voices at
-    // once. Voice In is the one thing that exists once per copy and knows which note that copy holds.
-    //
-    // A STEREO PAIR, because per-note pan has nowhere to go in one signal. Patch L alone for a mono
-    // voice and the sum arrives whole; patch both for the field.
-    { id: 'audioIn', name: 'Audio in', section: 'audio', domain: 'audio', dir: 'in' },
-    { id: 'audioL', name: 'Left', section: 'audio', domain: 'audio', dir: 'out' },
-    { id: 'audioR', name: 'Right', section: 'audio', domain: 'audio', dir: 'out' },
+    // The two that keep moving while the note sounds — see the Sequence Out descriptor for why these
+    // two and no others.
+    { id: 'pressureOut', name: 'Pressure', section: 'out', domain: 'control', dir: 'out' },
+    { id: 'timbreOut', name: 'Timbre', section: 'out', domain: 'control', dir: 'out' },
   ],
   params: [
     // Detented: eight positions you can count by feel as well as read. Eight is a ceiling for CPU
@@ -81,7 +87,10 @@ export default {
     // voices. Zero in either mode is an instant change, which is what the other three rollovers do.
     // TWO SECONDS AT THE TOP, not the half second a portamento wants. Long crossfades are how you hear
     // what this control does at all, and a range you cannot reach the end of teaches nothing.
-    { id: 'time', name: 'Time', section: 'note', curve: 'linear', min: 0, max: 2, default: 0.06,
+    // A HUNDRED MILLISECONDS AT THE TOP. Longer is a smear rather than a hand-over; the two seconds it
+    // had were for hearing what the control did while it was being built. One tick at zero and no
+    // scale: what matters is where OFF is, not what any other position measures.
+    { id: 'time', name: 'Time', section: 'note', curve: 'linear', min: 0, max: 0.1, default: 0.03,
       unit: 's', glideMs: 0 },
   ],
 };

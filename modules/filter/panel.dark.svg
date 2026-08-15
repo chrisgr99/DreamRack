@@ -17,7 +17,7 @@
   <g transform="translate(3.9 7.0994)">
   <rect x="0" y="0" width="40.64" height="113.5912" rx="2.5" fill="#262629"/>
   <rect x="0.5" y="0.5" width="39.64" height="112.5912" rx="2.2" fill="none" stroke="#808085" stroke-width="0.5"/>
-  <text x="8.0944" y="7.4" font-size="3.106" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">FILTER</text>
+  <text x="4.4704" y="7.4" font-size="3.106" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="start" font-family="Arial Narrow, Helvetica, Arial, sans-serif">FILTER</text>
   <g data-wcoast-param="cutoff" data-wcoast-cx="20.12" data-wcoast-cy="22.3" data-wcoast-angle-min="-150" data-wcoast-angle-max="150" data-wcoast-port="cutoffCv">
     <circle cx="20.12" cy="22.3" r="8.5" fill="url(#blueRing)" stroke="#6fa8d6" stroke-width="0.3748"/>
     <circle cx="20.12" cy="22.3" r="6.12" fill="url(#knobCap)" stroke="#b8b8bc" stroke-width="0.2498"/>

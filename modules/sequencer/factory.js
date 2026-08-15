@@ -7,7 +7,7 @@
 'use strict';
 
 const PROCESSOR = 'wcoast-sequencer';
-const IN_PORTS = ['gateIn', 'pitchIn', 'levelIn', 'durIn', 'panIn'];
+const IN_PORTS = ['gateIn', 'pitchIn', 'levelIn', 'durIn', 'panIn', 'pressureIn', 'timbreIn'];
 const KNOBS = new Set(['level', 'duration', 'pan', 'bendRange']);
 const ENDS = ['gate', 'hold'];   // a word on the panel, a number in the worklet
 const NOTE_CHANNELS = 1;   // one channel of silence: what keeps both ends of the cable rendered

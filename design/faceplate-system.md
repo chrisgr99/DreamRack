@@ -126,6 +126,30 @@ The host still validates on load: every tag resolves to a real descriptor id,
 every param/port has exactly one tagged element, every control has an
 indicator + pivot (or step-indicators), every jack has an anchor.
 
+## 5a. Banded or freeform — decide it when the module is made
+
+A panel is authored one of two ways, and **which one is a decision taken at the start**, not something
+to discover later by fighting the grammar.
+
+**Banded** — `band()` and `row()` — is for a panel that really is a stack of sections: the grammar
+spaces the rows, shares out the slack, and draws a rule between the bands. Most modules are this, and
+they cost almost nothing to author because nothing is positioned by hand.
+
+**Freeform** — one `placed()` list of explicit coordinates, usually with `rules: false` — is for a
+panel whose arrangement is a shape rather than a stack. The Macro Oscillator and Voice In are both
+this: a knob here, a column of lamps there, jacks in rows that do not correspond to sections.
+
+**The signal that you chose wrong** is an overrides file that has grown to name most of the controls.
+Overrides are for nudging a banded panel; when nearly every control is in one, the structure has
+stopped describing the panel and is only getting in the way — of the layout, and of the rules it
+insists on drawing. Convert it: bake the rendered positions into a `placed()` list and delete the
+overrides file.
+
+One trap when converting. `placed()` coordinates are measured from the **band's origin**, which
+begins 4 mm below the top of the face, while the positions you read out of a rendered panel are
+measured from the face. Subtract the four, or everything lands low — and on a full panel that is
+enough to push the bottom row over the border.
+
 ## 6a. The bipolar dot
 
 A jack carries a **white dot in its hole** when it deals in a signal that swings either side of zero.
@@ -230,3 +254,16 @@ Order:
    drawing from their own inline copies until this step.) All four modules —
    `complex-oscillator-259t`, `lpg-292`, `mixer`, `function-gen-281t` — now draw
    entirely from `panel/*`, and the mixer's new panel is the default pinned output.
+
+## Captions
+
+`caption(text)` puts a word or a sign on the panel belonging to no control. It carries no id and no
+port — it is ink, and the host never looks at it.
+
+It exists because **an operation between two controls has to be printed or it is not there**. Poly to
+Stereo's two level inputs multiply; two identically named jacks with nothing between them read as a sum,
+which is the wrong answer. A caption is drawn larger than a label (3.4mm against 2.0mm) because a
+sign read at a glance is not the same thing as a name read deliberately.
+
+A caption is not a substitute for a band header. Use the header for what a group of controls IS, and
+a caption for what happens BETWEEN them.

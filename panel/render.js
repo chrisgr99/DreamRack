@@ -49,6 +49,10 @@ function renderItem(it, th, dark) {
     // A divider — a horizontal rule anchored at (x,y) running `len` to the right. Same
     // art as `line`, but positioned by a single point so the editor can place/move it.
     case 'divider':      return `  <line x1="${it.x}" y1="${it.y}" x2="${it.x + it.len}" y2="${it.y}" stroke="${th.frame}" stroke-width="${it.w != null ? it.w : 0.355}"/>`;
+    // A themed outline circle — the ring round a caption's sign, and anything else that wants a
+    // plain stroked round. Stroke resolves from the theme so it inverts with the panel.
+    case 'circle':
+      return `  <circle cx="${it.x}" cy="${it.y}" r="${it.r}" fill="none" stroke="${it.stroke === 'frame' ? th.frame : th.ink}" stroke-width="${it.sw != null ? it.sw : 0.4}"/>`;
     // A themed rect (face background / frame border). fill/stroke of 'face'/'frame' resolve from the
     // theme; rx and stroke are optional so both scaffold styles (with/without rounded face) round-trip.
     case 'rect': {
