@@ -38,5 +38,8 @@ export default panel({ hp: 10 }, [
     // second pitch, and putting it on the rail beside the green v/oct would say the opposite.
     row([jack('panOut', 'pan'), jack('bendOut', 'bend')]),
   ]),
+  band('AUDIO', [
+    row([jack('audioIn', 'in'), jack('audioL', 'L'), jack('audioR', 'R')]),
+  ]),
   outputs([jack('gateOut', 'gate'), jack('pitchOut', 'v/oct')]),
 ]);

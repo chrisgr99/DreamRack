@@ -362,8 +362,16 @@ holds.
 
 It is a gain and a pan, not a VCA: no response curve, no CV input, no envelope. The rack has a VCA
 module for anything more, and the point of this one is that it does what every voice needs without
-being asked. A level **depth** control turns it out of the way for a drum voice, where velocity
-should change timbre rather than volume.
+being asked.
+
+**A stereo pair out**, because per-note pan has nowhere to go in one signal. Patch L alone for a mono
+voice and the sum arrives whole; patch both for the field. The pan law is **equal power**, so a voice
+panned hard is no louder than one in the middle — a linear law dips three decibels in the centre,
+which on a phrase that walks across the field is an audible pumping.
+
+Using it is optional. A page that patches its own VCA from the level lane and ignores these jacks
+behaves exactly as it did; what it cannot do that way is pan per note, because a mixer channel's pan
+moves every voice at once.
 
 ## 6. Ports appear when they are used
 

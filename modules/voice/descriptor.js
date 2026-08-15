@@ -53,6 +53,19 @@ export default {
     { id: 'levelOut', name: 'Level', section: 'out', domain: 'control', dir: 'out' },
     { id: 'durOut', name: 'Duration', section: 'out', domain: 'control', dir: 'out' },
     { id: 'panOut', name: 'Pan', section: 'out', domain: 'control', dir: 'out', polarity: 'bipolar' },
+    // ---- THE PAGE'S AUDIO EXIT. Patch the end of the voice's chain in here and the page leaves
+    // through this module: each copy scaled by the level of the note IT is playing, placed at that
+    // note's pan, and the copies summed.
+    //
+    // IT HAS TO BE HERE. Level and pan belong to a note, so they are only right if they are applied
+    // per copy, before anything is summed — panning at the mixer channel moves all eight voices at
+    // once. Voice In is the one thing that exists once per copy and knows which note that copy holds.
+    //
+    // A STEREO PAIR, because per-note pan has nowhere to go in one signal. Patch L alone for a mono
+    // voice and the sum arrives whole; patch both for the field.
+    { id: 'audioIn', name: 'Audio in', section: 'audio', domain: 'audio', dir: 'in' },
+    { id: 'audioL', name: 'Left', section: 'audio', domain: 'audio', dir: 'out' },
+    { id: 'audioR', name: 'Right', section: 'audio', domain: 'audio', dir: 'out' },
   ],
   params: [
     // Detented: eight positions you can count by feel as well as read. Eight is a ceiling for CPU

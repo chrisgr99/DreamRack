@@ -40,6 +40,17 @@ const RAMP = 128;           // samples an update takes to reach its value — on
 const OUT = { GATE: 0, PITCH: 1, BEND: 2, LEVEL: 3, DUR: 4, PAN: 5 };
 const LANES = 6;
 const MAX_VOICES = 8;       // the panel's ceiling, and how many output groups this node carries
+// After the note groups come the page's own audio, summed to a stereo pair.
+const AUDIO_L = MAX_VOICES * LANES, AUDIO_R = AUDIO_L + 1;
+// Input 0 is the note cable's channel of silence; 1..8 are the audio of each copy of the page.
+const AUDIO_IN = 1;
+// EQUAL POWER, so a voice panned hard is no louder than one in the middle — a linear pan dips by
+// three decibels in the centre, which on a phrase that walks across the field is an audible pumping.
+const PAN_L = [], PAN_R = [];
+for (let i = 0; i <= 256; i++) {
+  const a = (i / 256) * (Math.PI / 2);
+  PAN_L.push(Math.cos(a)); PAN_R.push(Math.sin(a));
+}
 
 // ---- ALLOCATION -------------------------------------------------------------------------------
 // One set of outputs per voice, in groups of six: group k is the note the k-th copy of the page is
@@ -243,6 +254,26 @@ class VoiceProcessor extends AudioWorkletProcessor {
         outputs[o + OUT.LEVEL][0][i] = v.level;
         outputs[o + OUT.DUR][0][i] = v.dur;
         outputs[o + OUT.PAN][0][i] = v.pan;
+      }
+    }
+    // ---- THE PAGE'S AUDIO, once per copy and then summed.
+    //
+    // Each copy is scaled by the level of the note IT is playing and placed at that note's pan, which
+    // is the whole reason this happens here rather than at the mixer: level and pan belong to a note,
+    // so they have to be applied before anything is summed. Panning a mixer channel moves all eight.
+    const outL = outputs[AUDIO_L] && outputs[AUDIO_L][0];
+    const outR = outputs[AUDIO_R] && outputs[AUDIO_R][0];
+    if (outL && outR) {
+      for (let k = 0; k < groups; k++) {
+        const src = _inputs[AUDIO_IN + k] && _inputs[AUDIO_IN + k][0];
+        if (!src || !src.length) continue;
+        const v = this._v[k];
+        // The same numbers the lanes carry, so a page that patches level and pan itself and one that
+        // lets this module do it come to the same place.
+        const p = v.pan < -1 ? -1 : v.pan > 1 ? 1 : v.pan;
+        const idx = Math.round((p + 1) * 128);
+        const gl = PAN_L[idx] * v.level, gr = PAN_R[idx] * v.level;
+        for (let i = 0; i < n; i++) { outL[i] += src[i] * gl; outR[i] += src[i] * gr; }
       }
     }
     return true;

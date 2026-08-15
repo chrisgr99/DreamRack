@@ -2926,7 +2926,13 @@ export class Rack {
           if (dstIn) wire(from, dstIn); else wireParam(from, dst, dstCopy, e.dst.portId);
           continue;
         }
-        if (srcOut && !dstIn) {
+        if (srcOut && !dstCopy) {
+          // PER NOTE INTO VOICE IN'S AUDIO: copy k has its own input there, so its audio can be scaled
+          // by the level of the note IT is playing and placed at that note's pan before the sum.
+          if (dst === boundary.rec && dst.instance.getVoiceInput) {
+            const vin = dst.instance.getVoiceInput(e.dst.portId, k);
+            if (vin) { wire(srcOut, vin); continue; }
+          }
           // per note -> shared, and per note -> off the page: every copy arrives at the one input,
           // which sums them. A linear CV input has no node, and summing eight of those into one
           // AudioParam would be eight times the modulation — so those are left to the template alone.

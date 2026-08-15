@@ -105,6 +105,23 @@
     <circle cx="43.3" cy="100.1" r="1.6" fill="#000000"/>
   </g>
   <text x="43.3" y="106.50431999999999" font-size="2.5060000000000002" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">bend</text>
+  <line x1="4.5" y1="110.8" x2="46.3" y2="110.8" stroke="#7d7d7d" stroke-width="0.355"/>
+  <text x="7.452" y="117.6" font-size="3.106" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">AUDIO</text>
+  <g data-wcoast-port="audioIn" data-wcoast-cx="7.5" data-wcoast-cy="122.6">
+    <circle cx="7.5" cy="122.6" r="3" fill="#8a8a8a" stroke="#000000" stroke-width="0.3"/>
+    <circle cx="7.5" cy="122.6" r="1.6" fill="#000000"/>
+  </g>
+  <text x="7.5" y="129.00431999999998" font-size="2.5060000000000002" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">in</text>
+  <g data-wcoast-port="audioL" data-wcoast-cx="25.4" data-wcoast-cy="122.6">
+    <circle cx="25.4" cy="122.6" r="3" fill="#8a8a8a" stroke="#000000" stroke-width="0.3"/>
+    <circle cx="25.4" cy="122.6" r="1.6" fill="#000000"/>
+  </g>
+  <text x="25.4" y="129.00431999999998" font-size="2.5060000000000002" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">L</text>
+  <g data-wcoast-port="audioR" data-wcoast-cx="43.3" data-wcoast-cy="122.6">
+    <circle cx="43.3" cy="122.6" r="3" fill="#8a8a8a" stroke="#000000" stroke-width="0.3"/>
+    <circle cx="43.3" cy="122.6" r="1.6" fill="#000000"/>
+  </g>
+  <text x="43.3" y="129.00431999999998" font-size="2.5060000000000002" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">R</text>
   <line x1="4.5" y1="97.99" x2="46.3" y2="97.99" stroke="#7d7d7d" stroke-width="0.355"/>
   <text x="4" y="104.59" font-size="2.906" font-weight="700" font-style="italic" fill="#163a69" text-anchor="start" font-family="Arial Narrow, Helvetica, Arial, sans-serif">OUT</text>
   <g data-wcoast-port="gateOut" data-wcoast-cx="13.7" data-wcoast-cy="103.3912">

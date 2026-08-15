@@ -18,22 +18,37 @@ const OUT_PORTS = ['gateOut', 'pitchOut', 'bendOut', 'levelOut', 'durOut', 'panO
 // across eight of them. Unused groups cost a block of silence each.
 const MAX_VOICES = 8;
 const ROLLOVER = ['oldest', 'quietest', 'ignore', 'glide', 'legato'];
+// Input 0 is the note cable — a channel of silence that keeps both ends rendered. Then one audio
+// input per copy of the page, and after the note groups, the summed stereo pair.
+const AUDIO_IN = 1;
+const AUDIO_OUT = { audioL: MAX_VOICES * OUT_PORTS.length, audioR: MAX_VOICES * OUT_PORTS.length + 1 };
 
 export function create(ctx, _services) {
   const node = new AudioWorkletNode(ctx, PROCESSOR, {
     // One input, carrying a channel of silence, whose only job is to keep both ends of the cable in
     // the rendering graph; six mono outputs per voice, the parts of a note.
-    numberOfInputs: 1,
-    numberOfOutputs: OUT_PORTS.length * MAX_VOICES,
-    outputChannelCount: new Array(OUT_PORTS.length * MAX_VOICES).fill(1),
+    numberOfInputs: 1 + MAX_VOICES,
+    numberOfOutputs: OUT_PORTS.length * MAX_VOICES + 2,
+    outputChannelCount: new Array(OUT_PORTS.length * MAX_VOICES + 2).fill(1),
   });
 
   const outIndex = new Map(OUT_PORTS.map((id, i) => [id, i]));
 
   return {
     node,
-    getOutput: (portId) => { const i = outIndex.get(portId); return i === undefined ? null : { node, index: i }; },
-    getInput: (portId) => (portId === 'noteIn' ? { node, index: 0 } : null),
+    getOutput: (portId) => {
+      if (AUDIO_OUT[portId] !== undefined) return { node, index: AUDIO_OUT[portId] };
+      const i = outIndex.get(portId);
+      return i === undefined ? null : { node, index: i };
+    },
+    getInput: (portId) => {
+      if (portId === 'noteIn') return { node, index: 0 };
+      if (portId === 'audioIn') return { node, index: AUDIO_IN };   // copy zero, which is the template
+      return null;
+    },
+    // Copy k's audio arrives on its own input, so it can be scaled and placed before the sum.
+    getVoiceInput: (portId, voice) => (portId === 'audioIn' && voice >= 0 && voice < MAX_VOICES
+      ? { node, index: AUDIO_IN + voice } : null),
     // The engine asks for a copy's outputs by voice number; the panel's jacks are voice zero.
     getVoiceOutput: (portId, voice) => {
       const i = outIndex.get(portId);
