@@ -680,7 +680,10 @@ async function boot() {
   const busOn = (id) => mixRec.values.get(id) === 'on';
   const soundOn = () => busOn('engine') && (busOn('masterEnable') || busOn('monitorEnable'));
   rack.isPlaying = () => audioCtx.state === 'running';
-  audioCtx.resume();
+  // THE CONTEXT IS NOT WOKEN AT BOOT ANY MORE. The engine comes up off, and off now means the audio
+  // thread is suspended rather than merely muted — waking it here would have every worklet running
+  // before the app had made a sound, which is the state the switch exists to avoid. The first turn of
+  // the engine resumes it (rack._applyEnginePower).
   rack._applyBusEnables();   // apply the initial routing (master on, monitor off)
 
   // After a bulk control reset (clear-patch command, and its undo/redo) the rack has moved the

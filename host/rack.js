@@ -1355,6 +1355,46 @@ export class Rack {
     if (rec.descriptorId === 'mixer' && id === 'engine') this._syncEngineLamp();
   }
 
+  // Suspend or resume the context to match the engine switch. Separate from the routing above because
+  // it answers a different question: routing decides what may be HEARD, this decides whether anything
+  // is COMPUTED.
+  _applyEnginePower(engine, audible) {
+    // THE VIDEO ENGINE STOPS TOO. Its frames are drawn from control voltages sampled out of the audio
+    // graph, so with the audio thread suspended every value it reads is frozen — it would be
+    // repainting an identical image at sixty frames a second, on the GPU, for nothing. Off is off.
+    if (this._videoEngine) {
+      if (engine) this._videoEngine.start(); else this._videoEngine.stop();
+    }
+    const ctx = this.host.ctx;
+    if (!ctx) return;
+    if (!engine) {
+      // Nothing is scheduled to arrive later that a suspend would strand: the buses are already
+      // muted by the routing above, and a note in flight is a worklet's own state, which survives.
+      if (ctx.state === 'running' && ctx.suspend) ctx.suspend().catch(() => {});
+      return;
+    }
+    if (!audible || ctx.state === 'running' || !ctx.resume) return;
+    // A REJECTED RESUME MUST NOT LEAVE THE LAMP LYING. A browser refuses to start audio for a page
+    // that has never been touched — the autoplay rule — and while reaching this switch is itself the
+    // gesture that satisfies it, anything that turns the engine on WITHOUT a click (a script, a
+    // restored session) can still be refused. Put the switch back where the truth is rather than
+    // showing a rack that is on and silent.
+    ctx.resume().catch(() => {
+      const rec = this._mixerRec();
+      if (rec && rec.values.get('engine') === 'on') this.applyParam(rec, 'engine', 'off');
+    });
+  }
+
+  // Wake the context for something that needs samples to flow — a scope tap, a monitor — but ONLY if
+  // the engine is on. Bare resume() calls scattered through the rack would otherwise undo the switch
+  // silently: you turn the rack off, open a scope, and the processor load comes back with no sound and
+  // nothing on screen to explain it.
+  _wakeIfEngineOn() {
+    if (!this.engineOn()) return;
+    const ctx = this.host.ctx;
+    if (ctx && ctx.state !== 'running' && ctx.resume) ctx.resume().catch(() => {});
+  }
+
   _syncEngineLamp() {
     const led = this._tabBarEl && this._tabBarEl.querySelector('.rack-tab-engine');
     if (led) led.classList.toggle('on', this.engineOn());
@@ -5356,6 +5396,10 @@ export class Rack {
       // smoothly) and while the frozen overview is up (where this work is invisible anyway). It's the
       // per-frame cable-dash/opacity DOM writes that otherwise steal main-thread time from the pointer.
       if (this._ovActive || this._optDown) { this._flowRaf = requestAnimationFrame(tick); return; }
+      // ENGINE OFF, NOTHING MOVES. The crawling dashes say "signal is running through this cable", and
+      // with the audio thread suspended none is. Leaving them going would be a lie, and it would also
+      // spend a frame's DOM writes per cable on a rack that is meant to be costing nothing.
+      if (!this.engineOn()) { this._flowRaf = requestAnimationFrame(tick); return; }
       if (this._isolateNet) {
         this._tickIsolate(dt);   // isolate: per-terminal breathe + per-cable signal-driven crawl
       } else {
@@ -5860,7 +5904,7 @@ export class Rack {
   _scopeTapConnect(sc) {
     // Resume the (no-autoplay) context so the analyser actually receives samples — the modules only
     // process while it's running. Read-only: the engine still gates the speakers, so no sound.
-    if (this.host.ctx.resume) this.host.ctx.resume();
+    this._wakeIfEngineOn();
     const tap = this._probeTap(sc.key, sc.portId);
     if (tap && tap.node) { try { tap.node.connect(sc.analyser, tap.index || 0); sc.tap = tap; } catch (_e) { sc.tap = null; } }
     sc.ringPos = 0; sc.ringFilled = 0; sc.lastCapTime = null; sc.vOffset = 0; sc.hOffset = 0;   // fresh source → discard stale samples, re-centre on 0
@@ -6879,7 +6923,7 @@ export class Rack {
       const preview = ctx.createGain(); preview.gain.value = MON_LEVEL_DEFAULT;
       this._monPreviewGain = preview; preview.connect(makeup);
     }
-    if (this.host.ctx.resume) this.host.ctx.resume();
+    this._wakeIfEngineOn();
     return this._monBus;
   }
 
@@ -6896,7 +6940,9 @@ export class Rack {
     if (this._videoEngine === undefined || this._videoEngine === null) {
       try {
         this._videoEngine = new VideoEngine();
-        this._videoEngine.start();
+        // Only if the rack is on: a video module dropped in while the engine is off would otherwise
+        // start a render loop the switch says should not be running.
+        if (this.engineOn()) this._videoEngine.start();
         // Where the output pane may stand: the same free-space search the monitors use, so it lands
         // beside the rack rather than on top of the last modules in the row.
         if (typeof this._videoEngine.setPanePlacer === 'function') {
@@ -7507,7 +7553,13 @@ export class Rack {
     const engine = rec.values.get('engine') === 'on';
     const masterAudible = engine && (o ? !!o.master : rec.values.get('masterEnable') !== 'off');
     const monitorAudible = engine && (o ? !!o.monitor : rec.values.get('monitorEnable') === 'on');
-    if ((masterAudible || monitorAudible) && this.host.ctx.resume) this.host.ctx.resume();
+    // THE ENGINE SWITCH SUSPENDS THE AUDIO THREAD, it does not merely mute it. Off used to gate the
+    // two buses and nothing else: every worklet went on being called 375 times a second, so a rack you
+    // had finished with cost exactly as much processor as one you were listening to. suspend() stops
+    // the render thread outright — no worklet runs, and the cost goes to nothing — and resume() brings
+    // it back with every phase, envelope and sequencer position exactly where it left off, because
+    // suspending stops the context's own clock along with everything else.
+    this._applyEnginePower(engine, masterAudible || monitorAudible);
     const mix = this._mixerInstance();
     if (mix && mix.setMasterAudible) mix.setMasterAudible(masterAudible);
     if (this._monModeGate) this._monModeGate.gain.setTargetAtTime(monitorAudible ? 1 : 0, this.host.ctx.currentTime, 0.008);
