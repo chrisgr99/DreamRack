@@ -34,6 +34,8 @@ import envLayout from './modules/envelope/panel.layout.js';
 import envDesc from './modules/envelope/descriptor.js';
 import vcaLayout from './modules/vca/panel.layout.js';
 import vcaDesc from './modules/vca/descriptor.js';
+import strudelLayout from './modules/strudel/panel.layout.js';
+import strudelDesc from './modules/strudel/descriptor.js';
 import polyStereoLayout from './modules/poly-to-stereo/panel.layout.js';
 import polyStereoDesc from './modules/poly-to-stereo/descriptor.js';
 import filterLayout from './modules/filter/panel.layout.js';
@@ -89,6 +91,7 @@ const MODULES = [
   { name: 'ADSR', dir: 'envelope', base: envLayout, desc: envDesc },
   { name: 'VCA', dir: 'vca', base: vcaLayout, desc: vcaDesc },
   { name: 'Poly to Stereo', dir: 'poly-to-stereo', base: polyStereoLayout, desc: polyStereoDesc },
+  { name: 'Strudel', dir: 'strudel', base: strudelLayout, desc: strudelDesc },
   { name: 'Filter', dir: 'filter', base: filterLayout, desc: filterDesc },
   { name: 'Octave', dir: 'octave', base: octLayout, desc: octDesc },
   { name: 'drClckd', dir: 'clock', base: clockLayout, desc: clockDesc },

@@ -273,6 +273,10 @@ const BEND_HOVER_MS = 1000;
 // without the letters having to fight through it — and the region is one block of lettering, so the
 // cable is at full strength a few millimetres either side.
 const CTRL_FADE_FLOOR = 0;       // how much of the cable still shows inside the region — none
+// How long to let the buses fade before the audio context is suspended. The gate's own time constant
+// is 8ms, so this is about three of them: silent, and still quick enough that the switch feels like a
+// switch.
+const ENGINE_MUTE_MS = 30;
 const CTRL_FADE_PAD = 2.0;       // mm of margin round a word, so the cable clears the letters
 const CTRL_FADE_FEATHER = 0.9;   // mm of blur on the region's edge — a cable dissolves, not cut
 const CABLE_FADE_TAU = 0.3;      // opacity easing time constant — cables brighten/dim over ~1s so quick sweeps don't flash
@@ -1368,11 +1372,23 @@ export class Rack {
     const ctx = this.host.ctx;
     if (!ctx) return;
     if (!engine) {
-      // Nothing is scheduled to arrive later that a suspend would strand: the buses are already
-      // muted by the routing above, and a note in flight is a worklet's own state, which survives.
-      if (ctx.state === 'running' && ctx.suspend) ctx.suspend().catch(() => {});
+      // WAIT FOR THE FADE. The buses have just been told to mute, and their gate takes about 25ms to
+      // get there; suspending the context before that cuts the sound mid-ramp, which is a click on
+      // every stop. Long enough to be silent, short enough that the switch still feels instant.
+      //
+      // Checked again on the way in, because the engine may have been turned back on in the meantime —
+      // a suspend that lands after that would leave the lamp saying on over a dead context.
+      if (ctx.state === 'running' && ctx.suspend) {
+        clearTimeout(this._suspendTimer);
+        this._suspendTimer = setTimeout(() => {
+          if (!this.engineOn() && ctx.state === 'running') ctx.suspend().catch(() => {});
+        }, ENGINE_MUTE_MS);
+      }
       return;
     }
+    // Coming back: cancel a suspend that has not fired yet, then resume. The gate ramps up from zero
+    // on its own, so there is nothing to fade in here.
+    clearTimeout(this._suspendTimer);
     if (!audible || ctx.state === 'running' || !ctx.resume) return;
     // A REJECTED RESUME MUST NOT LEAVE THE LAMP LYING. A browser refuses to start audio for a page
     // that has never been touched — the autoplay rule — and while reaching this switch is itself the
@@ -7559,10 +7575,13 @@ export class Rack {
     // the render thread outright — no worklet runs, and the cost goes to nothing — and resume() brings
     // it back with every phase, envelope and sequencer position exactly where it left off, because
     // suspending stops the context's own clock along with everything else.
-    this._applyEnginePower(engine, masterAudible || monitorAudible);
+    // The power is applied AFTER the routing below, not here: the buses have to be told to mute
+    // before the context is suspended, or the sound is cut mid-ramp and that is the click.
+    const wantPower = { engine, audible: masterAudible || monitorAudible };
     const mix = this._mixerInstance();
     if (mix && mix.setMasterAudible) mix.setMasterAudible(masterAudible);
     if (this._monModeGate) this._monModeGate.gain.setTargetAtTime(monitorAudible ? 1 : 0, this.host.ctx.currentTime, 0.008);
+    this._applyEnginePower(wantPower.engine, wantPower.audible);
     // Graying + monitor highlights track the PERSISTENT master/monitor state, not a momentary
     // audition, so a hover doesn't flicker the faceplate.
     this._setChannelsGrayed(!engine || rec.values.get('masterEnable') === 'off');

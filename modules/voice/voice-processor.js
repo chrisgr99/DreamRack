@@ -30,6 +30,37 @@ const DEFER = 128;          // one block: what buys the schedule its accuracy
 //
 // Not in GLIDE or LEGATO: not restarting the note is the whole point of both.
 const RETRIG = 48;          // samples the gate is held low — a millisecond, enough for any trigger
+// A STOLEN VOICE FADES, IT IS NOT CUT. Taking a voice that is still sounding used to drop its gate for
+// a millisecond and hand its level straight to the new note — and a millisecond is not a fade, it is a
+// step with a delay in front of it. What you heard was a click on the onset of whatever did the
+// stealing, and always on the slow notes, because the slow notes are the ones still holding voices.
+//
+// So the old note is taken down over FIVE MILLISECONDS first, and the new one starts when it is
+// silent. The new note is therefore that much late, which nobody can hear, and the join cannot click
+// because nothing steps.
+// IN MILLISECONDS, converted against the real sample rate rather than written as sample counts: a
+// constant of 240 samples is five milliseconds at 48k and two and a half at 96k, which is a fade that
+// gets shorter on better hardware.
+//
+// AND LONG ENOUGH TO BE A FADE. A millisecond is a step with a delay in front of it — it still clicks,
+// just less. Ten milliseconds is inaudible as a fade and unmistakable as the absence of a click.
+const STEAL_FADE_MS = 10;   // the voice being stolen, down to silence
+const LEVEL_RISE_MS = 10;   // every note's level, up to its own value
+const PAN_MOVE_MS = 10;     // ...and its place in the stereo field
+// A FADE IS MEASURED IN CYCLES, NOT MILLISECONDS. Ten milliseconds is nine cycles of a 900Hz note and
+// HALF A CYCLE of a 58Hz one — and half a cycle means ramping what is effectively a DC level down to
+// zero, which is a thump rather than a fade. Every bass note was being ended that way, which is why
+// the artefact followed the slow notes.
+//
+// So each fade lasts at least three cycles of the note's own fundamental, with the millisecond value
+// as a floor and a ceiling so a very low note cannot fade for ever.
+const FADE_CYCLES = 3;
+const FADE_MAX_MS = 60;
+// The pitch on the wire is VOLTS, which are relative — an oscillator multiplies its own frequency by
+// two to the power of them — so the frequency here is an estimate against the same middle-C anchor the
+// Strudel adapter uses. It is a good estimate, not a promise: an oscillator tuned elsewhere, or under
+// FM, is doing something this end cannot see. Hence the floor and the ceiling.
+const ANCHOR_HZ = 261.626;
 // A FINISHED VOICE FALLS SILENT. Pitch is held after a note ends, so a voice in its release still
 // reads the note it is releasing — but LEVEL is an amplitude, and holding that up means a voice whose
 // note is over goes on sounding for ever. With the level lane driving a gate, that is voices piling
@@ -91,7 +122,12 @@ class VoiceProcessor extends AudioWorkletProcessor {
 
   constructor() {
     super();
-    this._q = [];             // events waiting for their sample
+    this._q = [];
+    const ms = (t) => Math.max(8, Math.round((t / 1000) * sampleRate));
+    this._stealFade = ms(STEAL_FADE_MS);
+    this._levelRise = ms(LEVEL_RISE_MS);
+    this._panMove = ms(PAN_MOVE_MS);
+    this._fadeMax = ms(FADE_MAX_MS);             // events waiting for their sample
     // One slot per possible voice. `note` is what it is playing, `started` when, and the ramp state
     // belongs to the slot rather than to the module, since each is bending its own note.
     this._v = Array.from({ length: MAX_VOICES }, () => ({
@@ -105,6 +141,11 @@ class VoiceProcessor extends AudioWorkletProcessor {
       timbre: 0, timbTo: 0, timbStep: 0, timbLeft: 0,
       hold: 0,                                  // samples this voice keeps its gate up after being left
       retrig: 0,                                // samples the gate is held low, to make an edge
+      panTo: 0, panLeft: 0, panStep: 0,         // the note's place, travelled to rather than jumped to
+      freedAt: -Infinity,                       // the frame its last note ended — never used sorts first
+      steal: null,                              // a note waiting for this voice to fade out
+      stealLeft: 0,                             // samples of that fade still to run
+      stealRise: false,                         // the next note begins from silence
       bend: 0, bendTo: 0, bendStep: 0, bendLeft: 0,
     }));
     this._last = -1;          // which voice took the last note, for LEGATO's round-robin
@@ -121,6 +162,14 @@ class VoiceProcessor extends AudioWorkletProcessor {
     };
   }
 
+  // How long a fade should last for a note at this pitch, in samples: three cycles, floored at the
+  // millisecond value and capped so a very low note does not fade for ever.
+  _fadeFor(volts, floorSamples) {
+    const hz = ANCHOR_HZ * Math.pow(2, volts || 0);
+    const cycles = Math.round((FADE_CYCLES / Math.max(20, hz)) * sampleRate);
+    return Math.min(this._fadeMax, Math.max(floorSamples, cycles));
+  }
+
   _slotOf(handle) {
     for (let i = 0; i < MAX_VOICES; i++) if (this._v[i].note && this._v[i].note.handle === handle) return i;
     return -1;
@@ -131,7 +180,24 @@ class VoiceProcessor extends AudioWorkletProcessor {
   _choose(poly, rollover) {
     // GLIDE is monophonic by nature — see above. One voice, always carried, never restarted.
     if (rollover === 'glide') return { i: 0, legato: !!this._v[0].note };
-    for (let i = 0; i < poly; i++) if (!this._v[i].note) return { i, legato: false };
+    // THE FREE VOICE THAT HAS BEEN FREE LONGEST, not the lowest-numbered one.
+    //
+    // Lowest-first is the obvious rule and it is badly wrong in the case that matters. Hold a chord on
+    // voices 0 to 3 and play a line over it, and EVERY note of that line takes voice 4: it is freed,
+    // it is the lowest free, it is taken again, twelve times a second — while voices 5, 6 and 7 are
+    // never used at all. A voice reused that fast still has its envelope in release, so each note
+    // re-attacks a sounding one, and that is a click no amount of extra polyphony can fix, because the
+    // extra voices are never reached.
+    //
+    // Least-recently-freed spreads the same notes across every idle voice, which is the whole reason a
+    // polysynth has them: it buys each envelope the longest possible time to finish.
+    let free = -1, freedAt = Infinity;
+    for (let i = 0; i < poly; i++) {
+      const v = this._v[i];
+      if (v.note) continue;
+      if (v.freedAt < freedAt) { freedAt = v.freedAt; free = i; }
+    }
+    if (free >= 0) return { i: free, legato: false };
     if (rollover === 'ignore') return null;
     if (rollover === 'quietest') {
       // Furthest into its own decay: the note whose remaining life is shortest.
@@ -181,9 +247,40 @@ class VoiceProcessor extends AudioWorkletProcessor {
       }
       this._last = pick.i;
       const v = this._v[pick.i];
-      // Taking a voice that is still sounding: break the gate so the strike happens again. A voice
-      // that was free needs nothing — its gate is already down.
-      if (v.note && !pick.legato) v.retrig = RETRIG;
+      // TAKING A VOICE THAT IS STILL SOUNDING: fade it out first, and begin the new note when it is
+      // silent. The pending note waits on the voice; the per-sample loop starts it when the fade ends.
+      // A voice that was free needs none of this — its gate is already down and its level is zero.
+      // NOT IN LEGATO, which manages its own joins: at two voices it crossfades over TIME, and at one
+      // it BUTTS the notes deliberately — one ending exactly where the next begins is the whole point
+      // of the mode, and a fade in front of it would be a fade the user did not ask for. This is for a
+      // voice being TAKEN, which is a different event.
+      if (v.note && !pick.legato && rollover === 'legato') v.retrig = RETRIG;   // butt: break the gate
+      else if (v.note && !pick.legato) {
+        v.steal = { m, glide, overlap };
+        // ONE SAMPLE LONGER THAN THE RAMP. The hand-over is counted down before the level ramp runs in
+        // the same sample, so a countdown of exactly the fade length begins the new note with its last step
+        // of the fade still unspent — leaving the old voice at a three-hundredth of its level. Small,
+        // but it is a step, and a step is the thing being fixed.
+        // THE VOICE IS CLAIMED THE MOMENT IT IS TAKEN, not when the fade finishes. Its note is still
+        // the old one until then, so without this it goes on looking like the oldest voice in the
+        // rack — and a second steal arriving during the fade takes it AGAIN, throwing away the note
+        // that was waiting. With longer fades that overlap is no longer rare.
+        v.started = m.time;
+        const fade = this._fadeFor(v.pitch, this._stealFade);
+        v.stealLeft = fade + 1;
+        v.retrig = fade;                             // gate down for the whole fade
+        v.levelTo = 0; v.levelLeft = fade; v.levelStep = -v.level / fade;
+        return;
+      }
+      this._begin(v, m, pick, glide, overlap);
+      return;
+    }
+    this._applyRest(m);
+  }
+
+  // Start a note on a voice that is silent — either because it was free, or because it has just been
+  // faded out for this note.
+  _begin(v, m, pick, glide, overlap) {
       v.note = { handle: m.handle, endFrame: m.time + Math.round(m.duration * sampleRate), legato: pick.legato };
       v.started = m.time;
       // GLIDE: the pitch travels rather than jumps, over the same TIME. Only when this voice is being
@@ -191,20 +288,63 @@ class VoiceProcessor extends AudioWorkletProcessor {
       if (pick.legato && glide > 0) {
         v.pitchTo = m.pitch; v.pitchLeft = glide; v.pitchStep = (m.pitch - v.pitch) / glide;
       } else { v.pitch = m.pitch; v.pitchLeft = 0; }
-      // Fading in over the same span, from silence, when this is a hand-over.
+      // THE LEVEL NEVER STEPS, at any note, in any mode. It used to be assigned outright here, and
+      // that single line was a click in three different situations:
+      //
+      //   GLIDE and LEGATO — one voice sounds continuously while the pitch travels, so a level that
+      //   jumps from one note's velocity to the next's is a jump in a signal you are listening to.
+      //
+      //   A REUSED VOICE — a note that has ended is taken down to silence by LEVEL_FALL, but whatever
+      //   it feeds is still ringing its release. Restoring the level outright un-mutes that tail
+      //   instantly, which is the click you hear at the rate of the SLOW notes: they are the ones
+      //   whose tails are still sounding when their voice comes round again.
+      //
+      //   A FRESH VOICE — harmless in a patch whose envelope opens from zero, and not harmless in one
+      //   that goes straight to a VCA.
+      //
+      // A millisecond and a third of ramp costs nothing musically and removes all three.
       if (pick.legato && overlap > 0) {
         v.level = 0; v.levelTo = m.level; v.levelLeft = overlap; v.levelStep = m.level / overlap;
-      } else { v.level = m.level; v.levelLeft = 0; }
-      v.dur = m.duration; v.pan = m.pan;
+      } else {
+        // NEVER LONGER THAN A QUARTER OF THE NOTE. Ten milliseconds is the right fade for a note that
+        // lasts, and it is a catastrophe for one that does not: a five-millisecond note would spend its
+        // whole life climbing and never reach the velocity it was played at, so a fast pattern would
+        // come out flat. Short notes take a short rise, which is also when a click matters least —
+        // there is barely any tail to un-mute.
+        const rise = Math.max(8, Math.min(this._fadeFor(m.pitch, this._levelRise),
+          Math.round((m.duration * sampleRate) / 4)));
+        v.levelTo = m.level; v.levelLeft = rise; v.levelStep = (m.level - v.level) / rise;
+      }
+      v.dur = m.duration;
+      // THE SAME QUARTER-OF-THE-NOTE RULE AS THE LEVEL. A pan ramp longer than the note means a short
+      // note never arrives where it was meant to sit — which for per-note pan is the whole point of
+      // the lane.
+      const pmove = Math.max(8, Math.min(this._fadeFor(m.pitch, this._panMove),
+        Math.round((m.duration * sampleRate) / 4)));
+      // PAN TRAVELS TOO, for exactly the reason the level does. A note's place is applied to a voice
+      // that may still be sounding — in glide and legato it always is — and the equal-power gains at
+      // the far end are computed per sample, so a jump from one side to the other is a discontinuity
+      // in BOTH channels at once. A pattern that alternates hard left and hard right, which is a
+      // normal thing to write, clicks on every note without this.
+      v.panTo = m.pan; v.panLeft = pmove; v.panStep = (m.pan - v.pan) / pmove;
       // Bend belongs to the note that is starting, so it begins at nothing however the last one ended.
       v.bend = 0; v.bendTo = 0; v.bendLeft = 0; v.bendStep = 0; v.bendV = 0;
       v.pressure = 0; v.pressLeft = 0; v.timbre = 0; v.timbLeft = 0;
       // The note carries the range it was made with, so the volts lane can be recovered from the
       // normalised one without this end having to know what the sending knob says.
       v.scale = (m.bendRange || 2) / 12;
-    } else if (m.t === 'off') {
+      // A note that follows a fade rises from silence rather than stepping to its level.
+      if (v.stealRise) {
+        v.level = 0; v.levelTo = m.level; v.levelLeft = this._levelRise; v.levelStep = m.level / this._levelRise;
+        v.stealRise = false;
+      }
+  }
+
+  _applyRest(m) {
+    if (m.t === 'off') {
       const i = this._slotOf(m.handle);
-      if (i >= 0) this._v[i].note = null;
+      // WHEN it fell silent, so the allocator can leave it alone for as long as possible.
+      if (i >= 0) { this._v[i].note = null; this._v[i].freedAt = m.time; }
     } else if (m.t === 'u') {
       const i = this._slotOf(m.handle);
       if (i < 0) return;
@@ -244,7 +384,14 @@ class VoiceProcessor extends AudioWorkletProcessor {
         const v = this._v[k];
         // DURATION ENDS A NOTE THAT WAS NEVER ENDED. It is the failsafe the protocol is built on: an
         // off that never arrives cannot leave a voice sounding for ever.
-        if (v.note && f >= v.note.endFrame + DEFER) v.note = null;
+        if (v.note && f >= v.note.endFrame + DEFER) { v.note = null; v.freedAt = f; }
+        // A FADE THAT HAS FINISHED HANDS OVER. The voice is silent now, so the note that stole it can
+        // begin — from zero, with its own short rise, so the join has no step in it anywhere.
+        if (v.stealLeft > 0 && --v.stealLeft === 0 && v.steal) {
+          const st = v.steal;
+          v.steal = null; v.stealRise = true; v.level = 0; v.levelLeft = 0;
+          this._begin(v, st.m, { i: k, legato: false }, st.glide, st.overlap);
+        }
         if (v.bendLeft > 0) { v.bendV += v.bendStep; v.bendLeft--; if (v.bendLeft === 0) v.bendV = v.bendTo; }
         // The CV lane is the volts measured against the range, and CLAMPED — a source that bends
         // further than the range says has run out of control voltage, but its pitch has not run out
@@ -255,7 +402,17 @@ class VoiceProcessor extends AudioWorkletProcessor {
         if (v.timbLeft > 0) { v.timbre += v.timbStep; v.timbLeft--; if (v.timbLeft === 0) v.timbre = v.timbTo; }
         if (v.pitchLeft > 0) { v.pitch += v.pitchStep; v.pitchLeft--; if (v.pitchLeft === 0) v.pitch = v.pitchTo; }
         if (v.levelLeft > 0) { v.level += v.levelStep; v.levelLeft--; if (v.levelLeft === 0) v.level = v.levelTo; }
-        else if (!v.note && v.level !== 0) { v.levelTo = 0; v.levelLeft = LEVEL_FALL; v.levelStep = -v.level / LEVEL_FALL; }
+        else if (!v.note && v.level !== 0) {
+          // THE END OF EVERY NOTE, and the shortest of the three fades — it was two milliseconds, an
+          // eighth of a cycle at 58Hz, which is the thump that tracked the bass notes.
+          const fall = this._fadeFor(v.pitch, LEVEL_FALL);
+          v.levelTo = 0; v.levelLeft = fall; v.levelStep = -v.level / fall;
+        }
+        // THE PAN RAMP GOES AFTER THE WHOLE LEVEL CHAIN, not in the middle of it. Slipped between the
+        // level's `if` and its `else if`, it captured that else — so a finished voice only began its
+        // fall to silence when the pan happened to be still, and re-armed the fall from whatever level
+        // it had reached each time. What that sounds like is a note that never quite ends.
+        if (v.panLeft > 0) { v.pan += v.panStep; v.panLeft--; if (v.panLeft === 0) v.pan = v.panTo; }
         const o = k * LANES;
         if (!outputs[o + OUT.PAN] || !outputs[o + OUT.PAN][0]) continue;
         if (v.retrig > 0) v.retrig--;

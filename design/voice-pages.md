@@ -333,6 +333,19 @@ Both controls are printed rather than listed. A value window hides its options u
 how many voices there are and what happens when they run out are settings you want to read at a
 glance.
 
+### Which voice a note takes
+
+**The free voice that has been free LONGEST.** Lowest-numbered-first is the obvious rule and it fails
+in the case that matters most: hold a chord on the first four voices and play a line over it, and every
+note of that line takes voice five — freed, lowest, taken again, twelve times a second — while voices
+six, seven and eight are never touched. A voice reused that fast still has its envelope in release, so
+each note re-attacks a sounding one. That is an audible click, and no amount of extra polyphony fixes
+it, because the extra voices are never reached.
+
+Least-recently-freed spreads the same notes over every idle voice, which is what a polysynth has them
+for: it buys each envelope the longest time available to finish. A voice that has never sounded is
+taken before one just freed.
+
 ### Per note or shared, and who decides
 
 **Not the module's author.** `scope` in a descriptor is fixed per module TYPE, and whether a delay is

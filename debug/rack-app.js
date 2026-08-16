@@ -33,6 +33,8 @@ import envDescriptor from '../modules/envelope/descriptor.js';
 import { create as envCreate } from '../modules/envelope/factory.js';
 import vcaDescriptor from '../modules/vca/descriptor.js';
 import { create as vcaCreate } from '../modules/vca/factory.js';
+import strudelDescriptor from '../modules/strudel/descriptor.js';
+import { create as strudelCreate } from '../modules/strudel/factory.js';
 import polyStereoDescriptor from '../modules/poly-to-stereo/descriptor.js';
 import { create as polyStereoCreate } from '../modules/poly-to-stereo/factory.js';
 import filterDescriptor from '../modules/filter/descriptor.js';
@@ -96,6 +98,7 @@ registry.register({ descriptor: noiseDescriptor, create: noiseCreate });
 registry.register({ descriptor: envDescriptor, create: envCreate });
 registry.register({ descriptor: vcaDescriptor, create: vcaCreate });
 registry.register({ descriptor: polyStereoDescriptor, create: polyStereoCreate });
+registry.register({ descriptor: strudelDescriptor, create: strudelCreate });
 registry.register({ descriptor: filterDescriptor, create: filterCreate });
 registry.register({ descriptor: octDescriptor, create: octCreate });
 registry.register({ descriptor: clockDescriptor, create: clockCreate });
@@ -313,6 +316,14 @@ const MODULE_TYPES = [{
   hp: 8,
   panelUrl: 'modules/sequencer/panel.svg',
   descriptor: noteSeqDescriptor,
+}, {
+  // Strudel — live-coded patterns, running inside the app and sharing its audio context, with the rack
+  // as its output instead of superdough. See design/strudel-module.md.
+  descriptorId: strudelDescriptor.id,
+  name: 'Strudel',
+  hp: 8,
+  panelUrl: 'modules/strudel/panel.svg',
+  descriptor: strudelDescriptor,
 }, {
   descriptorId: pageVoiceDescriptor.id,
   name: 'Voice In',
