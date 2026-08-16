@@ -1,146 +1,158 @@
-# Wcoast control protocol — Design
+# Control protocol — how something outside plays DreamRack
 
-How an external sequencer or composition engine plays Wcoast: a small,
-sender-agnostic message protocol that arrives at a **rack module** and comes out
-as **voltages on jacks** — pitch, gate, and modulation — which you patch like any
-other cable. GXW is the first client; Strudel and a MIDI translator are co-clients
-of the same front door. This is the detailed protocol behind DESIGN.md §9 (the
-bridge transport) and leans on §7 (the voice allocator) and `ai-mirror.md` (the
-catalogue, for discovery).
+How an external sequencer or composition engine plays the rack: a small,
+sender-agnostic message protocol arriving at a **module**, which puts what it
+receives onto the **note cable** — the same cable a Sequence Out uses, carrying the
+same whole notes. GXW is the first client; Strudel and a MIDI translator are
+co-clients of the same front door.
 
-The guiding stance: **control enters the synth the way a cable does.** The module
-turns messages into pitch/gate/CV; nothing reaches into a module's internals. That
-keeps the whole thing modular and keeps the sender decoupled from the patch.
+The guiding stance: **control enters the synth the way a cable does.** Nothing
+reaches into a module's internals, and the sender is decoupled from the patch.
 
-## Two ends
+## 1. The receiver is smaller than it used to be
 
-- **Receiver — a module in the rack.** The *Control Interface* module owns the
-  listener, the voice allocator (§7), and the active-voice table. Its outputs are
-  jacks: per voice-group a **pitch** out (control-domain, 1V/oct — the green jack
-  family) and a **gate** out (trigger), a **level/velocity** out (control), a bank
-  of general **modulation** outs (control), and a **clock** out (trigger) the
-  sender can drive for transport sync. It has **no audio output** — OSC conveys
-  control, not audio; sound is made by whatever you patch these into.
-- **Sender — not a module.** It lives in the controlling app: in GXW a mapping UI
-  (below); in Strudel its pattern controls emitted as these messages; a thin MIDI
-  translator is a third option. All three speak the identical protocol, so the
-  synth never knows or cares which is driving it.
+This design once had the receiving module own a voice allocator and put out a pitch
+and a gate and a level per voice group. It does not any more, because the rack grew
+the thing that does that: **a note is an event on a cable, and Voice In allocates.**
+See `voice-pages.md`.
 
-## Transport
+So the module's whole job is: listen, check, convert the timestamp, and re-emit on
+the note cable. It has
 
-- **OSC-shaped messages** — an address, typed args, and a time tag — over a local
-  link. A browser Strudel can't open UDP, so the canonical carrier is a
-  **WebSocket** the Electron **main process** receives; native OSC-over-UDP is
-  accepted by the same listener. So Wcoast stands in for the SuperCollider/SuperDirt
-  target that Strudel already knows how to drive. Plain JSON `{address, args,
-  timestamp}` over the same socket is an equivalent carrier — OSC is a tidy
-  convention, not a speed requirement (§9).
-- **Scheduled, not played on arrival.** Each event is sent a small lookahead early
-  with an intended timestamp on the shared clock; the receiver places it at that
-  sample. This decouples rhythmic resolution from transport jitter (§9).
-- **The medium is lossy.** Especially over UDP, packets can be dropped, duplicated,
-  or reordered. The note model and receiver rules below are built to stay correct
-  under all three — this is not an edge case, it is the normal condition.
+- **NOTE out** — the chord or line it receives, as note events. One cable to a voice
+  tab and the sender is playing the rack.
+- **CLOCK out** — a trigger the sender can drive, so the rack's own clocks, envelopes
+  and arpeggios lock to the sender's tempo rather than free-running against it.
+- **A connected lamp and the port**, because a bridge that is not connected should
+  say so on its face rather than by being silent.
+- **A CHANNEL setting.** Notes for other channels are ignored, so a second part is a
+  second module feeding its own voice tab — which is what the rack's own model would
+  do anyway, and cheaper than one module with several outputs.
 
-## The note model — handle + mandatory duration
+**No audio output.** The protocol carries control; sound is made by whatever you
+patch the note cable into.
 
-Unlike SuperDirt's fire-and-forget events, every note carries two things that make
-early release and loss-tolerance possible:
+## 2. One protocol, two carriers
 
-- **A handle** — a unique token **minted by the sender**, naming this specific
-  sounding note so a later message can refer to it. Recommended form: a short
-  random **session prefix** plus a **monotonic counter** (e.g. `s7:1042`).
-  Collision-free within a sender (a counter never repeats), namespaced across
-  senders (distinct prefixes), and human-readable when debugging — a stronger and
-  shorter guarantee than a random GUID.
-- **A required duration** — the note's natural length **and** a dropped-message
-  failsafe. The receiver schedules an automatic release at start + duration, so a
-  note **always** ends on its own even if its off is never delivered. There are no
-  truly infinite notes; a drone is just a generous cap. This one rule turns a lost
-  off from a stuck voice into a self-healing situation.
+**The wire format is the note transport's own messages.** `{t:'on', handle, pitch,
+level, duration, pan, bendRange}`, `{t:'off', handle}`, `{t:'u', handle, k, v}`, and
+`{t:'key', tonic, mode}`. No translation layer, no second vocabulary to keep in
+step, and whatever the internal cable learns later the socket speaks for free.
 
-## Messages
+**Pitch is VOLTS per octave**, as it is inside the rack. That is the reason this
+exists rather than a MIDI cable: a note number cannot express what an unquantised or
+microtonal source is doing. A note number or a frequency is accepted at the door and
+converted, for senders that only have those.
 
-- **note-on** — `handle`, `channel`, `pitch`, `level`, `duration`, `time`, and
-  optional named controls. Allocates a voice, schedules the auto-release.
-- **note-off** — `handle`, `time`, optional `release` override. Releases the named
-  voice early and **cancels** its pending auto-release. Whichever of {explicit off,
-  duration timeout} comes first wins.
-- **all-notes-off** — optional `channel`, `time`. Panic / phrase reset; releases
-  every voice (or every voice on a channel).
-- **control-set** — `target`, `value`, `time`. Continuous modulation not tied to a
-  note: `target` is a modulation-out lane on the module, or (via the catalogue) a
-  named module parameter for direct automation. The patchable lanes are the
-  idiomatic default; direct-param addressing is there for automation lanes.
-- **note-modify** *(future)* — `handle`, plus `pitch` or a control value: per-note
-  expression (glide, move a CV after attack) — MPE-style. The handle model already
-  enables it; not built now.
+**OSC's shape, JSON's encoding, for now.** An address, typed arguments and a time
+tag is the right vocabulary, and the time tag is the part that matters — a
+standardised way to say "play this at this moment" rather than "play this now, sorry
+it is late". But both ends here are JavaScript, so JSON costs nothing, needs no
+library, and can be read in a console when a timing bug appears — which on a bridge
+it will. JSON also lets a note travel as an OBJECT, where OSC's positional arguments
+would force a fixed order and padding for the fields a sender did not send.
 
-## Field semantics
+**Binary OSC decode on the same socket comes later**, mapping positional arguments
+into the same object. That is what buys the ecosystem: Strudel already knows how to
+drive an OSC target, and Max, SuperCollider and TouchOSC come with it. The shape
+being OSC's from the start is what makes that an adapter rather than a rewrite.
 
-- **pitch** — a note number (semitones, middle-C-relative, or MIDI) or a direct
-  frequency; the module maps it to a 1V/oct pitch CV. Microtonal via fractional
-  note numbers or direct frequency.
-- **level** — 0..1, to a velocity/level CV lane.
-- **channel** — an integer selecting which voice-group / output set the note plays
-  on, so several parts or patterns can drive independent voices.
-- **duration** / **time** / **release** — seconds on the shared scheduling clock.
-- **named controls** — optional; mapped to the module's modulation lanes, or by the
-  catalogue to named parameters. The sender's mapping decides what each means.
+## 3. Time — the part that decides whether this is tight
 
-## Receiver semantics (loss-tolerant)
+`time` inside the rack is a **sample frame** of DreamRack's audio clock, which
+another process cannot know. So the wire carries **when to play relative to now**,
+and the sender runs **ahead**.
 
-The module keeps an **active-voice table keyed by handle**, and:
+- Each event is sent a **look-ahead** early — start with a fixed 40ms — carrying the
+  delay from send to sound.
+- The receiver converts that into a sample frame on arrival and places the event
+  exactly there, the same way the note transport already defers by one block and
+  places by timestamp.
+- **Constant latency is inaudible; variable latency smears rhythm.** That is the
+  whole argument: a fixed look-ahead you cannot hear buys away the jitter of two
+  main threads and a socket.
+- **Later, a ping refines it.** A periodic round trip measures offset and transit,
+  and the look-ahead can shrink towards the real number. Not needed to start.
 
-- a **note-on for a handle already active** is **ignored** (dedupes a duplicated
-  packet; it does **not** retrigger);
-- a **note-off for an unknown or already-released handle** is a **no-op** (covers a
-  lost note-on and a late-arriving off);
-- an **explicit off cancels** the scheduled auto-release so the timeout can't fire
-  redundantly;
-- **release = drop the voice's gate**, which enters the envelope's release stage —
-  a forced-off note fades out per the patch, it doesn't click; steal-oldest with a
-  fast release when the pool overflows (§7);
-- **everything is placed by its timestamp**, not by arrival order.
+If an event arrives too late to place — the look-ahead was too small, or the sender
+stalled — it is played at the start of the next block rather than dropped. Late is
+better than missing, and the connected lamp is where a persistent problem should
+show.
 
-## Voice allocation
+## 4. The note model — handle and mandatory duration
 
-The allocator is the seam (§7): the sender fires abstract note-ons and note-offs by
-handle; the allocator maps them onto physical voices, applies the polyphony count,
-and steals the oldest voice when the pool overflows (a normal condition for a
-generative sender, not an exception). The sender never addresses a physical voice —
-only handles and channels.
+- **A handle**, minted by the sender, naming a sounding note so a later message can
+  refer to it. A short random session prefix plus a monotonic counter (`s7:1042`):
+  collision-free within a sender, namespaced across senders, and readable when
+  debugging.
+- **A required duration** — the note's natural length AND a dropped-message
+  failsafe. A note always ends on its own even if its off never arrives. There are
+  no infinite notes; a drone is a generous cap. This is already how the internal
+  cable behaves, so the rule costs nothing here.
 
-## The sending end — mapping UI
+## 5. Receiver rules, because the medium is lossy
+
+Packets can be dropped, duplicated or reordered. This is the normal condition, not
+an edge case, and the door is where it is handled:
+
+- a **note-on for a handle already sounding** is ignored — it dedupes a duplicate
+  and does not retrigger;
+- a **note-off for an unknown or finished handle** is a no-op, covering a lost
+  note-on and a late off;
+- **unknown message kinds are ignored**, which is what lets the protocol grow
+  without breaking the receivers already written;
+- **everything is placed by its timestamp**, never by arrival order.
+
+## 6. Who listens
+
+**DreamRack listens; senders connect.** It is the instrument, and an instrument can
+have several sources. The listener lives in the Electron **main process** and hands
+messages to the module.
+
+- **Loopback only.** Bind 127.0.0.1, never a public interface.
+- **A token in the handshake**, printed on the module, since any local page could
+  otherwise knock on the port.
+- **Desktop only.** A browser build cannot open a listening socket; the same
+  messages could arrive from another tab by other means if that ever matters.
+- **Several clients at once** are allowed and their notes are merged, because they
+  carry distinct handle prefixes and nothing else in the receiver is stateful. Two
+  senders on one channel is the user's problem, not the protocol's.
+
+## 7. The sending end
 
 Discovery is free: the mirror's `catalogue.json` (`ai-mirror.md`) enumerates every
-module, port, and parameter with its range and curve, so a sender knows the
-available targets and how to scale into them.
+module, port and parameter with its range and curve, so a sender knows what is there
+and how to scale into it.
 
-- **GXW** — a routing matrix: its sources (each part's pitch/gate/level, its
-  modulation sources, macros) down one side; the module's channels and control
-  lanes across the top, read live from the catalogue so the grid tracks the real
-  patch. Assign a source to a lane per cell; each connection carries a range
-  mapping into the target's real units; a learn mode binds by wiggling a source and
-  arming a lane. Sender duties: mint handles, always include a duration, send offs
-  (best-effort — the failsafe covers loss), stamp events with a lookahead, and be
-  the tempo master (optionally emit the clock).
-- **Strudel** — its pattern controls (note, gain, pan, cutoff, …) emitted as these
-  messages; because it already speaks the SuperDirt play format, pointing it at
-  Wcoast is largely repointing its output. A superdough-shaped adapter maps its
-  control names to the protocol's fields. Strudel is the tempo master when it drives.
-- **MIDI** — a thin translator: note-on/off to protocol note-on/off (synthesising a
-  handle per key, a generous duration as the failsafe), CC to control-set.
+**GXW** is the first client, and the tap already exists — it has a MIDI output that
+is currently unused, and wherever that was fed is the point where a note is about to
+sound. The same call site emits the richer message instead: volts rather than note
+numbers, a real duration, pan, and whatever expression the part is carrying. Sender
+duties: mint handles, always include a duration, send offs on a best-effort basis
+(the failsafe covers loss), stamp with the look-ahead, and be the tempo master.
 
-## Non-goals
+**Strudel** speaks the SuperDirt play format already, so pointing it here is largely
+repointing its output; a superdough-shaped adapter maps its control names onto these
+fields.
 
-- **No audio over the protocol** — it carries control only; audio is synthesised by
-  the patched modules.
-- **No shared audio graph** — sender and synth run separate contexts and talk only
-  over this transport (§9).
+**MIDI** stays available as a thin translator for anything that only speaks it —
+note-on and off to these messages, synthesising a handle per key and a generous
+duration as the failsafe, CC to a tagged update. It is the lossy door, kept open
+because some senders have no other.
 
-## Status
+## 8. Non-goals
 
-Designed, not built — consistent with the deferred bridge (§7, §9). The receiving
-module is the concrete build unit when this is picked up; the sending end is built
-inside whichever controlling app drives it.
+- **No audio over the protocol.**
+- **No shared audio graph** — sender and rack run separate contexts and talk only
+  over this transport.
+- **No parameter automation in the first cut.** Driving a named parameter directly
+  is tempting and it is how a bridge becomes a remote control rather than an
+  instrument input. Notes first.
+
+## 9. Status
+
+Designed, not built. The receiving module is the build unit; the sending end lives
+in whichever app drives it. Nothing here now depends on anything that does not
+exist: the note cable, its message shapes, the duration failsafe and Voice In's
+allocator are all in the rack already, which is why the module is now a door rather
+than an engine.
