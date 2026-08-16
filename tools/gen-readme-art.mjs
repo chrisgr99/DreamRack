@@ -5,8 +5,9 @@
 // colour or a proportion changes in the app, this script is re-run and the pictures follow. A diagram
 // that drifts from the thing it describes is worse than no diagram.
 //
-// Two files per picture, light and dark, so the README can hand GitHub both and let the reader's own
-// theme pick — the app does exactly the same thing with its panels.
+// DARK ONLY. One picture per idea, on a dark faceplate: it reads on GitHub in either theme, and a
+// second set to keep in step was work for no gain. The app still generates both for its own panels —
+// that is a different problem, where the panel has to sit in a rack that is one theme or the other.
 //
 // Run: node tools/gen-readme-art.mjs
 
@@ -129,10 +130,30 @@ function cablesPicture(th) {
   return page(112, 34, th, body);
 }
 
-fs.mkdirSync(OUT, { recursive: true });
-for (const th of ['light', 'dark']) {
-  fs.writeFileSync(path.join(OUT, `jacks-${th}.svg`), jacksPicture(th));
-  fs.writeFileSync(path.join(OUT, `signals-${th}.svg`), signalsPicture(th));
-  fs.writeFileSync(path.join(OUT, `cables-${th}.svg`), cablesPicture(th));
+// ---- 4. a cable takes the colour of the jack it lands on ----------------------------------------
+// The clearest case is the one that happens constantly: an oscillator's AUDIO output driving another
+// module's modulation input. The signal is audio; the job it does at the far end is modulation; the
+// cord is orange because that is what it is DOING, not what it came out of.
+function rolesPicture(th) {
+  const t = THEME[th];
+  const d = 'M12,14 C40,9 72,19 100,14';
+  const body = [
+    `<path d="${d}" fill="none" stroke="${JACK.cv}" stroke-width="1.7" stroke-linecap="round"/>`,
+    `<path d="${d}" fill="none" stroke="#000000" stroke-width="0.85" stroke-dasharray="2.2 3.4"/>`,
+    jack(12, 14, JACK.audio, 'out', th),
+    jack(100, 14, JACK.cv, 'in', th),
+    txt(12, 23.5, 'audio out', { size: 2.7, fill: t.ink }),
+    txt(100, 23.5, 'modulation in', { size: 2.7, fill: t.ink }),
+    txt(56, 31, 'a cable takes the colour of the jack it lands on —', { size: 2.5, fill: t.ink, italic: false, weight: 400 }),
+    txt(56, 34.4, 'what the signal is doing, not where it came from', { size: 2.5, fill: t.ink, italic: false, weight: 400 }),
+  ].join('\n  ');
+  return page(112, 38, th, body);
 }
-console.log(`wrote 6 files to ${OUT}`);
+
+fs.mkdirSync(OUT, { recursive: true });
+const th = 'dark';
+fs.writeFileSync(path.join(OUT, 'jacks.svg'), jacksPicture(th));
+fs.writeFileSync(path.join(OUT, 'signals.svg'), signalsPicture(th));
+fs.writeFileSync(path.join(OUT, 'cables.svg'), cablesPicture(th));
+fs.writeFileSync(path.join(OUT, 'roles.svg'), rolesPicture(th));
+console.log(`wrote 4 files to ${OUT}`);

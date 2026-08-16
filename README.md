@@ -39,24 +39,19 @@ I think this is the cleanest visual language of any modular of this kind, and it
 
 **A jack tells you what it is without a word of panel art.** Its colour is the signal family. Its dashed ring says which way the signal runs — an output's dashes hug the outer rim, an input's hug the hole — so you never hunt for an arrow or a heading. A white dot in the middle marks a jack that deals in a signal swinging either side of zero, and the absence of one is a promise: no dot means unipolar, by design.
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/img/jacks-dark.svg">
-  <img alt="An input jack, an output jack, a bipolar output and an audio output" src="docs/img/jacks-light.svg" width="480">
-</picture>
+<img alt="An input jack, an output jack, a bipolar output and an audio output" src="docs/img/jacks.svg" width="480">
 
 **A cable's colour is the job it does where it lands**, so the same signal can be audio at one end of the rack and modulation at the other and each end reads correctly. Video is a family of its own, and the note bundle — the one cable carrying events rather than a continuous signal — is the one with no hue at all, which is what tells it apart at any zoom and for any kind of colour vision.
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/img/signals-dark.svg">
-  <img alt="The signal families and their cable colours" src="docs/img/signals-light.svg" width="480">
-</picture>
+<img alt="The signal families and their cable colours" src="docs/img/signals.svg" width="480">
+
+An oscillator's output driving another module's modulation input makes the rule plain: the signal is audio, the job it does where it lands is modulation, and the cable is the colour of the job. So you can read a patch by following colour without knowing what any module does.
+
+<img alt="An audio output patched to a modulation input, the cable drawn in the destination's colour" src="docs/img/roles.svg" width="480">
 
 **Cables never hide the panel.** Crawling dashes along each one show which way the signal runs, and every cable turns transparent exactly where it crosses lettering — so a dense patch still reads, and you can follow one cable across the rack without anything being dimmed to let you.
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/img/cables-dark.svg">
-  <img alt="A cable running clear of the label it crosses" src="docs/img/cables-light.svg" width="480">
-</picture>
+<img alt="A cable running clear of the label it crosses" src="docs/img/cables.svg" width="480">
 
 **Every panel is drawn from code, not painted.** A faceplate is a short description — this knob here, that jack there, these lamps — and the light and dark versions are generated from it. That is what keeps the language consistent: nobody is redrawing a jack by eye, a proportion changed centrally changes everywhere, and a check refuses any panel whose art has drifted from its description or spilled off its own face. It is also why a module you write looks like one that shipped.
 
