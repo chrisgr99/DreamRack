@@ -36,9 +36,11 @@ export function create(ctx, services) {
   };
   // Called by the rack when a note cable is made or pulled. The port is TRANSFERRED into the worklet,
   // so the two processors hold the two ends and nothing passes through the main thread.
-  const attachNoteOut = (port) => {
-    if (port) node.port.postMessage({ noteOut: port }, [port]);
-    else node.port.postMessage({ noteOut: null });
+  // ONE PORT PER CABLE, named by the edge that made it — a note output fans out, so detaching has to
+  // say WHICH cable went rather than clearing the only one there used to be.
+  const attachNoteOut = (port, edge) => {
+    if (port) node.port.postMessage({ noteOut: port, edge }, [port]);
+    else node.port.postMessage({ noteOutOff: edge });
   };
 
   return {

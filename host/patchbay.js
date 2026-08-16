@@ -163,8 +163,10 @@ export class Patchbay {
         && typeof src.instance.attachNoteOut === 'function'
         && typeof dst.instance.attachNoteIn === 'function') {
       const ch = new MessageChannel();
-      src.instance.attachNoteOut(ch.port1);
-      dst.instance.attachNoteIn(ch.port2);
+      // The EDGE ID names this cable at both ends: a note output feeds every cable plugged into it, so
+      // pulling one has to take back that one's port and leave the rest delivering.
+      src.instance.attachNoteOut(ch.port1, edge.id);
+      dst.instance.attachNoteIn(ch.port2, edge.id);
       edge.noteLink = true;
     }
 
@@ -213,8 +215,8 @@ export class Patchbay {
     if (!edge || !this.edges.has(edge.id)) return;
     // Take the note port back from both ends, or a pulled cable would go on delivering notes.
     if (edge.noteLink) {
-      try { edge.src.instance.attachNoteOut(null); } catch (_e) { /* gone */ }
-      try { edge.dst.instance.attachNoteIn(null); } catch (_e) { /* gone */ }
+      try { edge.src.instance.attachNoteOut(null, edge.id); } catch (_e) { /* gone */ }
+      try { edge.dst.instance.attachNoteIn(null, edge.id); } catch (_e) { /* gone */ }
     }
     try {
       if (edge.nodeIn) edge.out.node.disconnect(edge.nodeIn.node, edge.out.index, edge.nodeIn.index);
