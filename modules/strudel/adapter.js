@@ -46,6 +46,32 @@ export function levelOf(value) {
   return g < 0 ? 0 : g > 1 ? 1 : g;
 }
 
+// THE EXPRESSION LANES, named in the pattern. Strudel carries any control name straight through to
+// the output — `.timbre(0.7)` arrives as `{note:'c3', timbre:0.7}` with nothing registered anywhere —
+// so the rack's own lane names ARE the vocabulary, and there is no table of parts to learn.
+//
+// Aliases for the words a live coder already types: `lpf` and `cutoff` are in HERTZ and this rack's
+// lane is a control voltage, so they are mapped logarithmically across the audible range. A pattern's
+// explicit `timbre` beats an alias, because it asked for the lane by name.
+const LO_HZ = 20, HI_HZ = 20000;
+const LOG_LO = Math.log(LO_HZ), LOG_SPAN = Math.log(HI_HZ) - LOG_LO;
+
+export function timbreOf(value) {
+  if (typeof value.timbre === 'number') return clamp01(value.timbre);
+  const hz = typeof value.lpf === 'number' ? value.lpf
+    : typeof value.cutoff === 'number' ? value.cutoff : null;
+  if (hz === null || !(hz > 0)) return null;              // nothing asked for; the lane stays where it is
+  return clamp01((Math.log(hz) - LOG_LO) / LOG_SPAN);
+}
+
+export function pressureOf(value) {
+  const p = typeof value.press === 'number' ? value.press
+    : typeof value.pressure === 'number' ? value.pressure : null;
+  return p === null ? null : clamp01(p);
+}
+
+function clamp01(x) { return x < 0 ? 0 : x > 1 ? 1 : x; }
+
 // The whole conversion: an event and the clock it belongs to, in; a note and when to play it, out.
 // `sampleAt` turns a context time into a frame — the one thing that needs the live audio clock, so it
 // is passed in rather than reached for.
@@ -62,6 +88,10 @@ export function toNote(hap, cps, t, { noteToMidi, sampleAt, handle }) {
     level: levelOf(value),
     duration,
     pan: panOf(value),
+    // Null means "not asked for", which is different from zero: an unasked lane keeps whatever the
+    // patch has it at rather than being forced shut at every note.
+    timbre: timbreOf(value),
+    pressure: pressureOf(value),
     // The note ends by its own duration at the far end; the off is belt and braces, and it is what
     // makes an interrupted pattern fall silent rather than hang.
     offAt: sampleAt(t + duration),

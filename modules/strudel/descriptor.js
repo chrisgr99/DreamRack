@@ -32,6 +32,13 @@ const params = [
   // A NUMBER, not text: a text param under a readout has nothing to scroll and shows NaN when you try.
   { id: 'cps', name: 'Cycles per second', section: 'pattern', curve: 'linear',
     min: 0.05, max: 8, default: 0.5, glideMs: 0 },
+  // THE WINDOW IS PART OF THE PATCH. Its size, its place and whether it was open were kept in local
+  // storage, which is wrong twice: a patch did not reopen as you left it, and one key served every
+  // module and every patch, so two Strudel modules fought over one remembered window and a patch
+  // carried to another machine got that machine's last geometry. A text param holds it as JSON, which
+  // is the same route the pattern itself takes.
+  { id: 'window', name: 'Window', section: 'pattern', curve: 'text', default: '' },
+
   // Reported by the module, never set: whether the last evaluation took.
   // READ ONLY, because it is a report and not a control: without this you can press the lamp and tell
   // the module it has failed, which is a lie you had to type.

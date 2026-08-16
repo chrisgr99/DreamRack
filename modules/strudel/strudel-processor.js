@@ -60,7 +60,10 @@ class StrudelProcessor extends AudioWorkletProcessor {
       if (ev.off) this._post({ t: 'off', handle: ev.handle, time: at });
       else {
         this._post({ t: 'on', handle: ev.handle, time: at, pitch: ev.pitch, level: ev.level,
-          duration: ev.duration, pan: ev.pan, bendRange: 2 });
+          duration: ev.duration, pan: ev.pan, bendRange: 2,
+          // Only when the pattern asked: a lane nobody named should stay where the patch has it.
+          ...(ev.timbre == null ? {} : { timbre: ev.timbre }),
+          ...(ev.pressure == null ? {} : { pressure: ev.pressure }) });
         // The note flash on the cable, on the main thread's own port — one message per note, off the
         // audio path, exactly as Sequence Out does it.
         this.port.postMessage({ note: { handle: ev.handle } });

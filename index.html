@@ -617,21 +617,40 @@
        changes it. */
     .strudel-pane.theme-dark { --s-edge: #d2d2d6; }
     .strudel-pane.has-error { border-color: #c4543a; }
-    .strudel-pane-bar { display: flex; align-items: center; gap: 8px; padding: 5px 9px; cursor: grab;
-      background: #2f4a6b; color: #eaf2ff; font-size: 12px; font-weight: 700; user-select: none; }
-    .strudel-pane-bar .strudel-err { flex: 1; color: #ff8b6b; font-weight: 400; font-size: 11px; }
-    .strudel-pane-bar .strudel-close { cursor: pointer; opacity: 0.7; font-size: 15px; }
-    .strudel-pane-bar .strudel-close:hover { opacity: 1; }
-    .strudel-root { flex: 1; min-height: 0; overflow: auto; }
-    .strudel-grip { position: absolute; z-index: 2; }
-    .strudel-grip.n { top: -3px; left: 8px; right: 8px; height: 7px; cursor: ns-resize; }
-    .strudel-grip.s { bottom: -3px; left: 8px; right: 8px; height: 7px; cursor: ns-resize; }
-    .strudel-grip.w { left: -3px; top: 8px; bottom: 8px; width: 7px; cursor: ew-resize; }
-    .strudel-grip.e { right: -3px; top: 8px; bottom: 8px; width: 7px; cursor: ew-resize; }
-    .strudel-grip.nw { top: -3px; left: -3px; width: 12px; height: 12px; cursor: nwse-resize; }
-    .strudel-grip.se { bottom: -3px; right: -3px; width: 12px; height: 12px; cursor: nwse-resize; }
-    .strudel-grip.ne { top: -3px; right: -3px; width: 12px; height: 12px; cursor: nesw-resize; }
-    .strudel-grip.sw { bottom: -3px; left: -3px; width: 12px; height: 12px; cursor: nesw-resize; }
+    /* The evaluation acknowledgement: the frame brightens for a moment (see factory.js). */
+    .strudel-pane.flash { border-color: #6fa8dc; box-shadow: 0 8px 28px rgba(0,0,0,0.45), 0 0 10px rgba(111,168,220,0.55); }
+    /* The bar keeps its height; the NAME gets the room. Lettering is measured from its CAP HEIGHT,
+       not its box: centring the box leaves the word riding high, because the space under a capital
+       for descenders is empty here. Nudging it down by that much is what makes it look centred. */
+    .strudel-pane-bar { display: flex; align-items: center; gap: 9px; padding: 0 9px; height: 24px;
+      box-sizing: border-box; cursor: grab;
+      background: #2f4a6b; color: #eaf2ff; font-size: 19px; font-weight: 700; user-select: none;
+      line-height: 1; }
+    .strudel-pane-bar > span:first-child { transform: translateY(1px); }
+    /* A PLAY BUTTON IN THE BAR, the same switch as the faceplate's PLAY and drawn the way this rack
+       draws a button: black at rest, red and glossy when it is on, with a hairline separating it from
+       the bar at the same 0.75px the window's frame uses. Sat half a millimetre below centre, which
+       is where it looks level with the lettering. */
+    /* Its name, so the button says what it is rather than being learned. Smaller than the window's
+       own name — it labels a control, it does not title the window — and sat with the button as one
+       pair rather than as two things spaced along the bar. */
+    .strudel-play-label { font-size: 13px; letter-spacing: 0.3px; opacity: 0.85;
+      margin-left: 4px; margin-right: -4px; transform: translateY(1px); }
+    .strudel-play { position: relative; flex: none; width: 16px; height: 16px; border-radius: 50%;
+      cursor: pointer;
+      box-shadow: 0 0 0 0.75px #c9ccd0; background: #0d0d0f; }
+    .strudel-play:hover { filter: brightness(1.4); }
+    /* The specular dot a panel lamp carries, up and to the left. Only when lit — an unlit lamp with a
+       highlight on it reads as glass over nothing. */
+    .strudel-play::after { content: ''; position: absolute; left: 22%; top: 22%; width: 30%; height: 30%;
+      border-radius: 50%; background: #ffb4b4; opacity: 0; pointer-events: none; }
+    .strudel-play.on { background: radial-gradient(circle at 38% 34%, #ff6a4a 0%, #e02008 55%, #7c0000 100%);
+      box-shadow: 0 0 0 0.75px #c9ccd0, 0 0 7px rgba(255,90,60,0.7); }
+    .strudel-play.on::after { opacity: 0.85; }
+    /* THE CLOSE IS THE FAR CORNER, always: the error lamp and the × are pushed to the right end of
+       the bar, whatever else the bar grows on its left. */
+    .strudel-err { margin-left: auto; }
+    .strudel-close { cursor: pointer; padding: 0 2px; }
     .strudel-root .cm-editor { height: 100%; font-size: 13px; }
     .page-stubs { position: fixed; inset: 0; z-index: 1290; pointer-events: none; overflow: visible; }
     /* A cable IN HAND, drawn over the whole window so carrying one up to a tab does not run it into

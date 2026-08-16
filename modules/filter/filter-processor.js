@@ -23,12 +23,18 @@
 // ZERO ALLOCATION: process() allocates nothing.
 'use strict';
 
+// A full unit of cutoff CV is five octaves — enough for a nought-to-one envelope or a note's timbre
+// lane to take a filter from a growl to wide open, which is what those lanes are for.
+const CUTOFF_OCTAVES = 5;
+
 const PI = Math.PI;
 
 class Filter extends AudioWorkletProcessor {
   static get parameterDescriptors() {
     return [
       { name: 'cutoff', defaultValue: 1000, minValue: 20, maxValue: 20000, automationRate: 'a-rate' },
+      // How far a full unit of cutoff CV reaches, and in which direction.
+      { name: 'cutoffDepth', defaultValue: 1, minValue: -1, maxValue: 1, automationRate: 'k-rate' },
       { name: 'resonance', defaultValue: 0, minValue: 0, maxValue: 1, automationRate: 'a-rate' },
       { name: 'drive', defaultValue: 0, minValue: 0, maxValue: 1, automationRate: 'a-rate' },
     ];
@@ -58,6 +64,9 @@ class Filter extends AudioWorkletProcessor {
     const sig = inputs[0] && inputs[0][0];
     if (!sig) { if (lowCh) lowCh.fill(0); if (bandCh) bandCh.fill(0); if (highCh) highCh.fill(0); return true; }
 
+    const cvIn = inputs[1] && inputs[1][0];
+    const pD2 = parameters.cutoffDepth;
+    const depth = pD2 ? pD2[0] : 1;
     const pC = parameters.cutoff, cS = pC.length > 1 ? 1 : 0;
     const pR = parameters.resonance, rS = pR.length > 1 ? 1 : 0;
     const pD = parameters.drive, dS = pD.length > 1 ? 1 : 0;
@@ -67,7 +76,12 @@ class Filter extends AudioWorkletProcessor {
     let l1 = this._l1, l2 = this._l2, b1 = this._b1, b2 = this._b2, h1 = this._h1, h2 = this._h2;
 
     for (let i = 0; i < n; i++) {
-      let fc = pC[i * cS];
+      // THE CUTOFF CV IS EXPONENTIAL, and normalised — one unit is CUTOFF_OCTAVES octaves, the way
+      // the oscillator's exponential FM works. It used to be added straight to the parameter, which is
+      // in HERTZ: an envelope or a note's timbre lane, which run nought to one, moved a filter by one
+      // hertz. Every normalised source in the rack was therefore unable to open a filter at all.
+      const cv = cvIn ? cvIn[i] * depth : 0;
+      let fc = cv ? pC[i * cS] * Math.pow(2, cv * CUTOFF_OCTAVES) : pC[i * cS];
       if (fc < 20) fc = 20; else if (fc > nyq * 0.99) fc = nyq * 0.99;
       // k is 1/Q. Resonance 0 is k=2 (no peak at all); 1 leaves a sliver so it rings without running
       // away, which a self-oscillating filter would do the moment anything nudged it.

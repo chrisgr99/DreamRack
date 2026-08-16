@@ -16,7 +16,10 @@ const ports = [
   // `via` is what MAKES the depth work: the patchbay puts the cord through an attenuator gain it
   // owns and drives from that param. Without it the depth was declared, drawn and inert — which is
   // what it was here until the trim knob gave it a control.
-  { id: 'cutoffCv', name: 'Cutoff CV', section: 'shape', domain: 'control', dir: 'in', target: 'cutoff', via: 'cutoffDepth' },
+  // A NODE INPUT, not a parameter target: the worklet reads it and applies it EXPONENTIALLY, so a
+  // normalised source opens the filter by octaves instead of by hertz. The depth knob still says how
+  // far and in which direction, but it is read inside rather than being a gain on the cord.
+  { id: 'cutoffCv', name: 'Cutoff CV', section: 'shape', domain: 'control', dir: 'in' },
   // NO DEPTH on these two. Three trims do not fit across 8 HP — the resonance/drive row overflowed by
   // 6mm — and of the three, cutoff is the one you reach for while playing. Res and drive take an
   // insert if they ever need taming (design/inserts.md).

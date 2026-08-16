@@ -17,7 +17,7 @@ export function create(ctx, services) {
   }
 
   const node = new AudioWorkletNode(ctx, PROCESSOR_NAME, {
-    numberOfInputs: 1, numberOfOutputs: 3, outputChannelCount: [1, 1, 1],
+    numberOfInputs: 2, numberOfOutputs: 3, outputChannelCount: [1, 1, 1],
     parameterData: { cutoff: 1000, resonance: 0, drive: 0 },
   });
   node.port.postMessage({ type: 'switch', id: 'poles', value: '4' });
@@ -28,7 +28,7 @@ export function create(ctx, services) {
   return {
     node,
     getOutput: (id) => { const i = outIndex.get(id); return i === undefined ? null : { node, index: i }; },
-    getInput: (id) => (id === 'audioIn' ? { node, index: 0 } : null),
+    getInput: (id) => (id === 'audioIn' ? { node, index: 0 } : id === 'cutoffCv' ? { node, index: 1 } : null),
     getParam: (id) => node.parameters.get(id) || null,
     setParam: (id, value, atTime) => {
       const m = meta.get(id);

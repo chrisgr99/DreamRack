@@ -329,7 +329,11 @@ class VoiceProcessor extends AudioWorkletProcessor {
       v.panTo = m.pan; v.panLeft = pmove; v.panStep = (m.pan - v.pan) / pmove;
       // Bend belongs to the note that is starting, so it begins at nothing however the last one ended.
       v.bend = 0; v.bendTo = 0; v.bendLeft = 0; v.bendStep = 0; v.bendV = 0;
-      v.pressure = 0; v.pressLeft = 0; v.timbre = 0; v.timbLeft = 0;
+      // THE NOTE MAY ARRIVE WITH ITS OWN COLOUR. A source that says nothing leaves these at zero, as
+      // they always were; one that names them — a Strudel pattern writing `.timbre("0.2 0.8")` — has
+      // each note start where it asked, which is what lets one voice tab play many colours.
+      v.pressure = typeof m.pressure === 'number' ? m.pressure : 0; v.pressLeft = 0;
+      v.timbre = typeof m.timbre === 'number' ? m.timbre : 0; v.timbLeft = 0;
       // The note carries the range it was made with, so the volts lane can be recovered from the
       // normalised one without this end having to know what the sending knob says.
       v.scale = (m.bendRange || 2) / 12;

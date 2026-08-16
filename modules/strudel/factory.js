@@ -32,6 +32,8 @@ export function create(ctx, _services) {
   const prefix = 'st' + Math.floor(Math.random() * 1e4);
   let lastError = null;
   let report = null;              // set by the rack: how a module tells it a value has changed
+  let running = false;            // what the transport is doing, so the bar's button can show it
+  let placement = '';             // the window's geometry as the patch has it
   let reportedCps = null;
   let setCps = null;              // what the panel last asked for, so a report cannot fight it
   let onFlash = null;           // the rack lights the cable when a note goes out
@@ -54,7 +56,8 @@ export function create(ctx, _services) {
     });
     if (!n) return;             // no note in this event — a sample trigger, not ours
     node.port.postMessage({ events: [
-      { at: n.at, handle: n.handle, pitch: n.pitch, level: n.level, duration: n.duration, pan: n.pan },
+      { at: n.at, handle: n.handle, pitch: n.pitch, level: n.level, duration: n.duration, pan: n.pan,
+        timbre: n.timbre, pressure: n.pressure },
       { at: n.offAt, handle: n.handle, off: true },
     ] });
   };
@@ -67,6 +70,11 @@ export function create(ctx, _services) {
     // THE SCOPE FIRST. `note`, `s` and the rest have to exist as globals before any pattern can be
     // evaluated — by us or by the editor — and evalScope is what puts them there. An editor built
     // without it mounts perfectly and then evaluates nothing, with no error to show for it.
+    // THE RACK'S OWN LANES, REGISTERED AS CONTROLS. `.timbre(0.7)` has to BE a method: the bundled
+    // build has no catch-all for unknown control names, so a pattern using one dies with "timbre is
+    // not a function". createParams makes them real, and registering before the scope is evaluated
+    // means they can also be used bare — timbre("0.2 0.8") — like any other control.
+    try { if (S.core.createParams) S.core.createParams('timbre', 'press'); } catch (_e) { /* older build */ }
     await S.evalScope(S.core, S.mini);
     // Our own repl, for playing without the editor open. Its output is ours and its clock is the
     // rack's, so an event's deadline is already in the right domain.
@@ -106,6 +114,7 @@ export function create(ctx, _services) {
     openEditor(true);
   };
   document.addEventListener('keydown', focusToggle, true);
+
   // Once a second is enough for a tempo readout, and it costs nothing.
   const stateTimer = setInterval(reportState, 1000);
   // Strudel's own default is half a cycle a second; say so at once rather than when a pattern first
@@ -194,30 +203,44 @@ export function create(ctx, _services) {
     if (!pane) return;
     savePlacement();
     const anim = springFrom(buttonRect(), true);
+    savePlacement();
     const done = () => { pane.classList.remove('open'); };
     if (anim) anim.onfinish = done; else done();
   }
 
   // The size and place you left it, across a hide and across a restart: a window you have to resize
   // every time is a window you stop opening.
-  const PLACE_KEY = 'wcoast.strudel.pane';
+  // The geometry travels in a param, so it saves with the patch and belongs to THIS module rather
+  // than to the machine. Debounced: a drag is a stream of moves, not a stream of patch edits.
+  let placeTimer = null;
+  // THE LAST GEOMETRY IT ACTUALLY HAD. A hidden element measures as nothing — zero size at the origin
+  // — and closing the window fires the resize observer on the way out, so reading the pane at that
+  // moment saved 0,0 and the window came back in the top left corner every time. What is remembered
+  // is the last measurement taken while it was on screen.
+  let lastGeom = null;
   function savePlacement() {
-    if (!pane) return;
-    try {
-      localStorage.setItem(PLACE_KEY, JSON.stringify({
-        left: pane.offsetLeft, top: pane.offsetTop, w: pane.offsetWidth, h: pane.offsetHeight }));
-    } catch (_e) { /* no storage */ }
+    if (!pane || !report) return;
+    if (pane.offsetWidth > 0 && pane.offsetHeight > 0) {
+      lastGeom = { left: pane.offsetLeft, top: pane.offsetTop, w: pane.offsetWidth, h: pane.offsetHeight };
+    }
+    if (!lastGeom) return;
+    clearTimeout(placeTimer);
+    placeTimer = setTimeout(() => {
+      report('window', JSON.stringify({ ...lastGeom, open: pane.classList.contains('open') }));
+    }, 300);
   }
-  function loadPlacement() {
+  function applyPlacement(json) {
+    if (!pane || !json) return;
     try {
-      const p = JSON.parse(localStorage.getItem(PLACE_KEY) || 'null');
+      const p = JSON.parse(json);
       if (!p) return;
-      // Clamped, so a window saved on a bigger screen is not lost off the edge of a smaller one.
-      pane.style.left = Math.max(0, Math.min(p.left, window.innerWidth - 120)) + 'px';
-      pane.style.top = Math.max(0, Math.min(p.top, window.innerHeight - 60)) + 'px';
-      if (p.w) pane.style.width = p.w + 'px';
-      if (p.h) pane.style.height = p.h + 'px';
-    } catch (_e) { /* no storage */ }
+      // CLAMPED, so a window saved on a bigger screen is not lost off the edge of a smaller one — the
+      // patch may have been written somewhere else entirely.
+      if (typeof p.left === 'number') pane.style.left = Math.max(0, Math.min(p.left, window.innerWidth - 120)) + 'px';
+      if (typeof p.top === 'number') pane.style.top = Math.max(0, Math.min(p.top, window.innerHeight - 60)) + 'px';
+      if (p.w) pane.style.width = Math.min(p.w, window.innerWidth) + 'px';
+      if (p.h) pane.style.height = Math.min(p.h, window.innerHeight) + 'px';
+    } catch (_e) { /* a patch written by an older build */ }
   }
 
   async function openEditor(on) {
@@ -227,6 +250,8 @@ export function create(ctx, _services) {
       pane = document.createElement('div');
       pane.className = 'strudel-pane';
       pane.innerHTML = '<div class="strudel-pane-bar"><span>Strudel</span>'
+        + '<span class="strudel-play-label">Play</span>'
+        + '<span class="strudel-play" title="play / stop"></span>'
         + '<span class="strudel-err"></span><span class="strudel-close">×</span></div>'
         + '<div class="strudel-root"></div>';
       document.body.appendChild(pane);
@@ -235,12 +260,22 @@ export function create(ctx, _services) {
       const theme = () => pane.classList.toggle('theme-dark', document.body.classList.contains('wcoast-dark'));
       theme();
       new MutationObserver(theme).observe(document.body, { attributes: true, attributeFilter: ['class'] });
-      loadPlacement();
+      applyPlacement(placement);
       addGrips();
       // A resize or a drag is worth remembering the moment it happens, not only when the pane is put
       // away — the app may be closed with it open.
       if (window.ResizeObserver) new ResizeObserver(() => savePlacement()).observe(pane);
       pane.querySelector('.strudel-close').onclick = () => closeEditor();
+      // THE SAME SWITCH AS THE FACEPLATE'S, within reach of the hand that is typing. It reports the
+      // run param rather than starting the pattern itself, so the panel button and this one are one
+      // state seen twice — press either and both show it.
+      const playDot = pane.querySelector('.strudel-play');
+      playDot.classList.toggle('on', running);       // the window may be opened mid-pattern
+      playDot.onpointerdown = (e) => { e.preventDefault(); e.stopPropagation(); };
+      playDot.onclick = (e) => {
+        e.stopPropagation();
+        if (report) report('run', running ? 'off' : 'on');
+      };
       // Dragged by its bar, like every other floating thing in the rack.
       const bar = pane.querySelector('.strudel-pane-bar');
       bar.onpointerdown = (e) => {
@@ -279,8 +314,27 @@ export function create(ctx, _services) {
         root: pane.querySelector('.strudel-root'),
         initialCode: code,
         prebake: async () => {},
+        // THE HIGHLIGHT NEEDS A WINDOW TO LOOK THROUGH. StrudelMirror defaults to drawTime [0,0] —
+        // zero width — so it asks which events are active between now and now, and catches one only
+        // when a note begins on the very frame it happens to look. That is why the playing symbols lit
+        // up occasionally and seemed to depend on what you had just done. A tenth of a second either
+        // side is enough for every event to be seen, and short enough that what lights up is what you
+        // are hearing.
+        drawTime: [-0.1, 0.1],
+        autodraw: true,
       });
       mirror.setCode(code);
+      // NO WHITE WASH OVER THE CODE. Strudel acknowledges an evaluation by decorating the whole
+      // document with a white background and inverting the text for a fifth of a second, which at
+      // this size is the entire window flashing black-on-white each time a pattern is run. The
+      // acknowledgement is worth keeping; the form is not, so it becomes a brief pulse of the pane's
+      // own edge instead — the same event, said at the edge of vision rather than in the text.
+      try {
+        mirror.flash = () => {
+          pane.classList.add('flash');
+          setTimeout(() => pane.classList.remove('flash'), 200);
+        };
+      } catch (_e) { /* not this build */ }
       // THE PATTERN IS SAVED WITH THE PATCH. Debounced: a keystroke is not a patch edit, and the
       // autosave should not run on every character. Half a second after you stop typing, it is stored.
       let codeTimer = null;
@@ -298,6 +352,7 @@ export function create(ctx, _services) {
     }
     pane.classList.add('open');
     springFrom(buttonRect(), false);
+    savePlacement();
     // Opening it puts the cursor in it — that is what you opened it for. And CodeMirror has to be told
     // to measure itself again: it was display:none, so everything it knew about its own size is stale.
     const content = pane.querySelector('.cm-content');
@@ -323,6 +378,17 @@ export function create(ctx, _services) {
         if (mirror && mirror.code !== code) mirror.setCode(code);
         return;
       }
+      if (id === 'window') {
+        placement = String(value || '');
+        applyPlacement(placement);
+        // A patch that was saved with the editor open opens it again — the window is part of the
+        // piece, not part of the session.
+        try {
+          const st = placement ? JSON.parse(placement) : null;
+          if (st && st.open && (!pane || !pane.classList.contains('open'))) setTimeout(() => openEditor(true), 0);
+        } catch (_e) { /* nothing to reopen */ }
+        return;
+      }
       if (id === 'status') return;                       // reported BY us; nothing to obey
       if (id === 'cps') {
         // Turning it on the panel sets the running pattern's tempo. Remembered so the report below
@@ -333,13 +399,20 @@ export function create(ctx, _services) {
         try { (mirror ? mirror.repl : replInstance)?.setCps?.(v); } catch (_e) { /* not running yet */ }
         return;
       }
-      if (id === 'run') { if (value === 'on') api.play(code); else api.stop(); }
+      // THE TRANSPORT AND THE ENGINE STAY SEPARATE. Tying them together was tried and undone: the
+      // engine is the whole rack's switch, so a pattern's stop button silenced everything else on it.
+      if (id === 'run') {
+        running = value === 'on';
+        if (running) api.play(code); else api.stop();
+        const dot = pane && pane.querySelector('.strudel-play');
+        if (dot) dot.classList.toggle('on', running);
+      }
       // Momentary: every press arrives as 'on', so the press itself is the toggle.
       if (id === 'edit' && value === 'on') {
         if (pane && pane.classList.contains('open')) closeEditor(); else openEditor(true);
       }
     },
-    supports: (id) => ['code', 'run', 'edit', 'cps', 'status'].includes(id),
+    supports: (id) => ['code', 'run', 'edit', 'cps', 'status', 'window'].includes(id),
     // The rack hands this in when the module is placed (see rack.js): how to report a value it did
     // not set — the pattern you typed, the tempo the pattern asked for, whether it evaluated.
     onValueChange: (fn) => { report = fn; },
