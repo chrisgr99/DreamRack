@@ -17,11 +17,26 @@ const params = [
   // the Formula module's expression.
   { id: 'code', name: 'Pattern', section: 'pattern', curve: 'text',
     default: 'note("<c3 eb3 g3 bb3>").sustain(0.4)' },
-  { id: 'run', name: 'Run', section: 'pattern', curve: 'stepped', default: 'stop', modulatable: false,
-    steps: [{ value: 'stop' }, { value: 'play' }] },
-  // Opens the editor window. Phase two.
-  { id: 'edit', name: 'Editor', section: 'pattern', curve: 'stepped', default: 'closed', modulatable: false,
-    steps: [{ value: 'closed' }, { value: 'open' }] },
+  // A LATCH: lit red while the pattern is playing, dark when it is not.
+  // OFF AND ON, not stop and play: a button's lamp is bound to the value `on`, so any other pair of
+  // names gives you a button that works and never lights.
+  { id: 'run', name: 'Run', section: 'pattern', curve: 'stepped', default: 'off', modulatable: false,
+    steps: [{ value: 'off' }, { value: 'on' }] },
+  // MOMENTARY: it lights while you press it and each press is a fresh act — the window is not a state
+  // the button holds, it is somewhere you went, and it can also be sent away with Option+Tab or its own
+  // close, which would leave a latched button lit over nothing.
+  { id: 'edit', name: 'Editor', section: 'pattern', curve: 'stepped', default: 'off', modulatable: false,
+    momentary: true, steps: [{ value: 'off' }, { value: 'on' }] },
+  // THE TEMPO, WHICH GOES BOTH WAYS. The pattern sets it — `cpm(60)` — and the module reports it here
+  // so the panel shows what is actually running; turn it on the panel and the running pattern follows.
+  // A NUMBER, not text: a text param under a readout has nothing to scroll and shows NaN when you try.
+  { id: 'cps', name: 'Cycles per second', section: 'pattern', curve: 'linear',
+    min: 0.05, max: 8, default: 0.5, glideMs: 0 },
+  // Reported by the module, never set: whether the last evaluation took.
+  // READ ONLY, because it is a report and not a control: without this you can press the lamp and tell
+  // the module it has failed, which is a lie you had to type.
+  { id: 'status', name: 'Status', section: 'pattern', curve: 'stepped', default: 'ok', modulatable: false,
+    readOnly: true, steps: [{ value: 'ok' }, { value: 'error' }] },
 ];
 
 export default {
@@ -31,6 +46,8 @@ export default {
   abbreviation: 'STR',
   category: 'sequencer',
   scope: 'shared',
+  // One engine plays the tab; it is never duplicated per note, so it carries no per-note lamp.
+  sharedFixed: true,
   hp: 8,
   worklets: ['modules/strudel/strudel-processor.js'],
   menuSectionOrder: ['pattern', 'out'],

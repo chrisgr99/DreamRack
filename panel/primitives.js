@@ -595,19 +595,25 @@ const LED = {
 // An LED lamp with a highlight — the shared building block for radios, buttons, and
 // indicators. Pass role/step to make it a bindable step-indicator; `white` for the
 // light push-button disc instead of an LED; `led` to pick the LED colour.
-function ledLamp(cx, cy, { r = 1.66, role = null, step = null, white = false, on = true, led = 'red' } = {}) {
+// `off` — the colour this lamp shows when it is NOT lit. Panels have always used one grey; a button
+// that is the whole point of its module can say otherwise, and the host reads the attribute back when
+// it draws the unlit state.
+function ledLamp(cx, cy, { r = 1.66, role = null, step = null, white = false, on = true, led = 'red', off = null } = {}) {
   // `on` bakes the lit / unlit state for a static render; the host's showStep
   // repaints step-indicators live, so it only matters before load. The colour is
   // carried on the element as data-wcoast-led so showStep can light the right one —
   // a lamp with no such attribute is red, which is every panel authored so far.
   const c = LED[led] || LED.red;
-  const fill = white ? '#e9e9ec' : (on ? `url(#${c.grad})` : '#505055');
+  const fill = white ? '#e9e9ec' : (on ? `url(#${c.grad})` : (off || '#505055'));
   const stroke = white ? '#8a8a8e' : (on ? c.stroke : '#4a4a4a'), sw = white ? '0.35' : '0.2366';
   const roleAttr = role ? ` data-wcoast-role="${role}"${step != null ? ` data-wcoast-step="${step}"` : ''}` : '';
   const ledAttr = (!white && led !== 'red') ? ` data-wcoast-led="${led}"` : '';
+  // The host redraws this circle whenever the value changes, so the unlit colour has to travel WITH
+  // the element — it cannot be inferred from a fill that is about to be overwritten.
+  const offAttr = off ? ` data-wcoast-off="${off}"` : '';
   const hr = 0.3 * r, hx = cx - 0.28 * r, hy = cy - 0.28 * r;
-  const hFill = white ? '#ffffff' : c.gloss, hOp = white ? '0.8' : (on ? '0.85' : '0');
-  return `<circle cx="${cx}" cy="${cy}" r="${r}" fill="${fill}" stroke="${stroke}" stroke-width="${sw}"${roleAttr}${ledAttr}/>`
+  const hFill = white ? '#ffffff' : c.gloss, hOp = white ? '0.8' : (on ? '0.85' : (off ? '0.35' : '0'));
+  return `<circle cx="${cx}" cy="${cy}" r="${r}" fill="${fill}" stroke="${stroke}" stroke-width="${sw}"${roleAttr}${ledAttr}${offAttr}/>`
     + `<circle cx="${hx.toFixed(2)}" cy="${hy.toFixed(2)}" r="${hr.toFixed(2)}" fill="${hFill}" opacity="${hOp}" data-wcoast-role="led-gloss" pointer-events="none"/>`;
 }
 
@@ -641,12 +647,12 @@ const BUTTON_METAL = 0.7;     // how far the disc reaches past the lamp
 // lit each — which reads as "all eight of these are on" and undoes the distinction the track draws.
 // A button's resting state is off. `on: true` is for a specimen that is standing in for a lamp.
 // A white disc has no lit state, so it is always drawn as itself.
-function button(id, cx, cy, { r = 2.2, kind = 'red', on = false, label: lb = null, theme = {} } = {}) {
+function button(id, cx, cy, { r = 2.2, kind = 'red', on = false, label: lb = null, theme = {}, off = null } = {}) {
   // POINTER-EVENTS NONE, and a role so the host can find it. The disc is drawn on top of the button's
   // invisible hit pad, so as an ordinary filled circle it SWALLOWED every click that landed on the
   // metal rather than on the lamp — the control shrank to the lamp the moment it got its mounting.
   const ring = `<circle cx="${cx}" cy="${cy}" r="${(r + BUTTON_METAL).toFixed(2)}" fill="url(#metalDisc)" pointer-events="none" data-wcoast-role="button-metal"/>`;
-  const lamp = ring + ledLamp(cx, cy, { r, white: kind === 'white', led: kind === 'white' ? 'red' : kind, role: 'step-indicator', step: 'on', on: kind === 'white' ? true : on });
+  const lamp = ring + ledLamp(cx, cy, { r, white: kind === 'white', led: kind === 'white' ? 'red' : kind, role: 'step-indicator', step: 'on', on: kind === 'white' ? true : on, off });
   // Label placement goes through attachedLabel so it always clears the lamp
   // (first line sits gap+cap below the edge), the same as jack/knob labels.
   const lbl = lb ? '\n    ' + attachedLabel(cx, cy, r, r, { fill: '#163a69', ...lb }) : '';
@@ -687,7 +693,7 @@ const lampReach = (ledR) => ledR + LAMP_PAD;
 // the second one dead. Eight named modes is what forced this: as a single column it is 40mm of panel
 // and sets the module's height, folded it is 20mm and lets the module be narrow instead of tall.
 // `colGap` is centre to centre, and has to clear the widest LABEL, not the lamp.
-function radioGroup(id, cx, cy, { steps = [], orientation = 'v', spacing = 5.6, ledR = 2.16, size = 2.1, outline = true, value = null, led = 'red', theme = {}, labelLeft = false, columns = 1, colGap = 0 } = {}) {
+function radioGroup(id, cx, cy, { steps = [], orientation = 'v', spacing = 5.6, ledR = 2.16, size = 2.1, outline = true, value = null, led = 'red', theme = {}, labelLeft = false, columns = 1, colGap = 0, labelDrop = 0 } = {}) {
   const ink = theme.ink || '#163a69', n = steps.length;
   const tHalf = lampReach(ledR);
   const cols = orientation === 'h' ? 1 : Math.max(1, Math.round(columns));
@@ -741,7 +747,9 @@ function radioGroup(id, cx, cy, { steps = [], orientation = 'v', spacing = 5.6, 
       // its centre line, and the right-hand one has its neighbour on the right — labels running that
       // way land on top of it. Reading right to left costs nothing; landing on a knob costs the knob.
       const side = labelLeft && orientation !== 'h' ? -1 : 1;
-      const tx = orientation === 'h' ? lx : lx + side * (tHalf + LAMP_LABEL_GAP), ty = orientation === 'h' ? ly + tHalf + 2.3 : ly + size * 0.35;
+      // `labelDrop` pushes a horizontal group's words further below its lamps — at a larger label size
+      // the standard gap puts them through the lamp rather than under it.
+      const tx = orientation === 'h' ? lx : lx + side * (tHalf + LAMP_LABEL_GAP), ty = orientation === 'h' ? ly + tHalf + 2.3 + labelDrop : ly + size * 0.35;
       g += `\n    ${label(tx, ty, s.label, { size, fill: ink, anchor: orientation === 'h' ? 'middle' : (side < 0 ? 'end' : 'start') })}`;
     }
   });

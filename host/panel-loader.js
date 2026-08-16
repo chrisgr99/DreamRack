@@ -249,7 +249,10 @@ export function showStep(binding, stepValue) {
     // A lamp may declare its LED colour; no declaration means red, which is every
     // panel authored before the sequencer's START / END / PLAY columns.
     const hue = el.getAttribute('data-wcoast-led');
-    el.setAttribute('fill', on ? (hue === 'green' ? 'url(#ledLitGreen)' : hue === 'orange' ? 'url(#ledLitOrange)' : 'url(#ledLit)') : BUTTON_OFF);
+    // A lamp may carry its own unlit colour (data-wcoast-off) — a module whose one button IS the
+    // module can be dark red rather than the house grey, and still light the same bright red.
+    const offFill = el.getAttribute('data-wcoast-off') || BUTTON_OFF;
+    el.setAttribute('fill', on ? (hue === 'green' ? 'url(#ledLitGreen)' : hue === 'orange' ? 'url(#ledLitOrange)' : 'url(#ledLit)') : offFill);
     el.setAttribute('stroke', binding.dark ? DARK_LINE : BUTTON_EDGE_LIGHT);
     // Match the jack edge's PROPORTION (~6% of radius): buttons are smaller, so a
     // fixed width read much heavier on them. Scale the edge to each button's radius.
@@ -263,7 +266,7 @@ export function showStep(binding, stepValue) {
     // the function generator's SVGs are hand-held and are not regenerated.
     if (hi && hi.getAttribute
         && (hi.getAttribute('data-wcoast-role') === 'led-gloss' || hi.getAttribute('fill') === '#ffb4b4')) {
-      hi.setAttribute('opacity', on ? '0.85' : '0');
+      hi.setAttribute('opacity', on ? '0.85' : (el.getAttribute('data-wcoast-off') ? '0.35' : '0'));
     }
   }
   if (binding.indicator && binding.pivot) {

@@ -31,6 +31,9 @@ export function create(ctx, _services) {
   let seq = 0;                  // handle counter
   const prefix = 'st' + Math.floor(Math.random() * 1e4);
   let lastError = null;
+  let report = null;              // set by the rack: how a module tells it a value has changed
+  let reportedCps = null;
+  let setCps = null;              // what the panel last asked for, so a report cannot fight it
   let onFlash = null;           // the rack lights the cable when a note goes out
 
   node.port.onmessage = (e) => { if (e.data && e.data.note && onFlash) onFlash(); };
@@ -69,6 +72,9 @@ export function create(ctx, _services) {
     // rack's, so an event's deadline is already in the right domain.
     replInstance = S.repl({ defaultOutput: output, getTime: () => ctx.currentTime, transpiler: S.transpiler });
     started = true;
+    // THE PANEL IS NEVER BLANK. Until something reports a tempo the readout has no value to show, and
+    // scrolling an empty readout starts from the bottom of the range — which is how it came up at 0.05.
+    reportState();
     return S;
   }
 
@@ -85,13 +91,6 @@ export function create(ctx, _services) {
   // Option+Tab because everything else is taken: Command+Tab is the system's, Control+Tab belongs to
   // tabbed apps, Tab and Shift+Tab are the editor's own indentation and reverse-tab, and Strudel binds
   // a row of other Option combinations but not this one. Capture phase, so it wins over CodeMirror.
-  // The bar says when the editor has the keys — grey when the pane is up but the rack has them, which
-  // happens if you click the rack rather than using the toggle.
-  function markFocus() {
-    if (!pane) return;
-    const content = pane.querySelector('.cm-content');
-    pane.classList.toggle('has-focus', !!(content && content.contains(document.activeElement)));
-  }
 
   const focusToggle = (e) => {
     if (!e.altKey || e.key !== 'Tab' || e.metaKey || e.ctrlKey) return;
@@ -107,6 +106,11 @@ export function create(ctx, _services) {
     openEditor(true);
   };
   document.addEventListener('keydown', focusToggle, true);
+  // Once a second is enough for a tempo readout, and it costs nothing.
+  const stateTimer = setInterval(reportState, 1000);
+  // Strudel's own default is half a cycle a second; say so at once rather than when a pattern first
+  // runs, or the panel spends its first minutes empty.
+  setTimeout(() => { if (report && reportedCps == null) { reportedCps = 0.5; report('cps', 0.5); } }, 0);
   // WHERE IT SPRINGS FROM. The CODE button on this module's own faceplate — found in the document
   // because the factory never sees its own panel. One Strudel module is the normal case; with two, the
   // animation starts from the first, which is wrong in a way nobody will notice.
@@ -115,7 +119,24 @@ export function create(ctx, _services) {
     return el && el.getBoundingClientRect ? el.getBoundingClientRect() : null;
   }
 
-  const SPRING_MS = 500;
+  // Slower coming than going: arriving is the moment worth watching, leaving should just be gone.
+  const OPEN_MS = 1000, CLOSE_MS = 500;
+
+  // WHAT THE PANEL SHOWS. The tempo lives in the pattern, not on a knob, so the rack has to be told
+  // when it changes; the status is how a half-typed pattern says so without the window open.
+  function reportState() {
+    if (!report) return;
+    const c = api.cps();
+    // Only when the PATTERN has moved it somewhere else — otherwise the panel and the pattern take
+    // turns overwriting each other a second at a time.
+    if (c != null && Math.abs(c - (reportedCps ?? -1)) > 1e-6 && (setCps == null || Math.abs(c - setCps) > 1e-6)) {
+      reportedCps = c; setCps = null; report('cps', Math.round(c * 100) / 100);
+    }
+    report('status', lastError ? 'error' : 'ok');
+    const bar = pane && pane.querySelector('.strudel-err');
+    if (bar) bar.textContent = lastError ? lastError.slice(0, 90) : '';
+    if (pane) pane.classList.toggle('has-error', !!lastError);
+  }
 
   // Grow out of the button, or shrink back into it. Cheap: one transform on one element.
   function springFrom(rect, reverse) {
@@ -126,7 +147,7 @@ export function create(ctx, _services) {
     const small = { transform: `translate(${dx}px, ${dy}px) scale(0.04)`, opacity: 0.25 };
     const full = { transform: 'translate(0, 0) scale(1)', opacity: 1 };
     return pane.animate(reverse ? [full, small] : [small, full], {
-      duration: SPRING_MS,
+      duration: reverse ? CLOSE_MS : OPEN_MS,
       // A touch of overshoot on the way out, none on the way back — a thing that springs open and
       // simply leaves reads better than one that bounces in both directions.
       easing: reverse ? 'cubic-bezier(.4,0,.9,.4)' : 'cubic-bezier(.2,.9,.25,1.15)',
@@ -209,21 +230,47 @@ export function create(ctx, _services) {
         + '<span class="strudel-err"></span><span class="strudel-close">×</span></div>'
         + '<div class="strudel-root"></div>';
       document.body.appendChild(pane);
+      // The frame follows the rack's theme, the way every other floating card does. Read from the
+      // document rather than passed in: the factory has no line to the rack's own dark-mode state.
+      const theme = () => pane.classList.toggle('theme-dark', document.body.classList.contains('wcoast-dark'));
+      theme();
+      new MutationObserver(theme).observe(document.body, { attributes: true, attributeFilter: ['class'] });
       loadPlacement();
       addGrips();
       // A resize or a drag is worth remembering the moment it happens, not only when the pane is put
       // away — the app may be closed with it open.
       if (window.ResizeObserver) new ResizeObserver(() => savePlacement()).observe(pane);
-      pane.addEventListener('focusin', markFocus);
-      pane.addEventListener('focusout', () => setTimeout(markFocus, 0));
       pane.querySelector('.strudel-close').onclick = () => closeEditor();
       // Dragged by its bar, like every other floating thing in the rack.
       const bar = pane.querySelector('.strudel-pane-bar');
       bar.onpointerdown = (e) => {
-        const x0 = e.clientX - pane.offsetLeft, y0 = e.clientY - pane.offsetTop;
-        const move = (ev) => { pane.style.left = (ev.clientX - x0) + 'px'; pane.style.top = (ev.clientY - y0) + 'px'; };
-        const up = () => { savePlacement(); document.removeEventListener('pointermove', move); document.removeEventListener('pointerup', up); };
-        document.addEventListener('pointermove', move); document.addEventListener('pointerup', up);
+        // DRAGGING THE WINDOW DOES NOT TAKE THE CURSOR OUT OF IT. Without this, grabbing the bar to
+        // move the window costs you your place in the pattern.
+        e.preventDefault();
+        // MOVED BY TRANSFORM, NOT BY left/top. Writing left/top on every pointer move relayouts the
+        // page — the rack, the cables and a two-megabyte editor subtree with it — which is why
+        // dragging felt like wading while a patch played. A transform is a compositor move: nothing
+        // is laid out again, and the rack underneath is not repainted, only re-composited. The
+        // position is written back once, on release.
+        const x0 = e.clientX, y0 = e.clientY;
+        const l0 = pane.offsetLeft, t0 = pane.offsetTop;
+        pane.style.willChange = 'transform';
+        document.dispatchEvent(new CustomEvent('wcoast:ui-busy', { detail: { busy: true } }));
+        const move = (ev) => {
+          pane.style.transform = `translate(${ev.clientX - x0}px, ${ev.clientY - y0}px)`;
+        };
+        const up = (ev) => {
+          pane.style.transform = '';
+          pane.style.willChange = '';
+          pane.style.left = (l0 + (ev.clientX - x0)) + 'px';
+          pane.style.top = (t0 + (ev.clientY - y0)) + 'px';
+          savePlacement();
+          document.dispatchEvent(new CustomEvent('wcoast:ui-busy', { detail: { busy: false } }));
+          document.removeEventListener('pointermove', move);
+          document.removeEventListener('pointerup', up);
+        };
+        document.addEventListener('pointermove', move);
+        document.addEventListener('pointerup', up);
       };
       mirror = new s.StrudelMirror({
         defaultOutput: output,
@@ -234,6 +281,20 @@ export function create(ctx, _services) {
         prebake: async () => {},
       });
       mirror.setCode(code);
+      // THE PATTERN IS SAVED WITH THE PATCH. Debounced: a keystroke is not a patch edit, and the
+      // autosave should not run on every character. Half a second after you stop typing, it is stored.
+      let codeTimer = null;
+      const noteCode = () => {
+        clearTimeout(codeTimer);
+        codeTimer = setTimeout(() => {
+          const now = mirror.code || '';
+          if (now === code) return;
+          code = now;
+          if (report) report('code', code);
+        }, 500);
+      };
+      pane.addEventListener('keyup', noteCode);
+      pane.addEventListener('input', noteCode);
     }
     pane.classList.add('open');
     springFrom(buttonRect(), false);
@@ -243,7 +304,6 @@ export function create(ctx, _services) {
     setTimeout(() => {
       try { if (mirror && mirror.editor && mirror.editor.requestMeasure) mirror.editor.requestMeasure(); } catch (_e) { /* fine */ }
       if (content) content.focus({ preventScroll: true });
-      markFocus();
     }, 0);
   }
 
@@ -257,11 +317,32 @@ export function create(ctx, _services) {
     getParam: () => null,
     // The panel's buttons arrive here as stepped params, which is how the rack drives everything.
     setParam: (id, value) => {
-      if (id === 'code') { code = String(value || ''); return; }
-      if (id === 'run') { if (value === 'play') api.play(code); else api.stop(); }
-      if (id === 'edit') openEditor(value === 'open');
+      if (id === 'code') {
+        code = String(value || '');
+        // A patch loading, or an undo: the editor should show what the rack now holds.
+        if (mirror && mirror.code !== code) mirror.setCode(code);
+        return;
+      }
+      if (id === 'status') return;                       // reported BY us; nothing to obey
+      if (id === 'cps') {
+        // Turning it on the panel sets the running pattern's tempo. Remembered so the report below
+        // does not immediately push our own value back at us and fight the knob.
+        const v = Number(value);
+        if (!isFinite(v) || v <= 0) return;
+        setCps = v; reportedCps = v;
+        try { (mirror ? mirror.repl : replInstance)?.setCps?.(v); } catch (_e) { /* not running yet */ }
+        return;
+      }
+      if (id === 'run') { if (value === 'on') api.play(code); else api.stop(); }
+      // Momentary: every press arrives as 'on', so the press itself is the toggle.
+      if (id === 'edit' && value === 'on') {
+        if (pane && pane.classList.contains('open')) closeEditor(); else openEditor(true);
+      }
     },
-    supports: (id) => ['code', 'run', 'edit'].includes(id),
+    supports: (id) => ['code', 'run', 'edit', 'cps', 'status'].includes(id),
+    // The rack hands this in when the module is placed (see rack.js): how to report a value it did
+    // not set — the pattern you typed, the tempo the pattern asked for, whether it evaluated.
+    onValueChange: (fn) => { report = fn; },
     // The rack hands the note cable's port in when one is patched, exactly as it does for Sequence Out.
     attachNoteOut: (port, edge) => {
       if (port) node.port.postMessage({ noteOut: port, edge }, [port]);
@@ -278,10 +359,11 @@ export function create(ctx, _services) {
         const s = await ensure();
         // The EDITOR's copy is the truth when it is open — it is what you have been typing into.
         // The EDITOR's copy is the truth when it is open — it is what you have been typing into.
-        if (mirror) { await mirror.evaluate(); }
+        if (mirror) { await mirror.evaluate(); code = mirror.code || code; if (report) report('code', code); }
         else await replInstance.evaluate(src, true);
         lastError = null;
       } catch (e) { lastError = (e && e.message) || String(e); }
+      reportState();
       return lastError;
     },
     stop: () => {
@@ -297,6 +379,7 @@ export function create(ctx, _services) {
     dispose: () => {
       try { if (mirror) mirror.stop(); } catch (_e) { /* gone */ }
       try { if (replInstance) replInstance.stop(); } catch (_e) { /* gone */ }
+      try { clearInterval(stateTimer); } catch (_e) { /* gone */ }
       try { document.removeEventListener('keydown', focusToggle, true); } catch (_e) { /* gone */ }
       try { if (pane) pane.remove(); } catch (_e) { /* gone */ }
       try { node.port.onmessage = null; node.disconnect(); } catch (_e) { /* gone */ }

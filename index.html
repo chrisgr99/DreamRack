@@ -597,17 +597,28 @@
        sitting just inside the frame. A flex column so the editor takes whatever height is left. */
     .strudel-pane { position: fixed; left: 120px; top: 120px; width: 620px; height: 360px; z-index: 1340;
       display: none; flex-direction: column; overflow: hidden; min-width: 280px; min-height: 140px;
-      background: #1b1b1f; border: 1px solid #45454c; border-radius: 6px; box-shadow: 0 8px 28px rgba(0,0,0,0.45);
+      /* THE SAME FRAME AS THE TUTORIAL AND THE OTHER FLOATING CARDS: near-black on a light rack,
+         near-white on a dark one — the edge is the brightest value the theme defines, so a window
+         always stands off whatever is behind it. Tokens and the theme-dark convention are the ones
+         .tour-card uses. */
+      --s-face: #1b1b1f; --s-edge: #141414;
+      background: var(--s-face); border: 0.75px solid var(--s-edge); border-radius: 6px;
+      box-shadow: 0 8px 28px rgba(0,0,0,0.45);
       font-family: 'Arial Narrow', Helvetica, Arial, sans-serif;
+      /* Its own layer, and its layout kept to itself: the rack behind it is re-composited rather than
+         repainted when it moves. */
+      contain: layout paint;
       /* It grows out of the CODE button, so that is what it scales from. */
       transform-origin: top left; }
     .strudel-pane.open { display: flex; }
-    /* Option+Tab hides the pane outright and gives the rack back; the bar simply says when the
-       editor has the keys. */
-    .strudel-pane.has-focus { border-color: #6f9fd8; }
-    .strudel-pane.has-focus .strudel-pane-bar { background: #2f4a6b; color: #eaf2ff; }
+    /* ONE APPEARANCE, ALWAYS. The bar used to dim when focus left the editor — and clicking the bar
+       itself is enough to do that, so dragging the window made it look broken. A window that is on
+       screen is on screen; where the keys are going is not worth saying in the frame. Only an error
+       changes it. */
+    .strudel-pane.theme-dark { --s-edge: #d2d2d6; }
+    .strudel-pane.has-error { border-color: #c4543a; }
     .strudel-pane-bar { display: flex; align-items: center; gap: 8px; padding: 5px 9px; cursor: grab;
-      background: #26262b; color: #c9d6e6; font-size: 12px; font-weight: 700; user-select: none; }
+      background: #2f4a6b; color: #eaf2ff; font-size: 12px; font-weight: 700; user-select: none; }
     .strudel-pane-bar .strudel-err { flex: 1; color: #ff8b6b; font-weight: 400; font-size: 11px; }
     .strudel-pane-bar .strudel-close { cursor: pointer; opacity: 0.7; font-size: 15px; }
     .strudel-pane-bar .strudel-close:hover { opacity: 1; }

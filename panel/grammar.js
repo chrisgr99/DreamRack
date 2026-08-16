@@ -152,7 +152,11 @@ export const jack = (id, label, opts = {}) =>
   ({ kind: 'jack', id, label, r: opts.r || JACK_R, labelSize: opts.labelSize || null,
     side: opts.side === 'left' || opts.side === 'right' ? opts.side : null });
 
-export const button = (id, label, opts = {}) => ({ kind: 'button', id, label, r: opts.r || 2.0 });
+// `labelSize` for the same reason a jack has one: a module whose only controls are two buttons wants
+// them read from across the room, and the button's own radius is not the whole of how big it looks.
+export const button = (id, label, opts = {}) =>
+  ({ kind: 'button', id, label, r: opts.r || 2.0, labelSize: opts.labelSize || null,
+     look: opts.look || 'red', off: opts.off || null });
 
 // A stepped param as a COLUMN of clickable lamps in a recessed track: `steps` is [[value, label], …].
 // The role attribute is what makes them clickable, and it is set here so no module can forget it —
@@ -173,7 +177,7 @@ export const button = (id, label, opts = {}) => ({ kind: 'button', id, label, r:
 // list; the grammar could not ask for it, so a panel wanting two columns of named options had to be
 // hand-authored. Sixteen named models is exactly that panel.
 export const lamps = (param, steps, opts = {}) =>
-  ({ kind: 'lamps', param, steps, dir: opts.dir === 'h' ? 'h' : 'v', ledR: opts.ledR || LAMP_R, spacing: opts.spacing || (opts.dir === 'h' ? 5.6 : 5.2), labelLeft: !!opts.labelLeft,
+  ({ kind: 'lamps', param, steps, dir: opts.dir === 'h' ? 'h' : 'v', ledR: opts.ledR || LAMP_R, spacing: opts.spacing || (opts.dir === 'h' ? 5.6 : 5.2), labelLeft: !!opts.labelLeft, labelSize: opts.labelSize || null, labelDrop: opts.labelDrop || 0,
      columns: Math.max(1, opts.columns || 1), colGap: opts.colGap || 0, value: opts.value == null ? null : opts.value,
      outline: opts.outline !== false });
 
@@ -496,11 +500,12 @@ function emit(items, c, x, y) {
       items.push({ t: 'jack', id: c.id, x, y, opts: { r: c.r, label: lab } });
       break;
     case 'button':
-      items.push({ t: 'button', id: c.id, x, y, opts: { r: c.r, kind: 'red', label: lab } });
+      items.push({ t: 'button', id: c.id, x, y, opts: { r: c.r, kind: c.look, label: lab, ...(c.off ? { off: c.off } : {}) } });
       break;
     case 'lamps':
       items.push({ t: 'radio', id: c.param, x, y, opts: {
-        orientation: c.dir, spacing: c.spacing, ledR: c.ledR, size: LAMP_LABEL, labelLeft: !!c.labelLeft,
+        orientation: c.dir, spacing: c.spacing, ledR: c.ledR, size: c.labelSize || LAMP_LABEL, labelLeft: !!c.labelLeft,
+        ...(c.labelDrop ? { labelDrop: c.labelDrop } : {}),
         ...(c.columns > 1 ? { columns: c.columns, colGap: c.colGap } : {}),
         ...(c.value == null ? {} : { value: c.value }),
         ...(c.outline === false ? { outline: false } : {}),

@@ -432,6 +432,10 @@ export class Rack {
     this._scopes = new Set();       // live floating signal scopes (transient, not saved)
     this._monitors = new Set();     // live ear monitors — solo-listen taps (transient, not saved)
     this.dark = !!opts.dark;                        // dark-mode faceplates
+    // AND SAID OUT LOUD, on the body, so anything floating over the rack can follow the theme without
+    // a line back to this object. The panes the rack itself makes are handed `theme-dark` directly;
+    // one a MODULE makes — the Strudel editor — has no such line.
+    try { document.body.classList.toggle('wcoast-dark', this.dark); } catch (_e) { /* no DOM yet */ }
     this.rowCount = opts.rowCount || 2;
     // The pages, in bar order: the audio ones you have made, then Video, then Output.
     this.pages = [{ id: 'a1', kind: 'audio', name: 'Audio 1' }, ...PAGE_FIXED.map((p) => ({ ...p }))];
@@ -455,6 +459,9 @@ export class Rack {
     // Where cables run translucent: every word on the page, measured in mm and cached until the rack
     // is laid out again. See _labelMaskBoxes.
     this._labelMask = null; this._fadeMaskG = null;
+    // Set while a module's floating window is being dragged: the per-frame cable work stands down.
+    this._uiBusy = false;
+    document.addEventListener('wcoast:ui-busy', (e) => { this._uiBusy = !!(e.detail && e.detail.busy); });
     this._cableCur = new Map();   // edge id -> current (eased) { body, dash } opacity, animated toward _cableTgt in the flow loop
     this._cableTgt = new Map();   // edge id -> target { body, dash } opacity set each _drawCables
     this._isolateNet = null; // Set of edge ids when isolating one terminal's subnet (else null)
@@ -2958,6 +2965,7 @@ export class Rack {
     if (BOUNDARY[descriptorId]) return false;
     const d = this.host.registry.descriptor(descriptorId);
     if (d && d.perNoteFixed) return true;    // no lamp, and no way to be anything else
+    if (d && d.sharedFixed) return false;    // ...and the other way: one of these, never a copy
     return !(d && d.scope === 'shared');
   }
 
@@ -2975,7 +2983,10 @@ export class Rack {
     // would sum the voices before each one's level and pan had been applied, which is the single thing
     // it exists to prevent. A switch with one sane position is a switch that only ever goes wrong.
     const d = this.host.registry.descriptor(rec.descriptorId);
-    if (d && d.perNoteFixed) return false;
+    // LOCKED EITHER WAY SHOWS NO LAMP. Poly to Stereo is always per note; a pattern source is always
+    // shared — one Strudel engine plays the tab, it is not duplicated per note — and a switch with one
+    // sane position is a switch that can only ever be wrong.
+    if (d && (d.perNoteFixed || d.sharedFixed)) return false;
     return !!this._boundariesOn(this.pageOf(rec)).in;
   }
 
@@ -5416,6 +5427,10 @@ export class Rack {
       // smoothly) and while the frozen overview is up (where this work is invisible anyway). It's the
       // per-frame cable-dash/opacity DOM writes that otherwise steal main-thread time from the pointer.
       if (this._ovActive || this._optDown) { this._flowRaf = requestAnimationFrame(tick); return; }
+      // SOMETHING IS BEING DRAGGED OVER THE RACK — a module's own window. The crawling dashes rewrite
+      // a DOM attribute per cable per frame, and none of it matters while the user is moving a window
+      // across them. Costs nothing to skip and gives the drag the frame back.
+      if (this._uiBusy) { this._flowRaf = requestAnimationFrame(tick); return; }
       // ENGINE OFF, NOTHING MOVES. The crawling dashes say "signal is running through this cable", and
       // with the audio thread suspended none is. Leaving them going would be a lie, and it would also
       // spend a frame's DOM writes per cable on a rack that is meant to be costing nothing.
@@ -9142,6 +9157,15 @@ export class Rack {
       void onCord;
     });
 
+    // A MODULE CAN REPORT A VALUE BACK. Almost everything flows the other way — the rack sets a
+    // param, the module obeys — but a module with its own editing surface knows things the rack does
+    // not: the Strudel module's pattern is typed into its own window, and without this it would be
+    // lost the moment the app closed. Reported values go through applyParam, so they land in the
+    // record, save with the patch, and behave exactly as if a knob had been turned.
+    if (rec.instance && typeof rec.instance.onValueChange === 'function') {
+      try { rec.instance.onValueChange((id, value) => this.applyParam(rec, id, value)); }
+      catch (_e) { /* a module that reports badly must not stop it being placed */ }
+    }
     this.records.set(rec.key, rec);
     this.rows[rowIndex].push(rec);
     this._resolveRow(this.rows[rowIndex]);
@@ -9199,6 +9223,7 @@ export class Rack {
     dark = !!dark;
     if (dark === this.dark) return;
     this.dark = dark;
+    try { document.body.classList.toggle('wcoast-dark', dark); } catch (_e) { /* no DOM */ }
     for (const rec of this.records.values()) {
       const type = this.moduleTypes.find((t) => t.descriptorId === rec.descriptorId);
       if (!type) continue;
