@@ -660,6 +660,10 @@ export class Rack {
         return;
       }
       if (e.key === 'Control') this._ctrlDown = true;   // accessibility-zoom gesture held → pause the scope loop's layout reads
+      // ANY OTHER KEY WHILE OPTION IS HELD COUNTS AS USING IT. The overview pops on a bare Option TAP;
+      // without this, Option+anything — the Strudel window's Option+Tab, or any shortcut a module adds
+      // later — pops the overview as an afterthought when the key comes back up.
+      if (this._optDown && e.key !== 'Alt') this._optUsed = true;
       if (e.key === 'Alt') {
         if (this._optDown) return;   // ignore auto-repeat while the key is held
         this._optDown = true; this._optUsed = false;

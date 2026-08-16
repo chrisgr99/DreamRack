@@ -92,7 +92,53 @@ that drives the pattern. The module's window may be closed — the pattern must 
 scheduler must not depend on the editor being visible, and any embedded frame needs throttling off.
 This cost an hour in the spike and it will cost it again if it is not written down.
 
-## 5. Licence
+## 5. Many voices, and many colours
+
+Two separable questions that "orbit" usually tangles together: **where the notes go**, and **what they
+sound like**. Most of the time a live coder wants the second without paying for the first.
+
+### Where they go — `orbit`
+
+**Eight note outputs**, and `orbit` picks one. The rack addresses eight audio tabs, so eight jacks match
+the ceiling exactly; an untagged note leaves by the first, because a pattern written without thinking
+about routing should simply play.
+
+The cost is not the jacks, it is the tabs behind them: a voice tab is duplicated per note, so eight
+tabs at eight voices is sixty-four module copies.
+
+### What they sound like — the note's own lanes, named in the pattern
+
+**The configuration comes from the pattern, not from a table in the module.** A named-parts table was
+the first design and it was wrong: it makes the musician learn a set of names that live in someone
+else's patch, and a typo in a live set is indistinguishable from silence.
+
+Instead the note bundle's lanes ARE the vocabulary, set in the pattern by name:
+
+```
+note("c3 eb3 g3").timbre("0.2 0.8 0.5").press(0.4)
+```
+
+**Verified: an unregistered control name just works.** Strudel turns an unknown method into a control
+and carries it through to the output — `.timbre(0.7)` arrives as `{note:'c3', timbre:0.7}` with nothing
+registered anywhere. `createParams('timbre','press')` also exists, so they can be declared properly for
+the editor's benefit; either way there is nothing to set up and nothing to remember beyond the lane
+names, which are printed on Voice In's own panel.
+
+**This is how one tab plays many voices.** The tab is duplicated per note, so each copy's filter,
+wavefolder or gate sits where that note asked — patch Voice In's TIMB output at a filter's cutoff and
+`timbre("0.2 0.8")` is two different sounds from one voice. On hardware, per-note timbre means per-note
+hardware; here it is a lane.
+
+**Friendly aliases for the vocabulary they already have.** `lpf` and `cutoff` map onto the timbre lane,
+log-scaled across the audible range so a pattern written for superdough lands sensibly on an
+exponential CV input. A pattern's own explicit `timbre` wins over an alias.
+
+**Where it runs out**: two lanes. A pattern wanting cutoff and resonance and shape per note needs more,
+and that is the concrete case for adding AUX lanes to the note bundle — deliberately deferred until a
+pattern worth playing actually runs out, because each lane costs a jack on a panel that is already
+full.
+
+## 6. Licence
 
 `@strudel/web` and `@strudel/repl` are **AGPL-3.0-or-later**. Vendoring them makes the combined work
 AGPL: the source must be reachable by anyone using a hosted version, which DreamRack does anyway —
@@ -101,7 +147,7 @@ the source is published and the app is client-side, so every user already receiv
 The practical consequence is for other people, not for us: nobody can take DreamRack, add to it and run
 it as a closed hosted service without publishing their changes.
 
-## 6. Phases
+## 7. Phases
 
 **Phase 1 — it makes a sound.** Vendor the two files. A module with a NOTE out, a hard-coded pattern,
 and the adapter. Verified when a pattern plays a voice tab and the notes land where they should.
@@ -113,9 +159,10 @@ and STOP on the faceplate. Verified when you can write a pattern, hear it, break
 saved in the patch so a piece reopens as you left it. Verified when an envelope on another tab is
 locked to the pattern.
 
-**Phase 4 — expression.** The rest of the control names: Strudel's continuous controls as tagged
-updates, so a pattern can bend, swell and colour a note while it sounds. This is where a pattern stops
-sounding like a sequencer and starts sounding played.
+**Phase 4 — expression and routing.** The lanes named in the pattern (§5), `orbit` across eight note
+outputs, and Strudel's continuous controls as tagged updates so a pattern can bend, swell and colour a
+note while it sounds. This is where a pattern stops sounding like a sequencer and starts sounding
+played — and where one tab starts sounding like several.
 
 **Phase 5 — what only this can do.** Strudel driving the VIDEO side through the same events, and the
 rack's own signals visible in the editor. Nothing else gives a live coder a patchable, visible
