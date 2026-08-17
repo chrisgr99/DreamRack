@@ -351,15 +351,34 @@ export function create(ctx, _services) {
       pane.addEventListener('input', noteCode);
     }
     pane.classList.add('open');
-    springFrom(buttonRect(), false);
+    const anim = springFrom(buttonRect(), false);
     savePlacement();
     // Opening it puts the cursor in it — that is what you opened it for. And CodeMirror has to be told
     // to measure itself again: it was display:none, so everything it knew about its own size is stale.
+    //
+    // AFTER THE SPRING, NOT DURING IT. The window arrives by scaling up from the button, so for a
+    // second the pane is a fraction of its size — and a measurement taken then gives CodeMirror line
+    // heights a twenty-fifth of what they should be, which is what put the first few lines on top of
+    // each other. Measuring when the animation finishes measures the window that is actually there.
     const content = pane.querySelector('.cm-content');
-    setTimeout(() => {
+    const measure = () => {
       try { if (mirror && mirror.editor && mirror.editor.requestMeasure) mirror.editor.requestMeasure(); } catch (_e) { /* fine */ }
-      if (content) content.focus({ preventScroll: true });
-    }, 0);
+    };
+    if (anim) anim.onfinish = () => { measure(); if (content) content.focus({ preventScroll: true }); };
+    else setTimeout(() => { measure(); if (content) content.focus({ preventScroll: true }); }, 0);
+    // And once more a beat later: a font that arrives late, or a window resized while it was away,
+    // both leave the first measurement stale.
+    setTimeout(measure, OPEN_MS + 120);
+
+    // THE PATTERN MOVES INTO THE EDITOR. Playing with the window shut runs the module's own repl,
+    // which knows nothing about CodeMirror — so opening the window mid-pattern used to leave you
+    // watching an editor that was not the thing making the sound, with no highlighting to show for
+    // it. Handing the pattern over on open is what makes the highlight follow whatever is playing,
+    // whichever button started it.
+    if (running && mirror) {
+      try { replInstance && replInstance.stop(); } catch (_e) { /* not playing */ }
+      try { await mirror.evaluate(); } catch (_e) { /* a half-typed pattern; the lamp says so */ }
+    }
   }
 
   // The pattern text lives here between edits, so RUN plays whatever the patch last saved.

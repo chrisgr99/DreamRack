@@ -651,7 +651,32 @@
        the bar, whatever else the bar grows on its left. */
     .strudel-err { margin-left: auto; }
     .strudel-close { cursor: pointer; padding: 0 2px; }
+    /* EIGHT GRIPS, because CSS gives you one — see factory.js. Above the editor, or the code would
+       take every press that landed near an edge. */
+    .strudel-grip { position: absolute; z-index: 2; }
+    .strudel-grip.n { top: -3px; left: 8px; right: 8px; height: 7px; cursor: ns-resize; }
+    .strudel-grip.s { bottom: -3px; left: 8px; right: 8px; height: 7px; cursor: ns-resize; }
+    .strudel-grip.w { left: -3px; top: 8px; bottom: 8px; width: 7px; cursor: ew-resize; }
+    .strudel-grip.e { right: -3px; top: 8px; bottom: 8px; width: 7px; cursor: ew-resize; }
+    .strudel-grip.nw { top: -3px; left: -3px; width: 12px; height: 12px; cursor: nwse-resize; }
+    .strudel-grip.se { bottom: -3px; right: -3px; width: 12px; height: 12px; cursor: nwse-resize; }
+    .strudel-grip.ne { top: -3px; right: -3px; width: 12px; height: 12px; cursor: nesw-resize; }
+    .strudel-grip.sw { bottom: -3px; left: -3px; width: 12px; height: 12px; cursor: nesw-resize; }
+    /* THE EDITOR TAKES WHAT IS LEFT, AND NO MORE. Without a bounded height the editor grew to fit
+       its text and the surplus was simply clipped by the pane — a pattern longer than the window had
+       nowhere to scroll. `min-height: 0` is the part that matters: a flex child's default floor is
+       its content, which is exactly the growth being prevented here. */
+    .strudel-root { flex: 1 1 auto; min-height: 0; overflow: hidden; }
     .strudel-root .cm-editor { height: 100%; font-size: 13px; }
+    .strudel-root .cm-scroller { overflow: auto; }
+    /* A bar you can see on a dark editor, and one that does not sit over the last character. */
+    .strudel-root .cm-scroller::-webkit-scrollbar { width: 11px; height: 11px; }
+    .strudel-root .cm-scroller::-webkit-scrollbar-thumb {
+      background: rgba(190,200,215,0.35); border-radius: 6px; border: 2px solid transparent;
+      background-clip: content-box; }
+    .strudel-root .cm-scroller::-webkit-scrollbar-thumb:hover { background: rgba(210,220,235,0.6);
+      background-clip: content-box; }
+    .strudel-root .cm-scroller::-webkit-scrollbar-track { background: transparent; }
     .page-stubs { position: fixed; inset: 0; z-index: 1290; pointer-events: none; overflow: visible; }
     /* A cable IN HAND, drawn over the whole window so carrying one up to a tab does not run it into
        the rack's clipped edge and make it look dropped. Above the menu bar it has to reach, below
