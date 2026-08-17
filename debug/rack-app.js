@@ -27,6 +27,8 @@ import sineDescriptor from '../modules/sine-source/descriptor.js';
 import { create as sineCreate } from '../modules/sine-source/factory.js';
 import vcoDescriptor from '../modules/oscillator/descriptor.js';
 import { create as vcoCreate } from '../modules/oscillator/factory.js';
+import loadDescriptor from '../modules/load/descriptor.js';
+import { create as loadCreate } from '../modules/load/factory.js';
 import noiseDescriptor from '../modules/noise/descriptor.js';
 import { create as noiseCreate } from '../modules/noise/factory.js';
 import envDescriptor from '../modules/envelope/descriptor.js';
@@ -95,6 +97,7 @@ registry.register({ descriptor: galleryDescriptor, create: galleryCreate });
 registry.register({ descriptor: sineDescriptor, create: sineCreate });
 registry.register({ descriptor: vcoDescriptor, create: vcoCreate });
 registry.register({ descriptor: noiseDescriptor, create: noiseCreate });
+registry.register({ descriptor: loadDescriptor, create: loadCreate });
 registry.register({ descriptor: envDescriptor, create: envCreate });
 registry.register({ descriptor: vcaDescriptor, create: vcaCreate });
 registry.register({ descriptor: polyStereoDescriptor, create: polyStereoCreate });
@@ -151,6 +154,15 @@ const MODULE_TYPES = [{
   hp: 10,
   panelUrl: 'modules/oscillator/panel.svg',
   descriptor: vcoDescriptor,
+}, {
+  // Load — what the audio thread is costing, as a percentage of ONE core, which is the only ceiling
+  // that matters: the audio thread cannot spread across the others. 3 HP, so it can live on the rack
+  // permanently rather than being fetched when something already sounds wrong.
+  descriptorId: loadDescriptor.id,
+  name: 'Load',
+  hp: 3,
+  panelUrl: 'modules/load/panel.svg',
+  descriptor: loadDescriptor,
 }, {
   // Noise — five colours from one generator, no controls. First module built from the panel grammar
   // (panel/grammar.js): its whole faceplate is a list of five jacks.

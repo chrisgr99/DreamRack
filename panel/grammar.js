@@ -193,7 +193,10 @@ export const display = (id, w, h) => ({ kind: 'display', id, w, h, label: null }
 // it will ever hold, so the window is sized to its contents. `value` is what the static SVG shows
 // before anything is bound — the param's default, in words.
 export const readout = (id, label, opts = {}) =>
-  ({ kind: 'readout', id, label, chars: opts.chars || 3, value: opts.value || '', menu: !!opts.menu, digits: opts.digits || null,
+  // `readOnly` — a window the ENGINE fills in. No chevrons, because there is nothing to step: the
+  // load meter's numbers are measurements, and a pair of arrows beside them offers to change a fact.
+  ({ kind: 'readout', id, label, chars: opts.chars || 3, value: opts.value || '', menu: !!opts.menu,
+    readOnly: !!opts.readOnly, digits: opts.digits || null,
     widest: opts.widest || null, pad: opts.pad == null ? null : opts.pad, width: opts.width || 0,
     side: opts.side || null, labelSize: opts.labelSize || null, size: opts.size || 1 });
 
@@ -316,7 +319,7 @@ function extent(c) {
     const half = readoutHalf(c);
     // A menu readout has no chevrons, so it reaches no further right than its own window — unless it
     // wears its label at the side, in which case the word is what the next control has to clear.
-    const arrows = c.menu ? 0 : READOUT_ARROW_GAP + 2.6;
+    const arrows = (c.menu || c.readOnly) ? 0 : READOUT_ARROW_GAP + 2.6;
     const sideLab = (c.side === 'right' && c.label) ? 1.6 + textWidth(c.label, c.labelSize || LABEL_SIZE) : 0;
     const sideLabL = (c.side === 'left' && c.label) ? 1.6 + textWidth(c.label, c.labelSize || LABEL_SIZE) : 0;
     return { l: half + sideLabL, r: half + Math.max(arrows, sideLab) };
@@ -513,7 +516,7 @@ function emit(items, c, x, y) {
       } });
       break;
     case 'readout':
-      items.push({ t: 'readout', id: c.id, x, y, opts: { chars: c.chars, value: c.value, ...(c.menu ? { menu: true } : {}), ...(c.digits ? { digits: c.digits } : {}), ...(c.widest ? { widest: c.widest } : {}), ...(c.pad == null ? {} : { pad: c.pad }), ...(c.width ? { width: c.width } : {}), ...(c.size && c.size !== 1 ? { size: c.size } : {}), ...(lab ? { label: lab } : {}) } });
+      items.push({ t: 'readout', id: c.id, x, y, opts: { chars: c.chars, value: c.value, ...(c.menu ? { menu: true } : {}), ...(c.readOnly ? { readOnly: true } : {}), ...(c.digits ? { digits: c.digits } : {}), ...(c.widest ? { widest: c.widest } : {}), ...(c.pad == null ? {} : { pad: c.pad }), ...(c.width ? { width: c.width } : {}), ...(c.size && c.size !== 1 ? { size: c.size } : {}), ...(lab ? { label: lab } : {}) } });
       break;
     case 'display': {
       // A recessed well: the frame line, and a group the host fills. The group carries the id so the

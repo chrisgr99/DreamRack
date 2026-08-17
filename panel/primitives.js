@@ -822,7 +822,7 @@ const READOUT_GREEN = '#4ee37a';
 // `size` scales the whole window — its height and, with it, the digits. The house height suits a
 // value read in passing beside a knob; a module whose PRINCIPAL controls are windows rather than
 // knobs wants them at the size a knob would have been, or the panel has nothing on it to look at.
-function readout(id, cx, cy, { chars = 3, value = '', label: lb = null, theme = {}, menu = false, digits = READOUT_GREEN, widest = null, pad = READOUT_PAD, width = 0, size = 1 } = {}) {
+function readout(id, cx, cy, { chars = 3, value = '', label: lb = null, theme = {}, menu = false, readOnly = false, digits = READOUT_GREEN, widest = null, pad = READOUT_PAD, width = 0, size = 1 } = {}) {
   // This file rounds inline everywhere else; one local helper keeps the path data readable.
   const r2 = (v) => (+v).toFixed(2);
   const h = READOUT_H * (size || 1);
@@ -860,7 +860,9 @@ function readout(id, cx, cy, { chars = 3, value = '', label: lb = null, theme = 
   // NO CHEVRONS ON A MENU READOUT. They are up and down by one, and a control whose values you pick
   // from a list has no next and no previous worth drawing — a pair of arrows beside it would offer a
   // second, slower way to do the thing the list does in one gesture.
-  if (!menu) {
+  // AND NONE ON A READING. A window the engine fills in has no next value and no previous one — the
+  // arrows would be offering to edit a measurement.
+  if (!menu && !readOnly) {
     g += arrow(up, 'readout-up', cy - gap - rise / 2);
     g += arrow(dn, 'readout-down', cy + gap + rise / 2);
   }
