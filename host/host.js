@@ -20,6 +20,9 @@
 
 import { ModuleRegistry } from './registry.js';
 
+// Loaded into the worklet scope ahead of every processor; see worklets/lifetime.js.
+const LIFETIME = 'worklets/lifetime.js';
+
 export class SynthHost {
   // ctx: an AudioContext the caller created on a user gesture (browsers, and
   // Electron's renderer, require a gesture before audio starts). The host does
@@ -37,12 +40,50 @@ export class SynthHost {
 
   register(entry) { return this.registry.register(entry); }
 
+  // Which descriptor an instance came from, so dispose knows which ports to ask it for.
+  _noteDescriptor(instanceId, descriptorId) {
+    if (!this._descriptorOf) this._descriptorOf = new Map();
+    this._descriptorOf.set(instanceId, descriptorId);
+  }
+
+  // END ITS WORKLETS. A factory's dispose disconnects its nodes, which is not what stops them — a
+  // processor runs until it returns false, and the message this posts is what makes it do that.
+  //
+  // The NODES ARE FOUND THROUGH THE DESCRIPTOR'S PORTS rather than by reaching into the instance: a
+  // factory keeps its nodes in a closure and exposes them exactly one way, through getOutput and
+  // getInput. So the ports are the map, and a module with several worklets is covered by all of them.
+  _endWorklets(instanceId, inst) {
+    const descriptorId = this._descriptorOf && this._descriptorOf.get(instanceId);
+    const d = descriptorId && this.registry.descriptor(descriptorId);
+    const ports = (d && d.ports) || [];
+    const seen = new Set();
+    for (const p of ports) {
+      let slot = null;
+      try {
+        slot = p.dir === 'out' ? (inst.getOutput && inst.getOutput(p.id))
+          : (inst.getInput && inst.getInput(p.id));
+      } catch (_e) { slot = null; }
+      const node = slot && slot.node;
+      if (!node || !node.port || seen.has(node)) continue;
+      seen.add(node);
+      try { node.port.postMessage({ type: 'dispose' }); } catch (_e) { /* already gone */ }
+    }
+    if (this._descriptorOf) this._descriptorOf.delete(instanceId);
+  }
+
   // Load every worklet a module declares, once each. Paths are RELATIVE to the
   // document, so they resolve correctly whether the page is served at the origin
   // root (Electron's app:// scheme) or under a sub-path (e.g. GitHub Pages).
   async loadWorklets(descriptorId) {
     const descriptor = this.registry.descriptor(descriptorId);
     const paths = Array.isArray(descriptor.worklets) ? descriptor.worklets : [];
+    // FIRST, ALWAYS. It wraps registerProcessor so every processor loaded after it can be ended when
+    // its module goes (worklets/lifetime.js says why); loaded after one, that processor would be the
+    // one orphan that never stops.
+    if (paths.length && !this._loadedWorklets.has(LIFETIME)) {
+      await this.ctx.audioWorklet.addModule(LIFETIME);
+      this._loadedWorklets.add(LIFETIME);
+    }
     for (const p of paths) {
       if (this._loadedWorklets.has(p)) continue;
       await this.ctx.audioWorklet.addModule(p);
@@ -73,6 +114,7 @@ export class SynthHost {
     };
     const instance = entry.create(this.ctx, services);
     this._instances.set(id, instance);
+    this._noteDescriptor(id, descriptorId);
     return { instanceId: id, instance };
   }
 
@@ -81,6 +123,8 @@ export class SynthHost {
   dispose(instanceId) {
     const inst = this._instances.get(instanceId);
     if (!inst) return;
+    // The worklets are ended BEFORE the factory tears its nodes down: getOutput has to still answer.
+    try { this._endWorklets(instanceId, inst); } catch (_e) { /* best effort */ }
     try { inst.dispose(); } catch (_e) { /* best effort */ }
     this._instances.delete(instanceId);
   }
