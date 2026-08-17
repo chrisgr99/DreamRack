@@ -93,11 +93,19 @@ It works in most browsers — Chrome, Edge, Firefox, or Safari. Saving and loadi
 
 ## License
 
-DreamRack is free software under the **GNU General Public License, version 3** — see [LICENSE](LICENSE).
+DreamRack is free software under the **GNU Affero General Public License, version 3** — see
+[LICENSE](LICENSE).
+
+Affero rather than plain GPL because DreamRack embeds [Strudel](https://strudel.cc), which is
+AGPL-3.0-or-later. The practical difference is section 13: anyone who runs a modified DreamRack as a
+hosted service has to make their source available to the people using it. That costs this project
+nothing — DreamRack is client-side and its source is published, so every user already receives it.
 
 Version 3 only, not "or later". Some of the DSP here is derived from VCV Rack plugins, and
-[FrozenWasteland](https://github.com/almostEric/FrozenWasteland) is GPL-3.0-only — so version 3 is
-the licence the combined work has to carry. [Fundamental](https://github.com/VCVRack/Fundamental)
-is GPL-3.0-or-later, which is satisfied by using it under version 3.
+[FrozenWasteland](https://github.com/almostEric/FrozenWasteland) is GPL-3.0-only, so version 3 is
+what the combination can carry. [Fundamental](https://github.com/VCVRack/Fundamental) is
+GPL-3.0-or-later, satisfied by using it under version 3. GPLv3 section 13 is what allows GPL-3.0-only
+code and AGPL-3.0 code to be combined at all: those parts stay under their own licence, and the
+network clause applies to the combination.
 
 A module whose DSP is derived from either names its source in that module's folder.

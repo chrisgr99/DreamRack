@@ -1,7 +1,7 @@
 {
   "name": "wcoast",
   "version": "0.1.0",
-  "license": "GPL-3.0-only",
+  "license": "AGPL-3.0-only",
   "description": "DreamRack - an exploration of ideas for an easier-to-use, more powerful modular synthesis environment, in the browser and on the Mac.",
   "main": "electron-main.js",
   "scripts": {
