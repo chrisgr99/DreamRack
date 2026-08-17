@@ -677,6 +677,28 @@
     .strudel-root .cm-scroller::-webkit-scrollbar-thumb:hover { background: rgba(210,220,235,0.6);
       background-clip: content-box; }
     .strudel-root .cm-scroller::-webkit-scrollbar-track { background: transparent; }
+    /* THE CRAWLING DASHES, DRIVEN BY THE BROWSER. They were animated from JavaScript: a
+       stroke-dashoffset written on every cable and every stub, every frame, from the rack's flow loop.
+       That is the single most expensive thing the rack does while the engine is on — measured at 60
+       frames a second with the engine off and 13 with it on, on a patch making almost no sound.
+       A keyframe costs the main thread nothing per frame; the animation engine runs it.
+
+       THE PERIOD IS PER CABLE, because the dash length differs by signal family and by cable width, so
+       each element carries its own --flow-period and --flow-dur. The negative animation-delay set when
+       a cable is drawn is what keeps the crawl CONTINUOUS: this layer is rebuilt on nearly every
+       pointer move, and without it every redraw would restart the animation from zero and the dashes
+       would jump under the pointer. */
+    @keyframes wcoast-flow { from { stroke-dashoffset: 0; }
+                             to   { stroke-dashoffset: calc(-1 * var(--flow-period)); } }
+    .flow-dash, .flow-dash-stub { animation: wcoast-flow var(--flow-dur, 1s) linear infinite; }
+    /* NOTHING MOVES WITH THE ENGINE OFF — the dashes say "signal is running through this cable", and
+       with the audio thread suspended none is. Also stood down while a window is being dragged over
+       the rack and while the overview is up, which is what the flow loop used to do by skipping. One
+       class on the layer rather than a write per cable. */
+    .rack-cables.flow-still .flow-dash, .page-stubs.flow-still .flow-dash-stub { animation-play-state: paused; }
+    /* ISOLATE MODE DRIVES ITS OWN CRAWL, per cable and at a speed set by the signal on it, so there
+       the keyframe stands aside and the loop writes the offset as it always did. */
+    .rack-cables.flow-manual .flow-dash { animation: none; }
     .page-stubs { position: fixed; inset: 0; z-index: 1290; pointer-events: none; overflow: visible; }
     /* A cable IN HAND, drawn over the whole window so carrying one up to a tab does not run it into
        the rack's clipped edge and make it look dropped. Above the menu bar it has to reach, below

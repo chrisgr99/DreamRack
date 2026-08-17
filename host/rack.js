@@ -2312,6 +2312,8 @@ export class Rack {
 
   _drawCables() {
     if (!this.cables) return;
+    // The flow loop's element lists belong to the layer this is about to rebuild.
+    this._flowEls = null;
     this._refreshKnacks();   // a cable in/out of a knAck centre splits/unsplits it
     // While isolating a subnet, the hover-driven net highlight is suppressed, and the
     // subnet itself is recomputed live so it tracks patch edits (a new feeding cord
@@ -2329,17 +2331,28 @@ export class Rack {
     // The fade region's mask, rebuilt with the layer because the layer is cleared. Null while nothing
     // is hovered, and then no path references a mask at all — an idle rack pays nothing for this.
     const fadeMask = this._buildControlFadeDefs();
+    // ONE MASK OVER ALL THE CABLES, not one per cable. The fade is a canvas-sized mask with a Gaussian
+    // blur in it, and every cable path referenced it separately — so each of them was a masked layer of
+    // its own to rasterise. With the dashes crawling, that is a blurred mask rendered fifty-odd times a
+    // frame: measured at 12 frames a second on a patch of two dozen cables, and 57 with the masks off.
+    //
+    // Lazily, and only when there IS a fade — an unhovered rack references no mask and adds no group.
+    let maskG = null;
+    const layer = () => {
+      if (!fadeMask) return this.cables;
+      if (!maskG) { maskG = document.createElementNS(SVG_NS, 'g'); maskG.setAttribute('mask', fadeMask); this.cables.appendChild(maskG); }
+      return maskG;
+    };
     const wmm = CABLE_PX / (this._fit || 1);   // mm width -> CABLE_PX at zoom 1, scales with zoom
     const mk = (d, stroke, sw, opacity, pe) => {
       const p = document.createElementNS(SVG_NS, 'path');
-      if (fadeMask) p.setAttribute('mask', fadeMask);
       p.setAttribute('d', d);
       p.setAttribute('fill', 'none');
       p.setAttribute('stroke', stroke);
       p.setAttribute('stroke-width', r2(sw));
       if (opacity != null) p.style.opacity = String(opacity);
       if (pe) p.style.pointerEvents = pe;
-      this.cables.appendChild(p);
+      layer().appendChild(p);
       return p;
     };
     for (const e of this.patchbay.list()) {
@@ -2406,7 +2419,7 @@ export class Rack {
         fd.dataset.src = e.src.key + '|' + e.src.portId;   // source jack tag → its live level drives this cable's crawl in isolate mode
         fd.setAttribute('stroke-linecap', 'butt');
         fd.setAttribute('stroke-dasharray', `${r2((FLOW_DASH[e.style] || FLOW_DASH.control) * ewmm)} ${r2(FLOW_GAP * ewmm)}`);
-        fd.setAttribute('stroke-dashoffset', r2(this._flowOffset()));
+        this._flowPhase(fd, ((FLOW_DASH[e.style] || FLOW_DASH.control) + FLOW_GAP) * ewmm);
       }
       // THE BEND HANDLE, if this is the cord you have been resting on. Drawn from rack state for the
       // same reason the end stretches are: this layer is rebuilt on nearly every pointer move, so an
@@ -3165,7 +3178,30 @@ export class Rack {
     }
   }
 
+  // A VOICE NOBODY IS PLAYING DOES NO WORK. Voice In knows which of its voices are in use — it is the
+  // allocator — and reports a change to the rack, which quiets or wakes that voice's copy of every
+  // per-note module on the page. An idle copy stays wired and stays in the graph; it simply writes
+  // silence instead of computing it, so nothing has to be rebuilt at a note.
+  //
+  // The waking is done AHEAD of the note by Voice In, which keeps spare voices warm — see
+  // voice-processor.js. Nothing here is on the path of a note.
+  _setVoiceAwake(boundaryRec, voice, awake) {
+    const pageId = this.pageOf(boundaryRec);
+    for (const rec of this.records.values()) {
+      if (this.pageOf(rec) !== pageId || BOUNDARY[rec.descriptorId] || !this.perNote(rec)) continue;
+      const copy = voice === 0 ? { instanceId: rec.instanceId, instance: rec.instance }
+        : (rec.copies && rec.copies[voice - 1]);
+      if (!copy || !copy.instance) continue;
+      this.host.setInstanceIdle(copy.instanceId, copy.instance, !awake);
+    }
+  }
+
   async _buildVoiceCopies(pageId, boundary, poly) {
+    // Registered whatever the page holds, and before the early return: a page with nothing to copy
+    // still has a Voice In that will report, and a stale listener would point at the previous rack.
+    if (boundary && boundary.rec && boundary.rec.instance.onVoiceAwake) {
+      boundary.rec.instance.onVoiceAwake((voice, awake) => this._setVoiceAwake(boundary.rec, voice, awake));
+    }
     const onPage = [...this.records.values()].filter((r) => this.pageOf(r) === pageId);
     const perNote = onPage.filter((r) => !BOUNDARY[r.descriptorId] && this.perNote(r));
     if (!perNote.length) return;
@@ -3445,6 +3481,14 @@ export class Rack {
     const svg = this._ensureStubLayer();
     svg.textContent = '';
     const stubMask = this._buildStubFadeDefs(svg);
+    // The same grouping as the rack's own cables: one masked group rather than a masked layer per
+    // stub, which is what makes the crawl cheap to draw. Lazy, so an unfaded stub layer has no group.
+    let stubMaskG = null;
+    const stubLayer = () => {
+      if (!stubMask) return svg;
+      if (!stubMaskG) { stubMaskG = document.createElementNS(SVG_NS, 'g'); stubMaskG.setAttribute('mask', stubMask); svg.appendChild(stubMaskG); }
+      return stubMaskG;
+    };
     this._stubCurves = [];   // rebuilt every draw; what the bend dwell measures against
     if (!this._tabBarEl) return;
     // Group the crossing cables by the page they are bound for, so each tab's stubs can be spread
@@ -3564,10 +3608,9 @@ export class Rack {
         p.setAttribute('stroke', color);
         p.setAttribute('stroke-width', r2(w));
         p.setAttribute('stroke-linecap', 'round');
-        if (stubMask) p.setAttribute('mask', stubMask);   // clear of the lettering, like any other cable
         p.style.opacity = op;
         p.dataset.edge = item.e.id;
-        svg.appendChild(p);
+        stubLayer().appendChild(p);   // clear of the lettering, like any other cable
         // BENDING THE SWOOP. A crossing cable is as much in the way as any other, and it was the one
         // kind that could not be moved aside — its shape was computed from the tab and consulted
         // nothing. Same rule as a cord on the rack: rest on it, a handle appears, drag the handle.
@@ -3588,12 +3631,14 @@ export class Rack {
         fd.setAttribute('stroke-width', r2(w / 2));
         fd.setAttribute('stroke-linecap', 'butt');
         fd.setAttribute('stroke-dasharray', `${r2((FLOW_DASH[item.e.style] || FLOW_DASH.control) * w)} ${r2(FLOW_GAP * w)}`);
-        fd.setAttribute('stroke-dashoffset', r2(this._flowOffset() * (this.pxPerMm || 1) * (this.zoom || 1)));
+        // The stub layer is drawn in window pixels, so its period is the same dash in those units —
+        // and the speed with it, which is what keeps a stub's crawl in step with the cable it stands for.
+        this._flowPhase(fd, ((FLOW_DASH[item.e.style] || FLOW_DASH.control) + FLOW_GAP) * w,
+          FLOW_SPEED * (this.pxPerMm || 1) * (this.zoom || 1));
         fd.setAttribute('class', 'flow-dash-stub');
-        if (stubMask) fd.setAttribute('mask', stubMask);
         fd.dataset.edge = item.e.id;
         fd.style.opacity = op;
-        svg.appendChild(fd);
+        stubLayer().appendChild(fd);
         // THE GRAB MARK, the same idea a cable wears near its terminal: the straight drop out of the
         // tab thickens and brightens while you are on it, so a crossing cable advertises that it can be
         // held exactly as an ordinary one does. Drawn always and merely transparent, and painted from
@@ -5396,6 +5441,35 @@ export class Rack {
     this._noteFlash.set(key, Math.max(this._noteFlash.get(key) || 0, v));
   }
 
+  // THE LISTS, GATHERED ONCE PER DRAW RATHER THAN ONCE PER FRAME. Four querySelectorAll sweeps of the
+  // cable layer, sixty times a second, for a set of elements that only changes when the cables are
+  // redrawn — and a redraw is where this is now invalidated from.
+  _collectFlowEls() {
+    this._flowEls = {
+      dash: [...this.cables.querySelectorAll('.flow-dash')],
+      body: [...this.cables.querySelectorAll('.cable-body')],
+      glow: [...this.cables.querySelectorAll('.cable-note-glow')],
+    };
+    return this._flowEls;
+  }
+
+  // Whether the crawl is running, said once on the layer instead of per cable per frame. The engine
+  // being off is the main case: with the audio thread suspended nothing is flowing, and a moving dash
+  // would be saying otherwise.
+  _syncFlowState() {
+    const still = !this.engineOn() || !!this._uiBusy || !!this._ovActive || !!this._optDown;
+    if (this._flowStill !== still) {
+      this._flowStill = still;
+      if (this.cables) this.cables.classList.toggle('flow-still', still);
+      if (this._stubSvg) this._stubSvg.classList.toggle('flow-still', still);
+    }
+    const manual = !!this._isolateNet;
+    if (this._flowManual !== manual) {
+      this._flowManual = manual;
+      if (this.cables) this.cables.classList.toggle('flow-manual', manual);
+    }
+  }
+
   _tickNoteGlow(dt) {
     if (!this._noteFlash.size) return;
     const k = Math.exp(-dt / NOTE_GLOW_TAU);
@@ -5403,9 +5477,27 @@ export class Rack {
       const next = v * k;
       if (next < 0.02) this._noteFlash.delete(key); else this._noteFlash.set(key, next);
     }
-    for (const p of this.cables.querySelectorAll('.cable-note-glow')) {
-      p.style.opacity = String(r2(NOTE_GLOW_OP * (this._noteFlash.get(p.dataset.src) || 0)));
+    const els = this._flowEls || this._collectFlowEls();
+    for (const p of els.glow) {
+      const v = r2(NOTE_GLOW_OP * (this._noteFlash.get(p.dataset.src) || 0));
+      if (p._wcOp !== v) { p.style.opacity = String(v); p._wcOp = v; }
     }
+  }
+
+  // ONE DASH-LENGTH PER PERIOD, and the phase it should already be at. A CSS animation restarts when
+  // its element is created, and this layer is rebuilt on nearly every pointer move — so the crawl is
+  // started PART WAY THROUGH, by a negative delay taken from the same clock the whole rack uses. That
+  // is what makes it continuous across a redraw instead of jumping.
+  _flowPhase(el, period, speed = FLOW_SPEED) {
+    if (!(period > 0)) return;
+    const dur = period / speed;                       // seconds for one dash-and-gap
+    const t = (performance.now() - (this._flowT0 == null ? (this._flowT0 = performance.now()) : this._flowT0)) / 1000;
+    // IN PIXELS, WHICH IN AN SVG IS ONE USER UNIT — the layer's viewBox is in millimetres, so this is
+    // millimetres. Unitless would be valid as a presentation attribute and useless in calc(), which
+    // needs a length: the keyframe's end value would be invalid and nothing would move.
+    el.style.setProperty('--flow-period', r2(period) + 'px');
+    el.style.setProperty('--flow-dur', r2(dur) + 's');
+    el.style.animationDelay = '-' + r2(t % dur) + 's';
   }
 
   _flowOffset() {
@@ -5426,6 +5518,10 @@ export class Rack {
       // Suspended for the whole of a view-navigation gesture — while Option is held (so Option-scroll pans
       // smoothly) and while the frozen overview is up (where this work is invisible anyway). It's the
       // per-frame cable-dash/opacity DOM writes that otherwise steal main-thread time from the pointer.
+      // WHAT IS AND IS NOT MOVING, in one class on the layer. The three cases below used to be early
+      // returns that skipped the per-frame writes; the writes are a keyframe now, so what they skip is
+      // the animation itself.
+      this._syncFlowState();
       if (this._ovActive || this._optDown) { this._flowRaf = requestAnimationFrame(tick); return; }
       // SOMETHING IS BEING DRAGGED OVER THE RACK — a module's own window. The crawling dashes rewrite
       // a DOM attribute per cable per frame, and none of it matters while the user is moving a window
@@ -5438,27 +5534,28 @@ export class Rack {
       if (this._isolateNet) {
         this._tickIsolate(dt);   // isolate: per-terminal breathe + per-cable signal-driven crawl
       } else {
-        const off = r2(this._flowOffset());
         // Ease every cable's opacity a step toward its target this frame (framerate-independent), then
         // paint it — so brighten/dim animates over ~1s and quick pointer sweeps don't flash.
+        //
+        // THE CRAWL IS NOT HERE ANY MORE. It is a CSS keyframe per cable, so the only per-frame work
+        // left is the opacities, and those are written ONLY WHEN THEY MOVE: a style write dirties the
+        // element whether or not the value differs, and at rest every one of these is unchanged.
         const k = 1 - Math.exp(-dt / CABLE_FADE_TAU);
         for (const [id, tgt] of this._cableTgt) {
           const cur = this._cableCur.get(id); if (!cur) continue;
           cur.body += (tgt.body - cur.body) * k;
           cur.dash += (tgt.dash - cur.dash) * k;
         }
-        for (const p of this.cables.querySelectorAll('.flow-dash')) {
-          p.setAttribute('stroke-dashoffset', off);
-          const c = this._cableCur.get(p.dataset.edge); if (c) p.style.opacity = String(r2(c.dash));
+        const els = this._flowEls || this._collectFlowEls();
+        for (const p of els.dash) {
+          const c = this._cableCur.get(p.dataset.edge); if (!c) continue;
+          const v = r2(c.dash);
+          if (p._wcOp !== v) { p.style.opacity = String(v); p._wcOp = v; }
         }
-        // Stubs live in their own window-pinned layer and are drawn in window px, so their crawl is
-        // scaled to match — the same clock, expressed in the units that layer uses.
-        if (this._stubSvg) {
-          const offPx = r2(this._flowOffset() * (this.pxPerMm || 1) * (this.zoom || 1));
-          for (const p of this._stubSvg.querySelectorAll('.flow-dash-stub')) p.setAttribute('stroke-dashoffset', offPx);
-        }
-        for (const p of this.cables.querySelectorAll('.cable-body')) {
-          const c = this._cableCur.get(p.dataset.edge); if (c) p.style.opacity = String(r2(c.body));
+        for (const p of els.body) {
+          const c = this._cableCur.get(p.dataset.edge); if (!c) continue;
+          const v = r2(c.body);
+          if (p._wcOp !== v) { p.style.opacity = String(v); p._wcOp = v; }
         }
         this._tickNoteGlow(dt);
 
