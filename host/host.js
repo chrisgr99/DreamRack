@@ -52,7 +52,16 @@ export class SynthHost {
   // The NODES ARE FOUND THROUGH THE DESCRIPTOR'S PORTS rather than by reaching into the instance: a
   // factory keeps its nodes in a closure and exposes them exactly one way, through getOutput and
   // getInput. So the ports are the map, and a module with several worklets is covered by all of them.
-  _endWorklets(instanceId, inst) {
+  // QUIET, OR BACK TO WORK. Same route as ending one — the descriptor's ports are how a factory's
+  // nodes are reachable — but this one is reversible: an idle processor stays in the graph writing
+  // silence, so waking it is one message rather than a rebuild.
+  setInstanceIdle(instanceId, inst, idle) {
+    this._eachWorkletNode(instanceId, inst, (node) => {
+      try { node.port.postMessage({ type: 'idle', idle: !!idle }); } catch (_e) { /* gone */ }
+    });
+  }
+
+  _eachWorkletNode(instanceId, inst, fn) {
     const descriptorId = this._descriptorOf && this._descriptorOf.get(instanceId);
     const d = descriptorId && this.registry.descriptor(descriptorId);
     const ports = (d && d.ports) || [];
@@ -66,8 +75,14 @@ export class SynthHost {
       const node = slot && slot.node;
       if (!node || !node.port || seen.has(node)) continue;
       seen.add(node);
-      try { node.port.postMessage({ type: 'dispose' }); } catch (_e) { /* already gone */ }
+      fn(node);
     }
+  }
+
+  _endWorklets(instanceId, inst) {
+    this._eachWorkletNode(instanceId, inst, (node) => {
+      try { node.port.postMessage({ type: 'dispose' }); } catch (_e) { /* already gone */ }
+    });
     if (this._descriptorOf) this._descriptorOf.delete(instanceId);
   }
 

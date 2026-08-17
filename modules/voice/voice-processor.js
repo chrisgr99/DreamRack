@@ -149,6 +149,19 @@ class VoiceProcessor extends AudioWorkletProcessor {
       bend: 0, bendTo: 0, bendStep: 0, bendLeft: 0,
     }));
     this._last = -1;          // which voice took the last note, for LEGATO's round-robin
+    // ---- WHICH COPIES ARE WORTH RUNNING ------------------------------------------------------
+    // A page duplicated eight times runs eight oscillators, eight filters and eight envelopes whether
+    // or not there are eight notes, and an idle copy costs very nearly what a sounding one costs: its
+    // oscillator still computes a waveform for a VCA to multiply by nothing. This is the only place
+    // that knows which voices are actually in use, so it is the place that says so.
+    //
+    // The rack is told on a TRANSITION only, never per block, and it passes it to the copies.
+    this._awake = new Array(MAX_VOICES).fill(true);
+    // NEVER USED SORTS AS LONG AGO, so a page comes up with its unused voices already asleep rather
+    // than running for the first few seconds of every session.
+    this._busyAt = new Array(MAX_VOICES).fill(-Infinity);
+    this._peakUse = 0;                              // most voices sounding at once, lately
+    this._peakAt = 0;
     // The rack hands us one end of a channel to Sequence Out. Until then nothing plays, which is
     // correct: an unpatched Voice In has no notes to make.
     this.port.onmessage = (e) => {
@@ -433,7 +446,53 @@ class VoiceProcessor extends AudioWorkletProcessor {
         outputs[o + OUT.PAN][0][i] = v.pan;
       }
     }
+    this._sleepUnused(base + n, poly, rollover);
     return true;
+  }
+
+  // WHAT STAYS AWAKE: everything sounding, everything still within reach of its own release, and
+  // enough free voices to catch what is about to be played.
+  //
+  // THE SPARES ARE THE POINT. Waking a copy is a message to the main thread and back, which is far too
+  // slow to do at a note — so a voice is never woken to play, it is woken to WAIT. How many spares is
+  // read from what has been played: the largest chord seen lately, plus one. A monophonic line keeps
+  // two voices warm and sleeps the other six; a four-note chord keeps five.
+  //
+  // THE GRACE is what protects a release. This knows when a note ended but nothing about the envelope
+  // downstream, which may be a tenth of a second or ten seconds, so a voice stays awake for a good
+  // while after its note — long enough for any ordinary release, and irrelevant to the case this is
+  // for, which is voices that are not being used at all.
+  _sleepUnused(f, poly, rollover) {
+    const GRACE = sampleRate * 6;          // six seconds past its last note before a voice may sleep
+    const PEAK_WINDOW = sampleRate * 8;    // and how long "lately" is, for the chord size
+    let sounding = 0;
+    for (let k = 0; k < poly; k++) {
+      const v = this._v[k];
+      if (v.note || v.level !== 0 || v.steal || v.stealLeft > 0) { sounding++; this._busyAt[k] = f; }
+    }
+    if (sounding >= this._peakUse) { this._peakUse = sounding; this._peakAt = f; }
+    else if (f - this._peakAt > PEAK_WINDOW) { this._peakUse = sounding; this._peakAt = f; }
+
+    // GLIDE and LEGATO decide their own voice count; anything else may spread across the whole page.
+    const spares = rollover === 'glide' ? 0 : 1;
+    let allowed = Math.min(poly, this._peakUse + spares);
+    for (let k = 0; k < poly; k++) {
+      const v = this._v[k];
+      const busy = !!(v.note || v.level !== 0 || v.steal || v.stealLeft > 0);
+      let want = busy || (f - this._busyAt[k] < GRACE);
+      // Spares are taken in the order allocation will take them — lowest free first, which is what
+      // _choose does — so the voice woken is the voice the next note lands on.
+      if (!want && allowed > 0) { want = true; }
+      if (want) allowed--;
+      if (want !== this._awake[k]) {
+        this._awake[k] = want;
+        this.port.postMessage({ voiceAwake: { voice: k, awake: want } });
+      }
+    }
+    // Voices above the current poly are not built at all; if the knob comes down, let them go.
+    for (let k = poly; k < MAX_VOICES; k++) {
+      if (this._awake[k]) { this._awake[k] = false; this.port.postMessage({ voiceAwake: { voice: k, awake: false } }); }
+    }
   }
 }
 

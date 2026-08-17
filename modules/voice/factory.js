@@ -33,6 +33,14 @@ export function create(ctx, _services) {
 
   const outIndex = new Map(OUT_PORTS.map((id, i) => [id, i]));
 
+  // WHICH VOICES ARE WORTH RUNNING. The allocator says so from the audio thread; the rack acts on it
+  // by quieting the copies that are not in use. One message per transition, so this costs nothing.
+  let onAwake = null;
+  node.port.onmessage = (e) => {
+    const d = e.data && e.data.voiceAwake;
+    if (d && onAwake) onAwake(d.voice, d.awake);
+  };
+
   return {
     node,
     getOutput: (portId) => {
@@ -56,6 +64,7 @@ export function create(ctx, _services) {
       ap.setValueAtTime(v, atTime === undefined ? ctx.currentTime : atTime);
     },
     supports: (id) => id === 'poly' || id === 'rollover' || id === 'time',
+    onVoiceAwake: (fn) => { onAwake = fn; },
     // Called by the rack when a note cable is made or pulled: a port to listen on, or null to stop.
     attachNoteIn: (port) => {
       if (port) node.port.postMessage({ noteIn: port }, [port]);
