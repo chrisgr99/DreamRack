@@ -17,12 +17,24 @@ class StrudelProcessor extends AudioWorkletProcessor {
     // Scheduled events, each already converted to a sample frame. Kept sorted by time — patterns are
     // handed to us in order, and an out-of-order arrival is rare enough to cost one insertion.
     this._q = [];
-    // EVERY DESTINATION, as any note output has: one pattern can play two voice tabs.
-    this._outs = new Map();
+    // EVERY DESTINATION, PER JACK. Eight note outputs, V1 to V8, and each of them fans out — one
+    // pattern can play eight instruments, and any one of those jacks can feed two tabs at once. So
+    // this is a map of jack to (cable to port) rather than a single list: `.rack(3)` has to reach the
+    // cables on V3 and no others.
+    this._byPort = new Map();
     this.port.onmessage = (e) => {
       const d = e.data || {};
-      if (d.noteOut) { this._outs.set(d.edge, d.noteOut); if (d.noteOut.start) d.noteOut.start(); return; }
-      if (d.noteOutOff) { this._outs.delete(d.noteOutOff); return; }
+      if (d.noteOut) {
+        const id = d.port || 'noteOut';
+        if (!this._byPort.has(id)) this._byPort.set(id, new Map());
+        this._byPort.get(id).set(d.edge, d.noteOut);
+        if (d.noteOut.start) d.noteOut.start();
+        return;
+      }
+      if (d.noteOutOff) {
+        for (const m of this._byPort.values()) m.delete(d.noteOutOff);
+        return;
+      }
       if (d.events) {
         for (const ev of d.events) this._insert(ev);
         return;
@@ -40,7 +52,14 @@ class StrudelProcessor extends AudioWorkletProcessor {
     q.splice(i, 0, ev);
   }
 
-  _post(m) { for (const p of this._outs.values()) p.postMessage(m); }
+  // A voice number is a jack: 1 is `noteOut` — the id the first jack has always had, so a patch made
+  // before there were eight still finds its cable — and the rest are numbered after it.
+  _post(voice, m) {
+    const id = !voice || voice === 1 ? 'noteOut' : 'noteOut' + voice;
+    const outs = this._byPort.get(id);
+    if (!outs) return;                         // nothing patched to that jack; the note simply has nowhere to go
+    for (const p of outs.values()) p.postMessage(m);
+  }
 
   process(_inputs, outputs, _params) {
     // One channel of silence, for the same reason Sequence Out renders one: a worklet with no path to
@@ -57,9 +76,9 @@ class StrudelProcessor extends AudioWorkletProcessor {
       // busy, or a pattern was evaluated a moment too late — goes out at the start of this block
       // rather than being dropped. A note slightly late is a note; a note dropped is a hole.
       const at = ev.at < now ? now : ev.at;
-      if (ev.off) this._post({ t: 'off', handle: ev.handle, time: at });
+      if (ev.off) this._post(ev.voice, { t: 'off', handle: ev.handle, time: at });
       else {
-        this._post({ t: 'on', handle: ev.handle, time: at, pitch: ev.pitch, level: ev.level,
+        this._post(ev.voice, { t: 'on', handle: ev.handle, time: at, pitch: ev.pitch, level: ev.level,
           duration: ev.duration, pan: ev.pan, bendRange: 2,
           // Only when the pattern asked: a lane nobody named should stay where the patch has it.
           ...(ev.timbre == null ? {} : { timbre: ev.timbre }),

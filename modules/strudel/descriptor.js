@@ -8,8 +8,19 @@
 
 'use strict';
 
+// EIGHT VOICE OUTS, V1 to V8. A pattern says which one a part leaves by — `.rack(3)` for V3 — and the
+// cable from that jack decides which instrument plays it. One jack, one voice tab: the tab's own
+// polyphony handles however many notes overlap inside it.
+//
+// V1 KEEPS THE ID `noteOut`. It was the only jack when there was one, so a patch made before this
+// still finds its cable rather than losing it to a renamed port.
+//
+// The jacks cost sockets and nothing else. A note cable carries messages only when a note starts or
+// ends, so an unpatched jack costs nothing at all; what a voice tab costs is paid by the tab.
 const ports = [
-  { id: 'noteOut', name: 'Note', section: 'out', domain: 'note', dir: 'out' },
+  { id: 'noteOut', name: 'V1', section: 'out', domain: 'note', dir: 'out' },
+  ...[2, 3, 4, 5, 6, 7, 8].map((n) => (
+    { id: 'noteOut' + n, name: 'V' + n, section: 'out', domain: 'note', dir: 'out' })),
 ];
 
 const params = [
@@ -55,7 +66,7 @@ export default {
   scope: 'shared',
   // One engine plays the tab; it is never duplicated per note, so it carries no per-note lamp.
   sharedFixed: true,
-  hp: 8,
+  hp: 9,
   worklets: ['modules/strudel/strudel-processor.js'],
   menuSectionOrder: ['pattern', 'out'],
   ports,

@@ -56,9 +56,9 @@ export function create(ctx, _services) {
     });
     if (!n) return;             // no note in this event — a sample trigger, not ours
     node.port.postMessage({ events: [
-      { at: n.at, handle: n.handle, pitch: n.pitch, level: n.level, duration: n.duration, pan: n.pan,
-        timbre: n.timbre, pressure: n.pressure },
-      { at: n.offAt, handle: n.handle, off: true },
+      { at: n.at, handle: n.handle, voice: n.voice, pitch: n.pitch, level: n.level, duration: n.duration,
+        pan: n.pan, timbre: n.timbre, pressure: n.pressure },
+      { at: n.offAt, handle: n.handle, voice: n.voice, off: true },
     ] });
   };
 
@@ -74,7 +74,8 @@ export function create(ctx, _services) {
     // build has no catch-all for unknown control names, so a pattern using one dies with "timbre is
     // not a function". createParams makes them real, and registering before the scope is evaluated
     // means they can also be used bare — timbre("0.2 0.8") — like any other control.
-    try { if (S.core.createParams) S.core.createParams('timbre', 'press'); } catch (_e) { /* older build */ }
+    // `rack` is registered the same way: it is how a pattern says which voice jack a part leaves by.
+    try { if (S.core.createParams) S.core.createParams('timbre', 'press', 'rack'); } catch (_e) { /* older build */ }
     await S.evalScope(S.core, S.mini);
     // Our own repl, for playing without the editor open. Its output is ours and its clock is the
     // rack's, so an event's deadline is already in the right domain.
@@ -386,7 +387,10 @@ export function create(ctx, _services) {
 
   const api = {
     node,
-    getOutput: (id) => (id === 'noteOut' ? { node, index: 0 } : null),
+    // ALL EIGHT JACKS SHARE ONE CHANNEL OF SILENCE. The audio connection exists only to keep both
+    // worklets in the rendering graph — the notes themselves travel as messages — so eight jacks need
+    // eight ports in the descriptor and no extra outputs on the node.
+    getOutput: (id) => (id === 'noteOut' || /^noteOut[2-8]$/.test(id) ? { node, index: 0 } : null),
     getInput: () => null,
     getParam: () => null,
     // The panel's buttons arrive here as stepped params, which is how the rack drives everything.
@@ -435,9 +439,10 @@ export function create(ctx, _services) {
     // The rack hands this in when the module is placed (see rack.js): how to report a value it did
     // not set — the pattern you typed, the tempo the pattern asked for, whether it evaluated.
     onValueChange: (fn) => { report = fn; },
-    // The rack hands the note cable's port in when one is patched, exactly as it does for Sequence Out.
-    attachNoteOut: (port, edge) => {
-      if (port) node.port.postMessage({ noteOut: port, edge }, [port]);
+    // The rack hands the note cable's port in when one is patched, exactly as it does for Sequence Out
+    // — with WHICH JACK it was plugged into, since this module has eight of them.
+    attachNoteOut: (port, edge, portId) => {
+      if (port) node.port.postMessage({ noteOut: port, edge, port: portId || 'noteOut' }, [port]);
       else node.port.postMessage({ noteOutOff: edge });
     },
     onNoteFlash: (fn) => { onFlash = fn; },

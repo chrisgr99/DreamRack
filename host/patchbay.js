@@ -165,7 +165,9 @@ export class Patchbay {
       const ch = new MessageChannel();
       // The EDGE ID names this cable at both ends: a note output feeds every cable plugged into it, so
       // pulling one has to take back that one's port and leave the rest delivering.
-      src.instance.attachNoteOut(ch.port1, edge.id);
+      // WHICH OUTPUT IT WAS PLUGGED INTO, for a module with more than one note jack: Strudel's eight
+      // voice outs all carry notes, and the module has to know which of them this cable is on.
+      src.instance.attachNoteOut(ch.port1, edge.id, src.portId);
       dst.instance.attachNoteIn(ch.port2, edge.id);
       edge.noteLink = true;
     }
@@ -215,7 +217,7 @@ export class Patchbay {
     if (!edge || !this.edges.has(edge.id)) return;
     // Take the note port back from both ends, or a pulled cable would go on delivering notes.
     if (edge.noteLink) {
-      try { edge.src.instance.attachNoteOut(null, edge.id); } catch (_e) { /* gone */ }
+      try { edge.src.instance.attachNoteOut(null, edge.id, edge.src.portId); } catch (_e) { /* gone */ }
       try { edge.dst.instance.attachNoteIn(null, edge.id); } catch (_e) { /* gone */ }
     }
     try {

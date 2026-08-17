@@ -64,6 +64,22 @@ export function timbreOf(value) {
   return clamp01((Math.log(hz) - LOG_LO) / LOG_SPAN);
 }
 
+// WHICH VOICE JACK IT LEAVES BY. `.rack(2)` in the pattern, V2 on the faceplate — one number, printed
+// where you look for it, so a part is assigned to an instrument by saying which socket it comes out of.
+//
+// A NUMBER RATHER THAN A NAME, so it needs no quotes in the common case; a string is accepted anyway,
+// because a pattern that says .rack("<1 2>") to alternate between two instruments arrives here as one.
+// Anything unreadable, out of range, or simply absent goes to V1: a pattern written without a thought
+// for routing should play rather than vanish.
+export const VOICES = 8;
+
+export function voiceOf(value) {
+  const v = value.rack !== undefined ? value.rack : value.orbit;
+  const n = typeof v === 'number' ? v : (typeof v === 'string' ? parseInt(v, 10) : NaN);
+  if (!Number.isFinite(n)) return 1;
+  return n < 1 ? 1 : n > VOICES ? VOICES : Math.round(n);
+}
+
 export function pressureOf(value) {
   const p = typeof value.press === 'number' ? value.press
     : typeof value.pressure === 'number' ? value.pressure : null;
@@ -84,6 +100,7 @@ export function toNote(hap, cps, t, { noteToMidi, sampleAt, handle }) {
   return {
     handle,
     at: sampleAt(t),
+    voice: voiceOf(value),
     pitch,
     level: levelOf(value),
     duration,
