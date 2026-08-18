@@ -33,7 +33,7 @@ Twenty-nine modules ship:
 - **Video** — Coordinate Field, Shapes, Formula, Video Maths, Compositor, Time, Video Output
 - **Utility** — Control Gallery, Load, Mixer / Output
 
-They lean West Coast — Buchla- and Serge-flavoured — which is where my own interest lies and where the earliest work went. Nothing in the architecture ties DreamRack to that style: modules of any kind drop in as plug-ins, with or without a hardware ancestor. Many more are planned, and suggestions are welcome.
+Modules of any kind drop in as plug-ins, with or without a hardware ancestor. Many more are planned, and suggestions are welcome.
 
 ## The visual language
 
