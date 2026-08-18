@@ -459,10 +459,7 @@ function applyAppMenu() {
         // is what Help means; the authoring transport they happen to open is a detail of how they run.
         { label: 'Demos…', click: () => menuSend('demos') },
         { type: 'separator' },
-        { label: 'Feedback', submenu: [
-          { label: 'Send Feedback…', click: () => menuSend('feedback') },
-          { label: 'Report a Bug…', click: () => menuSend('reportBug') },
-        ] },
+        { label: 'Report a Bug…', click: () => menuSend('reportBug') },
         { type: 'separator' },
         { label: 'About DreamRack', click: () => menuSend('about') },
       ],

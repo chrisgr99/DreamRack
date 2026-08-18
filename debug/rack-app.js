@@ -1126,7 +1126,6 @@ async function boot() {
       patchNotes: () => { if (notes) notes.toggle(); },
       openExample: (e) => openExample(e.file, e.name),
       createFromClipboard: () => createFromClipboard(),
-      feedback: () => composer.feedback(),
       reportBug: () => composer.reportBug(),
       sharePatch: () => composer.sharePatch(),
       about: () => about.toggle(),
@@ -1300,7 +1299,6 @@ async function boot() {
     appVersion: APP_VERSION,
     getBuild: () => rack.buildInfo,
   });
-  rack.onFeedback = () => composer.feedback();
   rack.onReportBug = () => composer.reportBug();
   rack.onSharePatch = () => composer.sharePatch();
   const about = createAbout({
