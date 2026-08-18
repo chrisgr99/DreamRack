@@ -65,18 +65,19 @@ Everything works the same in light and dark, and the rack remembers where you le
 
 ## Where it's going
 
-- **A consistent design language across every module**, so knowledge carries from one to the next. *(done)*
-- **Polyphony** — more than one voice at a time. *(done — see the tab-is-a-voice note above)*
-- **Video synthesis sharing the rack with audio.** *(done)*
-- **Hear the signal at any terminal**, effortlessly, without rewiring. *(done)*
-- **See the signal at any terminal** — scopes you clip on and take off, as many as you want at once. *(partly TBD — dual trace still to come)*
-- **Know the numbers at any terminal** — frequency, maximum and minimum, DC offset. *(done)*
-- **See what affects what** — what feeds a module, what it feeds, and the whole chain shaping any one point. *(done)*
-- **Let any developer create new modules, and anyone snap them into their rack.** *(done)*
-- **Live coding inside the rack** — a pattern language driving the voices, and its own voices mixed beside them. *(done — see the Strudel note above)*
-- **Explore how AI might help understand and create patches** — describing what a patch does, suggesting changes, or building one from a request. *(done — the rack is readable and writable, and an assistant can hand a patch back for you to approve)*
-- **Inject a signal into any jack** without disturbing the patch cables — a button to fire a trigger, a toggle to hold a gate, or a simple sine or square wave. *(TBD)*
-- **Take input from outside** — an interface module that receives events from other sequencers and hosts and converts them into DreamRack notes to play. *(partly done — Strudel plays the rack from inside it; a socket for outside senders is still to come)*
+- **DONE** — **A consistent design language across every module**, so knowledge carries from one to the next.
+- **DONE** — **Polyphony** — more than one voice at a time. *(see the tab-is-a-voice note above)*
+- **PARTLY DONE** — **Video synthesis sharing the rack with audio** *(the family is there and works; many more video modules to come)*
+- **DONE** — **Hear the signal at any terminal**, effortlessly, without rewiring.
+- **PARTLY TBD** — **See the signal at any terminal** — scopes you clip on and take off, as many as you want at once. *(dual trace still to come)*
+- **DONE** — **Know the numbers at any terminal** — frequency, maximum and minimum, DC offset.
+- **DONE** — **See what affects what** — what feeds a module, what it feeds, and the whole chain shaping any one point.
+- **DONE** — **Let any developer create new modules, and anyone snap them into their rack.**
+- **DONE** — **Live coding inside the rack** — a pattern language driving the voices, and its own voices mixed beside them. *(see the Strudel note above)*
+- **DONE** — **Explore how AI might help understand and create patches** — describing what a patch does, suggesting changes, or building one from a request. *(the rack is readable and writable, and an assistant can hand a patch back for you to approve)*
+- **TBD** — **Inject a signal into any jack** without disturbing the patch cables — a button to fire a trigger, a toggle to hold a gate, or a simple sine or square wave.
+- **PARTLY DONE** — **Take input from outside** — an interface module that receives events from other sequencers and hosts and converts them into DreamRack notes to play. *(Strudel plays the rack from inside it; a socket for outside senders is still to come)*
+- **ONGOING** — **Keep adding modules**, West Coast and East Coast alike, and whatever has no hardware ancestor at all.
 
 ## Current state
 
