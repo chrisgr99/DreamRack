@@ -18,7 +18,7 @@
 'use strict';
 
 import { attachKnobHover } from './knob-hover.js';
-import { showReadout, hideReadout, readoutLive, readoutPinned, formatParamValue } from './knob-readout.js';
+import { showReadout, hideReadout, readoutLive, readoutPinned, formatParamValue, stepHzBySemitone, noteName } from './knob-readout.js';
 
 // Default pointer sweep (degrees each side of straight-up), per the contract.
 // A control may override with data-wcoast-angle-min / -max.
@@ -708,6 +708,8 @@ export function knobRadiusPx(el) {
   return (r / 2) || (el.getBoundingClientRect().width / 2) || 1;
 }
 
+const fmt = (binding, v) => formatParamValue(binding.meta, v, binding.values);
+
 export function attachControlInteraction(binding, hooks, opts = {}) {
   const el = binding.group;
   binding.readValue = hooks.get;   // the hover readout asks for the number a second later
@@ -793,7 +795,14 @@ export function attachControlInteraction(binding, hooks, opts = {}) {
         if (values[ni] !== cur) hooks.set(values[ni]);
         return;
       }
-      const nv = Math.max(min, Math.min(max, Math.round(Number(cur)) + dir));
+      // HOW BIG A STEP IS, from the descriptor. Whole numbers are right for a readout counting
+      // repeats or octaves and wrong for one holding a tempo between 0.05 and 8, where every press
+      // rounded to an integer first and then moved a whole one. `step` says what a press is worth;
+      // the value is snapped to that grid, so a knob left at 0.53 comes back to 0.5 and then 0.6.
+      const inc = Number(binding.meta.step) > 0 ? Number(binding.meta.step) : 1;
+      const dp = Math.max(0, -Math.floor(Math.log10(inc)));   // decimals the step implies, so 0.1 stays 0.1
+      const snapped = Math.round(Number(cur) / inc) * inc;
+      const nv = Math.max(min, Math.min(max, Number((snapped + dir * inc).toFixed(dp))));
       if (nv !== Number(cur)) hooks.set(nv);
     };
     // NO CURSOR CHANGE over the window itself. The wheel works there, but a resize cursor on a panel
@@ -857,7 +866,7 @@ export function attachControlInteraction(binding, hooks, opts = {}) {
       let guard = 0;
       while (acc >= THRESH && guard++ < 8) { acc -= THRESH; step(+1, by); }
       while (acc <= -THRESH && guard++ < 8) { acc += THRESH; step(-1, by); }
-      showReadout(formatParamValue(binding.meta, hooks.get(), binding.values) + scrollScaleTag(scale), controlAnchor(binding), null, true, { origin: () => controlOrigin(binding), region: 'value', hold: true });
+      showReadout(fmt(binding, hooks.get()) + scrollScaleTag(scale), controlAnchor(binding), null, true, { origin: () => controlOrigin(binding), region: 'value', hold: true });
     }, { passive: false });
     return;
   }
@@ -881,7 +890,7 @@ export function attachControlInteraction(binding, hooks, opts = {}) {
       // Refreshed from the LOOP, not from the wheel event: momentum keeps the value moving after
       // the last tick, and a readout driven by the event alone would freeze on the first number
       // while the knob carried on somewhere else.
-      if (at) showReadout(formatParamValue(binding.meta, hooks.get(), binding.values) + tag, controlAnchor(binding), null, true, { origin: () => controlOrigin(binding), region: 'value', hold: true });
+      if (at) showReadout(fmt(binding, hooks.get()) + tag, controlAnchor(binding), null, true, { origin: () => controlOrigin(binding), region: 'value', hold: true });
       vel *= Math.exp(-KNOB_DRAG * dt);
       // Stop only when the velocity is spent, or when we're pushing INTO a
       // boundary (not when velocity would carry us away from it — that's how you
@@ -890,6 +899,30 @@ export function attachControlInteraction(binding, hooks, opts = {}) {
       if (Math.abs(vel) > 1e-3 && !pinned) raf = requestAnimationFrame(tick);
       else { raf = null; vel = 0; }
     };
+    // ONE SEMITONE PER NOTCH WHILE SHIFT IS HELD, on a knob that sets a frequency.
+    //
+    // A DISCRETE PATH, NOT A SNAPPED ONE. Rounding the value the momentum loop produces does not work:
+    // the loop reads the value back each frame, so a notch smaller than half a semitone was rounded to
+    // where it already was — the knob felt stuck — and the velocity that built up while it appeared
+    // stuck then landed several semitones away at once. Stepping is its own gesture: the wheel's
+    // deltas are accumulated, each threshold's worth moves exactly one semitone, and the momentum is
+    // stood down so nothing coasts on after the key is released.
+    //
+    // Shift is the coarse multiplier on every other knob and stays that way. On a frequency knob a
+    // coarse step is the least useful thing it could mean — there you are either hunting a note or
+    // trimming cents — and Command still gives fine.
+    const isFreq = (binding.meta.unit || '').trim() === 'Hz';
+    const STEP_THRESH = 60;   // wheel units per semitone: one notch on a mouse, a short flick on a pad
+    let stepAcc = 0;
+    const stepNote = (dir) => {
+      const cur = Number(hooks.get());
+      if (!(cur > 0)) return;
+      let next = stepHzBySemitone(cur, dir);
+      const { min, max } = binding.meta;
+      if (typeof min === 'number' && next < min) return;
+      if (typeof max === 'number' && next > max) return;
+      hooks.set(next);
+    };
     el.addEventListener('wheel', (e) => {
       if (e.ctrlKey) return;   // ctrl+wheel is a pinch-zoom for the rack, not a knob turn
       // A GATED CONTROL DOES NOT TURN. Set by the host on a CV-depth trim whose jack is empty — the
@@ -897,6 +930,26 @@ export function attachControlInteraction(binding, hooks, opts = {}) {
       // the panel. Not preventDefault'd either: the scroll belongs to whatever is underneath.
       if (binding.gated) return;
       e.preventDefault();
+      if (isFreq && e.shiftKey) {
+        const dd = e.deltaMode === 1 ? e.deltaY * 16 : e.deltaMode === 2 ? e.deltaY * 400 : e.deltaY;
+        vel = 0; if (raf) { cancelAnimationFrame(raf); raf = null; }
+        stepAcc += -dd;
+        let guard = 0;
+        while (stepAcc >= STEP_THRESH && guard++ < 12) { stepAcc -= STEP_THRESH; stepNote(+1); }
+        while (stepAcc <= -STEP_THRESH && guard++ < 12) { stepAcc += STEP_THRESH; stepNote(-1); }
+        at = { x: e.clientX, y: e.clientY };
+        // THE NAME OF WHAT THE PANEL IS SHOWING. A param may declare a `readout` — the 259t's modulation
+        // oscillator divides by 128 in its low range — and naming the raw number would call the note
+        // something the knob is not set to. Dividing by a constant keeps the ratios, so a semitone step
+        // is still a semitone either way; only the name has to follow.
+        const raw = Number(hooks.get());
+        const shown = typeof binding.meta.readout === 'function'
+          ? Number(binding.meta.readout(raw, binding.values)) : raw;
+        showReadout(noteName(isFinite(shown) ? shown : raw), controlAnchor(binding), null, true,
+          { origin: () => controlOrigin(binding), region: 'value', hold: true });
+        return;
+      }
+      stepAcc = 0;
       // Normalise the scroll amount across devices (px / lines / pages).
       const d = e.deltaMode === 1 ? e.deltaY * 16 : e.deltaMode === 2 ? e.deltaY * 400 : e.deltaY;
       const factor = scrollScale(e);
@@ -904,7 +957,7 @@ export function attachControlInteraction(binding, hooks, opts = {}) {
       at = { x: e.clientX, y: e.clientY };
       // Straight away, not on the next frame: the chip is standing in for the pointer, and a frame's
       // wait is enough to see it arrive late. The loop keeps it current from here on.
-      showReadout(formatParamValue(binding.meta, hooks.get(), binding.values) + tag, controlAnchor(binding), null, true, { origin: () => controlOrigin(binding), region: 'value', hold: true });
+      showReadout(fmt(binding, hooks.get()) + tag, controlAnchor(binding), null, true, { origin: () => controlOrigin(binding), region: 'value', hold: true });
       vel += (-d / 100) * KNOB_STEP * KNOB_DRAG * factor;   // up (negative delta) raises
       if (vel > KNOB_MAXV) vel = KNOB_MAXV; else if (vel < -KNOB_MAXV) vel = -KNOB_MAXV;
       if (!raf) { last = performance.now(); raf = requestAnimationFrame(tick); }
@@ -939,7 +992,7 @@ export function attachControlInteraction(binding, hooks, opts = {}) {
       const p = posFromEvent(e);
       if (p == null) return;
       hooks.set(positionToValue(binding.meta, p));
-      showReadout(formatParamValue(binding.meta, hooks.get(), binding.values), controlAnchor(binding), null, true, { origin: () => controlOrigin(binding), region: 'value', hold: true });
+      showReadout(fmt(binding, hooks.get()), controlAnchor(binding), null, true, { origin: () => controlOrigin(binding), region: 'value', hold: true });
     };
     el.addEventListener('pointerdown', (e) => {
       e.stopPropagation(); e.preventDefault();
@@ -964,7 +1017,7 @@ export function attachControlInteraction(binding, hooks, opts = {}) {
       last = now;
       const next = clamp01(valueToPosition(binding.meta, hooks.get()) + vel * dt);
       hooks.set(positionToValue(binding.meta, next));
-      if (at) showReadout(formatParamValue(binding.meta, hooks.get(), binding.values) + fTag, controlAnchor(binding), null, true, { origin: () => controlOrigin(binding), region: 'value', hold: true });
+      if (at) showReadout(fmt(binding, hooks.get()) + fTag, controlAnchor(binding), null, true, { origin: () => controlOrigin(binding), region: 'value', hold: true });
       vel *= Math.exp(-KNOB_DRAG * dt);
       const pinned = (next <= 0 && vel < 0) || (next >= 1 && vel > 0);
       if (Math.abs(vel) > 1e-3 && !pinned) raf = requestAnimationFrame(tick);
@@ -977,7 +1030,7 @@ export function attachControlInteraction(binding, hooks, opts = {}) {
       at = { x: e.clientX, y: e.clientY };
       const factor = scrollScale(e);
       fTag = scrollScaleTag(factor);
-      showReadout(formatParamValue(binding.meta, hooks.get(), binding.values) + fTag, controlAnchor(binding), null, true, { origin: () => controlOrigin(binding), region: 'value', hold: true });
+      showReadout(fmt(binding, hooks.get()) + fTag, controlAnchor(binding), null, true, { origin: () => controlOrigin(binding), region: 'value', hold: true });
       vel += (-d / 100) * KNOB_STEP * KNOB_DRAG * factor;   // up (negative delta) raises
       if (vel > KNOB_MAXV) vel = KNOB_MAXV; else if (vel < -KNOB_MAXV) vel = -KNOB_MAXV;
       if (!raf) { last = performance.now(); raf = requestAnimationFrame(tick); }

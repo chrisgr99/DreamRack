@@ -325,6 +325,51 @@ const sig = (v, n) => {
 // control. The complex oscillator's modulation frequency is the case: its range switch divides it by
 // 128, so the same knob reads 220 Hz in high range and 1.72 Hz in low. A module declares that with a
 // `readout(value, values)` on the parameter — the knowledge belongs to the module, not here.
+// ---- PITCH IN NOTES -------------------------------------------------------------------------
+// A frequency reads as a NOTE as well as a number. Concert pitch, A4 = 440Hz, twelve-tone equal
+// temperament — the tuning the rest of the world assumes, and the one a pattern's note names mean.
+//
+// THE KNOB IS CONTINUOUS, AND HOLDING SHIFT MAKES IT STEP. Two other designs were tried first and are
+// worth knowing about. Snapping applied to the knob's own smooth motion fought the momentum it turns
+// with — a small scroll moved nothing, because the value was rounded straight back, and a large one
+// jumped several notes at once. And showing the note, the cents and the frequency together made a
+// readout too long and too busy to read while turning: three numbers changing at once.
+//
+// So: bare turning is continuous and reads in hertz, and while Shift is held the knob steps one
+// semitone per notch and reads ONLY the note. Nothing needs saying about how far off a note it is,
+// because while you are stepping you are never off one.
+const NOTE_NAMES = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
+const A4 = 440, A4_MIDI = 69;
+
+export function midiOfHz(hz) { return A4_MIDI + 12 * Math.log2(hz / A4); }
+export function hzOfMidi(n) { return A4 * Math.pow(2, (n - A4_MIDI) / 12); }
+
+// The next semitone in a direction, from wherever the knob is now — which snaps an off-note value on
+// the first step rather than carrying its error along.
+export function stepHzBySemitone(hz, dir) {
+  if (!(hz > 0)) return hz;
+  const n = midiOfHz(hz);
+  const k = dir > 0 ? Math.floor(n + 1e-6) + 1 : Math.ceil(n - 1e-6) - 1;
+  return hzOfMidi(k);
+}
+
+// JUST THE NAME. No cents: while stepping, the value is always exactly a note.
+export function noteName(hz) {
+  if (!(hz > 0)) return '—';
+  const k = Math.round(midiOfHz(hz));
+  return NOTE_NAMES[((k % 12) + 12) % 12] + (Math.floor(k / 12) - 1);
+}
+
+export function noteText(hz) {
+  if (!(hz > 0)) return '—';
+  const n = midiOfHz(hz);
+  const k = Math.round(n);
+  const cents = Math.round((n - k) * 100);
+  const name = NOTE_NAMES[((k % 12) + 12) % 12] + (Math.floor(k / 12) - 1);
+  if (cents === 0) return name;
+  return `${name} ${cents > 0 ? '+' : '−'}${Math.abs(cents)}¢`;
+}
+
 export function formatParamValue(meta, value, values) {
   if (meta == null || value == null) return null;
   let v = Number(value);

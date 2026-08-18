@@ -19,7 +19,10 @@ import { speechId } from './speech-id.js';
 const INDEX_URL = 'demos/speech/index.json';
 const FILE_DIR = 'demos/speech/';
 
-export function createVoice(getCtx, { register = null, volume = 0.9 } = {}) {
+// VOLUME ABOVE UNITY. The rendered speech is quiet — `say` leaves plenty of headroom — and it plays
+// against a patch, so at 0.9 it sat under the music. It goes straight to the destination with nothing
+// else summed into it, so there is room for the lift.
+export function createVoice(getCtx, { register = null, volume = 2.2 } = {}) {
   let index = null;                  // id -> { file, secs, text }
   let loading = null;
   let gain = null;
@@ -27,9 +30,15 @@ export function createVoice(getCtx, { register = null, volume = 0.9 } = {}) {
   let current = null;                // the source now playing, so it can be cut off
   let enabled = true;
 
+  // FRESH AT THE START OF EVERY RUN. The index was read once and kept for the life of the window, so a
+  // line rendered while the app was open stayed silent until the app was restarted — and a silent line
+  // is indistinguishable from a demo that did not change. Authoring is exactly the case this exists
+  // for, so the index is re-read per run and the decoded buffers are dropped with it.
+  const reload = () => { index = null; loading = null; buffers.clear(); };
+
   const ready = () => {
     if (!loading) {
-      loading = fetch(INDEX_URL)
+      loading = fetch(`${INDEX_URL}?t=${Date.now()}`)
         .then((r) => (r.ok ? r.json() : null))
         .then((j) => { index = (j && j.fragments) || null; })
         .catch(() => { index = null; });   // no narration rendered yet is a normal state, not an error
@@ -99,5 +108,5 @@ export function createVoice(getCtx, { register = null, volume = 0.9 } = {}) {
   function setEnabled(on) { enabled = !!on; if (!enabled) stop(); }
   function isAvailable() { return !!index; }
 
-  return { speak, secondsFor, stop, setEnabled, isAvailable, ready };
+  return { speak, secondsFor, stop, setEnabled, isAvailable, ready, reload };
 }

@@ -104,6 +104,11 @@
    "id": "tour-video",
    "title": "Tour \u2014 DreamRack video",
    "file": "tour-video.json"
+  },
+  {
+   "id": "strudel",
+   "title": "Strudel \u2014 a pattern playing two voice tabs",
+   "file": "strudel-module-demo.md"
   }
  ]
 }

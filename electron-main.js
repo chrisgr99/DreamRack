@@ -455,6 +455,9 @@ function applyAppMenu() {
       submenu: [
         { label: 'README', click: () => menuSend('readme') },
         { label: 'Tutorial', click: () => menuSend('tutorial') },
+        // DEMOS SIT WITH THE TUTORIAL, not in Developer. They are how the app explains itself, which
+        // is what Help means; the authoring transport they happen to open is a detail of how they run.
+        { label: 'Demos…', click: () => menuSend('demos') },
         { type: 'separator' },
         { label: 'Feedback', submenu: [
           { label: 'Send Feedback…', click: () => menuSend('feedback') },

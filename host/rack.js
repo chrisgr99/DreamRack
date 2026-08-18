@@ -967,7 +967,12 @@ export class Rack {
     // turnable through the page in front of them, and its jacks still reachable. The class blocks the
     // whole subtree explicitly, whatever any descendant asks for.
     for (const rec of this.records.values()) {
-      const on = this._onPage(rec);
+      // A MODULE IN YOUR HAND IS ON WHATEVER PAGE YOU ARE LOOKING AT. Carrying one across pages is how
+      // it moves between them — pick it up, click a tab, put it down — so while it is lifted its own
+      // page says nothing about whether you should be able to see it. Without this it vanished the
+      // instant you changed tabs, and stayed invisible where you dropped it: the row opened a gap for
+      // a module that was there and could not be seen.
+      const on = this._onPage(rec) || !!rec.lifted;
       rec.el.style.visibility = on ? '' : 'hidden';
       rec.el.classList.toggle('off-page', !on);
     }
@@ -8442,6 +8447,37 @@ export class Rack {
   // Glide back to the fit-to-window home view (View ▸ Fit to window, or double-click a panel background).
   resetZoom() { this._setView(1, 0, 0, true); }
 
+  // PUT ONE MODULE IN THE MIDDLE OF THE WINDOW, at a magnification you choose. Used by the demo
+  // runner as its camera: at working size a faceplate's lettering is unreadable in a recording, so a
+  // demo that talks about a control has to be able to show it. Eased, like every other view move.
+  // `align: 'left'` puts the module against the left of the window instead of in the middle of it.
+  // A patch carries no zoom or pan — those belong to how you were looking at the rack, not to the
+  // patch — so a demo that opens a floating window over the rack has to say where the module it is
+  // about should sit, or the window lands on top of it.
+  frameModule(key, zoom = 2.2, align = 'centre') {
+    const rec = this.records.get(key);
+    if (!rec) return;
+    // STAND ON ITS PAGE FIRST. Framing a module on a page you are not looking at moves the view to
+    // where it would be if you were — and shows you somebody else's modules there instead. A patch
+    // carries no "which tab was showing", so this is where it gets decided.
+    if (this.pageOf && this.pageOf(rec) !== this.page && this._hasPage(this.pageOf(rec))) {
+      this.selectPage(this.pageOf(rec));
+    }
+    const vpW = this.container.clientWidth || 0, vpH = this.container.clientHeight || 0;
+    if (vpW <= 0 || vpH <= 0) return;
+    const z = Math.max(0.2, Math.min(4, zoom));
+    const s2 = this.pxPerMm * z;
+    const cx = (rec.x + (rec.panelWmm || 0) / 2) * s2;
+    const cy = (rec.row * (PANEL_H_MM + ROW_GAP_MM) + PANEL_H_MM / 2) * s2;
+    const MARGIN = 16;
+    let tx = align === 'left' ? MARGIN - rec.x * s2 : vpW / 2 - cx;
+    let ty = vpH / 2 - cy;
+    const cw = (this._contentWmm || 0) * s2, ch = (this._contentHmm || 0) * s2;
+    if (cw > vpW) tx = Math.min(0, Math.max(vpW - cw, tx)); else tx = 0;
+    if (ch > vpH) ty = Math.min(0, Math.max(vpH - ch, ty)); else ty = 0;
+    this._setView(z, tx, ty, true);
+  }
+
   // The single view-apply entry point. eased=true glides to (zoom,tx,ty) with a snappy ease-out — one
   // GPU-composited transition, so the real rack animates smoothly and re-sharpens only at the end;
   // eased=false snaps instantly (1:1 pan). Scopes/monitors ride along with a matching transition.
@@ -9556,7 +9592,7 @@ export class Rack {
   _placeAtIndex(key, row, page, index) {
     const rec = this.records.get(key);
     if (!rec) return;
-    if (this.pageOf(rec) !== page) rec.page = page;
+    if (this.pageOf(rec) !== page) { rec.page = page; this._syncPageVisibility(); }
     const list = this._rowOccupants(row, page).filter((r) => r !== rec);
     const x = index >= list.length
       ? (list.length ? list[list.length - 1].x + 0.001 : 0)
@@ -10360,6 +10396,7 @@ export class Rack {
         // ...and it lands on the page you are LOOKING at, which is how a module crosses pages at all:
         // pick it up here, click a tab, put it down there.
         rec.page = this.page;
+        this._syncPageVisibility();   // it belongs here now; whatever the tab change hid, unhide
         finish();
         // IT STARTS WHERE YOUR HAND LET GO and eases from there into its slot — so a module dropped
         // past the end of a row is seen to travel back and nestle against the last one, rather than
@@ -11340,6 +11377,9 @@ export class Rack {
     return [
       { label: 'README', action: () => this._openExternal(DOCS_README_URL) },
       ...(this.onTutorial ? [{ label: 'Tutorial', action: () => this.onTutorial() }] : []),
+      // WITH THE TUTORIAL, NOT IN DEVELOPER. A demo is how the app explains itself, which is what
+      // Help is for; the authoring transport it opens is a detail of how it happens to run.
+      ...(this.openDemoPanel ? [{ label: 'Demos…', action: () => this.openDemoPanel() }] : []),
       ...(feedback.length ? [{ separator: true }, { label: 'Feedback', submenu: feedback }] : []),
       ...(this.onAbout ? [{ separator: true }, { label: 'About DreamRack', action: () => this.onAbout() }] : []),
     ];
@@ -11358,8 +11398,6 @@ export class Rack {
         items.push({ label: 'Edit this panel…', action: () => window.wcoast.openPanelEditor({ moduleId: rec.descriptorId, scale }) });
       }
     }
-    // The scripted-demo transport: an author tool for now, so it lives here rather than in Help.
-    if (this.openDemoPanel) items.push({ label: 'Demos…', action: () => this.openDemoPanel() });
     // Carrying a working shelf between machines by committing it. Here as well as in the native menu
     // bar because this is the menu the app is actually driven from — the bar is the one macOS puts at
     // the top of the screen, and an item that exists in only one of the two may as well not exist.

@@ -26,3 +26,22 @@ Rebuild with esbuild when Strudel is updated:
     export { transpiler } from '@strudel/transpiler';
     EOF
     npx esbuild entry.mjs --bundle --format=esm --minify --outfile=vendor/strudel-dreamrack.mjs
+
+---
+
+`superdough-dreamrack.mjs` — Strudel's own sound engine (`superdough` 1.3.0, AGPL-3.0-or-later), so a
+pattern can play Strudel's voices as well as the rack's. 113kB, and like the other bundle it has NO
+imports: esbuild inlines its DSP worklets as `data:` URLs, so there is no worklet file to serve and
+nothing to fetch before it can make a sound.
+
+It takes the rack's own AudioContext (`setAudioContext`), so its voices and the rack's are on one
+clock and one output.
+
+Rebuild:
+
+    npm i superdough esbuild
+    npx esbuild --bundle --format=esm --minify --platform=browser \
+      --outfile=vendor/superdough-dreamrack.mjs superdough
+
+SAMPLES ARE NOT BUNDLED. `samples()` fetches a pack when a pattern asks for one; a kit dropped into
+`vendor/samples/` is loaded from disk instead, which is what makes the desktop build work offline.

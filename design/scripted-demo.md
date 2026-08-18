@@ -210,6 +210,40 @@ switch, tab), and a verbosity the demo or a section of it sets. The runner knows
 the step, so none of it is authored — though a step may carry its own `say` where a stock phrase reads
 badly, and `voice: "off"` silences the gesture phrases while leaving the badges.
 
+**A demo is a markdown file**, named for what it demonstrates and ending in `-demo.md` —
+`strudel-module-demo.md`, `video-tour-demo.md` — so a demo script is never mistaken for the tutorial
+prose or the phrase table, which are markdown too. One `##` heading per step carrying the move, and
+ordinary prose beneath it as what is said there. A step with no prose says nothing. The header names
+the patch it opens and the modules the steps refer to:
+
+```markdown
+# Strudel — a pattern playing two voice tabs
+
+**Patch** Strudel — two voices
+**Modules** strudel = wcoast.strudel, voiceA = wcoast.voice#0
+**Sound** on
+
+## zoom strudel 2.2
+## press strudel run
+## wait 3
+
+## press strudel edit
+SCRIPT opens the editor.
+
+## point ".rack(1)"
+.rack(1) carries the chords, and the bass under them, to V1.
+```
+
+WHY MARKDOWN AND NOT JSON. The choreography of a demo settles quickly; its narration is rewritten a
+dozen times, and rewriting a sentence inside JSON means minding quotes and escapes to change a word.
+The parser (`host/demo/demo-md.js`) produces exactly the step objects the runner takes, so a JSON demo
+still runs — but new demos are written this way.
+
+The step vocabulary: `zoom <module> <factor> [left]` / `zoom out`, `press <module> <param>`,
+`set <module> <param> <value>`, `choose <module> <param> <value>`, `point <module>` or
+`point <module>:<jack>` or `point "phrase in the script"`, `patch a:b -> c:d`, `page <id>`, `say`,
+`wait <seconds>`.
+
 **The wording lives in `demos/phrases.md`**, a plain markdown table edited directly. Both the app and
 the render tool parse that file, so there is no generated copy to drift from the words you typed. The
 voice and its speed are declared in the same file, beside the words they will speak. Most of the

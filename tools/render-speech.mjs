@@ -25,6 +25,7 @@ import { fileURLToPath } from 'node:url';
 import { speechId } from '../host/demo/speech-id.js';
 import { parseActions, parseControls, createPhraseBook, parseVoiceSettings } from '../host/demo/phrases.js';
 import { parseTutorial, tutorialLines } from '../host/tutorial-md.js';
+import { parseDemoMd } from '../host/demo/demo-md.js';
 
 const run = promisify(execFile);
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -74,10 +75,13 @@ async function collect() {
   const noteKind = (ref, kind) => { if (ref) kinds[ref] = kind; };
 
   let files = [];
-  try { files = (await readdir(SCRIPTS)).filter((f) => f.endsWith('.json') && f !== 'index.json'); } catch { /* no demos yet */ }
+  try { files = (await readdir(SCRIPTS)).filter((f) => (f.endsWith('.json') || f.endsWith('.md')) && f !== 'index.json'); } catch { /* no demos yet */ }
   for (const f of files) {
     let demo;
-    try { demo = JSON.parse(await readFile(path.join(SCRIPTS, f), 'utf8')); } catch { continue; }
+    try {
+      const text = await readFile(path.join(SCRIPTS, f), 'utf8');
+      demo = f.endsWith('.md') ? parseDemoMd(text, { id: f.replace(/\.md$/, '') }) : JSON.parse(text);
+    } catch { continue; }
     for (const k of ['intro', 'outro']) if (demo[k]) lines.add(demo[k]);
     for (const s of demo.steps || []) {
       if (s.note) lines.add(s.note);

@@ -138,7 +138,36 @@ and that is the concrete case for adding AUX lanes to the note bundle — delibe
 pattern worth playing actually runs out, because each lane costs a jack on a panel that is already
 full.
 
-## 6. Licence
+## 6. Strudel's own voices
+
+**Built.** `vendor/superdough-dreamrack.mjs` — superdough 1.3.0, 113kB, no imports: esbuild inlines its
+DSP worklets as `data:` URLs, so there is no worklet file to serve. It takes the rack's own
+AudioContext, so its voices and the rack's are on one clock and one output.
+
+**THE OUTPUT IS A DISPATCHER**, and it decides per event, in this order:
+
+| the event | where it goes |
+| --- | --- |
+| names a rack jack — `.rack(2)`, or `orbit` | a note cable, to that voice tab |
+| names a SOUND — `s("bd")`, `s("sawtooth")` | superdough |
+| a bare note, naming neither | a note cable, V1 |
+
+The last row is why every pattern written before this goes on working: a bare `note("c3")` has always
+played a rack voice and still does. Naming a sound is how a pattern asks for Strudel's own.
+
+**Loaded on the first event that needs it**, so a patch playing nothing but rack voices never pays the
+113kB. Its synths are registered on load — without `registerSynthSounds()` the first `s("sawtooth")`
+reports that the sound was not found, which reads as a broken bundle.
+
+**Samples.** `samples()` and `registerSound` are put where a pattern can reach them, so
+`samples('github:…')` works as it does in Strudel. A kit in `vendor/samples/` is loaded from disk
+instead when one is there, which is what makes the desktop build play a drum offline; what ships in it
+is a licensing decision (see that folder's README).
+
+**What this does not change.** The note cable, the eight jacks and the per-note lanes are untouched.
+This adds a second destination for events the rack was never going to play.
+
+## 7. Licence
 
 `@strudel/web` and `@strudel/repl` are **AGPL-3.0-or-later**. Vendoring them makes the combined work
 AGPL: the source must be reachable by anyone using a hosted version, which DreamRack does anyway —
@@ -147,7 +176,7 @@ the source is published and the app is client-side, so every user already receiv
 The practical consequence is for other people, not for us: nobody can take DreamRack, add to it and run
 it as a closed hosted service without publishing their changes.
 
-## 7. Phases
+## 8. Phases
 
 **Phase 1 — it makes a sound.** Vendor the two files. A module with a NOTE out, a hard-coded pattern,
 and the adapter. Verified when a pattern plays a voice tab and the notes land where they should.
@@ -163,6 +192,8 @@ locked to the pattern.
 outputs, and Strudel's continuous controls as tagged updates so a pattern can bend, swell and colour a
 note while it sounds. This is where a pattern stops sounding like a sequencer and starts sounding
 played — and where one tab starts sounding like several.
+
+**Phase 4b — Strudel's own voices (§6). Built**, except for the kit that ships in `vendor/samples/`.
 
 **Phase 5 — what only this can do.** Strudel driving the VIDEO side through the same events, and the
 rack's own signals visible in the editor. Nothing else gives a live coder a patchable, visible

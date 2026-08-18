@@ -29,7 +29,7 @@
   </g>
   <g data-wcoast-param="under">
     <circle cx="7.62" cy="68" r="2" fill="url(#redLed)" stroke="#7c0000" stroke-width="0.2366" data-wcoast-role="step-indicator" data-wcoast-step="on"/><circle cx="7.06" cy="67.44" r="0.60" fill="#ffb4b4" opacity="0.85" data-wcoast-role="led-gloss" pointer-events="none"/>
-      <text x="7.62" y="74.3" font-size="3.106" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">DROP</text>
+      <text x="7.62" y="74.3" font-size="3.106" font-weight="700" font-style="italic" fill="#b8b8bc" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">GLITCH</text>
   </g>
   <g data-wcoast-param="fps" data-wcoast-role="readout" data-wcoast-cx="7.62" data-wcoast-cy="90.00" data-wcoast-w="10.25">
     <rect x="2.5" y="86.9" width="10.25" height="6.2" rx="1.2" fill="#101216" stroke="#808085" stroke-width="0.3"/>

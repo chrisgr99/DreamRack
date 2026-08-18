@@ -15,7 +15,7 @@
 
 'use strict';
 
-import { panel, band, jack, button, lamps, readout, placed } from '../../panel/grammar.js';
+import { panel, band, jack, button, readout, caption, placed } from '../../panel/grammar.js';
 
 const CX = 22.86;        // the centre line of a 9 HP face
 // The four columns of the jack grid, and the two rows of it.
@@ -24,29 +24,30 @@ const COLS = [CX - 15, CX - 5, CX + 5, CX + 15];
 export default panel({ hp: 9, pad: 1.2 }, [
   band(null, [
     placed([
-      // The two that matter. STRUDEL carries its own unlit colour — a dark red lens rather than the
-      // house grey — and flashes full red as it is pressed.
-      { c: button('edit', 'STRUDEL', { r: 5.4, labelSize: 5.4, off: '#8a2424' }), x: CX, y: 17 },
-      { c: button('run', 'PLAY', { r: 5.4, labelSize: 5.4 }), x: CX, y: 40 },
+      // The two that matter, up at the top and close together — what the panel is for, and everything
+      // below them is where the sound leaves. SCRIPT carries its own unlit colour, a dark red lens
+      // rather than the house grey, and flashes full red as it is pressed.
+      { c: button('edit', 'SCRIPT', { r: 5.4, labelSize: 5.4, off: '#8a2424' }), x: CX, y: 14 },
+      { c: button('run', 'PLAY', { r: 5.4, labelSize: 5.4 }), x: CX, y: 35 },
 
       // The tempo is set in the pattern, not here, so this READS it — and turning it sets the running
-      // pattern, which is the more useful direction while a piece plays. Half again as tall as a
-      // standard readout, because it is the only number on the module.
-      { c: readout('cps', 'CPS', { chars: 5, widest: '00.00', value: '0.50', size: 1.5, labelSize: 5.4 }), x: CX, y: 60 },
+      // pattern, which is the more useful direction while a piece plays. Its arrows and its wheel move
+      // in tenths (see the descriptor's `step`).
+      { c: readout('cps', 'CPS', { chars: 5, widest: '00.00', value: '0.50', size: 1.125, labelSize: 3.4 }), x: CX, y: 56 },
 
-      // Dark when all is well: "it is fine" needs no lamp of its own.
-      { c: lamps('status', [['error', 'ERR']], { dir: 'h', labelSize: 2.8, labelDrop: 2 }), x: CX, y: 74 },
-
-      // THE EIGHT VOICE OUTS, in two rows of four. Not in an output band: that band packs its jacks
-      // along one rail from the left behind an OUT header, and eight jacks want a grid whose columns
-      // line up with each other rather than a line that runs off the panel.
-      //
-      // NUMBERED, BECAUSE THE PATTERN IS. `.rack(3)` and V3 are the same thing said twice, once in the
-      // code and once on the panel, and nothing in between needs translating.
+      // TEN JACKS, CENTRED. Two rows of four voice outs and the stereo pair beneath them, symmetrical
+      // about the centre line, so the block reads as one group of outputs.
       ...[1, 2, 3, 4].map((n, i) => (
-        { c: jack(n === 1 ? 'noteOut' : 'noteOut' + n, 'V' + n, { labelSize: 2.8 }), x: COLS[i], y: 87 })),
+        { c: jack(n === 1 ? 'noteOut' : 'noteOut' + n, 'V' + n, { labelSize: 2.8 }), x: COLS[i], y: 72 })),
       ...[5, 6, 7, 8].map((n, i) => (
-        { c: jack('noteOut' + n, 'V' + n, { labelSize: 2.8 }), x: COLS[i], y: 98 })),
+        { c: jack('noteOut' + n, 'V' + n, { labelSize: 2.8 }), x: COLS[i], y: 85 })),
+
+      // STRUDEL'S OWN VOICES, as audio. L and R sit OUTSIDE the pair, left of one and right of the
+      // other, so the two letters read as the ends of a stereo pair rather than as two more labels in
+      // the column; the name of what they carry goes underneath, where it belongs to both.
+      { c: jack('audioOutL', 'L', { side: 'left', labelSize: 3.0 }), x: CX - 5.5, y: 97 },
+      { c: jack('audioOutR', 'R', { side: 'right', labelSize: 3.0 }), x: CX + 5.5, y: 97 },
+      { c: caption('SUPERDOUGH', { size: 2.5, italic: false }), x: CX, y: 104 },
     ], 105),
   ]),
 ]);

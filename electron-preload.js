@@ -9,6 +9,9 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('wcoast', {
+  // Whether this is `npm run dev`. The renderer uses it to hang a test handle on the window — see
+  // rack-app — so an automated harness can start a demo, which otherwise only the native menu can do.
+  isDev: !!process.env.WCOAST_DEV,
   isElectron: true,
   // Open an external URL (docs / help links) in the user's default browser,
   // rather than a new Electron window.

@@ -10,10 +10,16 @@
 
 'use strict';
 
-import { toNote } from './adapter.js';
+import { toNote, durationOf } from './adapter.js';
 
 const PROCESSOR = 'wcoast-strudel';
 const VENDOR = '../../vendor/strudel-dreamrack.mjs';
+// Strudel's OWN sound engine, loaded only if a pattern asks for one of its voices — 113kB that a
+// patch playing nothing but rack voices never pays for. See vendor/README.md.
+const SUPERDOUGH = '../../vendor/superdough-dreamrack.mjs';
+// A kit beside the bundle, when one has been dropped there: what makes the desktop build play a drum
+// with no network. Absent, `samples()` in a pattern fetches a pack as it does in Strudel itself.
+const LOCAL_SAMPLES = '../../vendor/samples/';
 
 let strudelPromise = null;      // the module namespace, once
 function loadStrudel() {
@@ -21,11 +27,66 @@ function loadStrudel() {
   return strudelPromise;
 }
 
+// ---- Strudel's own voices ----------------------------------------------------------------------
+// TWO DESTINATIONS, ONE CLOCK. A pattern's events go either to a voice tab in the rack or to
+// superdough, Strudel's own engine — and both run on the rack's AudioContext, so a drum from one and
+// a note from the other land on the same sample.
+//
+// WHICH ONE, decided per event and in this order: a part that names a rack jack goes to the rack; a
+// part that names a SOUND is Strudel's; anything else is a bare note, which is what a rack voice has
+// always played, so it keeps going there. That last rule is what lets every pattern written before
+// this go on working unchanged.
+let doughPromise = null;
+function loadSuperdough(ctx) {
+  if (!doughPromise) {
+    doughPromise = import(SUPERDOUGH).then(async (sd) => {
+      if (sd.setAudioContext) sd.setAudioContext(ctx);
+      if (sd.initAudio) { try { await sd.initAudio(); } catch (_e) { /* the rack owns resuming */ } }
+      // ITS SYNTHS HAVE TO BE REGISTERED. Without this, `s("sawtooth")` reports that the sound was
+      // not found — the first thing anyone meets, and it looks like a broken bundle rather than a
+      // missing line.
+      try { sd.registerSynthSounds && sd.registerSynthSounds(); } catch (_e) { /* older build */ }
+      try { sd.registerZZFXSounds && sd.registerZZFXSounds(); } catch (_e) { /* not in this build */ }
+      // A PATTERN MAY LOAD ITS OWN SAMPLES, as it would in Strudel — `samples('github:...')` — so the
+      // loader is put where a pattern can reach it rather than kept inside this module.
+      for (const name of ['samples', 'registerSound', 'registerSynthSounds', 'aliasBank']) {
+        if (typeof sd[name] === 'function') globalThis[name] = sd[name].bind(sd);
+      }
+      // OFF THE SPEAKERS AND ONTO THE JACK. superdough builds its own path to the destination on
+      // first use; this takes the last node of it, disconnects that path, and hands its signal to the
+      // rack instead. Done after init, because the output stage does not exist until then.
+      try {
+        const ctl = sd.getSuperdoughAudioController && sd.getSuperdoughAudioController();
+        const g = ctl && ctl.output && ctl.output.destinationGain;
+        if (g) { try { g.disconnect(); } catch (_e) { /* not connected yet */ } g.connect(doughOut); }
+        else console.warn('[strudel] superdough output stage not found; its voices go straight out');
+      } catch (_e) { /* older build: leave it as it is */ }
+      // A kit shipped beside the bundle, if there is one. Missing is the normal case in the browser.
+      try {
+        const url = new URL(LOCAL_SAMPLES + 'strudel.json', import.meta.url).href;
+        const res = await fetch(url);
+        if (res.ok) await sd.samples(await res.json(), new URL(LOCAL_SAMPLES, import.meta.url).href);
+      } catch (_e) { /* no local kit; patterns can still fetch their own */ }
+      return sd;
+    }).catch((e) => { doughPromise = null; throw e; });
+  }
+  return doughPromise;
+}
+
 export function create(ctx, _services) {
   const node = new AudioWorkletNode(ctx, PROCESSOR, {
     numberOfInputs: 0, numberOfOutputs: 1, outputChannelCount: [1],
   });
 
+  // Where Strudel's own voices arrive before the rack takes them, split into the two jacks the
+  // faceplate offers — see the descriptor. Stereo in, two mono jacks out, which is how every other
+  // stereo source on this rack presents itself.
+  const doughOut = ctx.createGain();
+  const doughSplit = ctx.createChannelSplitter(2);
+  const doughL = ctx.createGain(), doughR = ctx.createGain();
+  doughOut.connect(doughSplit);
+  doughSplit.connect(doughL, 0);
+  doughSplit.connect(doughR, 1);
   let S = null;                 // the Strudel namespace
   let started = false;          // initStrudel called
   let seq = 0;                  // handle counter
@@ -49,12 +110,25 @@ export function create(ctx, _services) {
   // it to the worklet, which holds it until its sample arrives.
   const output = (hap, _deadline, duration, cps, t) => {
     if (!S) return;
+    const value = (hap && hap.value) || {};
+    // WHOSE EVENT IS THIS. A part that names a rack jack is the rack's; a part that names a sound is
+    // Strudel's; a bare note is the rack's, as it always has been.
+    const named = value.rack !== undefined || value.orbit !== undefined;
+    if (!named && value.s !== undefined) {
+      loadSuperdough(ctx).then((sd) => {
+        // superdough takes the event, the time to sound at, and how long — the same three things the
+        // note bundle carries, in its own units.
+        try { sd.superdough(value, t, durationOf(value, hap.whole ? Number(hap.whole.end) - Number(hap.whole.begin) : 0, cps)); }
+        catch (e) { lastError = (e && e.message) || String(e); }
+      }).catch((e) => { lastError = `superdough: ${(e && e.message) || e}`; });
+      return;
+    }
     const n = toNote(hap, cps, t, {
       noteToMidi: S.noteToMidi,
       sampleAt,
       handle: prefix + ':' + (seq++),
     });
-    if (!n) return;             // no note in this event — a sample trigger, not ours
+    if (!n) return;             // nothing playable in this event
     node.port.postMessage({ events: [
       { at: n.at, handle: n.handle, voice: n.voice, pitch: n.pitch, level: n.level, duration: n.duration,
         pan: n.pan, timbre: n.timbre, pressure: n.pressure },
@@ -77,6 +151,15 @@ export function create(ctx, _services) {
     // `rack` is registered the same way: it is how a pattern says which voice jack a part leaves by.
     try { if (S.core.createParams) S.core.createParams('timbre', 'press', 'rack'); } catch (_e) { /* older build */ }
     await S.evalScope(S.core, S.mini);
+    // SAMPLES() HAS TO EXIST BEFORE A PATTERN IS READ, and superdough is not loaded until an event
+    // needs it — so what goes into scope is a forwarder: call it and the engine loads, then the call
+    // is made. Without this, a pattern whose first line is `samples('github:…')` throws while being
+    // evaluated, and a pattern that fails to evaluate plays NOTHING — not even the parts bound for
+    // the rack, which is a silence that looks nothing like a missing drum kit.
+    for (const name of ['samples', 'registerSound', 'registerSynthSounds', 'aliasBank', 'initAudio']) {
+      if (typeof globalThis[name] === 'function') continue;
+      globalThis[name] = (...args) => loadSuperdough(ctx).then((sd) => (sd[name] ? sd[name](...args) : undefined));
+    }
     // Our own repl, for playing without the editor open. Its output is ours and its clock is the
     // rack's, so an event's deadline is already in the right domain.
     replInstance = S.repl({ defaultOutput: output, getTime: () => ctx.currentTime, transpiler: S.transpiler });
@@ -115,6 +198,14 @@ export function create(ctx, _services) {
     openEditor(true);
   };
   document.addEventListener('keydown', focusToggle, true);
+
+  // WARM ON ARRIVAL. Strudel is a 1.7MB package and its scope has to be evaluated before a pattern
+  // can run, and none of that used to begin until the first press of PLAY — so the first press was
+  // followed by a second or two of silence while the module fetched and built what it needed. Started
+  // here, in the background, it is ready long before anyone reaches for the button. Failure is not
+  // reported: if it cannot load now it will be tried again by the press, which is where an error
+  // belongs.
+  setTimeout(() => { ensure().catch(() => {}); }, 0);
 
   // Once a second is enough for a tempo readout, and it costs nothing.
   const stateTimer = setInterval(reportState, 1000);
@@ -377,8 +468,19 @@ export function create(ctx, _services) {
     // it. Handing the pattern over on open is what makes the highlight follow whatever is playing,
     // whichever button started it.
     if (running && mirror) {
-      try { replInstance && replInstance.stop(); } catch (_e) { /* not playing */ }
-      try { await mirror.evaluate(); } catch (_e) { /* a half-typed pattern; the lamp says so */ }
+      // AND IF THE EDITOR WILL NOT TAKE IT, THE MODULE GOES ON PLAYING. The old repl is stopped only
+      // once the editor has actually started the pattern: stopping first and then failing — which is
+      // what an editor still being built does — left the module lit, reporting no error, and silent,
+      // with nothing to restart it. The failure is also recorded now rather than swallowed, so the
+      // ERR lamp says what happened.
+      try {
+        await mirror.evaluate();
+        try { replInstance && replInstance.stop(); } catch (_e) { /* it was not playing */ }
+        lastError = null;
+      } catch (e) {
+        lastError = (e && e.message) || String(e);
+      }
+      reportState();
     }
   }
 
@@ -390,7 +492,11 @@ export function create(ctx, _services) {
     // ALL EIGHT JACKS SHARE ONE CHANNEL OF SILENCE. The audio connection exists only to keep both
     // worklets in the rendering graph — the notes themselves travel as messages — so eight jacks need
     // eight ports in the descriptor and no extra outputs on the node.
-    getOutput: (id) => (id === 'noteOut' || /^noteOut[2-8]$/.test(id) ? { node, index: 0 } : null),
+    getOutput: (id) => {
+      if (id === 'audioOutL') return { node: doughL, index: 0 };
+      if (id === 'audioOutR') return { node: doughR, index: 0 };
+      return (id === 'noteOut' || /^noteOut[2-8]$/.test(id)) ? { node, index: 0 } : null;
+    },
     getInput: () => null,
     getParam: () => null,
     // The panel's buttons arrive here as stepped params, which is how the rack drives everything.
@@ -480,6 +586,7 @@ export function create(ctx, _services) {
       try { document.removeEventListener('keydown', focusToggle, true); } catch (_e) { /* gone */ }
       try { if (pane) pane.remove(); } catch (_e) { /* gone */ }
       try { node.port.onmessage = null; node.disconnect(); } catch (_e) { /* gone */ }
+      try { doughOut.disconnect(); doughSplit.disconnect(); doughL.disconnect(); doughR.disconnect(); } catch (_e) { /* gone */ }
     },
   };
   return api;

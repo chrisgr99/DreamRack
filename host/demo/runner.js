@@ -92,6 +92,55 @@ export function createDemoRunner(rack, opts = {}) {
     const r = el.getBoundingClientRect();
     return { el, x: r.left + r.width / 2, y: r.top + r.height / 2, w: r.width, h: r.height };
   }
+  // A PHRASE IN THE SCRIPT WINDOW. Pointing at a module says which faceplate; pointing at a line of
+  // code says which words, and a pattern is mostly words. The text is found in the editor's own DOM
+  // and measured with a Range, so the mark lands on the phrase wherever it has been scrolled to.
+  async function resolveText(needle) {
+    const root = () => document.querySelector('.strudel-root .cm-content');
+    if (!root() || !needle) return null;
+
+    // FIND IT WHERE IT IS NOW. CodeMirror renders the lines around the viewport and replaces those
+    // nodes when it scrolls, so a range measured before a scroll points at nodes that no longer exist
+    // — which is how the pointer came to rest above the window. The search is redone after every
+    // scroll rather than the rectangle being re-read.
+    const rectOf = () => {
+      const el = root();
+      if (!el) return null;
+      const walk = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+      const nodes = [];
+      let all = '';
+      for (let n = walk.nextNode(); n; n = walk.nextNode()) { nodes.push([all.length, n]); all += n.textContent; }
+      const at = all.indexOf(needle);
+      if (at < 0) return null;
+      const end = at + needle.length;
+      const find = (pos) => { let hit = nodes[0]; for (const e of nodes) if (e[0] <= pos) hit = e; return [hit[1], pos - hit[0]]; };
+      const [sn, so] = find(at), [en, eo] = find(end - 1);
+      const range = document.createRange();
+      try { range.setStart(sn, Math.min(so, sn.textContent.length)); range.setEnd(en, Math.min(eo + 1, en.textContent.length)); }
+      catch (_e) { return null; }
+      const r = range.getBoundingClientRect();
+      return (r && (r.width || r.height)) ? r : null;
+    };
+
+    const scroller = () => document.querySelector('.strudel-root .cm-scroller');
+    for (let pass = 0; pass < 4; pass++) {
+      const r = rectOf();
+      const sc = scroller();
+      if (!r || !sc) return null;
+      const sr = sc.getBoundingClientRect();
+      const margin = 28;
+      const above = r.top < sr.top + margin, below = r.bottom > sr.bottom - margin;
+      if (!above && !below) {
+        return { el: root(), x: r.left + r.width / 2, y: r.top + r.height / 2, w: r.width, h: r.height };
+      }
+      sc.scrollTop += (r.top + r.height / 2) - (sr.top + sr.height / 2);
+      await new Promise((res) => requestAnimationFrame(() => requestAnimationFrame(res)));
+    }
+    // Still not on screen after scrolling to it: point at nothing rather than at the wrong thing.
+    console.warn(`[demo] could not bring "${needle}" into view`);
+    return null;
+  }
+
   // The page tab itself is a target: switching page is something the viewer must see happen.
   function resolveTab(pageId) {
     const el = document.querySelector(`.rack-tab[data-page="${pageId}"]`);
@@ -238,7 +287,7 @@ export function createDemoRunner(rack, opts = {}) {
     // do not walk the same six inches again. A second travel of zero distance still spends its whole
     // duration, which reads as the demo hesitating for no reason.
     const there = theatre.pos && Math.hypot(theatre.pos.x - t.x, theatre.pos.y - t.y) < 4;
-    await Promise.all([there ? Promise.resolve() : theatre.moveTo(t.x, t.y, secs(s, 'perform')), voice.speak(line)]);
+    await Promise.all([there ? Promise.resolve() : theatre.moveTo(t.x, t.y, secs(s, 'perform')), narrate(line)]);
     if (!there) await theatre.sleep(secs(s, 'arrive') * 0.35);
     return t;
   }
@@ -250,7 +299,7 @@ export function createDemoRunner(rack, opts = {}) {
     theatre.badge(phrases.badgeFor(action), { x: t.x, y: t.y });
     // The speech runs alongside the travel rather than before it — "move the pointer to the output
     // terminal" describes what is happening, it is not something to wait for first.
-    await Promise.all([theatre.moveTo(t.x, t.y, secs(s, 'perform')), voice.speak(sayFor(s, action, false, ref))]);
+    await Promise.all([theatre.moveTo(t.x, t.y, secs(s, 'perform')), narrate(sayFor(s, action, false, ref))]);
     await theatre.sleep(secs(s, 'arrive'));
     return t;
   }
@@ -258,7 +307,7 @@ export function createDemoRunner(rack, opts = {}) {
   // floor here: a beat shorter than the phrase would clip it, so whichever is longer wins.
   async function announce(action, s, back = false, ref = null) {
     theatre.badge(phrases.badgeFor(action));
-    await Promise.all([theatre.sleep(secs(s, 'beat')), voice.speak(sayFor(s, action, back, ref))]);
+    await Promise.all([theatre.sleep(secs(s, 'beat')), narrate(sayFor(s, action, back, ref))]);
   }
   async function clickAt(t, s, action, back = false, ref = null) {
     await announce(action, s, back, ref);
@@ -341,10 +390,22 @@ export function createDemoRunner(rack, opts = {}) {
             }
           } else if (opts.loadExample) { await opts.loadExample(s.name); }
         } else if (opts.loadExample) { await opts.loadExample(s.name); }
+        keepViewerLevel();
+        ensureSound();
         // Bind this demo's names to whatever keys the file used: { "osc": "<descriptorId>" }.
-        for (const [name, type] of Object.entries(s.as || {})) {
-          const rec = [...rack.records.values()].find((r) => r.descriptorId === type);
+        //
+        // A PATCH MAY HOLD SEVERAL OF ONE MODULE — two voice tabs are two of everything — so a name may
+        // ask for the nth of them: "wcoast.oscillator#1". Ordered by page and then by position, which
+        // is the order they are read on screen, so #0 and #1 mean first and second as you would say it.
+        const ordered = [...rack.records.values()].sort((a, b) =>
+          String(rack.pageOf ? rack.pageOf(a) : '').localeCompare(String(rack.pageOf ? rack.pageOf(b) : ''))
+          || (a.row - b.row) || (a.x - b.x));
+        for (const [name, spec] of Object.entries(s.as || {})) {
+          const [type, nth] = String(spec).split('#');
+          const all = ordered.filter((r) => r.descriptorId === type);
+          const rec = all[nth ? Number(nth) : 0];
           if (rec) aliases[name] = rec.key;
+          else console.warn(`[demo] nothing named ${spec}`);
         }
         return;
       }
@@ -413,7 +474,10 @@ export function createDemoRunner(rack, opts = {}) {
           await ramp(s.target, s.to, d);
           await spin;
         } else {
-          if (t) { theatre.click(); await theatre.sleep(secs(s, 'beat')); }
+          // THE RINGS SAY WHERE, THE FLASH SAYS WHAT. A ripple on its own reads as "something
+          // happened near here"; lighting the control itself says which one was pressed, the way the
+          // value moving does for a knob.
+          if (t) { theatre.click(); theatre.highlight(t.el); await theatre.sleep(secs(s, 'beat')); }
           if (rec) rack.applyParam(rec, id, s.to);
           else console.warn(`[demo] no module for ${s.target} — the value was not set`);
         }
@@ -448,6 +512,24 @@ export function createDemoRunner(rack, opts = {}) {
         return;
       }
       case 'choose': {
+        // WHATEVER THE PANEL ACTUALLY IS. A stepped parameter is drawn either as a row of lamps or as
+        // a readout with a list behind it, and the demo must do what a hand would do to the control in
+        // front of it: press the lamp for the value, or open the list and pick the row. Opening a menu
+        // over a radio group would be showing a gesture the panel does not have.
+        const [k, id] = split(s.target);
+        const rec0 = recOf(k);
+        const b0 = rec0 && rec0.panel && rec0.panel.controls.get(id);
+        const lamp = b0 && b0.stepIndicators && b0.stepIndicators.get(s.to);
+        if (lamp) {
+          const lr = lamp.getBoundingClientRect();
+          const at = { el: lamp, x: lr.left + lr.width / 2, y: lr.top + lr.height / 2, w: lr.width, h: lr.height };
+          await gestureTo(at, s, 'pressButton', s.target);
+          theatre.click();
+          theatre.highlight(lamp);
+          rack.applyParam(rec0, id, s.to);
+          await theatre.sleep(secs(s, 'settle'));
+          return;
+        }
         // A VALUE LIST. The pointer goes to the lit window, clicks, and the list opens over it — the
         // real one, with the real values in it — then walks to the row it wants and presses that.
         //
@@ -455,7 +537,6 @@ export function createDemoRunner(rack, opts = {}) {
         // that reached the same value by calling the parameter would show a number changing by itself,
         // which is exactly what a viewer cannot learn anything from.
         const t = resolve(s.target);
-        const [k, id] = split(s.target);
         if (t) await gestureTo(t, s, 'openList', s.target);
         theatre.click();
         if (!rack.openValueList(k, id)) { console.warn(`[demo] no value list for "${s.target}"`); return; }
@@ -486,15 +567,43 @@ export function createDemoRunner(rack, opts = {}) {
         await theatre.sleep(secs(s, 'settle'));
         return;
       }
+      case 'zoom': {
+        // FRAME ONE MODULE, or step back to the whole rack with `"to": "out"`. A faceplate at working
+        // size is unreadable in a recording, and a demo that explains a control nobody can see is a
+        // voice-over. Nothing is clicked and nothing changes; it is the camera, not the hand.
+        if (s.to === 'out' || s.at == null) {
+          if (rack.resetZoom) rack.resetZoom();
+        } else if (rack.frameModule) {
+          rack.frameModule(aliases[s.at] || s.at, typeof s.to === 'number' ? s.to : 2.2, s.align || 'centre');
+        }
+        await theatre.sleep(secs(s, 'settle'));
+        return;
+      }
       case 'point': {
-        // POINT AT A MODULE while it is described. Not a gesture — nothing is clicked and nothing
+        // POINT AT SOMETHING while it is described. Not a gesture — nothing is clicked and nothing
         // changes — so it carries no badge and says nothing of its own: the note is the whole content,
-        // and the pointer is there to say WHICH of six faceplates the note is about. runStep moves it
-        // before the note is read, so the sentence lands with the pointer already resting on its
-        // subject rather than arriving after it.
-        const t = rack.moduleBox ? rack.moduleBox(aliases[s.at] || s.at) : null;
-        if (!t) { console.warn(`[demo] no module to point at: ${s.at}`); return; }
+        // and the pointer is there to say WHICH thing the note is about. runStep moves it before the
+        // note is read, so the sentence lands with the pointer already resting on its subject.
+        //
+        // THREE KINDS OF TARGET. A module by name; one of its JACKS or knobs, written "module:port",
+        // which is what lets a demo indicate one socket out of eight; and `text`, a phrase in the
+        // script window, for saying which words in a pattern are being talked about.
+        // On its page, for the same reason framing is — a pointer resting on a hidden module points
+        // at whatever happens to be drawn in that spot on the page you are actually looking at.
+        if (!s.text) {
+          const key = aliases[String(s.at || '').split(':')[0]] || String(s.at || '').split(':')[0];
+          const rec = rack.records.get(key);
+          if (rec && rack.pageOf && rack.pageOf(rec) !== rack.page && rack._hasPage(rack.pageOf(rec))) {
+            rack.selectPage(rack.pageOf(rec));
+            await theatre.sleep(0.35);
+          }
+        }
+        const t = s.text ? await resolveText(s.text)
+          : (String(s.at || '').includes(':') ? resolve(s.at)
+            : (rack.moduleBox ? rack.moduleBox(aliases[s.at] || s.at) : null));
+        if (!t) { console.warn(`[demo] nothing to point at: ${s.text ? 'text ' + s.text : s.at}`); return; }
         await theatre.moveTo(t.x, t.y, secs(s, 'perform'));
+        if (s.mark !== false) theatre.highlight(t.el);
         return;
       }
       case 'repatch': {
@@ -638,8 +747,8 @@ export function createDemoRunner(rack, opts = {}) {
       // opening statement: a minute of narration over a motionless rack cannot be told apart from a
       // demo that has hung, and the honest response to that is to stop it, which is what happened.
       // Unwaited, the words play over the first moves instead of in front of them.
-      if (s.note && s.wait === false) { voice.speak(s.note); await theatre.sleep(secs(s, 'beat')); }
-      else if (s.note) await Promise.all([theatre.sleep(secs(s, 'hold')), voice.speak(s.note)]);
+      if (s.note && s.wait === false) { narrate(s.note); await theatre.sleep(secs(s, 'beat')); }
+      else if (s.note) await Promise.all([theatre.sleep(secs(s, 'hold')), narrate(s.note)]);
     }
     if (s.do !== 'point') await perform(s);
     theatre.badge(null);
@@ -649,7 +758,7 @@ export function createDemoRunner(rack, opts = {}) {
     if (s.after) {
       showCard(s.after, noteSpanAvoid(i), s.berth || null);
       noteText = s.after;
-      await Promise.all([theatre.sleep(secs(s, 'beat')), voice.speak(s.after)]);
+      await Promise.all([theatre.sleep(secs(s, 'beat')), narrate(s.after)]);
     }
     await theatre.sleep(secs(s, 'settle'));
   }
@@ -734,6 +843,68 @@ export function createDemoRunner(rack, opts = {}) {
     phrases.reset();
   }
 
+  // What the rack's master fader was set to when this run began; see run().
+  let viewerMaster = null;
+
+  // ---- NARRATION OVER THE PATCH ------------------------------------------------------------------
+  // The patch goes on playing while a line is read, a few decibels down so the words are clear, and
+  // comes back up in the gaps left for listening. Done on the master AudioParam rather than the
+  // mixer's param, so the patch's own setting is untouched and nothing has to be put back if a run is
+  // interrupted — and rammped rather than stepped, or the drop is audible as a click.
+  const DUCK = 0.25;          // about 12dB under: still audible, but well clear of the words
+  const DUCK_RAMP = 0.12;     // seconds
+  let duckBase = null, ducked = false;
+  function duck(on) {
+    const rec = rack.records.get('mixer');
+    const p = rec && rec.instance.getParam ? rec.instance.getParam('master') : null;
+    const ctx = rack.host && rack.host.ctx;
+    if (!p || !ctx) return;
+    // THE LEVEL TO COME BACK TO IS READ ONCE. Reading it at each duck looked equivalent and was not:
+    // the ramp is asymptotic, so a line beginning while the previous release was still travelling
+    // captured a value part of the way down and made THAT the new full level. Over a dozen lines the
+    // music ratcheted quietly away, which is precisely what a demo full of narration does.
+    if (duckBase == null) duckBase = p.value;
+    const to = on ? duckBase * DUCK : duckBase;
+    ducked = !!on;
+    try { p.cancelScheduledValues(ctx.currentTime); } catch (_e) { /* not schedulable */ }
+    p.setTargetAtTime(to, ctx.currentTime, DUCK_RAMP);
+  }
+
+  // Every line goes through here, so there is one place that knows the patch should be down while
+  // anything is being said.
+  async function narrate(text) {
+    if (!text) return;
+    duck(true);
+    try { await voice.speak(text); } finally { duck(false); }
+  }
+
+  // MAKE SURE IT CAN BE HEARD, for a script that starts with a patch already playing.
+  //
+  // Loading ANY patch turns the engine and both buses off — deliberately, so a file cannot start
+  // making noise before anyone has looked at it (see silenceAfterLoad). A demo that opens a patch and
+  // narrates it therefore has to turn the sound back on, and doing it in the script means every such
+  // script carries the same three steps and one of them will eventually be forgotten. So the runner
+  // does it: before the first step, and again after any patch the script loads.
+  //
+  // OPT IN, with `"sound": true` in the script. The demos that TEACH the engine — where the whole
+  // point is pressing it and hearing the rack come alive — must not find it already on.
+  function ensureSound() {
+    if (!demo || !demo.sound) return;
+    const rec = rack.records.get('mixer');
+    if (!rec) return;
+    const on = (id) => rec.values.get(id) === 'on';
+    // The viewer's own choice of bus is kept when they had one; otherwise the main output.
+    if (!on('masterEnable') && !on('monitorEnable')) rack.applyParam(rec, 'masterEnable', 'on');
+    if (!on('engine')) rack.applyParam(rec, 'engine', 'on');
+  }
+
+  // Put it back after anything that loads a patch over the top of it.
+  function keepViewerLevel() {
+    if (viewerMaster == null) return;
+    const rec = rack.records.get('mixer');
+    if (rec && rec.values.get('master') !== viewerMaster) rack.applyParam(rec, 'master', viewerMaster);
+  }
+
   async function run(obj) {
     if (running) return;
     if (obj) load(obj);
@@ -742,14 +913,25 @@ export function createDemoRunner(rack, opts = {}) {
     theatre.setInstant(false);
     try {
       await reset();
+      // THE VIEWER'S LEVEL IS THE VIEWER'S. A demo opens a patch, and a patch carries the master fader
+      // the person who saved it was using — which is how a script came to play several times louder
+      // than the same patch does when you open it yourself. Whatever the rack is set to when a demo
+      // starts is put back after every patch the script loads, so the only thing that changes the
+      // volume is the viewer's own hand. A script that genuinely wants a level can still set it, in
+      // a `set` step, where it is written down and visible.
+      const mixRec = rack.records.get('mixer');
+      viewerMaster = mixRec ? mixRec.values.get('master') : null;
+      duckBase = null; ducked = false;   // this run's full level, read at its first line
+      ensureSound();   // before the first step, so a script that opens playing is audible at once
       theatre.begin(true, true);   // and from the middle of the window, not wherever the last run ended
       voice.setEnabled(true);
+      if (voice.reload) voice.reload();   // pick up anything rendered since the app started
       // A BEAT BEFORE ANYTHING HAPPENS. The tutorial has just vanished and the rack has just been set
       // up; starting to narrate and move in the same instant asks the viewer to work out where they
       // are and follow a pointer at the same time. Let them look first.
       console.warn(`[demo] RUN START — ${demo.id || '?'}, ${steps.length} steps, rate ${rate}`);
       await theatre.sleep(num(demo.openHold, 2.5));
-      if (demo.intro) { showCard(demo.intro); await Promise.all([theatre.sleep(num(demo.introHold, 2.5)), voice.speak(demo.intro)]); }
+      if (demo.intro) { showCard(demo.intro); await Promise.all([theatre.sleep(num(demo.introHold, 2.5)), narrate(demo.intro)]); }
       while (index < steps.length && !cancelled) {
         capture(index);
         // A STEP THAT THROWS LOSES ITS STEP, NOT THE REEL. This used to fall straight out of the loop
@@ -770,7 +952,7 @@ export function createDemoRunner(rack, opts = {}) {
         }
         index++;
       }
-      if (!cancelled && demo.outro) { showCard(demo.outro); await Promise.all([theatre.sleep(num(demo.outroHold, 3.0)), voice.speak(demo.outro)]); }
+      if (!cancelled && demo.outro) { showCard(demo.outro); await Promise.all([theatre.sleep(num(demo.outroHold, 3.0)), narrate(demo.outro)]); }
     } finally {
       console.warn(`[demo] RUN END — reached step ${index} of ${steps.length}, cancelled=${cancelled}`);
       releaseCable();
@@ -892,7 +1074,7 @@ export function createDemoRunner(rack, opts = {}) {
       if (mine !== speakRun) return;
       if (i) await new Promise((r) => setTimeout(r, BETWEEN * 1000));
       if (mine !== speakRun) return;
-      await voice.speak(lines[i]);
+      await narrate(lines[i]);
     }
     if (mine === speakRun && done) done();
   }

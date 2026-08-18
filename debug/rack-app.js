@@ -79,6 +79,7 @@ import { buildCatalogue, createMirror } from '../host/mirror.js';
 import { createAudioTrace } from '../host/audio-trace.js';
 import { DEFAULT_RACK, placeRack } from '../host/default-rack.js';
 import { createDemoRunner } from '../host/demo/runner.js';
+import { parseDemoMd } from '../host/demo/demo-md.js';
 import { createDemoPanel } from '../host/demo/panel.js';
 import { createTour, tourSeen } from '../host/tour.js';
 import { createPatchNotes } from '../host/patch-notes.js';
@@ -1110,6 +1111,7 @@ async function boot() {
       redo: () => { rack.redo(); pushMenuState(); },
       clearAll: () => rack.confirmDeleteAllCables(),
       toggleDark: () => toggleDark(),
+      demos: () => rack.openDemoPanel && rack.openDemoPanel(),
       setRows: (n) => setRows(n),
       fitToWindow: () => rack.resetZoom(),
       captureWork: () => captureWork(),
@@ -1492,6 +1494,13 @@ async function boot() {
   } catch (_e) { /* keep the file's own order */ }
 
   const loadDemo = async (entry) => {
+    // A DEMO IS MARKDOWN, and JSON only where one has not been converted yet. The words are the part
+    // that gets rewritten, and rewriting a sentence inside JSON means minding quotes and escapes.
+    if (String(entry.file).endsWith('.md')) {
+      const res = await fetch(`demos/scripts/${entry.file}?t=${Date.now()}`);
+      if (!res.ok) throw new Error(`demo ${entry.file}: ${res.status}`);
+      return parseDemoMd(await res.text(), { id: entry.id });
+    }
     // Cache-busted: the whole point of Reload is to pick up an edit made a moment ago, and a cached
     // script would quietly serve the words you just changed.
     const res = await fetch(`demos/scripts/${entry.file}?t=${Date.now()}`);
@@ -1732,6 +1741,26 @@ async function boot() {
   rack.onRestoreWork = () => restoreWork();
   rack.onResetDefault = () => resetToDefault();
   rack.openDemoPanel = () => { cameFromTutorial = null; demoPanel.setMode('author'); demoPanel.setExitLabel('Close'); demoPanel.open(); };
+  // A HANDLE FOR AUTOMATED TESTING. A demo can only be started from the native menu, which a test
+  // harness attached over the debugging port cannot reach — so a whole class of bug (a script that
+  // runs but makes no sound) could only ever be reproduced by asking a person to press a menu item
+  // and describe what happened. This runs one by id, exactly as the panel does.
+  //
+  // Under `npm run dev` only, so a shipped app carries no such door.
+  if (window.wcoast && window.wcoast.isDev) {
+    window.__wcoast = {
+      runDemo: async (id) => {
+        const idx = await (await fetch('demos/scripts/index.json')).json();
+        const row = (idx.demos || []).find((d) => d.id === id);
+        if (!row) throw new Error(`no demo "${id}"`);
+        const raw = await (await fetch('demos/scripts/' + row.file + '?t=' + Date.now()));
+        const obj = row.file.endsWith('.md') ? parseDemoMd(await raw.text(), { id }) : await raw.json();
+        return runDemo(obj, row.title || id, { restoreAfter: false });
+      },
+      stopDemo: () => rack.demo.stop && rack.demo.stop(),
+      rack,
+    };
+  }
 
   window.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && rack.demo.running) { stopDemo('Escape key'); return; }

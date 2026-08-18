@@ -131,7 +131,10 @@
     /* The MENU BAR. A horizontal strip of menu titles that appears where it is summoned — from
        any module's title-bar hamburger — rather than living permanently across the top of the
        window. A menu bar's shape and reach, with none of the vertical space given up to it. */
-    .rack-menubar { position: fixed; z-index: 1305; display: flex; align-items: stretch;
+    /* ABOVE THE FLOATING WINDOWS, like the menus that drop from it — the bar is summoned at the
+       pointer and the Strudel editor is furniture that happens to be under it. The DOCKED bar sets
+       this back to auto below, because there it is part of the layout rather than over it. */
+    .rack-menubar { position: fixed; z-index: 4290; display: flex; align-items: stretch;
       background: var(--panel); border: 1px solid var(--line); border-radius: 7px;
  padding: 3px 5px; gap: 0.34em;
       font: 500 13px/1 -apple-system, system-ui, sans-serif; user-select: none; }
@@ -457,7 +460,9 @@
 
     /* ---- context menu ---- */
     .rack-menu {
-      position: fixed; z-index: 1400; min-width: 92px; max-height: 72vh; overflow-y: auto; font-size: 12px; line-height: 1.25;
+      /* ABOVE THE FLOATING WINDOWS. A menu is a momentary thing you opened on purpose; the Strudel
+         editor and the scopes are furniture that happens to be in the way, so the menu wins. */
+      position: fixed; z-index: 4300; min-width: 92px; max-height: 72vh; overflow-y: auto; font-size: 12px; line-height: 1.25;
       background: var(--panel); border: 1px solid var(--line); border-radius: 8px;
       padding: 3px;
     }
@@ -495,7 +500,7 @@
     .rack-menu-item:hover .rack-menu-arrow { color: var(--accent-ink); }
     .rack-menu-item.disabled { color: var(--ink-dim); opacity: 0.55; cursor: default; }
     .rack-menu-item.disabled:hover { background: none; color: var(--ink-dim); }
-    .rack-submenu { z-index: 1410; }
+    .rack-submenu { z-index: 4310; }
     .rack-menu { border-width: 1.5px; border-color: #141414; }            /* light mode: dark line to stand out */
     .rack-menu.theme-dark { border-color: #d2d2d6; }                       /* dark mode: light line */
     /* The bar wears the SAME outline as the menus that drop from it, so the two read as one

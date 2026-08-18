@@ -17,66 +17,73 @@
   <g transform="translate(3.9 7.0994)">
   <rect x="0" y="0" width="45.72" height="113.5912" rx="2.5" fill="#cfcfcf"/>
   <rect x="0.5" y="0.5" width="44.72" height="112.5912" rx="2.2" fill="none" stroke="#7d7d7d" stroke-width="0.5"/>
-  <g data-wcoast-param="edit"><circle cx="22.86" cy="21" r="6.10" fill="url(#metalDisc)" pointer-events="none" data-wcoast-role="button-metal"/><circle cx="22.86" cy="21" r="5.4" fill="#8a2424" stroke="#4a4a4a" stroke-width="0.2366" data-wcoast-role="step-indicator" data-wcoast-step="on" data-wcoast-off="#8a2424"/><circle cx="21.35" cy="19.49" r="1.62" fill="#ffb4b4" opacity="0.35" data-wcoast-role="led-gloss" pointer-events="none"/>
-      <text x="22.86" y="32.39632" font-size="6.106" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="edit">STRUDEL</text></g>
-  <g data-wcoast-param="run"><circle cx="22.86" cy="44" r="6.10" fill="url(#metalDisc)" pointer-events="none" data-wcoast-role="button-metal"/><circle cx="22.86" cy="44" r="5.4" fill="#505055" stroke="#4a4a4a" stroke-width="0.2366" data-wcoast-role="step-indicator" data-wcoast-step="on"/><circle cx="21.35" cy="42.49" r="1.62" fill="#ffb4b4" opacity="0" data-wcoast-role="led-gloss" pointer-events="none"/>
-      <text x="22.86" y="55.39632" font-size="6.106" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="run">PLAY</text></g>
-  <g data-wcoast-param="cps" data-wcoast-role="readout" data-wcoast-cx="22.86" data-wcoast-cy="64.00" data-wcoast-w="19.1">
-    <rect x="13.31" y="59.35" width="19.1" height="9.3" rx="1.2" fill="#15171c" stroke="#7d7d7d" stroke-width="0.3"/>
-    <text x="22.86" y="66.88" data-wcoast-role="readout-text" font-size="7.25" font-weight="700" fill="#4ee37a" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">0.50</text>
+  <g data-wcoast-param="edit"><circle cx="22.86" cy="18" r="6.10" fill="url(#metalDisc)" pointer-events="none" data-wcoast-role="button-metal"/><circle cx="22.86" cy="18" r="5.4" fill="#8a2424" stroke="#4a4a4a" stroke-width="0.2366" data-wcoast-role="step-indicator" data-wcoast-step="on" data-wcoast-off="#8a2424"/><circle cx="21.35" cy="16.49" r="1.62" fill="#ffb4b4" opacity="0.35" data-wcoast-role="led-gloss" pointer-events="none"/>
+      <text x="22.86" y="29.39632" font-size="6.106" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="edit">SCRIPT</text></g>
+  <g data-wcoast-param="run"><circle cx="22.86" cy="39" r="6.10" fill="url(#metalDisc)" pointer-events="none" data-wcoast-role="button-metal"/><circle cx="22.86" cy="39" r="5.4" fill="#505055" stroke="#4a4a4a" stroke-width="0.2366" data-wcoast-role="step-indicator" data-wcoast-step="on"/><circle cx="21.35" cy="37.49" r="1.62" fill="#ffb4b4" opacity="0" data-wcoast-role="led-gloss" pointer-events="none"/>
+      <text x="22.86" y="50.39632" font-size="6.106" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="run">PLAY</text></g>
+  <g data-wcoast-param="cps" data-wcoast-role="readout" data-wcoast-cx="22.86" data-wcoast-cy="60.00" data-wcoast-w="15.08">
+    <rect x="15.32" y="56.51" width="15.08" height="6.9750000000000005" rx="1.2" fill="#15171c" stroke="#7d7d7d" stroke-width="0.3"/>
+    <text x="22.86" y="62.16" data-wcoast-role="readout-text" font-size="5.44" font-weight="700" fill="#4ee37a" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">0.50</text>
     <g data-wcoast-role="readout-up">
-      <rect x="31.41" y="60.78" width="4.2" height="3.8" fill="none" pointer-events="all"/>
-      <path d="M 32.31 63.20 L 33.51 62.15 L 34.71 63.20" fill="none" stroke="#163a69" stroke-width="0.4" stroke-linecap="round" stroke-linejoin="round" opacity="0.75"/>
+      <rect x="29.40" y="56.78" width="4.2" height="3.8" fill="none" pointer-events="all"/>
+      <path d="M 30.30 59.20 L 31.50 58.15 L 32.70 59.20" fill="none" stroke="#163a69" stroke-width="0.4" stroke-linecap="round" stroke-linejoin="round" opacity="0.75"/>
     </g>
     <g data-wcoast-role="readout-down">
-      <rect x="31.41" y="63.43" width="4.2" height="3.8" fill="none" pointer-events="all"/>
-      <path d="M 32.31 64.80 L 33.51 65.85 L 34.71 64.80" fill="none" stroke="#163a69" stroke-width="0.4" stroke-linecap="round" stroke-linejoin="round" opacity="0.75"/>
+      <rect x="29.40" y="59.42" width="4.2" height="3.8" fill="none" pointer-events="all"/>
+      <path d="M 30.30 60.80 L 31.50 61.85 L 32.70 60.80" fill="none" stroke="#163a69" stroke-width="0.4" stroke-linecap="round" stroke-linejoin="round" opacity="0.75"/>
     </g>
-      <text x="22.86" y="74.64632" font-size="6.106" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="cps">CPS</text>
+      <text x="22.86" y="68.04382" font-size="4.106" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="cps">CPS</text>
   </g>
-  <g data-wcoast-param="status">
-    <circle cx="22.86" cy="78" r="2" fill="url(#redLed)" stroke="#7c0000" stroke-width="0.2366" data-wcoast-role="step-indicator" data-wcoast-step="error"/><circle cx="22.30" cy="77.44" r="0.60" fill="#ffb4b4" opacity="0.85" data-wcoast-role="led-gloss" pointer-events="none"/>
-      <text x="22.86" y="84.3" font-size="3.506" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">ERR</text>
+  <g data-wcoast-port="noteOut" data-wcoast-cx="7.859999999999999" data-wcoast-cy="76">
+    <circle cx="7.859999999999999" cy="76" r="3" fill="#8a8a8a" stroke="#000000" stroke-width="0.3"/>
+    <circle cx="7.859999999999999" cy="76" r="1.6" fill="#000000"/>
   </g>
-  <g data-wcoast-port="noteOut" data-wcoast-cx="7.859999999999999" data-wcoast-cy="91">
-    <circle cx="7.859999999999999" cy="91" r="3" fill="#8a8a8a" stroke="#000000" stroke-width="0.3"/>
-    <circle cx="7.859999999999999" cy="91" r="1.6" fill="#000000"/>
+  <text x="7.859999999999999" y="83.12432" font-size="3.506" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="noteOut">V1</text>
+  <g data-wcoast-port="noteOut2" data-wcoast-cx="17.86" data-wcoast-cy="76">
+    <circle cx="17.86" cy="76" r="3" fill="#8a8a8a" stroke="#000000" stroke-width="0.3"/>
+    <circle cx="17.86" cy="76" r="1.6" fill="#000000"/>
   </g>
-  <text x="7.859999999999999" y="98.12432" font-size="3.506" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="noteOut">V1</text>
-  <g data-wcoast-port="noteOut2" data-wcoast-cx="17.86" data-wcoast-cy="91">
-    <circle cx="17.86" cy="91" r="3" fill="#8a8a8a" stroke="#000000" stroke-width="0.3"/>
-    <circle cx="17.86" cy="91" r="1.6" fill="#000000"/>
+  <text x="17.86" y="83.12432" font-size="3.506" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="noteOut2">V2</text>
+  <g data-wcoast-port="noteOut3" data-wcoast-cx="27.86" data-wcoast-cy="76">
+    <circle cx="27.86" cy="76" r="3" fill="#8a8a8a" stroke="#000000" stroke-width="0.3"/>
+    <circle cx="27.86" cy="76" r="1.6" fill="#000000"/>
   </g>
-  <text x="17.86" y="98.12432" font-size="3.506" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="noteOut2">V2</text>
-  <g data-wcoast-port="noteOut3" data-wcoast-cx="27.86" data-wcoast-cy="91">
-    <circle cx="27.86" cy="91" r="3" fill="#8a8a8a" stroke="#000000" stroke-width="0.3"/>
-    <circle cx="27.86" cy="91" r="1.6" fill="#000000"/>
+  <text x="27.86" y="83.12432" font-size="3.506" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="noteOut3">V3</text>
+  <g data-wcoast-port="noteOut4" data-wcoast-cx="37.86" data-wcoast-cy="76">
+    <circle cx="37.86" cy="76" r="3" fill="#8a8a8a" stroke="#000000" stroke-width="0.3"/>
+    <circle cx="37.86" cy="76" r="1.6" fill="#000000"/>
   </g>
-  <text x="27.86" y="98.12432" font-size="3.506" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="noteOut3">V3</text>
-  <g data-wcoast-port="noteOut4" data-wcoast-cx="37.86" data-wcoast-cy="91">
-    <circle cx="37.86" cy="91" r="3" fill="#8a8a8a" stroke="#000000" stroke-width="0.3"/>
-    <circle cx="37.86" cy="91" r="1.6" fill="#000000"/>
+  <text x="37.86" y="83.12432" font-size="3.506" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="noteOut4">V4</text>
+  <g data-wcoast-port="noteOut5" data-wcoast-cx="7.859999999999999" data-wcoast-cy="89">
+    <circle cx="7.859999999999999" cy="89" r="3" fill="#8a8a8a" stroke="#000000" stroke-width="0.3"/>
+    <circle cx="7.859999999999999" cy="89" r="1.6" fill="#000000"/>
   </g>
-  <text x="37.86" y="98.12432" font-size="3.506" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="noteOut4">V4</text>
-  <g data-wcoast-port="noteOut5" data-wcoast-cx="7.859999999999999" data-wcoast-cy="102">
-    <circle cx="7.859999999999999" cy="102" r="3" fill="#8a8a8a" stroke="#000000" stroke-width="0.3"/>
-    <circle cx="7.859999999999999" cy="102" r="1.6" fill="#000000"/>
+  <text x="7.859999999999999" y="96.12432" font-size="3.506" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="noteOut5">V5</text>
+  <g data-wcoast-port="noteOut6" data-wcoast-cx="17.86" data-wcoast-cy="89">
+    <circle cx="17.86" cy="89" r="3" fill="#8a8a8a" stroke="#000000" stroke-width="0.3"/>
+    <circle cx="17.86" cy="89" r="1.6" fill="#000000"/>
   </g>
-  <text x="7.859999999999999" y="109.12432" font-size="3.506" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="noteOut5">V5</text>
-  <g data-wcoast-port="noteOut6" data-wcoast-cx="17.86" data-wcoast-cy="102">
-    <circle cx="17.86" cy="102" r="3" fill="#8a8a8a" stroke="#000000" stroke-width="0.3"/>
-    <circle cx="17.86" cy="102" r="1.6" fill="#000000"/>
+  <text x="17.86" y="96.12432" font-size="3.506" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="noteOut6">V6</text>
+  <g data-wcoast-port="noteOut7" data-wcoast-cx="27.86" data-wcoast-cy="89">
+    <circle cx="27.86" cy="89" r="3" fill="#8a8a8a" stroke="#000000" stroke-width="0.3"/>
+    <circle cx="27.86" cy="89" r="1.6" fill="#000000"/>
   </g>
-  <text x="17.86" y="109.12432" font-size="3.506" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="noteOut6">V6</text>
-  <g data-wcoast-port="noteOut7" data-wcoast-cx="27.86" data-wcoast-cy="102">
-    <circle cx="27.86" cy="102" r="3" fill="#8a8a8a" stroke="#000000" stroke-width="0.3"/>
-    <circle cx="27.86" cy="102" r="1.6" fill="#000000"/>
+  <text x="27.86" y="96.12432" font-size="3.506" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="noteOut7">V7</text>
+  <g data-wcoast-port="noteOut8" data-wcoast-cx="37.86" data-wcoast-cy="89">
+    <circle cx="37.86" cy="89" r="3" fill="#8a8a8a" stroke="#000000" stroke-width="0.3"/>
+    <circle cx="37.86" cy="89" r="1.6" fill="#000000"/>
   </g>
-  <text x="27.86" y="109.12432" font-size="3.506" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="noteOut7">V7</text>
-  <g data-wcoast-port="noteOut8" data-wcoast-cx="37.86" data-wcoast-cy="102">
-    <circle cx="37.86" cy="102" r="3" fill="#8a8a8a" stroke="#000000" stroke-width="0.3"/>
-    <circle cx="37.86" cy="102" r="1.6" fill="#000000"/>
+  <text x="37.86" y="96.12432" font-size="3.506" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="noteOut8">V8</text>
+  <g data-wcoast-port="audioOutL" data-wcoast-cx="17.36" data-wcoast-cy="101">
+    <circle cx="17.36" cy="101" r="3" fill="#8a8a8a" stroke="#000000" stroke-width="0.3"/>
+    <circle cx="17.36" cy="101" r="1.6" fill="#000000"/>
   </g>
-  <text x="37.86" y="109.12432" font-size="3.506" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="noteOut8">V8</text>
+  <text x="12.76" y="102.33416" font-size="3.706" font-weight="700" font-style="italic" fill="#163a69" text-anchor="end" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="audioOutL">L</text>
+  <g data-wcoast-port="audioOutR" data-wcoast-cx="28.36" data-wcoast-cy="101">
+    <circle cx="28.36" cy="101" r="3" fill="#8a8a8a" stroke="#000000" stroke-width="0.3"/>
+    <circle cx="28.36" cy="101" r="1.6" fill="#000000"/>
+  </g>
+  <text x="32.96" y="102.33416" font-size="3.706" font-weight="700" font-style="italic" fill="#163a69" text-anchor="start" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="audioOutR">R</text>
+  <text x="22.86" y="108.9" font-size="3.206" font-weight="700" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">SUPERDOUGH</text>
   </g>
 </svg>

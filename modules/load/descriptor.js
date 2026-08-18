@@ -31,7 +31,7 @@ const params = [
     modulatable: false, readOnly: true },
   // AND WHETHER IT ACTUALLY BROKE. An underrun is the audible event — the block that did not finish in
   // time — so it gets a lamp rather than a number, and it stays lit long enough to be seen.
-  { id: 'under', name: 'Underrun', section: 'meter', curve: 'stepped', default: 'off',
+  { id: 'under', name: 'Glitch', section: 'meter', curve: 'stepped', default: 'off',
     modulatable: false, readOnly: true, steps: [{ value: 'off' }, { value: 'on' }] },
 ];
 
