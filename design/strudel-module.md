@@ -58,17 +58,26 @@ transport already has, and the duration is the failsafe that ends a note whose o
 
 ## 3. The module
 
-**NOTE out** — one cable to a voice tab and the pattern is playing the rack.
+**V1 to V8** — eight note outs. A pattern names one with `.rack(n)`; the cable from that jack decides
+which voice tab plays that part. One jack, one tab; the tab's own polyphony handles the notes that
+overlap inside it.
 
-**CLOCK out** — a trigger derived from `cps`, so the rack's own clocks, envelopes and arpeggios lock to
-the pattern's tempo rather than free-running against it.
+**SD L / SD R** — Strudel's own voices, as audio. superdough wires itself to the speakers, which would
+put its drums outside the rack — past the master fader, past the mutes, past the engine switch — so its
+output stage is taken at load and offered here instead, to be mixed like anything else. A pair, because
+what arrives is stereo.
 
-**CODE** — a button opening the editor window.
+**SCRIPT** — a button opening the editor window.
 
-**PLAY / STOP**, and a lamp that goes red when a pattern does not evaluate. An error in a live-coded
-pattern is a normal event, not a crash, and the face should say so without the window open.
+**PLAY**, the transport, with the same switch in the editor's own title bar so a pattern can be started
+and stopped without leaving the words.
 
-**A cps readout**, because the tempo is set in the code and you want to see it on the rack.
+**A cps readout**, because the tempo is set in the code and you want to see it on the rack. It steps in
+hundredths, and turning it sets the running pattern.
+
+**No error lamp.** There was one; it reported that the last evaluation had failed, which the editor
+already says where the mistake is. On a panel carrying ten jacks that was a jack's worth of room for
+something nobody looks at.
 
 The window carries the editor and nothing else: the transport is on the faceplate, where the rack's own
 controls are.
