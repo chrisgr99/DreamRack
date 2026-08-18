@@ -28,8 +28,8 @@ Twenty-nine modules ship:
 
 - **Sources** — Complex Oscillator, VCO, Macro Oscillator 2, Sine Source, Noise
 - **Shaping** — Quad Low Pass Gate, Filter, VCA, Quad Function Generator, ADSR, Delay, Octave
-- **Timing and sequencing** — drClckd, Sequencer / Programmer Eight, Random Sampler
-- **Voices** — Sequence Out, Voice In, Poly to Stereo, Strudel
+- **Timing and sequencing** — drClckd, Sequencer / Programmer Eight, Random Sampler, Strudel
+- **Voices** — Sequence Out, Voice In, Poly to Stereo
 - **Video** — Coordinate Field, Shapes, Formula, Video Maths, Compositor, Time, Video Output
 - **Utility** — Control Gallery, Load, Mixer / Output
 
