@@ -892,7 +892,18 @@ export class Rack {
   // rebuilt from the code and appended, so a patch written before they existed, or one hand-edited
   // into nonsense, still arrives with them present and in the right order.
   // Called when a patch has finished loading: everything is in place, so the names can be derived.
-  afterRestore() { this._autoNamePages(); this._drawPageStubs(); this._drawAllPerNote(); }
+  afterRestore() {
+    this._autoNamePages(); this._drawPageStubs(); this._drawAllPerNote();
+    // STAND WHERE THE PATCH IS. The selected tab belongs to the session, not to the file, so opening a
+    // patch used to leave you on whatever tab you were last on — and if that was a video tab the file
+    // does not use, the rack came up empty and looked broken. Move to the first page that actually
+    // holds something, in tab order, unless the page already showing does.
+    const holds = (id) => [...this.records.values()].some((r) => !r.pinned && this.pageOf(r) === id);
+    if (!holds(this.page)) {
+      const first = (this.pages || []).find((pg) => holds(pg.id));
+      if (first && first.id !== this.page) this.selectPage(first.id);
+    }
+  }
 
   restorePages(saved) {
     const audio = (Array.isArray(saved) ? saved : [])
@@ -11370,17 +11381,19 @@ export class Rack {
 
   // The Help submenu items (used by the main menu): doc links opened in the browser.
   helpMenuItems() {
-    const feedback = [
-      ...(this.onFeedback ? [{ label: 'Send feedback…', action: () => this.onFeedback() }] : []),
-      ...(this.onReportBug ? [{ label: 'Report a bug…', action: () => this.onReportBug() }] : []),
-    ];
+    // NO "SEND FEEDBACK" HERE. It opened a GitHub discussion, which asks for an account and a public
+    // post before anyone can say a sentence; email would need a service to receive it, and a route
+    // nobody reads is worse than no route. A bug still goes to GitHub, where it wants a thread anyway.
+    // General comment goes to the forum or the video it was announced on.
+    //
+    // AND IT SITS IN HELP DIRECTLY. A submenu holding one item is a door in front of a door.
     return [
       { label: 'README', action: () => this._openExternal(DOCS_README_URL) },
       ...(this.onTutorial ? [{ label: 'Tutorial', action: () => this.onTutorial() }] : []),
       // WITH THE TUTORIAL, NOT IN DEVELOPER. A demo is how the app explains itself, which is what
       // Help is for; the authoring transport it opens is a detail of how it happens to run.
       ...(this.openDemoPanel ? [{ label: 'Demos…', action: () => this.openDemoPanel() }] : []),
-      ...(feedback.length ? [{ separator: true }, { label: 'Feedback', submenu: feedback }] : []),
+      ...(this.onReportBug ? [{ separator: true }, { label: 'Report a bug…', action: () => this.onReportBug() }] : []),
       ...(this.onAbout ? [{ separator: true }, { label: 'About DreamRack', action: () => this.onAbout() }] : []),
     ];
   }

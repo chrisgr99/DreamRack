@@ -906,7 +906,9 @@ export function createDemoRunner(rack, opts = {}) {
   }
 
   async function run(obj) {
-    if (running) return;
+    // A RUN THAT IS REFUSED SAYS SO. Silently returning is how two demos came to look like one bug:
+    // the second press did nothing, the first was still going, and what was heard was the two of them.
+    if (running) { console.warn('[demo] a run is already going; this one was refused'); return; }
     if (obj) load(obj);
     if (!demo) return;
     running = true; cancelled = false;
@@ -924,6 +926,10 @@ export function createDemoRunner(rack, opts = {}) {
       duckBase = null; ducked = false;   // this run's full level, read at its first line
       ensureSound();   // before the first step, so a script that opens playing is audible at once
       theatre.begin(true, true);   // and from the middle of the window, not wherever the last run ended
+      // NOTHING FROM BEFORE IS STILL TALKING. A line cut off by a stop, a note being read aloud from
+      // the panel, a run that ended while its last sentence was still playing — any of them would be
+      // heard under the first line of this one. The speech is stopped before the voice is enabled.
+      stopSpeech();
       voice.setEnabled(true);
       if (voice.reload) voice.reload();   // pick up anything rendered since the app started
       // A BEAT BEFORE ANYTHING HAPPENS. The tutorial has just vanished and the rack has just been set
@@ -1019,7 +1025,19 @@ export function createDemoRunner(rack, opts = {}) {
   // the engine is still on, so the drone it started carries on into whatever the reader does next —
   // and a reader who has just watched a demo may have no idea which of those controls is holding the
   // sound up. Stepping back through the demo turns it on again; this is only about walking away.
-  function silence() { if (rack.engineOn && rack.engineOn()) rack.toggleEngine(); }
+  // SILENCE MEANS NOTHING IS STILL GOING, not merely that the engine is off. A module with a
+  // transport of its own — Strudel is the one so far — goes on running when the engine is switched
+  // off: inaudible, and playing again the instant anything turns the engine back on. So a run that
+  // ends or is stopped puts those transports back to off as well.
+  function silence() {
+    for (const rec of rack.records.values()) {
+      try {
+        if (rec.values && rec.values.get('run') === 'on' && rec.instance && rec.instance.supports
+            && rec.instance.supports('run')) rack.applyParam(rec, 'run', 'off');
+      } catch (_e) { /* a record mid-teardown; nothing to stop */ }
+    }
+    if (rack.engineOn && rack.engineOn()) rack.toggleEngine();
+  }
 
   // WHO STOPPED IT. A run that ends early is indistinguishable from one that finished unless the
   // stop says where it came from — and there are six ways to stop a demo, one of which is a stray
