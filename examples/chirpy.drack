@@ -1,0 +1,398 @@
+{
+ "format": "wcoast-patch",
+ "version": "0.1",
+ "app": "DreamRack",
+ "appVersion": "0.1",
+ "rack": {
+  "rows": 2
+ },
+ "pages": [
+  {
+   "id": "a1",
+   "name": "SEQ 1",
+   "stops": [
+    15.24,
+    0
+   ]
+  },
+  {
+   "id": "a2",
+   "name": "Voice 1",
+   "stops": [
+    116.84,
+    81.28
+   ]
+  }
+ ],
+ "mixerPos": {
+  "row": 1,
+  "x": 0
+ },
+ "modules": [
+  {
+   "id": "m36",
+   "type": "wcoast.clock",
+   "row": 0,
+   "x": 15.24
+  },
+  {
+   "id": "m37",
+   "type": "wcoast.quadFn281t",
+   "row": 0,
+   "x": 91.44
+  },
+  {
+   "id": "m38",
+   "type": "wcoast.sequencer",
+   "row": 0,
+   "x": 186.44
+  },
+  {
+   "id": "m39",
+   "type": "wcoast.voice",
+   "row": 0,
+   "x": 116.84,
+   "page": "a2"
+  },
+  {
+   "id": "m40",
+   "type": "model-voice",
+   "row": 0,
+   "x": 162.56,
+   "page": "a2"
+  },
+  {
+   "id": "m41",
+   "type": "wcoast.note-amp",
+   "row": 0,
+   "x": 233.68,
+   "page": "a2"
+  }
+ ],
+ "wiring": [
+  {
+   "from": {
+    "module": "m37",
+    "port": "fnA"
+   },
+   "to": {
+    "module": "m38",
+    "port": "pitchIn"
+   },
+   "bow": {
+    "along": 0.5797832986383602,
+    "perp": -0.10944762573160105
+   }
+  },
+  {
+   "from": {
+    "module": "m39",
+    "port": "gateOut"
+   },
+   "to": {
+    "module": "m40",
+    "port": "trigIn"
+   }
+  },
+  {
+   "from": {
+    "module": "m39",
+    "port": "pitchOut"
+   },
+   "to": {
+    "module": "m40",
+    "port": "pitchIn"
+   }
+  },
+  {
+   "from": {
+    "module": "m39",
+    "port": "bendOut"
+   },
+   "to": {
+    "module": "m40",
+    "port": "fmCv"
+   }
+  },
+  {
+   "from": {
+    "module": "m38",
+    "port": "noteOut"
+   },
+   "to": {
+    "module": "m39",
+    "port": "noteIn"
+   }
+  },
+  {
+   "from": {
+    "module": "m36",
+    "port": "clk1Out"
+   },
+   "to": {
+    "module": "m38",
+    "port": "gateIn"
+   }
+  },
+  {
+   "from": {
+    "module": "m39",
+    "port": "levelOut"
+   },
+   "to": {
+    "module": "m40",
+    "port": "levelIn"
+   }
+  },
+  {
+   "from": {
+    "module": "m37",
+    "port": "fnA"
+   },
+   "to": {
+    "module": "m38",
+    "port": "levelIn"
+   },
+   "bow": {
+    "along": 0.45862102265291477,
+    "perp": 9.330185108804764
+   }
+  },
+  {
+   "from": {
+    "module": "m37",
+    "port": "fnA"
+   },
+   "to": {
+    "module": "m38",
+    "port": "panIn"
+   },
+   "bow": {
+    "along": 0.5262502326559458,
+    "perp": 16.308964747618717
+   }
+  },
+  {
+   "from": {
+    "module": "m39",
+    "port": "panOut"
+   },
+   "to": {
+    "module": "m41",
+    "port": "panCv"
+   }
+  },
+  {
+   "from": {
+    "module": "m41",
+    "port": "outL"
+   },
+   "to": {
+    "module": "mixer",
+    "port": "chanA"
+   }
+  },
+  {
+   "from": {
+    "module": "m41",
+    "port": "outR"
+   },
+   "to": {
+    "module": "mixer",
+    "port": "chanB"
+   }
+  },
+  {
+   "from": {
+    "module": "m40",
+    "port": "out"
+   },
+   "to": {
+    "module": "m41",
+    "port": "audioIn"
+   }
+  }
+ ],
+ "settings": {
+  "params": {
+   "m36": {
+    "bpm": 218,
+    "ratio1": 0,
+    "ratio2": 0,
+    "ratio3": -2,
+    "swing": 0,
+    "swing1": 0.5062124519761049,
+    "swing2": 0,
+    "swing3": 0,
+    "pw": 0.5,
+    "pw1": 0.7977605270716623,
+    "pw2": 0.5,
+    "pw3": 0.5,
+    "delay1": 0,
+    "delay2": 0,
+    "delay3": 0,
+    "run": "on",
+    "reset": "off",
+    "bpmMode": "cv",
+    "lamp": "off",
+    "lamp1": "off",
+    "lamp2": "off",
+    "lamp3": "off",
+    "ppqn": 1
+   },
+   "m37": {
+    "attackA": 0.330768139173491,
+    "decayA": 0.04000261851958253,
+    "trigBtnA": "off",
+    "modeA": "cyclic",
+    "attackDepthA": 1,
+    "decayDepthA": 1,
+    "attackB": 0.36613880796725734,
+    "decayB": 0.1699995949579956,
+    "trigBtnB": "off",
+    "modeB": "cyclic",
+    "attackDepthB": 1,
+    "decayDepthB": 1,
+    "attackC": 2.7511261862163923,
+    "decayC": 0.2,
+    "trigBtnC": "off",
+    "modeC": "cyclic",
+    "attackDepthC": 1,
+    "decayDepthC": 1,
+    "attackD": 0.05,
+    "decayD": 0.2,
+    "trigBtnD": "off",
+    "modeD": "transient",
+    "attackDepthD": 1,
+    "decayDepthD": 1,
+    "quadTimeAB": 0.8139938916593531,
+    "quadTimeCD": 0.5,
+    "quadEnAB": "off",
+    "quadEnCD": "off"
+   },
+   "m38": {
+    "ends": "hold",
+    "level": 0.439686902334006,
+    "duration": 0.038265872749936126,
+    "pan": -0.5230854826220086,
+    "bendRange": 6
+   },
+   "m39": {
+    "poly": 4,
+    "rollover": "ignore",
+    "time": 0.0050541233913298025
+   },
+   "m40": {
+    "model": "grain",
+    "freq": 59.5100821955524,
+    "fmDepth": -0.5416382367525666,
+    "harmonics": 0.7320567880329875,
+    "harmonicsDepth": 0,
+    "timbre": 0.7200529255529463,
+    "timbreDepth": 0,
+    "morph": 0.5760725745780035,
+    "morphDepth": 0,
+    "decay": 0.8378377043816259,
+    "colour": 0.8068155006322203
+   },
+   "m41": {
+    "levelA": 0.5758953967276297,
+    "levelADepth": 1,
+    "levelB": 1,
+    "levelBDepth": 1,
+    "pan": -0.4576025432588334,
+    "panDepth": 1
+   },
+   "mixer": {
+    "levelA": 0.4881763688295961,
+    "panA": -1,
+    "muteA": "on",
+    "send1A": 0,
+    "send2A": 0,
+    "levelB": 0.467166351895409,
+    "panB": 1,
+    "muteB": "on",
+    "send1B": 0,
+    "send2B": 0,
+    "levelC": 0.5009592206905935,
+    "panC": -1,
+    "muteC": "on",
+    "send1C": 0,
+    "send2C": 0,
+    "levelD": 0.507640206965356,
+    "panD": 1,
+    "muteD": "on",
+    "send1D": 0,
+    "send2D": 0,
+    "levelE": 0.5,
+    "panE": -1,
+    "muteE": "off",
+    "send1E": 0,
+    "send2E": 0,
+    "levelF": 0.5,
+    "panF": 1,
+    "muteF": "off",
+    "send1F": 0,
+    "send2F": 0,
+    "levelG": 0.29,
+    "panG": 0,
+    "muteG": "on",
+    "send1G": 0,
+    "send2G": 0,
+    "levelH": 0.29,
+    "panH": 0,
+    "muteH": "on",
+    "send1H": 0,
+    "send2H": 0,
+    "levelI": 0.29,
+    "panI": 0,
+    "muteI": "on",
+    "send1I": 0,
+    "send2I": 0,
+    "levelJ": 0.29,
+    "panJ": 0,
+    "muteJ": "on",
+    "send1J": 0,
+    "send2J": 0,
+    "master": 0.2611793935637585,
+    "monitorLevel": 0.29,
+    "panMaster": 0,
+    "panDepthA": 1,
+    "send1DepthA": 1,
+    "send2DepthA": 1,
+    "panDepthB": 1,
+    "send1DepthB": 1,
+    "send2DepthB": 1,
+    "panDepthC": 1,
+    "send1DepthC": 1,
+    "send2DepthC": 1,
+    "panDepthD": 1,
+    "send1DepthD": 1,
+    "send2DepthD": 1,
+    "panDepthE": 1,
+    "send1DepthE": 1,
+    "send2DepthE": 1,
+    "panDepthF": 1,
+    "send1DepthF": 1,
+    "send2DepthF": 1,
+    "panDepthG": 1,
+    "send1DepthG": 1,
+    "send2DepthG": 1,
+    "panDepthH": 1,
+    "send1DepthH": 1,
+    "send2DepthH": 1,
+    "panDepthI": 1,
+    "send1DepthI": 1,
+    "send2DepthI": 1,
+    "panDepthJ": 1,
+    "send1DepthJ": 1,
+    "send2DepthJ": 1,
+    "panDepthMaster": 1,
+    "panMonitor": 0,
+    "panDepthMonitor": 1,
+    "av.panA": "off"
+   }
+  }
+ },
+ "probes": []
+}

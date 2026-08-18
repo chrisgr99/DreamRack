@@ -16,7 +16,11 @@
     "file": "modulate-complex-oscillator.drack"
   },
   {
-    "name": "Strudel \u2014 two voices",
+    "name": "Strudel \u2014 two voices and drums",
     "file": "strudel-two-voices.drack"
+  },
+  {
+    "name": "Chirpy \u2014 a function generator as sequencer",
+    "file": "chirpy.drack"
   }
 ]
