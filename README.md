@@ -10,9 +10,11 @@ More than that, it's an exploration. It began as an attempt to build the modular
 
 **A tab can be a voice.** The rack splits into tabs, and a tab is not just somewhere to put modules — it can be an instrument. Drop a **Voice In** module on a tab and that tab becomes a voice; set its POLYPHONY knob to eight and the whole tab runs eight times over, one copy per sounding note, wired exactly as you wired it once. Every module on the tab says whether it is *per note* or *shared*, so an oscillator becomes eight oscillators while the reverb next to it stays one. A single cable carries a whole note between tabs — pitch, velocity, length, position, and how the note moves while it sounds — so the tab that plays the notes and the tab that makes the sound stay separate things.
 
+**Live coding, patched into the rack.** DreamRack imports Strudel — the whole language, as a JavaScript package — and gives it a module. A pattern's parts leave by eight note outputs, `.rack(1)` to `.rack(8)`, each carrying a whole polyphonic voice down one cable to a voice tab; a part that names a sound instead plays Strudel's own voices, which come out of the module as ordinary audio to be mixed with everything else. The editor is Strudel's own, in a window you open from the faceplate, with the playing notes lit as they sound.
+
 **Video and audio in the same rack.** Video is a full second signal family here, with its own modules, its own cable colours and its own rules about what may plug into what: control voltage may drive a video parameter, an image may not be summed into an audio input. Build a shape, move it with the same envelopes and clocks driving your sound, and watch it on a Video Output module in the rack.
 
-**Instruments, not guesswork.** Listen at any terminal without unplugging anything. Clip a scope onto any jack — as many as you like at once — and drag it beside the knob that's shaping it to watch the trace as you turn. Read the frequency, the maximum and minimum, and the DC offset at any point. Ask what feeds a module, what it feeds, and what shapes any one signal, and see just that chain lit up.
+**Instruments, not guesswork.** Listen at any terminal without unplugging anything. Clip a scope onto any jack — as many as you like at once — and drag it beside the knob that's shaping it to watch the trace as you turn. Read the frequency, the maximum and minimum, and the DC offset at any point. Ask what feeds a module, what it feeds, and what shapes any one signal, and see just that chain lit up. And know what the rack is costing: a Load module reads the audio thread as a percentage of one core — the ceiling that matters, since that thread cannot spread across the others — with the worst block in the last window and a lamp for anything actually dropped.
 
 **The knAck.** A control you turn *and* plug a cable straight into, so a parameter and its CV input share one spot instead of costing a knob and a jack. Each can carry an attenuverter — switched on per knob — to set how far, and in which direction, the plugged signal moves it.
 
@@ -22,14 +24,14 @@ More than that, it's an exploration. It began as an attempt to build the modular
 
 ## What's in it today
 
-Twenty-seven modules ship:
+Twenty-nine modules ship:
 
 - **Sources** — Complex Oscillator, VCO, Macro Oscillator 2, Sine Source, Noise
 - **Shaping** — Quad Low Pass Gate, Filter, VCA, Quad Function Generator, ADSR, Delay, Octave
 - **Timing and sequencing** — drClckd, Sequencer / Programmer Eight, Random Sampler
-- **Voices** — Sequence Out, Voice In, Poly to Stereo
+- **Voices** — Sequence Out, Voice In, Poly to Stereo, Strudel
 - **Video** — Coordinate Field, Shapes, Formula, Video Maths, Compositor, Time, Video Output
-- **Utility** — Control Gallery, Mixer / Output
+- **Utility** — Control Gallery, Load, Mixer / Output
 
 They lean West Coast — Buchla- and Serge-flavoured — which is where my own interest lies and where the earliest work went. Nothing in the architecture ties DreamRack to that style: modules of any kind drop in as plug-ins, with or without a hardware ancestor. Many more are planned, and suggestions are welcome.
 
@@ -71,9 +73,10 @@ Everything works the same in light and dark, and the rack remembers where you le
 - **Know the numbers at any terminal** — frequency, maximum and minimum, DC offset. *(done)*
 - **See what affects what** — what feeds a module, what it feeds, and the whole chain shaping any one point. *(done)*
 - **Let any developer create new modules, and anyone snap them into their rack.** *(done)*
-- **Explore how AI might help understand and create patches** — describing what a patch does, suggesting changes, or building one from a request. *(partly done — the rack is readable and writable; the assistant side is early)*
+- **Live coding inside the rack** — a pattern language driving the voices, and its own voices mixed beside them. *(done — see the Strudel note above)*
+- **Explore how AI might help understand and create patches** — describing what a patch does, suggesting changes, or building one from a request. *(done — the rack is readable and writable, and an assistant can hand a patch back for you to approve)*
 - **Inject a signal into any jack** without disturbing the patch cables — a button to fire a trigger, a toggle to hold a gate, or a simple sine or square wave. *(TBD)*
-- **Take input from outside** — an interface module that receives events from other sequencers and hosts and converts them into DreamRack notes to play. *(TBD)*
+- **Take input from outside** — an interface module that receives events from other sequencers and hosts and converts them into DreamRack notes to play. *(partly done — Strudel plays the rack from inside it; a socket for outside senders is still to come)*
 
 ## Current state
 
