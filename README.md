@@ -2,7 +2,7 @@
 
 DreamRack is a modular synthesizer that runs in a web browser, built on Web Audio. You place modules on a rack, wire their jacks with virtual cables, turn the knobs, and listen — the feel of a hardware modular, with a few things a screen can do that hardware can't.
 
-More than that, it's an exploration. It began as an attempt to build the modular I've always wished I could patch on, and to try out ideas for making one easier to use and more powerful. It's a personal project: free software, source on GitHub under the GNU General Public License v3, and shared in the hope that others enjoy it as much as I do. Your mileage may vary. 😌
+More than that, it's an exploration. It began as an attempt to build the modular I've always wished I could patch on, and to try out ideas for making one easier to use and more powerful. It's a personal project: free software, source on GitHub under the GNU Affero General Public License v3, and shared in the hope that others enjoy it as much as I do. Your mileage may vary. 😌
 
 <!-- A picture of the rack belongs here — one wide screenshot with a patch on it, light mode. -->
 
