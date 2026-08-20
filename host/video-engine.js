@@ -641,6 +641,22 @@ export class VideoEngine {
 
   windowOpen() { return !!(this._win || this._pane); }
 
+  // MOVE AND RESIZE THE IN-APP PANE from outside. A demo needs the picture in two places — filling
+  // the window to open on, then a large monitor beside the rack while the patch is built — and
+  // dragging its title bar is not something a script should have to mime. No effect on a real
+  // Picture-in-Picture window, which belongs to the OS and is the user's to place.
+  setPaneBox(box) {
+    if (!this._pane || !box) return false;
+    const d = this._pane;
+    d.style.left = Math.round(box.x) + 'px';
+    d.style.top = Math.round(box.y) + 'px';
+    d.style.right = 'auto'; d.style.bottom = 'auto';
+    d.style.width = Math.round(box.w) + 'px';
+    d.style.height = Math.round(box.h) + 'px';
+    return true;
+  }
+  paneOpen() { return !!this._pane; }
+
   // ---- the pointer follower ----
   //
   // A small live picture that tracks the cursor. It exists for SCREEN MAGNIFICATION: magnified,

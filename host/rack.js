@@ -3330,10 +3330,53 @@ export class Rack {
       if (!a) continue;
       const patched = this.patchbay.list().some((e) => (e.dst.key === b.rec.key && e.dst.portId === b.port)
         || (e.src.key === b.rec.key && e.src.portId === b.port));
+      // HIT AREA JUST OFF THE DISC, not twice it. At NOTE_BTN_PX the pad reached eleven pixels from
+      // the centre — well past anything drawn — and hung over the rack below, where it sat on top of
+      // whichever module's title bar happened to be under it and swallowed the press that would have
+      // picked that module up. A few pixels of slop is aim; the rest was a trap.
       out.push({ ...b, portId: b.port, x: a.x, y: a.y,
-        r: NOTE_BTN_PX / 2, hitR: NOTE_BTN_PX, patched });
+        r: NOTE_BTN_PX / 2, hitR: NOTE_BTN_PX / 2 + 3, patched });
     }
     return out;
+  }
+
+  // Press and hold on an empty tab-bar button, and the module underneath comes up in your hand — the
+  // same one-second hold, the same slop, and the same carry as a press on the module's own title bar,
+  // so there is one gesture rather than two that look alike. A shorter press does nothing here and
+  // leaves the button's own click alone.
+  _passHoldToModule(pad) {
+    const HOLD_MS = 1000, SLOP_PX = 4;
+    pad.addEventListener('pointerdown', (e) => {
+      if (e.button !== 0) return;
+      const sx = e.clientX, sy = e.clientY;
+      let at = { x: sx, y: sy }, timer = 0;
+      const stop = () => {
+        clearTimeout(timer); timer = 0;
+        document.removeEventListener('pointermove', onMove, true);
+        document.removeEventListener('pointerup', stop, true);
+        document.removeEventListener('pointercancel', stop, true);
+      };
+      const onMove = (ev) => {
+        at = { x: ev.clientX, y: ev.clientY };
+        if (Math.hypot(ev.clientX - sx, ev.clientY - sy) > SLOP_PX) stop();
+      };
+      timer = setTimeout(() => {
+        stop();
+        // The button straddles the tab's lower edge, so the press itself often lands just ABOVE the
+        // module — a few pixels into the bar rather than into the title strip. Look down as well as
+        // at the point pressed, since what the hold means is "the module under my finger", and the
+        // finger is on a socket drawn half over the rack.
+        const rec = this._moduleAt(at.x, at.y) || this._moduleAt(at.x, at.y + 10) || this._moduleAt(at.x, at.y + 20);
+        if (!rec || this._carryingModule) return;
+        const r = rec.el.getBoundingClientRect();
+        const sz = this.pxPerMm * this.zoom;
+        this._carryModule({ rec, atX: at.x, atY: at.y,
+          offFrac: { x: (at.x - r.left) / (rec.panelWmm * sz), y: (at.y - r.top) / (PANEL_H_MM * sz) } });
+      }, HOLD_MS);
+      document.addEventListener('pointermove', onMove, true);
+      document.addEventListener('pointerup', stop, true);
+      document.addEventListener('pointercancel', stop, true);
+    });
   }
 
   // WHERE THE NOTE PORT SITS, and therefore where its cable must land. One place, read by the button
@@ -3367,6 +3410,12 @@ export class Rack {
       const pad = document.createElementNS(SVG_NS, 'circle');
       pad.setAttribute('cx', r2(b.x)); pad.setAttribute('cy', r2(b.y)); pad.setAttribute('r', r2(b.hitR));
       pad.setAttribute('fill', 'transparent');
+      // AN EMPTY BUTTON GETS OUT OF THE WAY of a module being picked up. Press and hold is the rack's
+      // gesture for taking a module in hand, and a socket with nothing in it has nothing to offer that
+      // gesture — so the hold is passed to whatever module lies under the press. A CLICK still belongs
+      // to the button, which is how a cord is dropped into it, and a button with a cable in it keeps
+      // both: pulling that cord out is worth more than reaching a title bar behind it.
+      if (!b.patched) this._passHoldToModule(pad);
       svg.appendChild(pad);
 
       const disc = document.createElementNS(SVG_NS, 'circle');
@@ -3417,13 +3466,15 @@ export class Rack {
       const a = this._stubAnchor(page, i);
       if (!a) return null;
       const live = patched.has(c.portId);
-      // THE HIT AREA IS THE BUTTON'S WIDTH AS A RADIUS — twice the button, and the same for an empty
-      // input as for a patched one, so a small placeholder is no harder to reach for being drawn
-      // small. It was the button's own radius, which is three millimetres across on a bar you are
-      // aiming at while carrying a cable: miss it and you land on the tab (which changes page) or on
-      // the module beside it. The target is now the one thing on that bar you can afford to be sloppy
-      // about, because everything around it does something you did not ask for.
-      return { ...c, x: a.x, y: a.y, live, r: (live ? MIXER_BTN_PX : MIXER_DOT_PX) / 2, hitR: MIXER_BTN_PX };
+      // THE HIT AREA IS THE BUTTON PLUS A LITTLE, and the same for an empty input as for a patched
+      // one, so a small placeholder is no harder to reach for being drawn small. It began as the
+      // button's own radius, which is three millimetres across on a bar you are aiming at while
+      // carrying a cable; it then became twice the button, which reached so far past the ink that it
+      // hung over the rack below and swallowed presses meant for whichever module's title bar sat
+      // under it — the Grid module in a video patch could not be picked up at all. A few pixels of
+      // slop is aim. The rest was a trap.
+      const r = (live ? MIXER_BTN_PX : MIXER_DOT_PX) / 2;
+      return { ...c, x: a.x, y: a.y, live, r, hitR: r + 3 };
     }).filter(Boolean);
   }
 
@@ -3448,6 +3499,13 @@ export class Rack {
       pad.setAttribute('fill', 'transparent');
       pad.style.pointerEvents = 'auto';
       pad.style.cursor = 'pointer';
+      // AN EMPTY CHANNEL GETS OUT OF THE WAY of a module being picked up. Press and hold is the rack's
+      // gesture for taking a module in hand, and a placeholder with nothing patched into it has
+      // nothing to offer that gesture — so the hold passes to whatever module lies under the press. A
+      // CLICK still belongs to the button, which is how a cord is dropped into it and how the channel
+      // is toggled; and a channel with a cable in it keeps the whole area, because reaching its level
+      // is worth more than reaching a title bar behind it.
+      if (!b.live) this._passHoldToModule(pad);
       // ONE ACT, SHARED BY BOTH — rather than a synthetic event aimed at the circle, which would have
       // arrived as a click at a handler that only listens for a press. A CLICK TOGGLES, and that is all
       // a button ever does: a cable is never pulled OFF it, only off the stub hanging below it, which
@@ -7275,6 +7333,86 @@ export class Rack {
       if (spot) return { x: spot.x, y: spot.y, w, h: h - 22 };
     }
     return null;
+  }
+
+  // WHERE THE PICTURE STANDS DURING A DEMO. Two places, and they are the whole vocabulary: FULL, to
+  // open on — the image filling the window, which is what a reel has to lead with if anyone is to
+  // watch the rest of it — and RIGHT, a large monitor in the empty half of the video page, where it
+  // stays visible while the patch is built in front of it. Until now a recorded demo showed the
+  // 20 mm preview on the module face and nothing else, which is the picture at the size of a stamp.
+  //
+  // Geometry only. Opening the pane is the module's own `window` parameter, so a demo turns the
+  // picture on the way a reader does and the module's lamp stays honest.
+  // BLACK, NOW. Raised before anything else happens, so the rack a reel opens on is never seen: the
+  // pane takes a moment to exist and videoStage cannot run until it does, which left half a second
+  // of the finished patch — the very thing the demo is about to build — on screen.
+  videoBackdrop(on) {
+    this._videoBackdrop = this._videoBackdrop || (() => {
+      const d = document.createElement('div');
+      d.className = 'video-stage-backdrop';
+      d.style.cssText = 'position:fixed;inset:0;background:#000;z-index:1399;display:none;pointer-events:none';
+      document.body.appendChild(d);
+      return d;
+    })();
+    this._videoBackdrop.style.display = on ? 'block' : 'none';
+    return true;
+  }
+
+  videoStage(mode) {
+    const eng = this._videoEngine;
+    // OFF — no monitor at all, which is what a demo wants while it is naming modules that are not
+    // patched to anything: a big black window under the rack says a picture is missing rather than
+    // that there is nothing to show yet.
+    if (mode === 'off' || mode === 'none') {
+      this.videoBackdrop(false);
+      const out = [...this.records.values()].find((r) => r.descriptorId === 'video-out');
+      if (out && out.values && out.values.get('window') !== 'off') this.applyParam(out, 'window', 'off');
+      return true;
+    }
+    if (!eng || !eng.setPaneBox || !eng.paneOpen || !eng.paneOpen()) return false;
+    const W = window.innerWidth, H = window.innerHeight, BAR = 22, PAD = 24;
+    const aspect = 16 / 9;
+    // BLACK BEHIND A FULL-SCREEN PICTURE. The pane keeps 16 by 9, so a wide window leaves the rack
+    // showing down both sides — and at the start of a reel that rack is the FINISHED patch, cables
+    // and all, which gives away the thing the demo is about to build. A backdrop hides it, and it
+    // also covers the moment the patch is swapped for an empty one.
+    this.videoBackdrop(mode === 'full');
+    if (mode === 'full') {
+      let w = Math.min(W - PAD * 2, (H - PAD * 2 - BAR) * aspect);
+      let h = Math.round(w / aspect);
+      return eng.setPaneBox({ x: Math.round((W - w) / 2), y: Math.round((H - h - BAR) / 2), w: Math.round(w), h });
+    }
+    if (mode === 'below') {
+      // BELOW THE ROW the modules occupy, filling the width they leave. A single row of modules uses
+      // the top third of the window and nothing else, so the picture goes under it, big — which is
+      // what you want when the patch is one row deep and the image is the point of the demo.
+      let bottom = 0;
+      for (const rec of this.records.values()) {
+        if (this.pageOf && this.pageOf(rec) !== this.page) continue;
+        const el = rec.el; if (!el) continue;
+        const b = el.getBoundingClientRect();
+        if (b.height && b.bottom > bottom) bottom = b.bottom;
+      }
+      const top = Math.min(Math.max(bottom + PAD, H * 0.35), H - 200);
+      let hh = H - top - PAD;
+      let ww = Math.min(W - PAD * 2, hh * aspect);
+      hh = Math.round(ww / aspect);
+      return eng.setPaneBox({ x: Math.round((W - ww) / 2), y: Math.round(top), w: Math.round(ww), h: hh });
+    }
+    // RIGHT — beside the rack, not over it. The free edge is measured from the panels actually on
+    // this page rather than assumed: a page with one more module has less room, and a monitor that
+    // covers the faceplate the demo is about to work on is worse than a smaller monitor.
+    let edge = 0;
+    for (const rec of this.records.values()) {
+      if (this.pageOf && this.pageOf(rec) !== this.page) continue;
+      const el = rec.el; if (!el) continue;
+      const r = el.getBoundingClientRect();
+      if (r.width && r.right > edge) edge = r.right;
+    }
+    const left = Math.min(Math.max(edge + PAD, W * 0.45), W - 320);
+    let w = Math.max(300, Math.min(W - left - PAD, (H - PAD * 2 - BAR) * aspect));
+    const h = Math.round(w / aspect);
+    return eng.setPaneBox({ x: Math.round(left), y: PAD + 40, w: Math.round(w), h });
   }
 
   // CLOSE VIDEO MONITORS — one module's, or all of them. They were the one floating object nothing
