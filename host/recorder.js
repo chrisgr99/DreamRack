@@ -19,6 +19,10 @@
 // Screen content is the hard case for a video encoder: DreamRack is hairlines, 2 mm
 // legends and thin cables, all of which smear at the bitrate a recorder picks by
 // default. This is deliberately generous.
+// THE DEFAULT IS GENEROUS ON PURPOSE, and a caller may ask for less. Anything bound for YouTube
+// should keep it: the site re-encodes whatever it is sent, so a soft source becomes a softer result,
+// and this app is the hard case — hairlines, 2mm legends, thin cables. A take for a forum post or an
+// email is a different job, and 4 Mbps is a third of the size.
 const VIDEO_BITS_PER_SECOND = 12_000_000;
 const AUDIO_BITS_PER_SECOND = 192_000;
 const CHUNK_MS = 1000;               // one file append per second
@@ -68,13 +72,18 @@ export class Recorder {
 
   elapsedMs() { return this.recording ? Date.now() - this.startedAt : 0; }
 
-  async start() {
+  async start(name = null, opts = {}) {
     if (this.recording || !this.available()) return null;
+    const videoBits = Number(opts.mbps) > 0 ? Math.round(Number(opts.mbps) * 1_000_000) : VIDEO_BITS_PER_SECOND;
 
     // Open the file first. It lands in Downloads under a timestamped name — no dialog at
     // either end, because the point of the shortcut is that a take starts the moment you
     // ask for it.
-    const begun = await window.wcoast.record.begin(`DreamRack ${stamp()}.webm`);
+    // A NAME, WHEN THE CALLER HAS ONE. A take started by hand is timestamped, because it is one of
+    // many and nobody wants to name it mid-thought; a take of a demo is a deliverable and has a name
+    // already.
+    const file = name ? (/\.webm$/i.test(name) ? name : `${name}.webm`) : `DreamRack ${stamp()}.webm`;
+    const begun = await window.wcoast.record.begin(file);
     if (!begun || !begun.path) return null;
     this.filePath = begun.path;
 
@@ -106,7 +115,7 @@ export class Recorder {
     const mimeType = pickMime();
     this._rec = new MediaRecorder(stream, {
       ...(mimeType ? { mimeType } : {}),
-      videoBitsPerSecond: VIDEO_BITS_PER_SECOND,
+      videoBitsPerSecond: videoBits,
       audioBitsPerSecond: AUDIO_BITS_PER_SECOND,
     });
 

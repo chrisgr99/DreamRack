@@ -72,6 +72,7 @@ async function collect() {
   // numeric value a knob, anything else a button. That is all the renderer needs to avoid making
   // sentences no demo can ask for, and it needs no descriptors to work it out.
   const kinds = {};
+  const seenVoices = new Set();          // verbosity levels the scripts actually ask for
   const noteKind = (ref, kind) => { if (ref) kinds[ref] = kind; };
 
   let files = [];
@@ -82,10 +83,16 @@ async function collect() {
       const text = await readFile(path.join(SCRIPTS, f), 'utf8');
       demo = f.endsWith('.md') ? parseDemoMd(text, { id: f.replace(/\.md$/, '') }) : JSON.parse(text);
     } catch { continue; }
+    if (demo.voice) seenVoices.add(String(demo.voice));
     for (const k of ['intro', 'outro']) if (demo[k]) lines.add(demo[k]);
     for (const s of demo.steps || []) {
       if (s.note) lines.add(s.note);
+      // The CAPTIONS too. A demo can be run with the captions spoken instead of the long narration —
+      // the short line read aloud beside the same choreography — and that voice has to be rendered
+      // like any other or the run comes up silent.
+      if (s.caption) lines.add(s.caption);
       if (s.say) lines.add(s.say);          // a step's own override of the stock gesture phrase
+      if (s.voice) seenVoices.add(String(s.voice));
       if (s.do === 'patch') { noteKind(s.from, 'terminal'); noteKind(s.to, 'terminal'); }
       if (s.do === 'set') noteKind(s.target, typeof s.to === 'number' ? 'knob' : 'button');
     }
@@ -102,7 +109,13 @@ async function collect() {
   try {
     const md = await readFile(path.join(DEMOS, 'phrases.md'), 'utf8');
     const book = createPhraseBook(parseActions(md), parseControls(md));
-    for (const p of book.all(kinds)) lines.add(p);
+    // ONLY WHAT A DEMO CAN REACH. The table is crossed with every control and carries a short form
+    // beside every long one, which came to 1335 lines — three quarters of everything rendered, most
+    // of it unspoken: no demo declares short verbosity, and a third of the controls the table names
+    // appear in no script. A demo that starts asking for either puts the lines back by declaring it.
+    const levels = ['long', 'after', 'combined'];
+    for (const d of seenVoices) if (d === 'short') levels.push('short');
+    for (const p of book.all(kinds, { levels, onlyUsedRefs: true })) lines.add(p);
   } catch { console.warn('render-speech: demos/phrases.md not readable — no gesture phrases rendered.'); }
 
   return [...lines].map((t) => String(t).trim().replace(/\s+/g, ' ')).filter(Boolean);

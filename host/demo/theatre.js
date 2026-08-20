@@ -72,6 +72,25 @@ const ease = (u) => (u < 0.5 ? 2 * u * u : 1 - Math.pow(-2 * u + 2, 2) / 2);
 export function createDemoTheatre() {
   let styleEl = null, cursorEl = null, badgeEl = null;
   let rate = 1, cancelled = false, instant = false;
+  // PAUSE IS A PROPERTY OF THE CLOCK, not of fifty call sites. Every wait and every animation in a
+  // demo runs through span() below, so freezing time here freezes the whole performance: the pointer
+  // holds where it is, a knob stops mid-sweep, the step in flight simply takes longer to finish.
+  // `pausedAt` is when the freeze began and `paused` the total time spent frozen, which every span
+  // subtracts — so a wait that had run two of its three seconds still has one second left however
+  // long the viewer spends looking at the rack.
+  let pausedAt = 0, pausedTotal = 0, playing = false;
+  const nowSecs = () => (pausedAt ? pausedAt : performance.now() / 1000) - pausedTotal;
+  function setPaused(on) {
+    if (!!on === !!pausedAt) return !!pausedAt;
+    if (on) pausedAt = performance.now() / 1000;
+    else { pausedTotal += performance.now() / 1000 - pausedAt; pausedAt = 0; }
+    // GIVE THE REAL CURSOR BACK while paused. The OS pointer is hidden during playback so only the
+    // synthetic one is recorded; a viewer who has stopped to look at what just happened needs their
+    // own pointer to hover a jack or open a scope with.
+    document.documentElement.classList.toggle('demo-playing', !pausedAt && playing);
+    return !!pausedAt;
+  }
+  const isPaused = () => !!pausedAt;
   let px = Math.round(window.innerWidth / 2), py = Math.round(window.innerHeight / 2);
 
   function ensure() {
@@ -132,6 +151,8 @@ export function createDemoTheatre() {
 
   function begin(hideOS = true, fromHome = false) {
     ensure(); cancelled = false;
+    pausedAt = 0; pausedTotal = 0;            // a fresh run starts unfrozen and owing no time
+    playing = !!hideOS;
     if (fromHome) home();
     document.documentElement.classList.toggle('demo-playing', !!hideOS);
     cursorEl.style.display = 'block';
@@ -139,6 +160,7 @@ export function createDemoTheatre() {
   }
   function end() {
     cancelled = true;
+    playing = false; pausedAt = 0;
     tracker = null;
     hoverItem(null);
     if (cursorEl) cursorEl.style.display = 'none';
@@ -164,7 +186,7 @@ export function createDemoTheatre() {
     return new Promise((resolve) => {
       const dur = instant ? 0 : Math.max(0, demoSecs) / rate;
       if (cancelled || dur <= 0) { if (onFrame) onFrame(1); resolve(); return; }
-      const now = () => performance.now() / 1000;
+      const now = nowSecs;
       const t0 = now();
       let done = false, timer = 0;
       const tick = () => {
@@ -172,7 +194,7 @@ export function createDemoTheatre() {
         if (cancelled) { done = true; clearTimeout(timer); resolve(); return; }
         const u = Math.min(1, (now() - t0) / dur);
         if (onFrame) onFrame(u);
-        if (u >= 1) { done = true; clearTimeout(timer); resolve(); return; }
+        if (u >= 1 && !pausedAt) { done = true; clearTimeout(timer); resolve(); return; }
         requestAnimationFrame(tick);
         clearTimeout(timer); timer = setTimeout(tick, 40);   // the carrier, for when frames stop
       };
@@ -230,6 +252,6 @@ export function createDemoTheatre() {
     setTimeout(() => el.classList.remove('demo-hot'), 550);
   }
 
-  return { begin, end, place, moveTo, click, wheelTicks, highlight, hoverItem, badge, sleep, span, setRate, setInstant,
+  return { begin, end, place, moveTo, click, wheelTicks, highlight, hoverItem, badge, sleep, span, setRate, setInstant, setPaused, isPaused,
     setTracker, home, get pos() { return { x: px, y: py }; } };
 }

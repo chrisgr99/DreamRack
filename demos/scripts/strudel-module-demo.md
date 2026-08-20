@@ -1,6 +1,6 @@
 # Strudel — a pattern playing two voice tabs
 
-**Patch** Strudel — two voices
+**Patch** Strudel — two voices and drums
 **Modules** strudel = wcoast.strudel, voiceA = wcoast.voice#0, oscA = wcoast.oscillator, filterA = wcoast.filter, envA = wcoast.envelope, outA = wcoast.note-amp#0, voiceB = wcoast.voice#1, outB = wcoast.note-amp#1, osc259 = wcoast.complexOsc259t, envB = wcoast.envelope#1, vcaB = wcoast.vca#1
 **Sound** on
 **OpenHold** 0.4

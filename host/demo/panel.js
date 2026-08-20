@@ -31,10 +31,14 @@ const CSS = `
   .demo-panel-select { flex: 1 1 auto; min-width: 0; padding: 2px 5px; border-radius: 5px;
     font: 600 13px/1.2 inherit; background: var(--bg, #14110d); color: var(--ink, #f2ead9);
     border: 1px solid rgba(207,207,207,0.55); }
-  .demo-panel-row { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--ink-dim, #b6ab93); }
+  .demo-panel-row { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--ink-dim, #b6ab93);
+    flex-wrap: wrap; row-gap: 4px; }
   .demo-panel-rate { padding: 0 3px; border-radius: 5px; font: inherit; font-size: 12px;
     background: var(--bg, #14110d); color: var(--ink, #f2ead9); border: 1px solid rgba(207,207,207,0.55); }
   .demo-panel-caps { display: flex; align-items: center; gap: 4px; cursor: pointer; }
+  .demo-panel-goto { display: flex; align-items: center; gap: 4px; flex: none; }
+  .demo-panel-gotonum { width: 46px; padding: 1px 4px; border-radius: 5px; font: inherit; font-size: 12px;
+    color: inherit; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.25); }
   .demo-panel-reload { padding: 1px 7px; border-radius: 5px; font: inherit; font-size: 12px; cursor: pointer;
     flex: none; border: 1px solid rgba(207,207,207,0.55); background: rgba(255,255,255,0.04);
     color: var(--ink, #f2ead9); }
@@ -61,7 +65,7 @@ const CSS = `
   html.demo-playing .demo-panel { cursor: move !important; }
 `;
 
-export function createDemoPanel({ demos = [], onSelect, onRun, onStop, onRestart, onRate, onCaptions, onStep, onBack, onPlay, onReload, onClose } = {}) {
+export function createDemoPanel({ demos = [], onSelect, onRun, onStop, onRestart, onRate, onCaptions, onCaptionVoice, onPause, onStep, onBack, onPlay, onReload, onGoto, onRunFrom, onClose } = {}) {
   const style = document.createElement('style'); style.textContent = CSS; document.head.appendChild(style);
   const el = document.createElement('div');
   el.className = 'demo-panel';
@@ -85,19 +89,37 @@ export function createDemoPanel({ demos = [], onSelect, onRun, onStop, onRestart
             '<option value="1">1×</option><option value="1.5" selected>1.5×</option><option value="2">2×</option>' +
           '</select>' +
         '</label>' +
-        // Captions OFF by default: the narration is spoken, and a card over the rack is in the way
-        // more often than it is wanted.
+        // CAPTIONS INSTEAD OF THE VOICE, not alongside it. Ticked, the run is silent: each step
+        // shows its one-line caption hung off the pointer and is timed by how long that takes to
+        // read. Unticked, the script runs however it declares itself, which is spoken for all but
+        // the demos written captions-first.
         '<label class="demo-panel-caps"><input type="checkbox"> Captions</label>' +
+        // ...and the third way to run it: the captions, spoken. Only meaningful with the box above
+        // ticked, since it swaps WHICH words are said rather than turning the voice on.
+        '<label class="demo-panel-caps demo-panel-say"><input type="checkbox"> Speak them</label>' +
+      '</div>' +
+      '<div class="demo-panel-row">' +
       '</div>' +
       '<div class="demo-panel-row">' +
         '<span class="demo-panel-dot"></span>' +
         '<span class="demo-panel-pos">—</span>' +
+        // JUMP TO A STEP. Authoring a demo means watching one moment of it over and over, and the
+        // only ways there were pressing Step twenty times or watching the whole thing again. The
+        // number is the step shown beside it, so what you read is what you type.
+        '<label class="demo-panel-goto">Step ' +
+          '<input type="number" min="0" step="1" class="demo-panel-gotonum">' +
+        '</label>' +
+        '<button class="demo-panel-reload" data-act="goto">Go</button>' +
+        '<button class="demo-panel-reload" data-act="runfrom">Run from</button>' +
         '<button class="demo-panel-reload" data-act="reload">Reload</button>' +
       '</div>' +
     '</div>' +
     '<div class="demo-panel-right">' +
       '<div class="demo-panel-btns">' +
         '<button data-act="run">Run</button>' +
+        // PAUSE SITS BESIDE RUN, not beside Stop, because it belongs to watching rather than to
+        // ending: it freezes the performance and gives nothing up, where Stop ends the run.
+        '<button data-act="pause">Pause</button>' +
         '<button data-act="stop">Stop</button>' +
         '<button data-act="restart">Restart</button>' +
       '</div>' +
@@ -132,10 +154,13 @@ export function createDemoPanel({ demos = [], onSelect, onRun, onStop, onRestart
   sel.addEventListener('change', () => onSelect && onSelect(entryById(sel.value)));
   rateSel.addEventListener('change', () => onRate && onRate(Number(rateSel.value)));
   capsChk.addEventListener('change', () => onCaptions && onCaptions(capsChk.checked));
+  const sayChk = el.querySelector('.demo-panel-say input');
+  if (sayChk) sayChk.addEventListener('change', () => onCaptionVoice && onCaptionVoice(sayChk.checked));
   const on = (act, fn) => el.querySelector(`[data-act="${act}"]`).addEventListener('click', () => fn && fn());
   // Delayed tips, in the app's own chip rather than the operating system's.
   for (const [act, text] of [
     ['run', 'Play this demonstration from the start'],
+    ['pause', 'Pause — freeze it here, look around, carry on'],
     ['stop', 'Stop — and stay on the step it reached'],
     ['restart', 'Start again from the beginning'],
     ['back', 'Back one step'],
@@ -145,6 +170,14 @@ export function createDemoPanel({ demos = [], onSelect, onRun, onStop, onRestart
   ]) { const b = el.querySelector(`[data-act="${act}"]`); if (b) tip(b, text); }
   tip(el.querySelector('.demo-panel-close'), 'Leave the demonstration');
   on('run', onRun); on('stop', onStop); on('restart', onRestart);
+  const gotoNum = el.querySelector('.demo-panel-gotonum');
+  const wanted = () => Math.max(0, Number(gotoNum && gotoNum.value) || 0);
+  on('goto', () => onGoto && onGoto(wanted()));
+  on('runfrom', () => onRunFrom && onRunFrom(wanted()));
+  const pauseBtn = el.querySelector('[data-act="pause"]');
+  // The key and the button are two ways to the same switch, so the button follows whatever happened.
+  const setPaused = (on) => { if (pauseBtn) pauseBtn.textContent = on ? 'Resume' : 'Pause'; };
+  if (pauseBtn) pauseBtn.addEventListener('click', () => { if (onPause) pauseBtn.textContent = onPause() ? 'Resume' : 'Pause'; });
   on('step', onStep); on('back', onBack); on('play', onPlay); on('reload', onReload);
   el.querySelector('.demo-panel-close').addEventListener('click', () => (onClose ? onClose() : close()));
 
@@ -224,12 +257,16 @@ export function createDemoPanel({ demos = [], onSelect, onRun, onStop, onRestart
     const live = !!name;
     dot.classList.toggle('on', live);
     runBtn.disabled = live;
+    if (pauseBtn) { pauseBtn.disabled = !live; if (!live) pauseBtn.textContent = 'Pause'; }
     // Stop is ALWAYS live. It ends a step-through as well as a playback — and a step-through is not
     // "running", so gating it on that left the only way out of stepping disabled.
     stopBtn.disabled = false;
   }
   // "step 4 of 15 — patch", so the author can see where a step-through has got to.
   function setPosition(i, n, label) {
+    // The box follows where the demo is, unless you are typing in it — so the number you read beside
+    // it and the number you jump to are the same number.
+    if (gotoNum && document.activeElement !== gotoNum) gotoNum.value = String(Math.max(0, i || 0));
     el.querySelector('.demo-panel-pos').textContent =
       n ? `step ${Math.min(i + 1, n)} of ${n}${label ? ' — ' + label : ''}` : '—';
   }
@@ -261,5 +298,5 @@ export function createDemoPanel({ demos = [], onSelect, onRun, onStop, onRestart
   setRunning(null);
   if (demos[0] && onSelect) onSelect(demos[0]);   // default selection matches the drop-down
 
-  return { open, close, toggle, setRunning, setPosition, setMode, setTitle, setExitLabel, avoid, rect, el };
+  return { open, close, toggle, setRunning, setPaused, setPosition, setMode, setTitle, setExitLabel, avoid, rect, el };
 }

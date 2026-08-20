@@ -258,7 +258,10 @@ function registerPatchIpc() {
     const out = {};
     try {
       for (const name of await fs.promises.readdir(dir)) {
-        if (!name.endsWith('.json') || name === 'index.json') continue;
+        // BOTH FORMS. This scanned only .json, which predates markdown demos — so every markdown
+        // script came back undated and sank to the bottom of the list, which is exactly where the
+        // one being worked on is not wanted. New demos are markdown, so that was all of them.
+        if (name === 'index.json' || !/\.(json|md)$/i.test(name)) continue;
         try { out[name] = (await fs.promises.stat(path.join(dir, name))).mtimeMs; } catch (_e) { /* skip */ }
       }
     } catch (_e) { /* no scripts folder */ }

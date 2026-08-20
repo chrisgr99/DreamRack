@@ -73,6 +73,21 @@ import noteSeqDescriptor from '../modules/sequencer/descriptor.js';
 import { create as noteSeqCreate } from '../modules/sequencer/factory.js';
 import formulaDescriptor from '../modules/formula/descriptor.js';
 import { create as formulaCreate } from '../modules/formula/factory.js';
+// The three colour modules. Everything else in the video set emits luma, so until these exist a
+// patch can make any image it likes and it comes out grey.
+import colorizerDescriptor from '../modules/colorizer/descriptor.js';
+import { create as colorizerCreate } from '../modules/colorizer/factory.js';
+import encoderDescriptor from '../modules/encoder/descriptor.js';
+import { create as encoderCreate } from '../modules/encoder/factory.js';
+import chromaDescriptor from '../modules/chroma/descriptor.js';
+import { create as chromaCreate } from '../modules/chroma/factory.js';
+// The three that give the set structure: a drawn shape, a screen of cells, and a fold about a centre.
+import polygonDescriptor from '../modules/polygon/descriptor.js';
+import { create as polygonCreate } from '../modules/polygon/factory.js';
+import gridDescriptor from '../modules/grid/descriptor.js';
+import { create as gridCreate } from '../modules/grid/factory.js';
+import symmetryDescriptor from '../modules/symmetry/descriptor.js';
+import { create as symmetryCreate } from '../modules/symmetry/factory.js';
 import { serialize, restore, validate, APP_NAME, APP_VERSION } from '../host/patch-io.js';
 import { createStorage } from '../host/storage.js';
 import { buildCatalogue, createMirror } from '../host/mirror.js';
@@ -119,6 +134,12 @@ registry.register({ descriptor: voiceDescriptor, create: voiceCreate });
 registry.register({ descriptor: pageVoiceDescriptor, create: pageVoiceCreate });
 registry.register({ descriptor: noteSeqDescriptor, create: noteSeqCreate });
 registry.register({ descriptor: formulaDescriptor, create: formulaCreate });
+registry.register({ descriptor: colorizerDescriptor, create: colorizerCreate });
+registry.register({ descriptor: encoderDescriptor, create: encoderCreate });
+registry.register({ descriptor: chromaDescriptor, create: chromaCreate });
+registry.register({ descriptor: polygonDescriptor, create: polygonCreate });
+registry.register({ descriptor: gridDescriptor, create: gridCreate });
+registry.register({ descriptor: symmetryDescriptor, create: symmetryCreate });
 
 const MODULE_TYPES = [{
   descriptorId: oscDescriptor.id,
@@ -312,6 +333,57 @@ const MODULE_TYPES = [{
   hp: 8,
   panelUrl: 'modules/formula/panel.svg',
   descriptor: formulaDescriptor,
+}, {
+  // Colorizer — the short route to colour: brightness read as a position along a palette, so one
+  // luma cable arrives as a colour ramp. 8 HP.
+  descriptorId: colorizerDescriptor.id,
+  name: 'Colorizer',
+  hp: 8,
+  panelUrl: 'modules/colorizer/panel.svg',
+  descriptor: colorizerDescriptor,
+}, {
+  // Encoder — the other route, and the one the luma/rgb split exists for: three separately
+  // processed monochrome chains become red, green and blue, which is where fringing and colour
+  // separation come from. 8 HP, three identical rows.
+  descriptorId: encoderDescriptor.id,
+  name: 'Encoder',
+  hp: 8,
+  panelUrl: 'modules/encoder/panel.svg',
+  descriptor: encoderDescriptor,
+}, {
+  // Chroma — colour in, the same picture in other colour out: hue, saturation, level and contrast.
+  // It multiplies what the other two can do without adding a cable, which is why it is here before
+  // the Decoder. 8 HP.
+  descriptorId: chromaDescriptor.id,
+  name: 'Chroma',
+  hp: 8,
+  panelUrl: 'modules/chroma/panel.svg',
+  descriptor: chromaDescriptor,
+}, {
+  // Polygon — a shape with corners, drawn rather than sliced out of a gradient. Two sides is a bar,
+  // three a triangle, four a square you can round into a squircle, and the star control pulls any of
+  // them into points. 10 HP: nine controls, because a drawn shape has more to say about itself.
+  descriptorId: polygonDescriptor.id,
+  name: 'Polygon',
+  hp: 10,
+  panelUrl: 'modules/polygon/panel.svg',
+  descriptor: polygonDescriptor,
+}, {
+  // Grid — one picture becomes a screen of cells, with gaps between them and an offset for alternate
+  // rows. Distinct from TILE on the Coordinate Field, which repeats the space and stays continuous.
+  descriptorId: gridDescriptor.id,
+  name: 'Grid',
+  hp: 8,
+  panelUrl: 'modules/grid/panel.svg',
+  descriptor: gridDescriptor,
+}, {
+  // Symmetry — a kaleidoscope: the frame folded into N sectors, so repetition about a point turns a
+  // texture into a figure. 8 HP.
+  descriptorId: symmetryDescriptor.id,
+  name: 'Symmetry',
+  hp: 8,
+  panelUrl: 'modules/symmetry/panel.svg',
+  descriptor: symmetryDescriptor,
 }, {
   // Macro Oscillator 2 — a complete instrument in one module: the sound, its envelope and the gate that
   // shapes it. One cable from the clock and it plays. A port of Émilie Gillet's Plaits (MIT); the
@@ -1497,7 +1569,11 @@ async function boot() {
     if (String(entry.file).endsWith('.md')) {
       const res = await fetch(`demos/scripts/${entry.file}?t=${Date.now()}`);
       if (!res.ok) throw new Error(`demo ${entry.file}: ${res.status}`);
-      return parseDemoMd(await res.text(), { id: entry.id });
+      const md = parseDemoMd(await res.text(), { id: entry.id });
+      // The markdown demos were the ones without a file recorded, which is the half that matters:
+      // a step's line number is only useful beside the name of the file it is a line of.
+      md.__file = 'demos/scripts/' + entry.file;
+      return md;
     }
     // Cache-busted: the whole point of Reload is to pick up an edit made a moment ago, and a cached
     // script would quietly serve the words you just changed.
@@ -1521,11 +1597,15 @@ async function boot() {
   // script, and for the reader who wants to see a step again.
   rack.demo = createDemoRunner(rack, {
     registerAudio: (node) => rack.addAudioTap(node),   // narration goes into a recording, not just the speakers
+    // Every step, and every pause, projected to the mirror — see pushDemoState above.
+    onProgress: () => pushDemoState(),
     // Load a shipped example, the same route File ▸ Examples takes, so a demo can start from a patch
     // that already works rather than building one first.
     loadExample: async (name) => {
       const entry = (examples || []).find((e) => e.name === name || e.file === name);
-      if (!entry) { log(`no example named "${name}"`); return; }
+      // LOUDLY. A demo whose patch does not load runs every remaining step against an empty rack and
+      // records a video of nothing, which is what a silent log bought once already.
+      if (!entry) { console.warn(`[demo] no example named "${name}" — the rack will be empty`); log(`no example named "${name}"`); return; }
       try {
         const res = await fetch('examples/' + entry.file);
         if (!res.ok) throw new Error(String(res.status));
@@ -1570,10 +1650,14 @@ async function boot() {
     markClean();
   }
 
-  async function runDemo(obj, name, { restoreAfter = true, loop = false } = {}) {
+  async function runDemo(obj, name, { restoreAfter = true, loop = false, from = 0 } = {}) {
     if (!obj || rack.demo.running) return;
     if (restoreAfter && !demoHeld) holdUserState();
     if (tour && tour.isOpen()) tour.close();   // the first-run tutorial card sits over the rack
+    // ...and so does the patch-notes window, which afterLoad already refuses to OPEN during a demo
+    // but could not close one that was already up when Run was pressed. A note about the patch is
+    // exactly what a viewer has open when they decide to watch the demo of it.
+    if (notes) notes.close();
     demoActive = true; demoStop = false;
     if (demoPanel) demoPanel.setRunning(name || obj.id || 'demo');
     try { do { await rack.demo.run(obj); } while (loop && !demoStop); }
@@ -1601,14 +1685,14 @@ async function boot() {
   // reader who presses again because nothing has visibly happened yet is doing the obvious thing.
   let demoStarting = false;
 
-  async function runSelected() {
+  async function runSelected({ from = 0 } = {}) {
     if (!selectedEntry || demoStarting || rack.demo.running || demoActive) return;
     demoStarting = true;
     try {
       let obj; try { obj = await loadDemo(selectedEntry); } catch (e) { log(`demo load failed: ${e.message}`); return; }
       const base = Number(obj.rate) > 0 ? Number(obj.rate) : 1;
       const eff = { ...obj, rate: base * overrideRate };   // global rate override on top of the reel's own
-      demoPromise = runDemo(eff, selectedEntry.title || selectedEntry.id, { loop: loopWanted });
+      demoPromise = runDemo(eff, selectedEntry.title || selectedEntry.id, { loop: loopWanted, from });
       return demoPromise;
     } finally { demoStarting = false; }
   }
@@ -1717,8 +1801,23 @@ async function boot() {
     },
     onRestart: restartDemo,
     onRate: (v) => { if (v > 0) overrideRate = v; },
-    onCaptions: (v) => rack.demo.setCaptions(!!v),
+    // Ticked: caption mode, which turns the cards on itself. Unticked: back to whatever the script
+    // declares — `null` is "the header decides", not "narrated", so a captions-first demo still runs
+    // the way it was written.
+    onCaptions: (v) => { rack.demo.setCaptionShow(!!v); rack.demo.setCaptions(!!v); },
+    onCaptionVoice: (v) => rack.demo.setCaptionVoice(!!v),
+    // Returns the new state, so the button can say Pause or Resume without keeping its own copy.
+    onPause: () => { const p = rack.demo.togglePause(); pushDemoState(); return p; },
     onStep: stepDemo, onBack: backDemo, onPlay: playStepDemo, onReload: reloadDemo,
+    // JUMP THERE, or jump there and play on from it. Backwards is a snapshot restore and forwards
+    // replays the steps between with their waits collapsed, so either direction lands on the state
+    // that step begins from — which is what makes "watch that bit again" a two-second job.
+    onGoto: async (n) => { if (!demoStepping && !(await enterStepping())) return; await rack.demo.seek(n); showPos(); },
+    onRunFrom: async (n) => {
+      if (!demoStepping && !(await enterStepping())) return;
+      showPos();
+      runSelected({ from: n });
+    },
     onClose: leaveDemo,
   });
   // The DEV menu opens it as an AUTHOR tool — picker, Play and Reload — and closing it just closes it.
@@ -1753,15 +1852,42 @@ async function boot() {
         if (!row) throw new Error(`no demo "${id}"`);
         const raw = await (await fetch('demos/scripts/' + row.file + '?t=' + Date.now()));
         const obj = row.file.endsWith('.md') ? parseDemoMd(await raw.text(), { id }) : await raw.json();
+        obj.__file = 'demos/scripts/' + row.file;    // so the mirror can name the file a step lives in
         return runDemo(obj, row.title || id, { restoreAfter: false });
       },
       stopDemo: () => rack.demo.stop && rack.demo.stop(),
+      // RECORD A DEMO AS A TAKE. Start the recorder, run the script, stop when it ends — the picture
+      // is the window and the sound is tapped off the audio graph, so what lands in the file is what
+      // the mixer produced rather than whatever the operating system happened to be routing.
+      recordDemo: async (id, name, opts = {}) => {
+        if (!recorder || !recorder.available()) throw new Error('no recorder here (Electron only)');
+        if (rack.demo && rack.demo.primeVoice) rack.demo.primeVoice();   // ...so the narration is in the take
+        const path = await recorder.start(name || `DreamRack ${id}`, opts);
+        if (!path) throw new Error('the recorder did not start');
+        try { await window.__wcoast.runDemo(id); } finally {
+          const saved = await recorder.stop();
+          window.__wcoast.lastRecording = saved || path;
+        }
+        return window.__wcoast.lastRecording;
+      },
       rack,
     };
   }
 
   window.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && rack.demo.running) { stopDemo('Escape key'); return; }
+    // P PAUSES AND RESUMES a run. Not Space, which starts and stops the engine, and not Escape,
+    // which ends the demo — the two acts are different and a viewer who wanted to look at something
+    // should not have to risk ending the run to do it. Ignored while typing, and with any modifier
+    // held, so Cmd-P and friends pass straight through.
+    if (!e.metaKey && !e.ctrlKey && !e.altKey && (e.key === 'p' || e.key === 'P') && rack.demo.running) {
+      const t = e.target;
+      if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
+      e.preventDefault();
+      const paused = rack.demo.togglePause();
+      if (demoPanel && demoPanel.setPaused) demoPanel.setPaused(paused);
+      return;
+    }
     if (e.ctrlKey && e.shiftKey && e.code === 'KeyD') { e.preventDefault(); runSelected(); }
   }, true);
 

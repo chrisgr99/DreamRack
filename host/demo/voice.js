@@ -28,6 +28,11 @@ export function createVoice(getCtx, { register = null, volume = 2.2 } = {}) {
   let gain = null;
   const buffers = new Map();         // id -> AudioBuffer (decoded on first use)
   let current = null;                // the source now playing, so it can be cut off
+  // PAUSING A SENTENCE. A buffer source cannot be frozen — it can only be stopped — so a pause notes
+  // which line was speaking and how far in, and a resume starts the same buffer again from that
+  // offset. The line is heard from where it left off rather than from the top, which is what the
+  // viewer expects when they stop to look at something mid-sentence.
+  let held = null;                   // { buf, offset, resolve } while paused mid-line
   let enabled = true;
 
   // FRESH AT THE START OF EVERY RUN. The index was read once and kept for the life of the window, so a
@@ -35,6 +40,11 @@ export function createVoice(getCtx, { register = null, volume = 2.2 } = {}) {
   // is indistinguishable from a demo that did not change. Authoring is exactly the case this exists
   // for, so the index is re-read per run and the decoded buffers are dropped with it.
   const reload = () => { index = null; loading = null; buffers.clear(); };
+
+  // BUILT NOW, NOT AT THE FIRST WORD. The recorder collects what it should capture when it starts, and
+  // this node used to be created by the first line spoken — after that moment — so a take carried the
+  // patch and none of the narration. It costs one silent gain node to have it waiting.
+  const prime = () => { try { out(); } catch (_e) { /* no context yet; out() will build it later */ } };
 
   const ready = () => {
     if (!loading) {
@@ -90,23 +100,61 @@ export function createVoice(getCtx, { register = null, volume = 2.2 } = {}) {
     const buf = await bufferFor(id);
     const ctx = getCtx(), dst = out();
     if (!buf || !ctx || !dst) return 0;
+    // A SUSPENDED CONTEXT MAKES THE WHOLE DEMO SILENT, and silently so: the buffer plays into
+    // nothing, the backstop timer resolves on schedule, and the run looks like a demo whose
+    // narration was never rendered. The context is suspended until something asks for sound, and a
+    // demo that turns no sound on — a video demo has nothing to hear — never asks. Narration is not
+    // the patch's sound and must not depend on it, so resume here. Pressing Run is the user gesture
+    // that permits it.
+    if (ctx.state === 'suspended') { try { await ctx.resume(); } catch (_e) { /* speak silently */ } }
     stop();
     return new Promise((resolve) => {
       const src = ctx.createBufferSource();
       src.buffer = buf;
       src.connect(dst);
+      src._startedAt = ctx.currentTime;      // so a pause knows how far in the line had got
+      src._resolve = resolve;
       current = src;
       src.onended = () => { if (current === src) current = null; resolve(buf.duration); };
       src.start();
       // onended does not fire if the context is suspended or the node is cut short by stop(); the
       // timer is the backstop so a demo never parks waiting on a voice that has gone quiet.
-      setTimeout(() => { if (current === src) { current = null; } resolve(buf.duration); }, (buf.duration + 0.5) * 1000);
+      // The backstop cannot fire blind any more: a line held by a pause has not finished, and
+      // resolving it would let the demo walk on while the sentence was still waiting to be resumed.
+      setTimeout(() => { if (held) return; if (current === src) { current = null; } resolve(buf.duration); }, (buf.duration + 0.5) * 1000);
     });
   }
 
-  function stop() { if (current) { try { current.stop(); } catch (_e) { /* already done */ } current = null; } }
+  function stop() { held = null; if (current) { try { current.stop(); } catch (_e) { /* already done */ } current = null; } }
+
+  // Freeze or restart the voice. Returns whether it is now paused.
+  function setPaused(on) {
+    const ctx = getCtx();
+    if (on) {
+      if (current && ctx) {
+        const played = ctx.currentTime - (current._startedAt || ctx.currentTime);
+        held = { buf: current.buffer, offset: Math.max(0, Math.min(current.buffer.duration - 0.01, played)), resolve: current._resolve };
+        try { current.onended = null; current.stop(); } catch (_e) { /* already done */ }
+        current = null;
+      }
+      return true;
+    }
+    if (held && ctx) {
+      const dst = out();
+      const src = ctx.createBufferSource();
+      src.buffer = held.buf; src.connect(dst);
+      src._startedAt = ctx.currentTime - held.offset;
+      src._resolve = held.resolve;
+      const done = held.resolve;
+      src.onended = () => { if (current === src) current = null; if (done) done(held ? 0 : 0); };
+      current = src;
+      src.start(0, held.offset);
+      held = null;
+    }
+    return false;
+  }
   function setEnabled(on) { enabled = !!on; if (!enabled) stop(); }
   function isAvailable() { return !!index; }
 
-  return { speak, secondsFor, stop, setEnabled, isAvailable, ready, reload };
+  return { speak, secondsFor, stop, setPaused, setEnabled, isAvailable, ready, reload, prime };
 }

@@ -69,7 +69,22 @@ export function createDemoRunner(rack, opts = {}) {
   const recOf = (key) => rack.records.get(realKey(key));
   const num = (v, fb) => (Number.isFinite(Number(v)) ? Number(v) : fb);
   // Every timing question goes through here: the step's own number, else the demo's, else ours.
-  const secs = (s, name) => num(s && s[name], num(defaults[name], DEFAULTS[name]));
+  const secs = (s, name) => {
+    const v = num(s && s[name], num(defaults[name], DEFAULTS[name]));
+    if (!captionMode) return v;
+    // EVERY PAUSE IN A NARRATED DEMO IS SIZED FOR A SENTENCE. The beats between gestures, the settle
+    // after one, and above all an authored sweep — "set chr hue 0.5 over 8" — are long because words
+    // are being said over them. With no words there is nothing to fill, and a captioned run that
+    // keeps those pauses is a slow demo with the talking removed rather than a fast one. Authored
+    // sweeps take the deeper cut: they are the longest waits and the ones a reader least needs.
+    const authored = Number.isFinite(Number(s && s[name]));
+    if (name !== 'perform' || !authored) return v * CAPTION_PACE;
+    // AND A CEILING ON A KNOB TURN. Watching a control travel is worth a couple of seconds the first
+    // time and nothing at all the fifth; the value it lands on is the point, and the turn only has to
+    // be seen to happen. One second, wall clock — multiplied up by the rate the clock is about to
+    // divide it by — so an eight-second authored sweep still reads as a sweep and costs a second.
+    return Math.min(v * SWEEP_SCALE, CAPTION_TURN_MAX * rate * CAPTION_RATE);
+  };
 
   // ---- resolving a control to a place on screen -----------------------------
   // A module on ANOTHER PAGE has no on-screen position worth pointing at — its panel is present but
@@ -392,6 +407,7 @@ export function createDemoRunner(rack, opts = {}) {
         } else if (opts.loadExample) { await opts.loadExample(s.name); }
         keepViewerLevel();
         ensureSound();
+        applyStage();   // a loaded patch closes the output window; put the picture back where it was
         // Bind this demo's names to whatever keys the file used: { "osc": "<descriptorId>" }.
         //
         // A PATCH MAY HOLD SEVERAL OF ONE MODULE — two voice tabs are two of everything — so a name may
@@ -713,6 +729,13 @@ export function createDemoRunner(rack, opts = {}) {
         } finally { theatre.setTracker(null); rack._demoCarry = false; }
         return;
       }
+      // WHERE THE PICTURE STANDS. Nothing is pointed at and nothing is clicked: the pane is not a
+      // control on a faceplate, and walking a synthetic pointer to a title bar to drag it would be
+      // several silent seconds spent on the one object in the window that is not part of the patch.
+      case 'stage':
+        stageNow = s.to;
+        applyStage();
+        return;
       case 'pause':
         await theatre.sleep(num(s.for, 1));
         return;
@@ -725,20 +748,38 @@ export function createDemoRunner(rack, opts = {}) {
   async function runStep(i) {
     const s = steps[i];
     if (!s) return;
+    // TELL THE OUTSIDE WHERE WE ARE, at the top of every step. The mirror publishes this, so a
+    // conversation about "the step we are on" needs no preamble: the script, the step's own
+    // directive and line in the file, its caption and its note are all readable while it plays.
+    if (opts.onProgress) { try { opts.onProgress(); } catch (_e) { /* a watcher must not stop a demo */ } }
+    let approach = null;   // caption mode: the pointer's journey, running under the card
     // POINTING COMES FIRST. Every other action answers a note that has already been read — "now do
     // this" — but a point exists to say what the note is ABOUT, so it has to arrive before the words
     // rather than three seconds after them.
-    if (s.do === 'point') await perform(s);
+    // POINTING COMES FIRST, and so does moving the picture: a note on a `stage` step is about what
+    // that move reveals — "eight modules, and no connections yet" — and reading it before the pane
+    // has shrunk describes a screen the viewer cannot see yet.
+    if (s.do === 'point' || s.do === 'stage') await perform(s);
     // Everything else with somewhere to go gets there first, silently. The gesture's own sentence is
     // still said by the action, on arrival.
-    else { const at = approachOf(s); if (at) await theatre.moveTo(at.x, at.y, secs(s, 'perform')); }
-    if (s.note !== undefined) {
-      noteText = s.note;
+    //
+    // EXCEPT IN CAPTION MODE, where the travel is started but not waited for: the card goes up now
+    // and the pointer crosses the rack while it is being read. Waiting for the pointer first put a
+    // second of nothing in front of every card, which over fifty steps is most of a minute spent
+    // watching an arrow move with nothing to read.
+    else {
+      const at = approachOf(s);
+      if (at) { const trip = theatre.moveTo(at.x, at.y, secs(s, 'perform')); if (!captionMode) await trip; else approach = trip; }
+    }
+    // A TITLE STEP CARRIES ITS WORDS AS A CAPTION and has no narration, so without naming it here the
+    // whole block was skipped in a narrated run and the opening frame never appeared at all.
+    if (s.note !== undefined || ((capShow || captions) && s.caption) || s.title) {
+      noteText = cardTextFor(s);
       const region = noteSpanAvoid(i);
       // The CARD is placed first and the transport window then keeps off both it and the work. The
       // reader's text gets first choice of berth because it is the thing they must read; the author's
       // window is the one that can afford to be shunted.
-      showCard(s.note, region, s.berth || null);
+      showCard(noteText, region, s.berth || null, s);
       if (opts.onAvoid) opts.onAvoid([region, captions ? card.rect() : null]);
       // The note is read aloud while it is up, and the demo waits for BOTH the hold and the
       // narration — the speech is the floor, so a hold shorter than the sentence cannot cut it off.
@@ -747,18 +788,55 @@ export function createDemoRunner(rack, opts = {}) {
       // opening statement: a minute of narration over a motionless rack cannot be told apart from a
       // demo that has hung, and the honest response to that is to stop it, which is what happened.
       // Unwaited, the words play over the first moves instead of in front of them.
-      if (s.note && s.wait === false) { narrate(s.note); await theatre.sleep(secs(s, 'beat')); }
-      else if (s.note) await Promise.all([theatre.sleep(secs(s, 'hold')), narrate(s.note)]);
+      //
+      // IN CAPTION MODE THE CARD IS READ BEFORE THE GESTURE, always. The line says what is about to
+      // happen — "connect the field to the Colorizer" — so it has to be up and readable first;
+      // arriving with the movement it describes makes a reader choose between watching and reading,
+      // and they will miss one. `wait: false` is ignored here for the same reason: it exists so a
+      // long spoken passage can play over the moves, and there is no long passage without a voice.
+      // The card is up for as long as it takes to read, and the pointer's journey runs underneath —
+      // whichever is longer decides when the gesture happens. `readingSecs` is wall clock, so it is
+      // multiplied back up by the rate that theatre.sleep is about to divide it by.
+      // THE POINTER ARRIVES, AND ONLY THEN DOES THE CLOCK START. Reading while the pointer is still
+      // crossing the rack is reading and tracking at once, and the caption can be gone before the
+      // pointer has settled on the thing it names. So the journey is waited out — the card is
+      // already up, so it can be read on the way — and the hold is spent STANDING on the target.
+      if (s.title && !captionMode) {
+        // ...and it is READ as well as shown. This held the card for its reading time and never said
+        // it, so a narrated run put the opening frame on screen in silence.
+        const line = s.note || s.caption;
+        const spoken = await voice.secondsFor(line);
+        await Promise.all([theatre.sleep(Math.max(readingSecs(noteText), spoken + 0.2) * rate), narrate(line)]);
+      } else if (captionMode) {
+        if (approach) { await approach; approach = null; }
+        // With the captions spoken, the line is both read and heard, so the hold is whichever takes
+        // longer — the speech is a floor exactly as it is in a narrated run.
+        const hold = theatre.sleep(readingSecs(noteText) * rate * CAPTION_RATE);
+        await (captionVoice ? Promise.all([hold, narrate(noteText)]) : hold);
+      }
+      else if (s.note && s.wait === false) { narrate(s.note); await theatre.sleep(secs(s, 'beat')); }
+      else if (s.note) {
+        // THE HOLD IS THE SENTENCE, not a fixed three seconds. The default was a guess for a line with
+        // no audio, and it turned a list of eight module names into eight one-second names with two
+        // seconds of silence after each. Where the line HAS been rendered, its own length is the hold
+        // — with a beat after it, so consecutive lines run on rather than butting together — and a
+        // line with no audio keeps the old default, which is the only case that guess was ever for.
+        const spoken = await voice.secondsFor(s.note);
+        const hold = spoken > 0 ? Math.max(spoken + 0.08, secs(s, 'beat')) : secs(s, 'hold');
+        await Promise.all([theatre.sleep(hold * rate), narrate(s.note)]);
+      }
     }
+    if (approach) { await approach; approach = null; }   // a step with no card still waits for its travel
     if (s.do !== 'point') await perform(s);
     theatre.badge(null);
     // AND A NOTE THAT BELONGS AFTERWARDS. "Now we have a chain three modules long" is true once the
     // cable has landed and not a moment before, and saying it on the way in describes a rack that
     // does not exist yet. `after` is for the result; `note` stays for what you are about to watch.
     if (s.after) {
-      showCard(s.after, noteSpanAvoid(i), s.berth || null);
+      showCard(s.after, noteSpanAvoid(i), s.berth || null, s);
       noteText = s.after;
-      await Promise.all([theatre.sleep(secs(s, 'beat')), narrate(s.after)]);
+      if (captionMode) await theatre.sleep(readingSecs(s.after));
+      else await Promise.all([theatre.sleep(secs(s, 'beat')), narrate(s.after)]);
     }
     await theatre.sleep(secs(s, 'settle'));
   }
@@ -767,12 +845,117 @@ export function createDemoRunner(rack, opts = {}) {
   // more often than it is wanted, and the one thing it must never cover is the module being described.
   let captions = false;
   const setCaptions = (on) => { captions = !!on; if (!captions) card.hide(); };
+
+  // ---- caption mode: the same demo, run silent ------------------------------
+  //
+  // `**Mode** captions` in the script. The voice is off entirely — notes and gesture phrases both —
+  // each step shows its own one-line caption, and the hold is how long that line takes to READ
+  // rather than how long a sentence takes to say. A captioned run of the colour demo is about a
+  // third the length of the narrated one, and it plays in a feed, where video autoplays muted.
+  //
+  // A step with no caption falls back to its narration, timed the same way. That is deliberately not
+  // an error: it lets a script be captioned a few steps at a time.
+  // THE SAME SCRIPT PLAYS BOTH WAYS. The header declares which a demo is normally run as; an
+  // override — from the transport, or from a recording harness making both cuts of one demo — wins
+  // over it. Null means "whatever the script says", which is the ordinary case.
+  // SPEAKING THE CAPTIONS. A third way to run the same script: the short line read aloud rather
+  // than the long sentence, with the cards and the pacing of caption mode. It suits a viewer who
+  // wants both and a script whose captions were written to be said as well as read.
+  // TWO SWITCHES, INDEPENDENT. They were one mode with a rider on it, so "speak them" did nothing
+  // unless "captions" was also on — which is not what two checkboxes mean.
+  //
+  //   captions off, speak off   the demo's own narration, spoken, no cards      (how a reel ships)
+  //   captions on,  speak off   the short lines on screen, silent
+  //   captions on,  speak on    the short lines on screen AND read aloud
+  //   captions off, speak on    the short lines read aloud, nothing on screen
+  //
+  // `captionMode` survives as the internal question "are we working from the short lines?", which is
+  // what decides the wording and the pacing; either switch turns it on.
+  let capShow = false, capSpeak = false;
+  let captionMode = false, captionOverride = null, captionVoice = false;
+  const syncCaption = () => {
+    captionMode = captionOverride == null ? (capShow || capSpeak) : captionOverride;
+    captionVoice = capSpeak;
+    if (capShow) captions = true;
+  };
+  const setCaptionShow = (on) => { capShow = !!on; if (!capShow) card.hide(); syncCaption(); };
+  // WHERE THE PICTURE STANDS, and it has to be re-applied after every patch load: restoring a patch
+  // closes the output window (a file must not open one), so a demo that loads its second example
+  // would lose the picture and every `stage` after it would have no pane to move.
+  let stageNow = null;
+  function applyStage() {
+    if (!stageNow || !rack.videoStage) return;
+    // The black goes up in the same tick the run starts; the pane catches up when it can.
+    if (rack.videoBackdrop) rack.videoBackdrop(stageNow === 'full');
+    // AND IT KEEPS TRYING. Restoring a patch closes the output window — a file must never open one —
+    // and that close is asynchronous, so a single reopen on a timer sometimes ran BEFORE it and was
+    // undone. The picture then vanished for the rest of the demo. So: ask, check, ask again, for a
+    // second or so, and stop the moment the pane is actually standing where it was asked to stand.
+    if (stageNow === 'off' || stageNow === 'none') { try { rack.videoStage(stageNow); } catch (_e) { /* nothing open */ } return; }
+    let tries = 0;
+    const put = () => {
+      const out = [...rack.records.values()].find((r) => r.descriptorId === 'video-out');
+      if (out && out.values && out.values.get('window') !== 'on') rack.applyParam(out, 'window', 'on');
+      let placed = false;
+      try { placed = !!rack.videoStage(stageNow); } catch (_e) { placed = false; }
+      if (!placed && ++tries < 8) setTimeout(put, 150);
+    };
+    setTimeout(put, 60);
+  }
+  const setCaptionVoice = (on) => { capSpeak = !!on; syncCaption(); };
+  const setCaptionMode = (on) => {
+    captionOverride = on == null ? null : !!on;
+    if (captionOverride != null) { capShow = !!on; capSpeak = capSpeak && !!on; }
+    syncCaption();
+  };
+  // Reading a five-word label is quick — a fluent reader takes a short line in at about fifteen
+  // characters a second — and the first pass at these numbers was sized for sentences, which made
+  // the cards the longest thing in the demo. `readingSecs` is WALL CLOCK: it is not divided by the
+  // rate, because the rate makes the pointer quicker and cannot make a reader quicker.
+  const READ_BASE = 0.25, READ_PER_CHAR = 0.035, READ_MIN = 0.7, READ_MAX = 2.2;
+  // AND HALF AS LONG AGAIN. The figures above are a fluent reader taking a short line at a glance,
+  // which is the floor rather than the target: the viewer is also watching the rack, may be reading
+  // at speed or under magnification, and a caption that goes before it has been finished is worse
+  // than a demo that runs a little longer. The margin is deliberately a single number, so it can be
+  // raised for everyone rather than argued about line by line.
+  const READ_MARGIN = 1.5;
+  const CAPTION_RATE = 1.6;      // and the gestures themselves run faster with no sentence to fill
+  const CAPTION_TURN_MAX = 1.0;  // seconds, wall clock, for any one knob sweep
+  const SWEEP_SCALE = 0.45;   // an authored `over N` is long because a sentence is read over it
+  const CAPTION_PACE = 0.6;   // and so is every other pause the runner takes between gestures
+  const readingSecs = (text) =>
+    READ_MARGIN * Math.max(READ_MIN, Math.min(READ_MAX, READ_BASE + String(text || '').length * READ_PER_CHAR));
+  const cardTextFor = (s, which = 'note') =>
+    (s.title && which === 'note' ? (s.caption || s.note)
+      : (captionMode && which === 'note' ? (s.caption || s.note) : s[which]));
   // A card standing on a module is only a problem when it is standing on the module under discussion.
   // Covering some other part of the rack is fine, and treating the whole rack as out of bounds only
   // drove the card into whatever odd corner happened to be free.
-  function showCard(text, region = null, pin = null) {
-    if (!captions) { card.hide(); return; }
-    card.show(text, { avoid: [region, opts.panelRect ? opts.panelRect() : null], pin });
+  function showCard(text, region = null, pin = null, step = null) {
+    // A TITLE IS NOT A CAPTION. The captions switch decides whether the running commentary is drawn
+    // over the rack; an opening frame is the demo introducing itself and belongs on screen either
+    // way — without this it was invisible in a narrated run, which is how it ships.
+    if (!(captions || capShow) && !(step && step.title)) { card.hide(); return; }
+    // IN CAPTION MODE THE CARD GOES TO THE WORK. The step already names what it is about to touch, so
+    // the chip parks beside that and points at it. A step naming a CONTROL — a jack, a knob, a lamp —
+    // gets the ring; one naming a whole module gets the chip beside it and no ring, because an arrow
+    // into the middle of a panel points at nothing in particular.
+    let near = null, arrow = false;
+    // The opening title has nothing to point at and belongs over the picture, not under it.
+    if (step && step.title) pin = 'title';
+    else if (captionMode && step && step.do === 'stage' && step.to === 'full') pin = 'middle';
+    if (captionMode && step) {
+      const ref = targetsOf(step)[0] || null;
+      if (ref) {
+        near = resolve(ref);
+        arrow = String(ref).includes(':') && !!split(ref)[1];
+      }
+    }
+    // The caption HANGS OFF THE POINTER in caption mode: read where the eye already is, and carried
+    // to the next control by the thing that is about to act on it. The opening title is the one
+    // exception — it belongs over the picture, and the pointer is nowhere near it.
+    const follow = (capShow || captions) && captionMode && pin !== 'middle' ? () => theatre.pos : null;
+    card.show(text, { avoid: [region, opts.panelRect ? opts.panelRect() : null], pin, caption: captionMode, near, arrow, follow });
   }
 
   // ---- state, so a step can be gone back to --------------------------------
@@ -796,8 +979,17 @@ export function createDemoRunner(rack, opts = {}) {
     steps = (demo && demo.steps) || [];
     defaults = { ...DEFAULTS, ...((demo && demo.defaults) || {}) };
     verbosity = (demo && demo.voice) || 'long';
+    // A captioned script turns its own cards on: they are the only channel it has, so leaving them
+    // to the transport's toggle would make the demo silent AND wordless.
+    if (String((demo && demo.mode) || '').toLowerCase().includes('voice')) captionVoice = true;
+    if (captionOverride == null && !capShow && !capSpeak) {
+      const declared = String((demo && demo.mode) || '').toLowerCase();
+      capShow = declared.startsWith('captions');
+      capSpeak = declared.includes('voice');
+    }
+    syncCaption();
     rate = num(demo && demo.rate, 1) > 0 ? num(demo && demo.rate, 1) : 1;
-    theatre.setRate(rate);
+    theatre.setRate(rate * (captionMode ? CAPTION_RATE : 1));
     index = 0; history = []; noteText = null;
   }
 
@@ -873,6 +1065,9 @@ export function createDemoRunner(rack, opts = {}) {
   // Every line goes through here, so there is one place that knows the patch should be down while
   // anything is being said.
   async function narrate(text) {
+    // Caption mode is silent by definition: no notes, no gesture phrases, nothing for the ducking to
+    // duck. The badge still names each gesture, which is picture rather than sound.
+    if (captionMode && !capSpeak) return;
     if (!text) return;
     duck(true);
     try { await voice.speak(text); } finally { duck(false); }
@@ -905,12 +1100,17 @@ export function createDemoRunner(rack, opts = {}) {
     if (rec && rec.values.get('master') !== viewerMaster) rack.applyParam(rec, 'master', viewerMaster);
   }
 
-  async function run(obj) {
+  async function run(obj, { from = 0 } = {}) {
     // A RUN THAT IS REFUSED SAYS SO. Silently returning is how two demos came to look like one bug:
     // the second press did nothing, the first was still going, and what was heard was the two of them.
     if (running) { console.warn('[demo] a run is already going; this one was refused'); return; }
     if (obj) load(obj);
     if (!demo) return;
+    // BLACK FIRST, BEFORE THE PATCH IS EVEN LOADED. A reel that opens on a full screen is opening on
+    // its FINISHED patch, and reset() builds that patch on a rack the viewer can see. Half a second
+    // of it is enough to give away the whole demo, so the black goes up here — the first thing the
+    // run does — and comes down when the picture takes over.
+    if (demo.screen === 'full' && rack.videoBackdrop) rack.videoBackdrop(true);
     running = true; cancelled = false;
     theatre.setInstant(false);
     try {
@@ -929,13 +1129,40 @@ export function createDemoRunner(rack, opts = {}) {
       // NOTHING FROM BEFORE IS STILL TALKING. A line cut off by a stop, a note being read aloud from
       // the panel, a run that ended while its last sentence was still playing — any of them would be
       // heard under the first line of this one. The speech is stopped before the voice is enabled.
+      // THE PICTURE IS UP BEFORE THE FIRST STEP. `**Stage**` says where it starts, and both the
+      // opening and the window it needs are done here rather than as steps: a viewer who pressed Run
+      // on a video reel should be looking at the picture, not at a pointer pressing a button to make
+      // it appear. Nothing is pointed at and nothing is announced.
+      stageNow = demo.screen || null;
+      if (stageNow === 'full' && rack.videoBackdrop) rack.videoBackdrop(true);
+      applyStage();
+      // The page the script opens on, before the pointer appears — see `**Page**` in demo-md.
+      if (demo.startPage && rack._hasPage && rack._hasPage(demo.startPage) && rack.page !== demo.startPage) {
+        rack.selectPage(demo.startPage);
+      }
+      // THE CONTEXT IS RESUMED HERE, at the top of the run. It was resumed by the first line spoken,
+      // which is too late and too narrow: a demo whose first words come after a patch load found the
+      // context suspended, played its fragment into a stopped clock and made no sound at all — the
+      // files were fine and nothing was heard. Pressing Run is the gesture that permits this.
+      const actx = ctx();
+      if (actx && actx.state === 'suspended') { try { await actx.resume(); } catch (_e) { /* stays silent */ } }
       stopSpeech();
       voice.setEnabled(true);
+      if (voice.prime) voice.prime();   // its output node must exist before a recorder looks for it
       if (voice.reload) voice.reload();   // pick up anything rendered since the app started
       // A BEAT BEFORE ANYTHING HAPPENS. The tutorial has just vanished and the rack has just been set
       // up; starting to narrate and move in the same instant asks the viewer to work out where they
       // are and follow a pointer at the same time. Let them look first.
-      console.warn(`[demo] RUN START — ${demo.id || '?'}, ${steps.length} steps, rate ${rate}`);
+      console.warn(`[demo] RUN START — ${demo.id || '?'}, ${steps.length} steps, rate ${rate}${from ? ', from step ' + from : ''}`);
+      // RUN FROM A STEP. The steps before it are replayed with every wait collapsed and the voice off,
+      // because the rack has to arrive in the state that step begins from — a demo is a sequence of
+      // acts on a patch, not a set of independent moments. Then the run proper carries on from there.
+      if (from > 0) {
+        theatre.setInstant(true);
+        voice.setEnabled(false);
+        try { while (index < Math.min(from, steps.length) && !cancelled) { capture(index); await runStep(index); index++; } }
+        finally { theatre.setInstant(false); voice.setEnabled(true); }
+      }
       await theatre.sleep(num(demo.openHold, 2.5));
       if (demo.intro) { showCard(demo.intro); await Promise.all([theatre.sleep(num(demo.introHold, 2.5)), narrate(demo.intro)]); }
       while (index < steps.length && !cancelled) {
@@ -1045,16 +1272,45 @@ export function createDemoRunner(rack, opts = {}) {
   function stop(reason) {
     if (running) console.warn(`[demo] STOP — ${reason || 'no reason given'}`);
     cancelled = true;
+    // A run stopped WHILE PAUSED would otherwise leave the clock frozen and the next run would never
+    // move. Unfreeze first, then cancel: the order matters, since the waits in flight are waiting on
+    // that clock to notice they have been cancelled.
+    if (theatre.isPaused()) { theatre.setPaused(false); voice.setPaused(false); }
     // The monitors a demo opened are the demo's, not yours: they were put there to show a stage of a
     // chain being built, and once the run is over they are a screenful of pictures with nothing to
     // explain them. Cleared with the rest of the theatre.
     if (rack.closeVideoMonitors) rack.closeVideoMonitors();
     releaseCable(); theatre.end(); card.hide();
+    if (rack.videoBackdrop) rack.videoBackdrop(false);
     voice.stop(); voice.setEnabled(false);
     silence();
   }
 
   function setRate(r) { if (Number(r) > 0) { rate = Number(r); theatre.setRate(rate); } }
+
+  // ---- pause ----------------------------------------------------------------
+  //
+  // STOPPING AND PAUSING ARE DIFFERENT ACTS. Stopping ends the run and leaves the rack exactly as the
+  // demo had built it, standing on the step it reached — which is what you want when you have seen
+  // enough. Pausing freezes the performance where it is and gives nothing up: the clock stops, so the
+  // step in flight simply takes longer; the sentence stops and remembers where it was; the real
+  // pointer comes back so the viewer can hover a jack or read a value; and the caption stays up,
+  // because it is the line explaining the thing they have stopped to look at.
+  //
+  // Nothing is snapshotted or restored, so anything the viewer does while paused is theirs to keep —
+  // the demo carries on from the rack as it finds it, which is the honest behaviour and also the only
+  // one that does not silently undo their poking about.
+  function setPaused(on) {
+    const want = !!on;
+    if (want === theatre.isPaused()) return want;
+    theatre.setPaused(want);
+    voice.setPaused(want);
+    if (want) console.warn('[demo] PAUSED at step ' + index);
+    if (opts.onProgress) { try { opts.onProgress(); } catch (_e) { /* as above */ } }
+    return want;
+  }
+  const togglePause = () => setPaused(!theatre.isPaused());
+  const isPaused = () => theatre.isPaused();
 
   // Where the demo has got to, in enough detail to talk about. Projected to the AI mirror so that
   // "make that shorter" needs no explanation of WHICH step or WHAT it says — the step, its exact
@@ -1064,6 +1320,11 @@ export function createDemoRunner(rack, opts = {}) {
     return {
       script: demo ? { id: demo.id, title: demo.title || null, file: demo.__file || null } : null,
       index, count: steps.length, running,
+      // Paused is part of the state a reader needs: "step 9 of 33, paused" is a different situation
+      // from "step 9 of 33, playing", and it is the moment an author is most likely to ask for a
+      // change to the step they are looking at.
+      paused: theatre.isPaused ? theatre.isPaused() : false,
+      captionMode, captionVoice,
       defaults, voice: verbosity,
       note: noteText,
       previous: at(index - 1),
@@ -1099,8 +1360,13 @@ export function createDemoRunner(rack, opts = {}) {
   const stopSpeech = () => { speakRun++; voice.stop(); };
 
   return {
-    run, stop, step, playStep, back, seek, load, reset, setRate, setCaptions, state,
+    run, stop, step, playStep, back, seek, load, reset, setRate, setCaptions, setCaptionMode, setCaptionVoice, setCaptionShow,
+    setPaused, togglePause, isPaused, state,
     speakText, stopSpeech,
+    // BEFORE A RECORDER LOOKS FOR IT. The recorder gathers what it will capture at the moment it
+    // starts, and the narration's output node is built by the first line spoken — so a take begun
+    // before then carries the patch and none of the words. Anything about to record calls this first.
+    primeVoice: () => { if (voice.prime) voice.prime(); },
     get running() { return running; },
     get index() { return index; },
     get count() { return steps.length; },

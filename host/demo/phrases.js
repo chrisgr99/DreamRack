@@ -147,13 +147,22 @@ export function createPhraseBook(actions = {}, controls = {}) {
   // `kinds` maps a control reference to 'terminal' | 'knob' | 'button' — what the scripts actually do
   // with it. Given that, a templated phrase is only crossed with the controls its action can act on.
   // Without it every phrase is crossed with every control, which is correct but wasteful.
-  const all = (kinds = null) => {
+  // `levels` limits which sets are enumerated. Rendering costs a `say` call and a file per line, and
+  // the SHORT forms are spoken only by a demo that asks for short verbosity — of which there are
+  // none, so they were three quarters of a minute of premium-voice audio nobody can hear. A demo
+  // that declares `voice: short` puts them back by naming the level here.
+  //
+  // `onlyUsedRefs` crosses templated phrases with the controls the scripts actually touch, rather
+  // than every control the table happens to name.
+  const all = (kinds = null, { levels = ['long', 'after', 'short', 'combined'], onlyUsedRefs = false } = {}) => {
     const out = new Set();
-    const refs = Object.keys(controls);
+    const known = Object.keys(controls);
+    const refs = onlyUsedRefs && kinds ? known.filter((r) => kinds[r]) : known;
+    const want_ = (name, list) => (levels.includes(name) ? (list || []) : []);
     for (const [key, a] of Object.entries(actions)) {
       const want = ACTION_KIND[key];
       const usable = (kinds && want) ? refs.filter((r) => kinds[r] === want) : refs;
-      for (const t of [...a.long, ...(a.after || []), ...a.short, ...(a.combined || [])]) {
+      for (const t of [...want_('long', a.long), ...want_('after', a.after), ...want_('short', a.short), ...want_('combined', a.combined)]) {
         if (!t) continue;
         if (t.includes('{target}')) { for (const r of usable) out.add(t.replace('{target}', controls[r])); }
         else out.add(t);

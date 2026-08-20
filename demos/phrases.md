@@ -5,8 +5,8 @@ generated from it and no code needs touching.
 
 ## Voice
 
-- voice: Jamie (Premium)
-- rate: 175
+- voice: Karen (Premium)
+- rate: 150
 
 The voice every fragment is rendered in, and its speed in words per minute. Change either and
 `npm run speech` re-renders everything in the new voice.
@@ -94,15 +94,15 @@ sometimes an abbreviation, so anything a demo actually points at is worth writin
 | videoOut:imageIn | the video output's image input |
 | videoOut:window | the window button on the video output |
 | videoOut:test | the test pattern button |
-| field:fieldOut | the field output of the coordinate field |
-| field:field | the field selector on the coordinate field |
-| field:scale | the scale knob on the coordinate field |
-| field:polar | the polar knob on the coordinate field |
-| field:twist | the twist knob on the coordinate field |
-| field:tile | the tile knob on the coordinate field |
-| field:quantise | the quantise knob on the coordinate field |
-| field:scroll | the scroll knob on the coordinate field |
-| field:rotate | the rotate knob on the coordinate field |
+| field:fieldOut | the field output |
+| field:field | the field selector — which way the space is read |
+| field:scale | the scale knob, which zooms the space |
+| field:polar | the polar knob, which bends the grid round the centre |
+| field:twist | the twist knob, which turns the space further the further out you go |
+| field:tile | the tile knob, which repeats the space across the frame |
+| field:quantise | the quantise knob, which steps the field into bands |
+| field:scroll | the scroll knob, which drifts the picture on its own |
+| field:rotate | the rotate knob, which turns the whole space |
 | field:offsetXCv | the X jack in the middle of the coordinate field's X knob |
 | field:offsetYCv | the Y jack in the middle of the coordinate field's Y knob |
 | shapes:fieldIn | the field input on shapes |
@@ -115,6 +115,41 @@ sometimes an abbreviation, so anything a demo actually points at is worth writin
 | timeMachine:imageOut | the image output of the time module |
 | timeMachine:mode | the mode selector on the time module |
 | timeMachine:spread | the spread knob on the time module |
+| poly:sides | the sides knob, which counts the corners |
+| poly:size | the size knob |
+| poly:star | the star knob, which pulls the corners into points |
+| poly:outline | the outline knob, which hollows the shape out |
+| poly:shapeOut | the polygon's output |
+| sym:sectors | the sectors knob, which sets how many times the frame is folded |
+| sym:rotate | the rotate knob, which turns what is folded |
+| sym:spread | the spread knob, which decides how much of the frame is folded |
+| sym:mode | the fold switch |
+| sym:imageIn | symmetry's image input |
+| sym:imageOut | symmetry's output |
+| grid:cols | the columns knob |
+| grid:rows | the rows knob |
+| grid:brick | the brick knob, which offsets alternate rows |
+| grid:vary | the vary knob, which makes the cells differ |
+| grid:imageIn | the grid's image input |
+| grid:imageOut | the grid's output |
+| col:spread | the spread knob, which stretches the image across the palette |
+| col:shift | the shift knob, which slides it along |
+| col:cycle | the cycle knob, which turns the palette under the picture |
+| col:palette | the palette list |
+| col:imageIn | the colorizer's image input |
+| col:imageOut | the colorizer's output |
+| chr:hue | the hue knob, which turns every colour at once |
+| chr:sat | the saturation knob |
+| chr:contrast | the contrast knob |
+| chr:level | the level knob |
+| chr:imageIn | chroma's image input |
+| chr:imageOut | chroma's output |
+| maths:aIn | the A input on video maths |
+| maths:bIn | the B input |
+| maths:outImage | the output of video maths |
+| maths:op | the operation list |
+| maths:amount | the amount knob, which dials the operation in |
+| out:imageIn | the video output's image input |
 | videoMaths:aIn | the A input on video maths |
 | videoMaths:bIn | the B input on video maths |
 | videoMaths:outImage | the output of video maths |
