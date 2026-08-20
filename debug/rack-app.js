@@ -426,1478 +426,1514 @@ const MODULE_TYPES = [{
   hidden: true,
 }];
 
-let audioCtx = null;
-let host = null;
-let rack = null;
-let mixer = null;        // { instanceId, instance }
-let recorder = null;     // screen+audio recorder (Electron only)
-let recBadge = null, recTimer = null;
+// createDreamRack — one rack, built into an element, running on a context it is given.
+//
+// EVERYTHING BELOW USED TO BE MODULE-LEVEL STATE plus one boot(). That works exactly once: the
+// audio context, the host, the rack, the mixer and the recorder were file-scoped, so a second rack
+// in the same page would have quietly taken the first one's variables. Closing over them instead
+// costs nothing today — the page still makes exactly one — and is what lets a caller that is not
+// this page make one at all.
+//
+// The two things a host has to supply are the two things this used to help itself to:
+//
+//   ctx      the AudioContext. A merged app creates ONE and hands it to everything, which is the
+//            whole reason a rack and a sequencer can be patched together rather than merely run
+//            side by side. Omitted, the rack makes its own, which is what the standalone page wants.
+//   element  where the rack draws. Omitted, it takes #rack, which is what the standalone page has.
+//
+// NOT YET HERE: teardown. Nothing can remove a rack from a page, because nothing needs to until a
+// rack can be a module inside something else. It belongs with stage 4, where that first happens.
+export async function createDreamRack({ ctx = null, element = null } = {}) {
+  const givenCtx = ctx, givenElement = element;
+  let audioCtx = null;
+  let rackElement = null;
+  let host = null;
+  let rack = null;
+  let mixer = null;        // { instanceId, instance }
+  let recorder = null;     // screen+audio recorder (Electron only)
+  let recBadge = null, recTimer = null;
 
-// A recording that is quietly still running is the failure mode worth designing against,
-// so the badge is deliberately hard to miss: fixed to the top-right, above everything,
-// with a pulsing dot and the elapsed time. Click it to stop.
-function paintRecBadge() {
-  if (!recorder) return;
-  if (recorder.recording && !recBadge) {
-    recBadge = document.createElement('button');
-    recBadge.type = 'button';
-    recBadge.title = 'Stop recording';
-    recBadge.style.cssText = [
-      'position:fixed', 'top:10px', 'right:12px', 'z-index:2000',
-      'display:flex', 'align-items:center', 'gap:7px',
-      'padding:5px 11px 5px 9px', 'border-radius:16px',
-      'border:1px solid #b3323c', 'background:#2a1416', 'color:#ffd9dc',
-      'font:600 12px/1 -apple-system,system-ui,sans-serif', 'cursor:pointer',
-      'font-variant-numeric:tabular-nums', 'box-shadow:0 3px 14px rgba(0,0,0,.5)',
-    ].join(';');
-    const dot = document.createElement('span');
-    dot.style.cssText = 'width:9px;height:9px;border-radius:50%;background:#ff3b30;animation:wcRecPulse 1.6s ease-in-out infinite';
-    const time = document.createElement('span');
-    recBadge.append(dot, time);
-    recBadge.addEventListener('click', () => toggleRecording());
-    if (!document.getElementById('wcRecKeyframes')) {
-      const st = document.createElement('style');
-      st.id = 'wcRecKeyframes';
-      st.textContent = '@keyframes wcRecPulse{0%,100%{opacity:1}50%{opacity:.35}}';
-      document.head.appendChild(st);
+  // A recording that is quietly still running is the failure mode worth designing against,
+  // so the badge is deliberately hard to miss: fixed to the top-right, above everything,
+  // with a pulsing dot and the elapsed time. Click it to stop.
+  function paintRecBadge() {
+    if (!recorder) return;
+    if (recorder.recording && !recBadge) {
+      recBadge = document.createElement('button');
+      recBadge.type = 'button';
+      recBadge.title = 'Stop recording';
+      recBadge.style.cssText = [
+        'position:fixed', 'top:10px', 'right:12px', 'z-index:2000',
+        'display:flex', 'align-items:center', 'gap:7px',
+        'padding:5px 11px 5px 9px', 'border-radius:16px',
+        'border:1px solid #b3323c', 'background:#2a1416', 'color:#ffd9dc',
+        'font:600 12px/1 -apple-system,system-ui,sans-serif', 'cursor:pointer',
+        'font-variant-numeric:tabular-nums', 'box-shadow:0 3px 14px rgba(0,0,0,.5)',
+      ].join(';');
+      const dot = document.createElement('span');
+      dot.style.cssText = 'width:9px;height:9px;border-radius:50%;background:#ff3b30;animation:wcRecPulse 1.6s ease-in-out infinite';
+      const time = document.createElement('span');
+      recBadge.append(dot, time);
+      recBadge.addEventListener('click', () => toggleRecording());
+      if (!document.getElementById('wcRecKeyframes')) {
+        const st = document.createElement('style');
+        st.id = 'wcRecKeyframes';
+        st.textContent = '@keyframes wcRecPulse{0%,100%{opacity:1}50%{opacity:.35}}';
+        document.head.appendChild(st);
+      }
+      document.body.appendChild(recBadge);
+      const tick = () => {
+        const s = Math.floor(recorder.elapsedMs() / 1000);
+        time.textContent = `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
+      };
+      tick();
+      recTimer = setInterval(tick, 500);
+    } else if (!recorder.recording && recBadge) {
+      clearInterval(recTimer); recTimer = null;
+      recBadge.remove(); recBadge = null;
     }
-    document.body.appendChild(recBadge);
-    const tick = () => {
-      const s = Math.floor(recorder.elapsedMs() / 1000);
-      time.textContent = `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
+  }
+
+  // WHERE THINGS WENT, said next to where you were looking. Capturing something and having nothing
+  // happen on screen is indistinguishable from a broken menu item, so every capture answers back.
+  //
+  // This replaced a pill pinned to the top-right corner that stayed until dismissed. Two reasons it
+  // moved: a corner is nowhere near where you just clicked, and — the one that decided it — a
+  // notification that never goes away is still on screen the NEXT time you take a snapshot, so it
+  // ends up IN the picture. It keeps everything the pill carried: the filename, and a click that
+  // reveals the file in Finder. It just expires rather than waiting to be dismissed.
+  //
+  // The pointer is tracked continuously because the trigger is not always a click: R starts a
+  // recording from the keyboard, and the pointer may be anywhere or nowhere useful. Last known
+  // position, falling back to the top centre of the window.
+  let lastPointer = null;
+  document.addEventListener('pointermove', (e) => { lastPointer = { x: e.clientX, y: e.clientY }; }, true);
+  document.addEventListener('pointerdown', (e) => { lastPointer = { x: e.clientX, y: e.clientY }; }, true);
+
+  // Two lines, always: what happened, then which file (or what to do next). Stacked rather than
+  // strung out on one line because a short wide banner is a thing you have to READ across, while
+  // two short lines are a thing you take in at a glance — and this has four seconds to be taken in.
+  let noteEl = null, noteTimer = 0;
+  // `at` is WHERE THE ACTION HAPPENED, not where the pointer is by the time the work finishes.
+  // That distinction matters: stopping a recording waits on the recorder to finalise and the last
+  // chunks to reach disk, and reading the pointer after that wait put "Recording saved" wherever the
+  // pointer had drifted to — somewhere other than where "Recording started" had appeared. Callers
+  // capture the position before they await anything, so the pair lands in one place.
+  function notify(message, { detail = null, path = null, ms = 4000, at = null, sticky = false } = {}) {
+    if (noteEl) { clearTimeout(noteTimer); noteEl.remove(); noteEl = null; }
+    const note = document.createElement('div');
+    note.style.cssText = [
+      'position:fixed', 'z-index:2000', 'transform:translate(-50%,-100%)',
+      'display:flex', 'flex-direction:column', 'align-items:flex-start', 'gap:2px',
+      'padding:8px 13px', 'border-radius:9px',
+      'border:1px solid #3d6b46', 'background:#152418', 'color:#cfe9d5',
+      'font:600 12.5px/1.4 -apple-system,system-ui,sans-serif',
+      'box-shadow:0 4px 18px rgba(0,0,0,.55)', 'transition:opacity .35s',
+      'max-width:30ch', 'pointer-events:auto',
+    ].join(';');
+    const text = document.createElement('span');
+    text.textContent = message;
+    note.appendChild(text);
+    const second = detail || (path ? path.split('/').pop() : null);
+    if (second != null || sticky) {
+      const sub2 = document.createElement('span');
+      sub2.textContent = second == null ? '' : second;
+      // A filename wraps rather than truncating: an elided name is no use for finding the file,
+      // which is the only reason it is shown.
+      sub2.style.cssText = 'opacity:.75;font-weight:400;word-break:break-word';
+      note.appendChild(sub2);
+    }
+    if (path) {
+      note.title = `${path}\nClick to show in Finder`;
+      note.style.cursor = 'pointer';
+      note.addEventListener('click', () => window.wcoast?.record?.reveal?.(path));
+    } else {
+      note.style.pointerEvents = 'none';
+    }
+    document.body.appendChild(note);
+
+    // Just above the pointer, then nudged back on screen if that put it over an edge — the same
+    // courtesy the menus get.
+    const p = at || lastPointer || { x: (window.innerWidth || 800) / 2, y: 90 };
+    const r = note.getBoundingClientRect();
+    const pad = 8;
+    let x = p.x, y = p.y - 14;
+    x = Math.min(Math.max(x, pad + r.width / 2), (window.innerWidth || 800) - pad - r.width / 2);
+    if (y - r.height < pad) y = p.y + 14 + r.height;      // no room above → below the pointer
+    note.style.left = Math.round(x) + 'px';
+    note.style.top = Math.round(y) + 'px';
+
+    noteEl = note;
+    const fade = (after) => {
+      clearTimeout(noteTimer);
+      noteTimer = setTimeout(() => {
+        note.style.opacity = '0';
+        setTimeout(() => { note.remove(); if (noteEl === note) noteEl = null; }, 400);
+      }, after);
     };
-    tick();
-    recTimer = setInterval(tick, 500);
-  } else if (!recorder.recording && recBadge) {
-    clearInterval(recTimer); recTimer = null;
-    recBadge.remove(); recBadge = null;
+    if (!sticky) fade(ms);
+    // A STICKY note stays until the caller says otherwise, and can be rewritten in place — which is
+    // how the recording countdown works: one note that counts down and then becomes the confirmation,
+    // rather than five notes flickering in and out.
+    return {
+      set(msg, det) {
+        text.textContent = msg;
+        const line2 = note.children[1];
+        if (line2) line2.textContent = det == null ? '' : det;
+      },
+      dismissAfter: fade,
+      close() { clearTimeout(noteTimer); note.remove(); if (noteEl === note) noteEl = null; },
+    };
   }
-}
 
-// WHERE THINGS WENT, said next to where you were looking. Capturing something and having nothing
-// happen on screen is indistinguishable from a broken menu item, so every capture answers back.
-//
-// This replaced a pill pinned to the top-right corner that stayed until dismissed. Two reasons it
-// moved: a corner is nowhere near where you just clicked, and — the one that decided it — a
-// notification that never goes away is still on screen the NEXT time you take a snapshot, so it
-// ends up IN the picture. It keeps everything the pill carried: the filename, and a click that
-// reveals the file in Finder. It just expires rather than waiting to be dismissed.
-//
-// The pointer is tracked continuously because the trigger is not always a click: R starts a
-// recording from the keyboard, and the pointer may be anywhere or nowhere useful. Last known
-// position, falling back to the top centre of the window.
-let lastPointer = null;
-document.addEventListener('pointermove', (e) => { lastPointer = { x: e.clientX, y: e.clientY }; }, true);
-document.addEventListener('pointerdown', (e) => { lastPointer = { x: e.clientX, y: e.clientY }; }, true);
-
-// Two lines, always: what happened, then which file (or what to do next). Stacked rather than
-// strung out on one line because a short wide banner is a thing you have to READ across, while
-// two short lines are a thing you take in at a glance — and this has four seconds to be taken in.
-let noteEl = null, noteTimer = 0;
-// `at` is WHERE THE ACTION HAPPENED, not where the pointer is by the time the work finishes.
-// That distinction matters: stopping a recording waits on the recorder to finalise and the last
-// chunks to reach disk, and reading the pointer after that wait put "Recording saved" wherever the
-// pointer had drifted to — somewhere other than where "Recording started" had appeared. Callers
-// capture the position before they await anything, so the pair lands in one place.
-function notify(message, { detail = null, path = null, ms = 4000, at = null, sticky = false } = {}) {
-  if (noteEl) { clearTimeout(noteTimer); noteEl.remove(); noteEl = null; }
-  const note = document.createElement('div');
-  note.style.cssText = [
-    'position:fixed', 'z-index:2000', 'transform:translate(-50%,-100%)',
-    'display:flex', 'flex-direction:column', 'align-items:flex-start', 'gap:2px',
-    'padding:8px 13px', 'border-radius:9px',
-    'border:1px solid #3d6b46', 'background:#152418', 'color:#cfe9d5',
-    'font:600 12.5px/1.4 -apple-system,system-ui,sans-serif',
-    'box-shadow:0 4px 18px rgba(0,0,0,.55)', 'transition:opacity .35s',
-    'max-width:30ch', 'pointer-events:auto',
-  ].join(';');
-  const text = document.createElement('span');
-  text.textContent = message;
-  note.appendChild(text);
-  const second = detail || (path ? path.split('/').pop() : null);
-  if (second != null || sticky) {
-    const sub2 = document.createElement('span');
-    sub2.textContent = second == null ? '' : second;
-    // A filename wraps rather than truncating: an elided name is no use for finding the file,
-    // which is the only reason it is shown.
-    sub2.style.cssText = 'opacity:.75;font-weight:400;word-break:break-word';
-    note.appendChild(sub2);
+  // A still of the window, saved beside the video takes. It goes through the main process rather
+  // than trying to rasterise the DOM here: capturePage reads the COMPOSITED window, so the scopes'
+  // live traces, the cables and the video preview are all in it — a DOM-to-image conversion would
+  // lose every canvas, which is most of what is worth a picture.
+  function snapshotAvailable() {
+    return !!(window.wcoast && window.wcoast.isElectron && window.wcoast.snapshot);
   }
-  if (path) {
-    note.title = `${path}\nClick to show in Finder`;
-    note.style.cursor = 'pointer';
-    note.addEventListener('click', () => window.wcoast?.record?.reveal?.(path));
-  } else {
-    note.style.pointerEvents = 'none';
+
+  async function takeSnapshot() {
+    if (!snapshotAvailable()) return;
+    const at = lastPointer && { ...lastPointer };   // where you were when you asked, not after the wait
+    // Shut the menu first — and WAIT FOR A FRAME so it is actually gone. capturePage reads what is
+    // composited, so a menu still on screen is a menu in the photograph, and taking the snapshot
+    // from that very menu is the commonest way to do it.
+    if (rack) rack.closeMenus();
+    await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+    const d = new Date();
+    const p = (n) => String(n).padStart(2, '0');
+    const name = `DreamRack ${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} `
+      + `${p(d.getHours())}.${p(d.getMinutes())}.${p(d.getSeconds())}.png`;
+    // Failures here are REPORTED, not swallowed to the console. A menu item that silently does
+    // nothing is indistinguishable from a broken one, and the console is not somewhere a user looks.
+    try {
+      const res = await window.wcoast.snapshot.save(name);
+      if (res && res.path) { notify('Image written to Downloads', { path: res.path, at }); return; }
+      log(`snapshot: no path returned (${JSON.stringify(res)})`);
+      window.alert(`Snapshot failed: ${(res && res.error) || 'the window returned no image'}`);
+    } catch (e) {
+      log(`snapshot failed: ${e && e.message}`);
+      window.alert(`Snapshot failed: ${e && e.message}`);
+    }
   }
-  document.body.appendChild(note);
 
-  // Just above the pointer, then nudged back on screen if that put it over an edge — the same
-  // courtesy the menus get.
-  const p = at || lastPointer || { x: (window.innerWidth || 800) / 2, y: 90 };
-  const r = note.getBoundingClientRect();
-  const pad = 8;
-  let x = p.x, y = p.y - 14;
-  x = Math.min(Math.max(x, pad + r.width / 2), (window.innerWidth || 800) - pad - r.width / 2);
-  if (y - r.height < pad) y = p.y + 14 + r.height;      // no room above → below the pointer
-  note.style.left = Math.round(x) + 'px';
-  note.style.top = Math.round(y) + 'px';
+  // The lead-in before a take starts rolling. Five seconds of "get ready" so a demonstration can
+  // begin the moment recording does, rather than opening with a shot of someone reaching for the
+  // mouse. Pressing R again during the count calls it off.
+  let countdown = null;
 
-  noteEl = note;
-  const fade = (after) => {
-    clearTimeout(noteTimer);
-    noteTimer = setTimeout(() => {
-      note.style.opacity = '0';
-      setTimeout(() => { note.remove(); if (noteEl === note) noteEl = null; }, 400);
-    }, after);
-  };
-  if (!sticky) fade(ms);
-  // A STICKY note stays until the caller says otherwise, and can be rewritten in place — which is
-  // how the recording countdown works: one note that counts down and then becomes the confirmation,
-  // rather than five notes flickering in and out.
-  return {
-    set(msg, det) {
-      text.textContent = msg;
-      const line2 = note.children[1];
-      if (line2) line2.textContent = det == null ? '' : det;
-    },
-    dismissAfter: fade,
-    close() { clearTimeout(noteTimer); note.remove(); if (noteEl === note) noteEl = null; },
-  };
-}
-
-// A still of the window, saved beside the video takes. It goes through the main process rather
-// than trying to rasterise the DOM here: capturePage reads the COMPOSITED window, so the scopes'
-// live traces, the cables and the video preview are all in it — a DOM-to-image conversion would
-// lose every canvas, which is most of what is worth a picture.
-function snapshotAvailable() {
-  return !!(window.wcoast && window.wcoast.isElectron && window.wcoast.snapshot);
-}
-
-async function takeSnapshot() {
-  if (!snapshotAvailable()) return;
-  const at = lastPointer && { ...lastPointer };   // where you were when you asked, not after the wait
-  // Shut the menu first — and WAIT FOR A FRAME so it is actually gone. capturePage reads what is
-  // composited, so a menu still on screen is a menu in the photograph, and taking the snapshot
-  // from that very menu is the commonest way to do it.
-  if (rack) rack.closeMenus();
-  await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
-  const d = new Date();
-  const p = (n) => String(n).padStart(2, '0');
-  const name = `DreamRack ${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} `
-    + `${p(d.getHours())}.${p(d.getMinutes())}.${p(d.getSeconds())}.png`;
-  // Failures here are REPORTED, not swallowed to the console. A menu item that silently does
-  // nothing is indistinguishable from a broken one, and the console is not somewhere a user looks.
-  try {
-    const res = await window.wcoast.snapshot.save(name);
-    if (res && res.path) { notify('Image written to Downloads', { path: res.path, at }); return; }
-    log(`snapshot: no path returned (${JSON.stringify(res)})`);
-    window.alert(`Snapshot failed: ${(res && res.error) || 'the window returned no image'}`);
-  } catch (e) {
-    log(`snapshot failed: ${e && e.message}`);
-    window.alert(`Snapshot failed: ${e && e.message}`);
-  }
-}
-
-// The lead-in before a take starts rolling. Five seconds of "get ready" so a demonstration can
-// begin the moment recording does, rather than opening with a shot of someone reaching for the
-// mouse. Pressing R again during the count calls it off.
-let countdown = null;
-
-async function toggleRecording() {
-  if (!recorder) return;
-  const at = lastPointer && { ...lastPointer };   // fixed before any await, so start and stop agree
-  if (rack) rack.closeMenus();                    // never leave a menu open over a take
-  if (countdown) {                                // a second press during the lead-in calls it off
-    clearTimeout(countdown.timer);
-    countdown.note.set('Recording cancelled', '');
-    countdown.note.dismissAfter(1200);
-    const settle = countdown.resolve;
-    countdown = null;
-    settle(false);                                // let the waiting call return instead of hanging
-    return;
-  }
-  try {
-    if (!recorder.recording) {
-      // The countdown resolves with its OUTCOME rather than merely finishing: cancelled and
-      // completed both end the wait, and only one of them should start a recording.
-      const ready = await new Promise((resolve) => {
-        const note = notify('Recording starts in', { detail: '5', at, sticky: true });
-        let n = 5;
-        const tick = () => {
-          n -= 1;
-          if (n >= 2) { note.set('Recording starts in', String(n)); countdown.timer = setTimeout(tick, 1000); return; }
-          // The last beat says "Starting" rather than "1" — by then the number is no longer
-          // information — and it carries "Press R to stop", because this is the LAST moment that
-          // instruction can be shown. Anything on screen after the stream opens is IN the take,
-          // so the note has to say its piece and be gone before recording begins.
-          note.set('Starting', 'Press R to stop');
-          countdown.timer = setTimeout(() => { countdown = null; resolve(true); }, 1000);
-        };
-        countdown = { note, resolve, timer: setTimeout(tick, 1000) };
-      });
-      if (!ready) return;
-      // Clear the note and let a frame pass so it is actually off the screen, THEN open the
-      // stream. Otherwise the first second of every take is a picture of the countdown.
-      if (noteEl) { noteEl.remove(); noteEl = null; }
-      await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
-      const file = await recorder.start();
-      if (file) log(`recording to ${file}`);
+  async function toggleRecording() {
+    if (!recorder) return;
+    const at = lastPointer && { ...lastPointer };   // fixed before any await, so start and stop agree
+    if (rack) rack.closeMenus();                    // never leave a menu open over a take
+    if (countdown) {                                // a second press during the lead-in calls it off
+      clearTimeout(countdown.timer);
+      countdown.note.set('Recording cancelled', '');
+      countdown.note.dismissAfter(1200);
+      const settle = countdown.resolve;
+      countdown = null;
+      settle(false);                                // let the waiting call return instead of hanging
       return;
     }
-  } catch (err) {
-    countdown = null;
-    log(`recording failed — ${err && err.message ? err.message : err}`);
-    notify('Recording failed', { detail: (err && err.message) || String(err), at });
-    paintRecBadge();
-    return;
-  }
-  try {
-    if (recorder.recording) {
-      const file = await recorder.stop();
-      if (file) { log(`recording saved — ${file}`); notify('Recording saved to Downloads', { path: file, at }); }
+    try {
+      if (!recorder.recording) {
+        // The countdown resolves with its OUTCOME rather than merely finishing: cancelled and
+        // completed both end the wait, and only one of them should start a recording.
+        const ready = await new Promise((resolve) => {
+          const note = notify('Recording starts in', { detail: '5', at, sticky: true });
+          let n = 5;
+          const tick = () => {
+            n -= 1;
+            if (n >= 2) { note.set('Recording starts in', String(n)); countdown.timer = setTimeout(tick, 1000); return; }
+            // The last beat says "Starting" rather than "1" — by then the number is no longer
+            // information — and it carries "Press R to stop", because this is the LAST moment that
+            // instruction can be shown. Anything on screen after the stream opens is IN the take,
+            // so the note has to say its piece and be gone before recording begins.
+            note.set('Starting', 'Press R to stop');
+            countdown.timer = setTimeout(() => { countdown = null; resolve(true); }, 1000);
+          };
+          countdown = { note, resolve, timer: setTimeout(tick, 1000) };
+        });
+        if (!ready) return;
+        // Clear the note and let a frame pass so it is actually off the screen, THEN open the
+        // stream. Otherwise the first second of every take is a picture of the countdown.
+        if (noteEl) { noteEl.remove(); noteEl = null; }
+        await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+        const file = await recorder.start();
+        if (file) log(`recording to ${file}`);
+        return;
+      }
+    } catch (err) {
+      countdown = null;
+      log(`recording failed — ${err && err.message ? err.message : err}`);
+      notify('Recording failed', { detail: (err && err.message) || String(err), at });
+      paintRecBadge();
+      return;
     }
-  } catch (err) {
-    // A refused screen-share, or a codec the build cannot produce. Say so rather than
-    // leaving a badge that never appeared unexplained.
-    log(`recording failed — ${err && err.message ? err.message : err}`);
-    paintRecBadge();
+    try {
+      if (recorder.recording) {
+        const file = await recorder.stop();
+        if (file) { log(`recording saved — ${file}`); notify('Recording saved to Downloads', { path: file, at }); }
+      }
+    } catch (err) {
+      // A refused screen-share, or a codec the build cannot produce. Say so rather than
+      // leaving a badge that never appeared unexplained.
+      log(`recording failed — ${err && err.message ? err.message : err}`);
+      paintRecBadge();
+    }
   }
-}
-let trace = null;        // audio-trace projection (created after the mixer)
+  let trace = null;        // audio-trace projection (created after the mixer)
 
-function ensureAudio() {
-  if (audioCtx) return;
-  audioCtx = new AudioContext();
-  host = new SynthHost(audioCtx, registry);
-  log(`Audio ready — ${audioCtx.sampleRate} Hz, crossOriginIsolated = ${self.crossOriginIsolated}.`);
-}
-
-async function boot() {
-  ensureAudio();
-  let darkMode = true;   // first run defaults to DARK; a saved choice (below) overrides
-  try { const s = localStorage.getItem('wcoast.dark'); if (s !== null) darkMode = s === '1'; } catch (_e) { /* no storage */ }
-  // Where the view was left, remembered like dark mode: an app preference, not part of any patch.
-  const VIEW_KEY = 'wcoast.view';
-  const PAGE_KEY = 'wcoast.page';   // the tab last looked at
-  // Unsaved-changes state, declared BEFORE the rack: its onChange fires during
-  // relayout and the mixer addModule below, calling onEdit -> markDirty, which
-  // reads `dirty` — so `dirty` must already be initialized (no temporal dead zone).
-  // `menuStateTimer` is here for exactly the same reason: onEdit/markClean also push the native
-  // menu's state, and pushMenuState is hoisted while a `let` beside it would not be.
-  let dirty = false, patchName = null, mirror = null, booted = false, menuStateTimer = null, notes = null, examples = [];
-  let selectedEntry = null, demoActive = false, demoStop = false, demoPromise = null, demoPanel = null;   // scripted demos (design/scripted-demo.md)
-  let viewSaveTimer = null;
-  rack = new Rack(document.getElementById('rack'), {
-    host, moduleTypes: MODULE_TYPES, rowCount: 2, dark: darkMode, onChange: () => onEdit(),
-    // Remember where the view is between runs. Debounced hard: the view moves on every frame of a
-    // pan, and this only needs to be right by the time the app closes.
-    // The tab bar re-homes itself when the menu bar docks or undocks, and the page is part of what
-    // the session remembers, so a switch is worth an autosave.
-    onPageChange: () => {
-      pushMenuState(); onEdit();
-      // WHICH TAB YOU WERE ON IS PART OF THE VIEW, and belongs to the app rather than to the patch —
-      // the same standing as dark mode and the zoom. Reopening on Audio 1 after an evening spent on
-      // a voice page is a small thing that has to be undone by hand every time.
-      try { localStorage.setItem(PAGE_KEY, rack.currentPage()); } catch (_e) { /* no storage */ }
-    },
-    onViewChange: () => {
-      clearTimeout(viewSaveTimer);
-      viewSaveTimer = setTimeout(() => {
-        try { localStorage.setItem(VIEW_KEY, JSON.stringify(rack.viewState())); } catch (_e) { /* no storage */ }
-      }, 400);
-    },
-  });
-  rack.relayout();
-  rack.ensureTabBar();   // the page tabs; they re-home themselves as the menu bar docks
-
-  // Stamp the exact source revision into saved patches (serialize reads rack.buildInfo), so a bug
-  // report carrying a patch traces to a checkout. Electron-from-source only; the browser build has
-  // no repository and leaves this undefined, which patch-io omits.
-  if (window.wcoast && window.wcoast.build) {
-    try { rack.buildInfo = await window.wcoast.build(); } catch (_e) { /* leave unstamped */ }
+  // THE CONTEXT MAY BE GIVEN. A host that is running more than one thing creates the context itself
+  // and hands the same one to each, because two contexts cannot be patched to each other at any
+  // price. Given one, the rack builds its host on that and creates nothing.
+  function ensureAudio() {
+    if (audioCtx) return;
+    audioCtx = givenCtx || new AudioContext();
+    host = new SynthHost(audioCtx, registry);
+    log(`Audio ready — ${audioCtx.sampleRate} Hz, ${givenCtx ? 'context supplied by the host' : 'context created here'}`
+      + `, crossOriginIsolated = ${self.crossOriginIsolated}.`);
   }
 
-  // The output mixer is now a pinned rack module — a terminal singleton placed
-  // once at the bottom row (draggable, not deletable) that stays the stable
-  // "mixer" patch endpoint. Its master bus defaults on (routing applied below).
-  // THE MIXER LIVES ON THE AUDIO OUTPUT PAGE, and only there. It is created on that page and nothing
-  // moves a module between pages, so it is pinned to the page as firmly as it is pinned against
-  // deletion — free to be dragged anywhere WITHIN the page, and never anywhere else. That is the whole
-  // point of the page having its name: it is where the sound leaves, so the thing it leaves through
-  // should not be sitting among the oscillators.
-  const mixRec = await rack.addModule(mixerDescriptor.id, rack.rowCount - 1, 0, { pinned: true, key: 'mixer', page: 'output' });
-  mixer = { instanceId: mixRec.instanceId, instance: mixRec.instance };
-  trace = createAudioTrace({ ctx: audioCtx, rack, mixer: mixer.instance });
+  async function boot() {
+    ensureAudio();
+    let darkMode = true;   // first run defaults to DARK; a saved choice (below) overrides
+    try { const s = localStorage.getItem('wcoast.dark'); if (s !== null) darkMode = s === '1'; } catch (_e) { /* no storage */ }
+    // Where the view was left, remembered like dark mode: an app preference, not part of any patch.
+    const VIEW_KEY = 'wcoast.view';
+    const PAGE_KEY = 'wcoast.page';   // the tab last looked at
+    // Unsaved-changes state, declared BEFORE the rack: its onChange fires during
+    // relayout and the mixer addModule below, calling onEdit -> markDirty, which
+    // reads `dirty` — so `dirty` must already be initialized (no temporal dead zone).
+    // `menuStateTimer` is here for exactly the same reason: onEdit/markClean also push the native
+    // menu's state, and pushMenuState is hoisted while a `let` beside it would not be.
+    let dirty = false, patchName = null, mirror = null, booted = false, menuStateTimer = null, notes = null, examples = [];
+    let selectedEntry = null, demoActive = false, demoStop = false, demoPromise = null, demoPanel = null;   // scripted demos (design/scripted-demo.md)
+    let viewSaveTimer = null;
+    // The element may be given, for the same reason the context may be: a rack inside something
+    // else does not get to decide where it draws.
+    rackElement = givenElement || document.getElementById('rack');
+    if (!rackElement) throw new Error('createDreamRack: no element to draw into (pass one, or give the page a #rack)');
+    rack = new Rack(rackElement, {
+      host, moduleTypes: MODULE_TYPES, rowCount: 2, dark: darkMode, onChange: () => onEdit(),
+      // Remember where the view is between runs. Debounced hard: the view moves on every frame of a
+      // pan, and this only needs to be right by the time the app closes.
+      // The tab bar re-homes itself when the menu bar docks or undocks, and the page is part of what
+      // the session remembers, so a switch is worth an autosave.
+      onPageChange: () => {
+        pushMenuState(); onEdit();
+        // WHICH TAB YOU WERE ON IS PART OF THE VIEW, and belongs to the app rather than to the patch —
+        // the same standing as dark mode and the zoom. Reopening on Audio 1 after an evening spent on
+        // a voice page is a small thing that has to be undone by hand every time.
+        try { localStorage.setItem(PAGE_KEY, rack.currentPage()); } catch (_e) { /* no storage */ }
+      },
+      onViewChange: () => {
+        clearTimeout(viewSaveTimer);
+        viewSaveTimer = setTimeout(() => {
+          try { localStorage.setItem(VIEW_KEY, JSON.stringify(rack.viewState())); } catch (_e) { /* no storage */ }
+        }, 400);
+      },
+    });
+    rack.relayout();
+    rack.ensureTabBar();   // the page tabs; they re-home themselves as the menu bar docks
 
-  // Window recording (Electron only). The picture comes from the window; the sound is
-  // tapped off the audio graph, so a take carries exactly what was reaching the speakers.
-  recorder = new Recorder(audioCtx, () => rack.audioTapNodes(), { onState: paintRecBadge });
+    // Stamp the exact source revision into saved patches (serialize reads rack.buildInfo), so a bug
+    // report carrying a patch traces to a checkout. Electron-from-source only; the browser build has
+    // no repository and leaves this undefined, which patch-io omits.
+    if (window.wcoast && window.wcoast.build) {
+      try { rack.buildInfo = await window.wcoast.build(); } catch (_e) { /* leave unstamped */ }
+    }
 
-  // Unsaved-changes tracking (state declared above the rack). Any knob, switch,
-  // cable, or mixer change dirties the patch; loading or saving cleans it. The
-  // title shows a dot while dirty, mirrored to the main process to guard close.
-  function updateTitle() { document.title = `DreamRack — ${patchName || 'untitled'}${dirty ? ' •' : ''}`; }
-  function setPatchName(n) { patchName = n; updateTitle(); if (mirror) mirror.project(); }
-  function markDirty() { if (dirty) return; dirty = true; updateTitle(); window.wcoast?.patch?.setDirty?.(true); }
-  function markClean() { dirty = false; updateTitle(); window.wcoast?.patch?.setDirty?.(false); if (mirror) mirror.project(); pushMenuState(); }
-  // Any patch edit: mark dirty and re-project the mirror. Also re-check the audio-trace, since a
-  // bus enable (masterEnable/monitorEnable) toggling is an edit and changes whether sound plays.
-  function onEdit() { markDirty(); autosaveSession(); if (mirror) mirror.project(); updateTrace(); pushMenuState(); }
-  // After loading any patch (open/recent/reopen/session-resume/AI-apply): refresh the notes card, and let
-  // a note that asked to greet the user pop open.
-  // After ANY patch arrives — opened, dropped, pasted, or an example — the engine goes OFF. A patch
-  // that started sounding the moment it loaded would be making a noise nobody asked for, from a rack
-  // the reader has not even looked at yet. It is the same rule the app starts under: sound happens
-  // because you asked for it. Turning the engine off is what guarantees it, so it is cleared last.
-  function silenceAfterLoad() {
-    if (!mixRec) return;
-    rack.applyParam(mixRec, 'masterEnable', 'off');
-    rack.applyParam(mixRec, 'monitorEnable', 'off');
-    rack.applyParam(mixRec, 'engine', 'off');
-  }
+    // The output mixer is now a pinned rack module — a terminal singleton placed
+    // once at the bottom row (draggable, not deletable) that stays the stable
+    // "mixer" patch endpoint. Its master bus defaults on (routing applied below).
+    // THE MIXER LIVES ON THE AUDIO OUTPUT PAGE, and only there. It is created on that page and nothing
+    // moves a module between pages, so it is pinned to the page as firmly as it is pinned against
+    // deletion — free to be dragged anywhere WITHIN the page, and never anywhere else. That is the whole
+    // point of the page having its name: it is where the sound leaves, so the thing it leaves through
+    // should not be sitting among the oscillators.
+    const mixRec = await rack.addModule(mixerDescriptor.id, rack.rowCount - 1, 0, { pinned: true, key: 'mixer', page: 'output' });
+    mixer = { instanceId: mixRec.instanceId, instance: mixRec.instance };
+    trace = createAudioTrace({ ctx: audioCtx, rack, mixer: mixer.instance });
 
-  // A patch that asks to show its notes on opening does so — unless a DEMO opened it. A demo is
-  // already narrating this patch, and a notes panel unfurling over the modules it is talking about
-  // hides the very thing being pointed at.
-  function afterLoad() { silenceAfterLoad(); if (!notes) return; notes.refresh(); if (rack.patchNotesOpen && !demoActive) notes.open(); }
+    // Window recording (Electron only). The picture comes from the window; the sound is
+    // tapped off the audio graph, so a take carries exactly what was reaching the speakers.
+    recorder = new Recorder(audioCtx, () => rack.audioTapNodes(), { onState: paintRecBadge });
 
-  // Master level lives on the mixer module's own faceplate; this is just the last read of
-  // it, kept for the AI mirror's `master` field. Re-read it whenever the fader may have
-  // moved without us (a bulk reset, a patch restore).
-  let masterValue = Number(mixRec.values.get('master'));
-  const syncMaster = () => { masterValue = Number(mixRec.values.get('master')); };
+    // Unsaved-changes tracking (state declared above the rack). Any knob, switch,
+    // cable, or mixer change dirties the patch; loading or saving cleans it. The
+    // title shows a dot while dirty, mirrored to the main process to guard close.
+    function updateTitle() { document.title = `DreamRack — ${patchName || 'untitled'}${dirty ? ' •' : ''}`; }
+    function setPatchName(n) { patchName = n; updateTitle(); if (mirror) mirror.project(); }
+    function markDirty() { if (dirty) return; dirty = true; updateTitle(); window.wcoast?.patch?.setDirty?.(true); }
+    function markClean() { dirty = false; updateTitle(); window.wcoast?.patch?.setDirty?.(false); if (mirror) mirror.project(); pushMenuState(); }
+    // Any patch edit: mark dirty and re-project the mirror. Also re-check the audio-trace, since a
+    // bus enable (masterEnable/monitorEnable) toggling is an edit and changes whether sound plays.
+    function onEdit() { markDirty(); autosaveSession(); if (mirror) mirror.project(); updateTrace(); pushMenuState(); }
+    // After loading any patch (open/recent/reopen/session-resume/AI-apply): refresh the notes card, and let
+    // a note that asked to greet the user pop open.
+    // After ANY patch arrives — opened, dropped, pasted, or an example — the engine goes OFF. A patch
+    // that started sounding the moment it loaded would be making a noise nobody asked for, from a rack
+    // the reader has not even looked at yet. It is the same rule the app starts under: sound happens
+    // because you asked for it. Turning the engine off is what guarantees it, so it is cleared last.
+    function silenceAfterLoad() {
+      if (!mixRec) return;
+      rack.applyParam(mixRec, 'masterEnable', 'off');
+      rack.applyParam(mixRec, 'monitorEnable', 'off');
+      rack.applyParam(mixRec, 'engine', 'off');
+    }
 
-  // The transport is the ENGINE over two buses. `soundOn` is true when the engine is on AND at
-  // least one bus is enabled — it answers "can this rack be heard?", which is what the mirror and
-  // the audio-trace mean by it, so it has to account for all three switches. isPlaying = the audio
-  // clock is live (scopes read this to decide when to auto-scale). The context wakes here and
-  // stays up; the engine boots off, so the app is silent until asked.
-  const busOn = (id) => mixRec.values.get(id) === 'on';
-  const soundOn = () => busOn('engine') && (busOn('masterEnable') || busOn('monitorEnable'));
-  rack.isPlaying = () => audioCtx.state === 'running';
-  // THE CONTEXT IS NOT WOKEN AT BOOT ANY MORE. The engine comes up off, and off now means the audio
-  // thread is suspended rather than merely muted — waking it here would have every worklet running
-  // before the app had made a sound, which is the state the switch exists to avoid. The first turn of
-  // the engine resumes it (rack._applyEnginePower).
-  rack._applyBusEnables();   // apply the initial routing (master on, monitor off)
+    // A patch that asks to show its notes on opening does so — unless a DEMO opened it. A demo is
+    // already narrating this patch, and a notes panel unfurling over the modules it is talking about
+    // hides the very thing being pointed at.
+    function afterLoad() { silenceAfterLoad(); if (!notes) return; notes.refresh(); if (rack.patchNotesOpen && !demoActive) notes.open(); }
 
-  // After a bulk control reset (clear-patch command, and its undo/redo) the rack has moved the
-  // mixer's own params, so re-read the master level and re-apply the bus routing so the audio
-  // matches the restored enables.
-  rack.onControlsReset = () => {
-    syncMaster();
-    rack._applyBusEnables();
-  };
+    // Master level lives on the mixer module's own faceplate; this is just the last read of
+    // it, kept for the AI mirror's `master` field. Re-read it whenever the fader may have
+    // moved without us (a bulk reset, a patch restore).
+    let masterValue = Number(mixRec.values.get('master'));
+    const syncMaster = () => { masterValue = Number(mixRec.values.get('master')); };
 
-  // --- VU meters -------------------------------------------------------------
-  // One rAF loop reads the mixer instance's per-channel + master RMS and lights
-  // the pre-drawn LED rings (fill the ring when lit, clear it when not).
-  const vuColumns = [...mixRec.panel.svg.querySelectorAll('[data-wcoast-role="vu"],[data-wcoast-role="vuMaster"],[data-wcoast-role="vuMonitor"]')].map((g) => ({
-    chan: g.getAttribute('data-wcoast-chan'),
-    segs: [...g.querySelectorAll('[data-wcoast-seg]')].sort(
-      (a, b) => (+a.getAttribute('data-wcoast-seg')) - (+b.getAttribute('data-wcoast-seg'))),
-  }));
-  const vuColour = (i, n) => { const f = i / (n - 1); return f > 0.85 ? '#ff5a4a' : f > 0.6 ? '#f4c430' : '#3ad16b'; };
-  // dB meter: map RMS to dBFS and spread a fixed range across the segments, so the meter
-  // tracks perceived loudness (a linear meter crowds everything at the top).
-  const VU_FLOOR_DB = -48;
-  const vuScale = (rms) => { if (rms <= 0) return 0; const db = 20 * Math.log10(rms); return Math.max(0, Math.min(1, (db - VU_FLOOR_DB) / -VU_FLOOR_DB)); };
+    // The transport is the ENGINE over two buses. `soundOn` is true when the engine is on AND at
+    // least one bus is enabled — it answers "can this rack be heard?", which is what the mirror and
+    // the audio-trace mean by it, so it has to account for all three switches. isPlaying = the audio
+    // clock is live (scopes read this to decide when to auto-scale). The context wakes here and
+    // stays up; the engine boots off, so the app is silent until asked.
+    const busOn = (id) => mixRec.values.get(id) === 'on';
+    const soundOn = () => busOn('engine') && (busOn('masterEnable') || busOn('monitorEnable'));
+    rack.isPlaying = () => audioCtx.state === 'running';
+    // THE CONTEXT IS NOT WOKEN AT BOOT ANY MORE. The engine comes up off, and off now means the audio
+    // thread is suspended rather than merely muted — waking it here would have every worklet running
+    // before the app had made a sound, which is the state the switch exists to avoid. The first turn of
+    // the engine resumes it (rack._applyEnginePower).
+    rack._applyBusEnables();   // apply the initial routing (master on, monitor off)
 
-  // Master PEAK reader (not RMS): peak is what makes a signal "too loud", so an ear
-  // monitor auto-levels against the loudest PEAK the main output has actually reached.
-  const masterAn = mixer.instance.analysers && mixer.instance.analysers.master;
-  const peakBuf = new Float32Array(masterAn && masterAn.l ? masterAn.l.fftSize : 1024);
-  const peakOf = (an) => { if (!an) return 0; an.getFloatTimeDomainData(peakBuf); let p = 0; for (let i = 0; i < peakBuf.length; i++) { const a = Math.abs(peakBuf[i]); if (a > p) p = a; } return p; };
-  function paintVU() {
-    const lv = mixer.instance.levels();
-    if (soundOn() && masterAn) { const mp = Math.max(peakOf(masterAn.l), peakOf(masterAn.r)); if (mp > (rack._sessionMaxMaster || 0)) rack._sessionMaxMaster = mp; }
-    for (const col of vuColumns) {
-      const n = col.segs.length;
-      // The master reads per SIDE ('ML'/'MR'), since the pan knobs above it are meaningless if you
-      // cannot see where they are putting the sound. 'M' is the summed reading, kept for any meter
-      // that asks for one bar.
-      const level = col.chan === 'ML' ? lv.masterL
-        : col.chan === 'MR' ? lv.masterR
-          : col.chan === 'M' ? lv.master
-            : col.chan === 'MON' ? rack.monVuLevel() : (lv.channels[col.chan] || 0);
-      const lit = Math.round(vuScale(level) * n);
-      for (let i = 0; i < n; i++) col.segs[i].setAttribute('fill', i < lit ? vuColour(i, n) : 'none');
+    // After a bulk control reset (clear-patch command, and its undo/redo) the rack has moved the
+    // mixer's own params, so re-read the master level and re-apply the bus routing so the audio
+    // matches the restored enables.
+    rack.onControlsReset = () => {
+      syncMaster();
+      rack._applyBusEnables();
+    };
+
+    // --- VU meters -------------------------------------------------------------
+    // One rAF loop reads the mixer instance's per-channel + master RMS and lights
+    // the pre-drawn LED rings (fill the ring when lit, clear it when not).
+    const vuColumns = [...mixRec.panel.svg.querySelectorAll('[data-wcoast-role="vu"],[data-wcoast-role="vuMaster"],[data-wcoast-role="vuMonitor"]')].map((g) => ({
+      chan: g.getAttribute('data-wcoast-chan'),
+      segs: [...g.querySelectorAll('[data-wcoast-seg]')].sort(
+        (a, b) => (+a.getAttribute('data-wcoast-seg')) - (+b.getAttribute('data-wcoast-seg'))),
+    }));
+    const vuColour = (i, n) => { const f = i / (n - 1); return f > 0.85 ? '#ff5a4a' : f > 0.6 ? '#f4c430' : '#3ad16b'; };
+    // dB meter: map RMS to dBFS and spread a fixed range across the segments, so the meter
+    // tracks perceived loudness (a linear meter crowds everything at the top).
+    const VU_FLOOR_DB = -48;
+    const vuScale = (rms) => { if (rms <= 0) return 0; const db = 20 * Math.log10(rms); return Math.max(0, Math.min(1, (db - VU_FLOOR_DB) / -VU_FLOOR_DB)); };
+
+    // Master PEAK reader (not RMS): peak is what makes a signal "too loud", so an ear
+    // monitor auto-levels against the loudest PEAK the main output has actually reached.
+    const masterAn = mixer.instance.analysers && mixer.instance.analysers.master;
+    const peakBuf = new Float32Array(masterAn && masterAn.l ? masterAn.l.fftSize : 1024);
+    const peakOf = (an) => { if (!an) return 0; an.getFloatTimeDomainData(peakBuf); let p = 0; for (let i = 0; i < peakBuf.length; i++) { const a = Math.abs(peakBuf[i]); if (a > p) p = a; } return p; };
+    function paintVU() {
+      const lv = mixer.instance.levels();
+      if (soundOn() && masterAn) { const mp = Math.max(peakOf(masterAn.l), peakOf(masterAn.r)); if (mp > (rack._sessionMaxMaster || 0)) rack._sessionMaxMaster = mp; }
+      for (const col of vuColumns) {
+        const n = col.segs.length;
+        // The master reads per SIDE ('ML'/'MR'), since the pan knobs above it are meaningless if you
+        // cannot see where they are putting the sound. 'M' is the summed reading, kept for any meter
+        // that asks for one bar.
+        const level = col.chan === 'ML' ? lv.masterL
+          : col.chan === 'MR' ? lv.masterR
+            : col.chan === 'M' ? lv.master
+              : col.chan === 'MON' ? rack.monVuLevel() : (lv.channels[col.chan] || 0);
+        const lit = Math.round(vuScale(level) * n);
+        for (let i = 0; i < n; i++) col.segs[i].setAttribute('fill', i < lit ? vuColour(i, n) : 'none');
+      }
+      requestAnimationFrame(paintVU);
     }
     requestAnimationFrame(paintVU);
-  }
-  requestAnimationFrame(paintVU);
 
-  // The mixer as a save/load endpoint: its settings are the pinned record's values (it stays the
-  // fixed "mixer" key, just now a rack module). The engine and the two bus enables are transport
-  // state, NOT persistent mixer settings — sound boots to defaults (engine off; master on, monitor
-  // off beneath it; the monitor bus re-enables itself when saved monitors are restored), so they're
-  // excluded from save/restore. Otherwise a patch saved with the engine off would reload silent for
-  // a non-obvious reason.
-  const TRANSPORT = new Set(['engine', 'masterEnable', 'monitorEnable']);
-  const mixerIO = {
-    key: 'mixer',
-    getParams: () => { const o = Object.fromEntries(mixRec.values); for (const k of TRANSPORT) delete o[k]; return o; },
-    setParams: (vals) => { for (const [id, v] of Object.entries(vals)) { if (TRANSPORT.has(id)) continue; rack.applyParam(mixRec, id, v); } },
-  };
-
-  // AI patch mirror: project the live patch, the module catalogue, and app state
-  // to a folder on disk (Electron only; a no-op in a browser).
-  mirror = createMirror({
-    getPatch: () => serialize(rack, mixerIO),
-    getActive: () => ({
-      protocolVersion: 1,
-      isLive: true,
-      patch: { name: patchName, dirty },
-      state: { sound: soundOn() ? 'on' : 'off', master: masterValue },
-      sync: { lastSyncAt: new Date().toISOString() },
-      files: { roundTrip: ['inbox.json'], observationOnly: ['patch.json', 'active.json', 'catalogue.json', 'last-apply-result.json', 'selection.json', 'runtime.json', 'audio-trace.json', 'demo.json', 'AGENTS.md', 'README.md'] },
-    }),
-    // EVERY module type, not a hand-kept pair. This listed two of the twenty-six, so the catalogue an
-    // external sender reads to find its targets — and that ai-mirror.md says enumerates the rack —
-    // described the Complex Oscillator and the Quad Low Pass Gate and nothing else. Taken from
-    // MODULE_TYPES so a module added to the library is in the catalogue by the same act.
-    catalogue: buildCatalogue(MODULE_TYPES.filter((t) => !t.hidden).map((t) => t.descriptor), mixerDescriptor),
-    applyEdit,
-  });
-
-  // Audio-trace + runtime projection: while sound plays AND the mirror is on,
-  // measure the live signal at every wired output, each mixer channel, and the
-  // master, and write audio-trace.json (plus a small runtime.json). Started and
-  // stopped by the On/Off toggle and the mirror enable toggle.
-  function pushTrace(t) {
-    const master = t.endpoints.find((e) => e.id === 'mixer.master');
-    const runtime = {
-      protocolVersion: 1, sound: t.sound, master: masterValue,
-      vu: master ? { peak_dbfs: master.peak_dbfs, rms_dbfs: master.rms_dbfs } : null,
-      at: t.capturedAt,
+    // The mixer as a save/load endpoint: its settings are the pinned record's values (it stays the
+    // fixed "mixer" key, just now a rack module). The engine and the two bus enables are transport
+    // state, NOT persistent mixer settings — sound boots to defaults (engine off; master on, monitor
+    // off beneath it; the monitor bus re-enables itself when saved monitors are restored), so they're
+    // excluded from save/restore. Otherwise a patch saved with the engine off would reload silent for
+    // a non-obvious reason.
+    const TRANSPORT = new Set(['engine', 'masterEnable', 'monitorEnable']);
+    const mixerIO = {
+      key: 'mixer',
+      getParams: () => { const o = Object.fromEntries(mixRec.values); for (const k of TRANSPORT) delete o[k]; return o; },
+      setParams: (vals) => { for (const [id, v] of Object.entries(vals)) { if (TRANSPORT.has(id)) continue; rack.applyParam(mixRec, id, v); } },
     };
-    mirror.pushFiles({ 'audio-trace.json': t, 'runtime.json': runtime });
-  }
-  function updateTrace() {
-    if (!trace || !mirror) return;
-    const want = soundOn() && mirror.isEnabled();
-    if (want && !trace.running()) trace.start(pushTrace);
-    else if (!want && trace.running()) trace.stop({ writeOff: mirror.isEnabled() });
-  }
 
-  // Sticky deixis: project the module the pointer last entered to selection.json,
-  // so "make this one louder" resolves. Debounced; never cleared on pointer-leave.
-  let selTimer = null;
-  rack.onSelect = (rec) => {
-    clearTimeout(selTimer);
-    selTimer = setTimeout(() => {
-      if (!mirror.isEnabled()) return;
-      mirror.pushFiles({ 'selection.json': rec ? { id: rec.key, type: rec.descriptorId, name: rec.name } : null });
-    }, 200);
-  };
-
-  // Save/load: the environment-chosen storage adapter drives the shared core.
-  const storage = createStorage();
-  const patchText = () => JSON.stringify(serialize(rack, mixerIO), null, 2);
-  // A compact patch JSON for embedding in a GitHub bug report / shared post: the bulky frozen-scope trace
-  // blobs are stripped (a bug reproduces from the topology + settings, not the captured pixels).
-  const trimmedPatchText = () => {
-    const obj = serialize(rack, mixerIO);
-    for (const p of (obj.probes || [])) { if (p && p.frozen) { p.frozen = false; delete p.wave; delete p.hist; delete p.histIdx; delete p.fastVotes; delete p.forceMode; } }
-    return JSON.stringify(obj, null, 2);
-  };
-  // Session autosave: persist the live patch to localStorage on every edit
-  // (debounced) so a relaunch resumes exactly where you left off. Separate from
-  // named File saves — this just remembers the last working state.
-  const SESSION_KEY = 'wcoast.session';
-  // THE SESSION BEFORE THIS ONE, kept so a bad boot cannot silently eat a working patch. The session
-  // is overwritten by autosave a moment after startup, so if anything goes wrong while restoring — a
-  // thrown error, a module that fails to instantiate, cables that do not come back — the damaged
-  // result is written over the only copy and the original is gone. One generation of history costs a
-  // few kilobytes and turns that from data loss into an inconvenience. Rolled at BOOT, before the
-  // first autosave can run, so it always holds the state the app came up with.
-  const SESSION_PREV_KEY = 'wcoast.session.prev';
-  let sessTimer = null;
-  // Guarded by `booted`: the many addModule edits DURING boot must not overwrite the
-  // session with a half-built (e.g. mixer-only) rack — only genuine post-boot edits save.
-  // `demoActive` freezes autosave: a running demo rebuilds the rack, which must never overwrite
-  // the user's saved session (it's snapshotted and restored around the run).
-  function autosaveSession() { if (!booted || demoActive) return; clearTimeout(sessTimer); sessTimer = setTimeout(() => { try { localStorage.setItem(SESSION_KEY, patchText()); } catch (_e) { /* no storage */ } }, 400); }
-  function flushSession() { if (!booted || demoActive) return; clearTimeout(sessTimer); try { localStorage.setItem(SESSION_KEY, patchText()); } catch (_e) { /* no storage */ } }
-  // Guard the destructive actions (New / Open / Reopen) when there's unsaved work.
-  // A DEMO is never asked. It reached File ▸ Examples by script, the user's own patch was snapshotted
-  // before the demo began and is put back when it ends — so the one thing this prompt protects is
-  // already safe, and a modal appearing over a demonstration is a dead end: the synthetic pointer
-  // cannot press it.
-  const okToDiscard = () => !dirty || demoActive || window.confirm('You have unsaved changes. Discard them?');
-
-  // The rack a brand-new user gets on a first run, and exactly what File > New rebuilds.
-  // Shared between the two so they can never drift apart.
-  // The arrangement itself lives in host/default-rack.js, so that a tutorial demo can open on the
-  // SAME rack a first-run user meets rather than conjuring its modules as it goes.
-  async function placeDefaultModules() {
-    // The mixer is pinned and survives File > New, wherever the discarded patch left it — but always
-    // on the audio output page, which is not a page this layout otherwise touches.
-    rack.placeModule('mixer', rack.rowCount - 1, 0);
-    await placeRack(rack, DEFAULT_RACK);
-  }
-
-  async function newPatch() {
-    if (!okToDiscard()) return;
-    // clear() pulls every cable and deletes every module EXCEPT the pinned mixer, which
-    // survives still carrying the discarded patch's fader and pan positions — so reset the
-    // controls too. The modules placed afterwards are fresh, and start at their defaults.
-    rack.clear(); rack.resetAllControls();
-    await placeDefaultModules();
-    storage.forget(); setPatchName(null); markClean(); afterLoad();
-  }
-  // RESET TO DEFAULT — the rack and the app exactly as a first-run user meets them.
-  //
-  // Distinct from File ▸ New, which starts a new PATCH and leaves your view settings where you put
-  // them. This also returns dark mode, the row count, the menu bar and the zoom, because the thing
-  // it exists for is recovery: "put everything back" should not leave you hunting for the one
-  // setting it decided was yours to keep.
-  //
-  // The order matters. Row count is set BEFORE the modules are placed, since placeDefaultModules
-  // lays out against the current number of rows and would otherwise put the mixer in a row that is
-  // about to disappear.
-  async function resetToDefault() {
-    rack.confirm(
-      'Reset to default? This puts your modules back to the initial complement and state, '
-      + 'and returns the view settings to their defaults. Unsaved work is lost.',
-      'Reset', async () => {
-        rack.clear();
-        rack.resetAllControls();
-        setRows(2);
-        if (!rack.isDark()) toggleDark();
-        setMenuBar(true);
-        rack.resetZoom();
-        await placeDefaultModules();
-        // Silent, the way a launch is: the engine last, since that is what guarantees it.
-        rack.applyParam(mixRec, 'masterEnable', 'off');
-        rack.applyParam(mixRec, 'monitorEnable', 'off');
-        rack.applyParam(mixRec, 'engine', 'off');
-        storage.forget(); setPatchName(null); markClean(); afterLoad();
-      });
-  }
-
-  async function openPatch() {
-    if (!okToDiscard()) return;
-    let f;
-    try { f = await storage.open(); } catch (e) { log(`open failed: ${e.message}`); return; }
-    if (!f) return;
-    try { await restore(JSON.parse(f.text), rack, mixerIO); setPatchName(f.name); markClean(); afterLoad(); }
-    catch (e) { console.error('[wcoast] open failed: ' + ((e && e.stack) || e)); log(`restore failed: ${e.message}`); window.alert(`Could not open patch: ${e.message}`); }
-  }
-  // ---- WORK STATE, CARRIED BY THE REPOSITORY ---------------------------------------------------
-  // CAPTURE before leaving a machine, RESTORE after cloning on the next one. The transport is git:
-  // the app runs from its own checkout, so `patches/` beside it travels with a commit and a push.
-  //
-  // The saved patches are ordinary files and the main process copies them itself. The two things that
-  // are NOT files — the live session and the view transform — live in this window's storage, so they
-  // are handed over from here.
-  async function captureWork() {
-    if (!(window.wcoast && window.wcoast.captureWork)) { log('capture: Electron only'); return; }
-    flushSession();   // whatever is on the rack right now, not what it was 400ms ago
-    let view = null;
-    try { view = JSON.parse(localStorage.getItem(VIEW_KEY) || 'null'); } catch (_e) { /* none */ }
-    const r = await window.wcoast.captureWork({ session: patchText(), view });
-    if (!r || r.error) { log(`capture failed: ${(r && r.error) || 'unknown'}`); return; }
-    log(`captured ${r.copied} patches + session to patches/ — commit and push to carry them`);
-  }
-  async function restoreWork() {
-    if (!(window.wcoast && window.wcoast.restoreWork)) { log('restore: Electron only'); return; }
-    if (!okToDiscard()) return;   // it replaces the rack you are looking at
-    const r = await window.wcoast.restoreWork();
-    if (!r || r.error) { log(`restore failed: ${(r && r.error) || 'unknown'}`); return; }
-    if (r.session) {
-      try {
-        await restore(JSON.parse(r.session), rack, mixerIO);
-        setPatchName(null); markClean(); afterLoad();
-      } catch (e) {
-        console.error('[wcoast] work restore failed: ' + ((e && e.stack) || e));
-        log(`restore failed: ${e.message}`);
-      }
-    }
-    // The view goes back AFTER the modules, since laying them out resets the transform.
-    if (r.view) { try { rack.setViewState(r.view); localStorage.setItem(VIEW_KEY, JSON.stringify(r.view)); } catch (_e) { /* ignore */ } }
-    log(`restored ${r.added} patches to Documents (${r.kept} already there, left alone)`);
-  }
-
-  async function savePatch() {
-    try { const name = await storage.save(patchText()); if (name) { setPatchName(name); markClean(); } }
-    catch (e) { log(`save failed: ${e.message}`); window.alert(`Could not save: ${e.message}`); }
-  }
-  async function saveAsPatch() {
-    try { const name = await storage.saveAs(patchText()); if (name) { setPatchName(name); markClean(); } }
-    catch (e) { log(`save failed: ${e.message}`); window.alert(`Could not save: ${e.message}`); }
-  }
-  // Open one of the recent saves. Same guard as Open — it discards the current work.
-  async function openRecent(id) {
-    if (!okToDiscard()) return;
-    let f;
-    try { f = await storage.openRecent(id); } catch (e) { log(`open failed: ${e.message}`); return; }
-    if (!f) { window.alert('That patch could not be opened — it may have been moved or renamed.'); return; }
-    try { await restore(JSON.parse(f.text), rack, mixerIO); setPatchName(f.name); markClean(); afterLoad(); }
-    catch (e) { console.error('[wcoast] open failed: ' + ((e && e.stack) || e)); log(`restore failed: ${e.message}`); window.alert(`Could not open patch: ${e.message}`); }
-  }
-
-  // The recent list is read when the menu OPENS, not cached at boot: the folder is the truth, and
-  // it changes underneath us every time a patch is saved — here or in the Finder.
-  let recentFiles = [];
-  const refreshRecent = async () => { try { recentFiles = await storage.recent(); } catch (_e) { recentFiles = []; } };
-
-  async function reopenPatch() {
-    if (!okToDiscard()) return;
-    let f;
-    try { f = await storage.reopenLast(); } catch (e) { log(`reopen failed: ${e.message}`); return; }
-    if (!f) return;
-    try { await restore(JSON.parse(f.text), rack, mixerIO); setPatchName(f.name); markClean(); afterLoad(); }
-    catch (e) { console.error('[wcoast] open failed: ' + ((e && e.stack) || e)); log(`restore failed: ${e.message}`); window.alert(`Could not open patch: ${e.message}`); }
-  }
-
-  // Bundled example patches (examples/index.json), loaded once. Opening one loads it as a STARTING POINT:
-  // storage.forget() means a following Save behaves like Save As, since it isn't a file of the user's own.
-  const loadExamples = async () => { try { const r = await fetch('examples/index.json'); if (r.ok) examples = await r.json(); } catch (_e) { examples = []; } pushMenuState(); };
-  async function openExample(file, name) {
-    if (!okToDiscard()) return;
-    let obj;
-    try { const r = await fetch('examples/' + file); if (!r.ok) throw new Error('not found'); obj = await r.json(); }
-    catch (e) { log(`example load failed: ${e.message}`); window.alert('Could not load that example.'); return; }
-    try { await restore(obj, rack, mixerIO); storage.forget(); setPatchName(name); markClean(); afterLoad(); }
-    catch (e) { console.error('[wcoast] open failed: ' + ((e && e.stack) || e)); log(`restore failed: ${e.message}`); window.alert(`Could not open example: ${e.message}`); }
-  }
-  // Edit ▸ Create patch from clipboard — load a patch someone shared (e.g. copied from a GitHub post).
-  async function createFromClipboard() {
-    if (!okToDiscard()) return;
-    let text;
-    try { text = await navigator.clipboard.readText(); }
-    catch (e) { log(`clipboard read failed: ${e.message}`); window.alert('Could not read the clipboard.'); return; }
-    text = (text || '').trim().replace(/^```[a-z]*\s*/i, '').replace(/\s*```$/, '').trim();   // tolerate a pasted code fence
-    let obj;
-    try { obj = JSON.parse(text); } catch (_e) { window.alert('The clipboard doesn’t contain a patch (it isn’t readable as JSON).'); return; }
-    const v = validate(obj, registry);
-    if (!v.ok) { window.alert(`That isn’t a valid Wcoast patch: ${v.error}`); return; }
-    try { await restore(obj, rack, mixerIO); storage.forget(); setPatchName('from clipboard'); markClean(); afterLoad(); }
-    catch (e) { window.alert(`Could not open the patch: ${e.message}`); }
-  }
-
-  // THE HANDOFF ASKS IN OUR OWN DIALOG, not the browser's. window.confirm is a native modal whose
-  // dismissal rules are the platform's — a stray keystroke closes it — and a handoff dismissed by
-  // accident is gone: the mirror has already given up the file, so the proposal has to be sent again.
-  // This one answers to two keys and two buttons and NOTHING ELSE. No click-outside, no Tab, no
-  // space bar: Return applies, Escape cancels.
-  function askApply(summary) {
-    return new Promise((resolve) => {
-      const dark = rack.isDark();
-      const wrap = document.createElement('div');
-      wrap.style.cssText = 'position:fixed;inset:0;z-index:9000;display:flex;align-items:center;'
-        + 'justify-content:center;background:rgba(0,0,0,0.45)';
-      const box = document.createElement('div');
-      box.style.cssText = 'min-width:340px;max-width:520px;padding:18px 20px 16px;border-radius:10px;'
-        + `background:${dark ? '#25252a' : '#f2f2f4'};color:${dark ? '#e8e8ec' : '#1b1b1f'};`
-        + 'font:14px/1.45 system-ui,sans-serif;box-shadow:0 12px 40px rgba(0,0,0,0.5)';
-      box.innerHTML = `<div style="font-weight:600;margin-bottom:6px">Apply the proposed patch?</div>
-        <div style="opacity:0.8">${summary}</div>
-        <div style="opacity:0.6;margin-top:10px;font-size:12px">Return to apply · Escape to cancel</div>`;
-      const row = document.createElement('div');
-      row.style.cssText = 'display:flex;gap:10px;justify-content:flex-end;margin-top:16px';
-      const mk = (label, primary) => {
-        const b = document.createElement('button');
-        b.textContent = label;
-        b.style.cssText = 'padding:6px 16px;border-radius:6px;font:inherit;cursor:pointer;'
-          + (primary ? 'background:#2f7fd0;color:#fff;border:1px solid #2f7fd0'
-            : `background:transparent;color:inherit;border:1px solid ${dark ? '#585860' : '#b0b0b8'}`);
-        return b;
-      };
-      const cancel = mk('Cancel', false), ok = mk('Apply', true);
-      row.append(cancel, ok); box.appendChild(row); wrap.appendChild(box); document.body.appendChild(wrap);
-      const done = (yes) => {
-        document.removeEventListener('keydown', onKey, true);
-        wrap.remove();
-        resolve(yes);
-      };
-      const onKey = (e) => {
-        if (e.key !== 'Enter' && e.key !== 'Escape') { e.stopPropagation(); return; }
-        e.preventDefault(); e.stopPropagation();
-        done(e.key === 'Enter');
-      };
-      document.addEventListener('keydown', onKey, true);
-      cancel.addEventListener('click', () => done(false));
-      ok.addEventListener('click', () => done(true));
-      ok.focus();
+    // AI patch mirror: project the live patch, the module catalogue, and app state
+    // to a folder on disk (Electron only; a no-op in a browser).
+    mirror = createMirror({
+      getPatch: () => serialize(rack, mixerIO),
+      getActive: () => ({
+        protocolVersion: 1,
+        isLive: true,
+        patch: { name: patchName, dirty },
+        state: { sound: soundOn() ? 'on' : 'off', master: masterValue },
+        sync: { lastSyncAt: new Date().toISOString() },
+        files: { roundTrip: ['inbox.json'], observationOnly: ['patch.json', 'active.json', 'catalogue.json', 'last-apply-result.json', 'selection.json', 'runtime.json', 'audio-trace.json', 'demo.json', 'AGENTS.md', 'README.md'] },
+      }),
+      // EVERY module type, not a hand-kept pair. This listed two of the twenty-six, so the catalogue an
+      // external sender reads to find its targets — and that ai-mirror.md says enumerates the rack —
+      // described the Complex Oscillator and the Quad Low Pass Gate and nothing else. Taken from
+      // MODULE_TYPES so a module added to the library is in the catalogue by the same act.
+      catalogue: buildCatalogue(MODULE_TYPES.filter((t) => !t.hidden).map((t) => t.descriptor), mixerDescriptor),
+      applyEdit,
     });
-  }
 
-  // Apply an AI-proposed patch (the mirror's inbox.json handoff, in patch.json's
-  // format): validate it against the descriptors, confirm with the user, then restore it.
-  async function applyEdit(text) {
-    let obj;
-    try { obj = JSON.parse(text); } catch (e) { return { ok: false, error: `invalid JSON: ${e.message}` }; }
-    const v = validate(obj, registry);
-    if (!v.ok) return v;
-    const cur = serialize(rack, mixerIO);
-    const summary = `${cur.modules.length} → ${obj.modules.length} modules, ${cur.wiring.length} → ${obj.wiring.length} cables`;
-    if (!await askApply(summary)) return { ok: false, error: 'cancelled by the user' };
-    try { await restore(obj, rack, mixerIO); afterLoad(); } catch (e) { return { ok: false, error: `apply failed: ${e.message}` }; }
-    markDirty();
-    return { ok: true };
-  }
+    // Audio-trace + runtime projection: while sound plays AND the mirror is on,
+    // measure the live signal at every wired output, each mixer channel, and the
+    // master, and write audio-trace.json (plus a small runtime.json). Started and
+    // stopped by the On/Off toggle and the mirror enable toggle.
+    function pushTrace(t) {
+      const master = t.endpoints.find((e) => e.id === 'mixer.master');
+      const runtime = {
+        protocolVersion: 1, sound: t.sound, master: masterValue,
+        vu: master ? { peak_dbfs: master.peak_dbfs, rms_dbfs: master.rms_dbfs } : null,
+        at: t.capturedAt,
+      };
+      mirror.pushFiles({ 'audio-trace.json': t, 'runtime.json': runtime });
+    }
+    function updateTrace() {
+      if (!trace || !mirror) return;
+      const want = soundOn() && mirror.isEnabled();
+      if (want && !trace.running()) trace.start(pushTrace);
+      else if (!want && trace.running()) trace.stop({ writeOff: mirror.isEnabled() });
+    }
 
-  // The commands the two menus share. Both the in-window menu and the native one call THESE, so
-  // there is one implementation of each and they can't drift apart.
-  let libraryTheme = null;   // set once the library exists; the theme toggle re-skins its thumbnails
-  const toggleDark = () => {
-    const d = !rack.isDark();
-    rack.setDarkMode(d);   // re-skins every module, the pinned mixer included
-    if (tour) tour.applyTheme();   // ...and the tutorial card, which is dressed as a faceplate
-    if (notes) notes.applyTheme();
-    if (composer) composer.applyTheme();
-    if (about) about.applyTheme();
-    if (typeof libraryTheme === 'function') libraryTheme();
-    try { localStorage.setItem('wcoast.dark', d ? '1' : '0'); } catch (_e) { /* no storage */ }
-    pushMenuState();
-  };
-  // The row count is PATCH DATA — it is serialised and restored — so changing it has to mark the
-  // patch edited. Without that nothing triggered an autosave, and a rack set to two rows and then
-  // quit came back at whatever the session had last recorded for some other reason.
-  const setRows = (n) => { rack.setRowCount(n); pushMenuState(); onEdit(); };
-
-  // Keep the native menu's state honest: what's undoable, which mode, which patches. Debounced,
-  // because this fires on every edit and the main process rebuilds the menu bar from it.
-  function pushMenuState() {
-    const m = window.wcoast && window.wcoast.menu;
-    if (!m) return;                       // browser: there is no native menu
-    clearTimeout(menuStateTimer);
-    menuStateTimer = setTimeout(async () => {
-      menuStateTimer = null;
-      let recent = [];
-      try { recent = await storage.recent(); } catch (_e) { /* none */ }
-      m.setState({ dark: rack.isDark(), rows: rack.rowCount, canUndo: rack.canUndo(), canRedo: rack.canRedo(),
-        recent, examples, videoFollow: rack.videoFollowsPointer() });
-    }, 200);
-  }
-
-  // The native menu names an action; the renderer runs the same function the in-window menu does.
-  if (window.wcoast && window.wcoast.menu) {
-    const actions = {
-      new: () => newPatch(), open: () => openPatch(), save: () => savePatch(), saveAs: () => saveAsPatch(),
-      openRecent: (id) => openRecent(id),
-      undo: () => { rack.undo(); pushMenuState(); },
-      redo: () => { rack.redo(); pushMenuState(); },
-      clearAll: () => rack.confirmDeleteAllCables(),
-      toggleDark: () => toggleDark(),
-      demos: () => rack.openDemoPanel && rack.openDemoPanel(),
-      setRows: (n) => setRows(n),
-      fitToWindow: () => rack.resetZoom(),
-      captureWork: () => captureWork(),
-      restoreWork: () => restoreWork(),
-      library: () => library.show(),
-      resetToDefault: () => resetToDefault(),
-      toggleVideoFollow: () => setVideoFollow(!rack.videoFollowsPointer()),
-      // Run the same items the in-window Help menu offers, rather than restating their URLs here.
-      readme: () => { const it = rack.helpMenuItems().find((i) => i.label === 'README'); if (it) it.action(); },
-      reference: () => { const it = rack.developerMenuItems().find((i) => i.label === 'Developer guide'); if (it) it.action(); },
-      tutorial: () => { if (rack.onTutorial) rack.onTutorial(); },
-      patchNotes: () => { if (notes) notes.toggle(); },
-      openExample: (e) => openExample(e.file, e.name),
-      createFromClipboard: () => createFromClipboard(),
-      reportBug: () => composer.reportBug(),
-      sharePatch: () => composer.sharePatch(),
-      about: () => about.toggle(),
+    // Sticky deixis: project the module the pointer last entered to selection.json,
+    // so "make this one louder" resolves. Debounced; never cleared on pointer-leave.
+    let selTimer = null;
+    rack.onSelect = (rec) => {
+      clearTimeout(selTimer);
+      selTimer = setTimeout(() => {
+        if (!mirror.isEnabled()) return;
+        mirror.pushFiles({ 'selection.json': rec ? { id: rec.key, type: rec.descriptorId, name: rec.name } : null });
+      }, 200);
     };
-    window.wcoast.menu.onAction(({ action, arg }) => { const fn = actions[action]; if (fn) fn(arg); });
-  }
 
-  // The panel menu's File entry opens the File menu, reusing the rack's pop-up menu.
-  // Hierarchical menu: the top level shows File / Edit / View; hovering (or clicking) a
-  // heading opens its submenu, Electron-style.
-  const appMenuItems = (rec) => {
-    const file = [
-      { label: 'New', action: () => newPatch() },
-      { label: 'Open…', action: () => openPatch() },
-      { label: 'Save', action: () => savePatch() },
-      { label: 'Save As…', action: () => saveAsPatch() },
-    ];
-    if (examples.length) file.push({ label: 'Examples', submenu: examples.map((e) => ({ label: e.name, action: () => openExample(e.file, e.name) })) });
-    if (storage.hasLast && storage.hasLast()) file.push({ label: `Reopen ${storage.lastName()}`, action: () => reopenPatch() });
-    // Newest first, in a submenu of its own — a header over a flat run of filenames just reads as
-    // more File commands. The file you already have open is listed like any other: clicking it
-    // re-reads it from disk, which is how you revert to the last save.
-    if (recentFiles.length) {
-      file.push({ label: 'Recent', submenu: recentFiles.map((f) => ({ label: f.name, action: () => openRecent(f.id) })) });
+    // Save/load: the environment-chosen storage adapter drives the shared core.
+    const storage = createStorage();
+    const patchText = () => JSON.stringify(serialize(rack, mixerIO), null, 2);
+    // A compact patch JSON for embedding in a GitHub bug report / shared post: the bulky frozen-scope trace
+    // blobs are stripped (a bug reproduces from the topology + settings, not the captured pixels).
+    const trimmedPatchText = () => {
+      const obj = serialize(rack, mixerIO);
+      for (const p of (obj.probes || [])) { if (p && p.frozen) { p.frozen = false; delete p.wave; delete p.hist; delete p.histIdx; delete p.fastVotes; delete p.forceMode; } }
+      return JSON.stringify(obj, null, 2);
+    };
+    // Session autosave: persist the live patch to localStorage on every edit
+    // (debounced) so a relaunch resumes exactly where you left off. Separate from
+    // named File saves — this just remembers the last working state.
+    const SESSION_KEY = 'wcoast.session';
+    // THE SESSION BEFORE THIS ONE, kept so a bad boot cannot silently eat a working patch. The session
+    // is overwritten by autosave a moment after startup, so if anything goes wrong while restoring — a
+    // thrown error, a module that fails to instantiate, cables that do not come back — the damaged
+    // result is written over the only copy and the original is gone. One generation of history costs a
+    // few kilobytes and turns that from data loss into an inconvenience. Rolled at BOOT, before the
+    // first autosave can run, so it always holds the state the app came up with.
+    const SESSION_PREV_KEY = 'wcoast.session.prev';
+    let sessTimer = null;
+    // Guarded by `booted`: the many addModule edits DURING boot must not overwrite the
+    // session with a half-built (e.g. mixer-only) rack — only genuine post-boot edits save.
+    // `demoActive` freezes autosave: a running demo rebuilds the rack, which must never overwrite
+    // the user's saved session (it's snapshotted and restored around the run).
+    function autosaveSession() { if (!booted || demoActive) return; clearTimeout(sessTimer); sessTimer = setTimeout(() => { try { localStorage.setItem(SESSION_KEY, patchText()); } catch (_e) { /* no storage */ } }, 400); }
+    function flushSession() { if (!booted || demoActive) return; clearTimeout(sessTimer); try { localStorage.setItem(SESSION_KEY, patchText()); } catch (_e) { /* no storage */ } }
+    // Guard the destructive actions (New / Open / Reopen) when there's unsaved work.
+    // A DEMO is never asked. It reached File ▸ Examples by script, the user's own patch was snapshotted
+    // before the demo began and is put back when it ends — so the one thing this prompt protects is
+    // already safe, and a modal appearing over a demonstration is a dead end: the synthetic pointer
+    // cannot press it.
+    const okToDiscard = () => !dirty || demoActive || window.confirm('You have unsaved changes. Discard them?');
+
+    // The rack a brand-new user gets on a first run, and exactly what File > New rebuilds.
+    // Shared between the two so they can never drift apart.
+    // The arrangement itself lives in host/default-rack.js, so that a tutorial demo can open on the
+    // SAME rack a first-run user meets rather than conjuring its modules as it goes.
+    async function placeDefaultModules() {
+      // The mixer is pinned and survives File > New, wherever the discarded patch left it — but always
+      // on the audio output page, which is not a page this layout otherwise touches.
+      rack.placeModule('mixer', rack.rowCount - 1, 0);
+      await placeRack(rack, DEFAULT_RACK);
     }
-    file.push({ label: 'Share this patch…', disabled: true });   // greyed until there's a person-to-person channel
-    const edit = [
-      { label: 'Undo', disabled: !rack.canUndo(), action: () => rack.undo() },
-      { label: 'Redo', disabled: !rack.canRedo(), action: () => rack.redo() },
-      { label: 'Create patch from clipboard', action: () => createFromClipboard() },
-      { separator: true },
-      // Emptying the patch is an edit of the whole patch. It sat under Module because it is about
-      // modules, which is true of nearly everything in the app and is not what that menu is for:
-      // Module is where you reach for ONE of them.
-      { label: 'Clear connections & controls…', action: () => rack.confirmDeleteAllCables() },
-    ];
-    // View (Dark/Light mode is self-describing: the label names the mode it switches to).
-    const view = [
-      { label: rack.isDark() ? 'Light mode' : 'Dark mode', action: () => toggleDark() },
-      { label: 'Fit to window', action: () => rack.resetZoom() },
-      { label: 'Patch notes', action: () => notes.toggle() },   // info about this patch
-      // A conventional menu bar across the top, for anyone who looks for one there. ON by
-      // default: the title-bar hamburgers are quicker once you know about them, but a menu you
-      // have to be told about is a menu most people never find.
-      { label: 'Menu bar', checkFn: () => rack.menuBarDocked(), action: () => setMenuBar(!rack.menuBarDocked()) },
-      { label: 'Video follows pointer', checkFn: () => rack.videoFollowsPointer(),
-        action: () => setVideoFollow(!rack.videoFollowsPointer()) },
-      // How many rows the rack stands: the shape of what you are looking at, beside Fit to window
-      // and the rest. It lived under Rack, which no longer exists.
-      { label: 'Rows', submenu: [1, 2, 3, 4, 5].map((n) => ({
-        label: String(n), checkFn: () => rack.rowCount === n, action: () => setRows(n),
-      })) },
-    ];
-    // Capturing what you can SEE belongs under View, beside the other things that change what is
-    // on screen — not under File, which is about the patch. Both are desktop only: they need the
-    // main process to reach the window's pixels and to write to disk.
-    if ((recorder && recorder.available()) || snapshotAvailable()) {
-      view.push({ separator: true });
-      // "Snapshot VIEW", not just "snapshot": on an instrument, an unqualified snapshot sounds
-      // like it might capture the sound or the patch state. This one captures what you can see.
-      if (snapshotAvailable()) view.push({ label: 'Snapshot view', action: () => takeSnapshot() });
-      if (recorder && recorder.available()) {
-        view.push({ label: `${recorder.recording ? 'Stop recording' : 'Record video…'}   R`, action: () => toggleRecording() });
-      }
+
+    async function newPatch() {
+      if (!okToDiscard()) return;
+      // clear() pulls every cable and deletes every module EXCEPT the pinned mixer, which
+      // survives still carrying the discarded patch's fader and pan positions — so reset the
+      // controls too. The modules placed afterwards are fresh, and start at their defaults.
+      rack.clear(); rack.resetAllControls();
+      await placeDefaultModules();
+      storage.forget(); setPatchName(null); markClean(); afterLoad();
     }
-    // MODULE — what the rack is made of, and the two commands that act on the whole set of them.
-    // It replaces the old Rack menu: the engine went (the space bar toggles it, and the mixer has the
-    // control), Rows went to View, and deleting a page is now the × on the tab itself.
+    // RESET TO DEFAULT — the rack and the app exactly as a first-run user meets them.
     //
-    // NOTHING HERE ACTS ON A PARTICULAR MODULE. Duplicating one, or deleting one, is about a module
-    // you have to name — and this menu cannot name it, so it used to arm the pointer and wait for a
-    // click to say which. That is a whole extra gesture, and an armed mode you can forget you are in.
-    // Right-clicking a module's title bar names it by definition, so those commands live there.
+    // Distinct from File ▸ New, which starts a new PATCH and leaves your view settings where you put
+    // them. This also returns dark mode, the row count, the menu bar and the zoom, because the thing
+    // it exists for is recovery: "put everything back" should not leave you hunting for the one
+    // setting it decided was yours to keep.
     //
-    // What is left is the library, which is about no module in particular. Clearing the patch went to
-    // Edit, where the other whole-patch commands are.
-    const modulesMenu = [
-      { label: 'Module library…', action: () => library.show() },
-    ];
-    // DR is the application menu, in the position and role the app menu holds on a Mac. DEV is
-    // last and abbreviated: it earns a place for the people who need it without taking the width
-    // of "Developer" from the menus everyone uses.
-    return [
-      { label: 'DreamRack', submenu: rack.helpMenuItems().filter((i) => /about/i.test(i.label || '')).concat([
-        { separator: true },
-        { label: 'Interactive tutorial', action: () => rack.onTutorial && rack.onTutorial() },
-      ]) },
-      { label: 'File', submenu: file },
-      { label: 'Edit', submenu: edit },
-      { label: 'View', submenu: view },
-      { label: 'Module', submenu: modulesMenu },
-      { label: 'Help', submenu: rack.helpMenuItems() },
-      { label: 'DEV', submenu: rack.developerMenuItems(rec) },
-    ];
-  };
-  // Read the folder, THEN open. It's a local readdir of a handful of files, so the wait is
-  // imperceptible — and opening first and re-opening once it lands makes the menu flicker.
-  // A RIGHT-CLICK ON A FACEPLATE opens this — the same items as the bar at the top of the window,
-  // summoned where the pointer already is. That is the whole point: the faceplate is the largest
-  // target on screen, so the main menu costs no aim at all.
-  rack.onAppMenuBar = (x, y, rec) => {
-    refreshRecent().then(() => rack.openMenuBar(x, y, appMenuItems(rec)));
-  };
-
-  // The MODULE LIBRARY, on right-click over empty rack background and from Modules ▸ Module library.
-  // Choosing a card hands the module to the pointer to be carried and placed; the callback is how the
-  // library knows to come back once it has been put down.
-  const library = createLibrary({
-    types: MODULE_TYPES,
-    isTaken: (id) => rack.hasModule(id),
-    isDark: () => rack.isDark(),
-    onChoose: (id, at, done) => rack.startCarryModule(id, done, at),
-  });
-  rack.onLibrary = () => library.show();
-  libraryTheme = library.refreshTheme;
-
-  // The docked bar. It hands the rack a PROVIDER rather than a fixed set of items, so each menu
-  // is rebuilt as it opens — a bar that lives all session would otherwise keep the Undo state,
-  // the Recent list and the light/dark label it happened to be born with.
-  // The pointer-following video picture, remembered like the menu bar: an app preference rather
-  // than anything a patch carries. It exists for magnified working — see video-engine.
-  const FOLLOW_KEY = 'wcoast.videoFollow';
-  function setVideoFollow(on) {
-    try { localStorage.setItem(FOLLOW_KEY, on ? '1' : '0'); } catch (_e) { /* no storage */ }
-    rack.videoFollowPointer(!!on);
-    pushMenuState();
-  }
-
-  // Clicking the Video Output module's picture toggles the same thing the menu item does, so the
-  // menu's tick has to follow it — otherwise the two disagree about a state they share.
-  rack.onVideoFollowChange = (on) => {
-    try { localStorage.setItem(FOLLOW_KEY, on ? '1' : '0'); } catch (_e) { /* no storage */ }
-    pushMenuState();
-  };
-
-  const MENUBAR_KEY = 'wcoast.menuBar';
-  function setMenuBar(on) {
-    try { localStorage.setItem(MENUBAR_KEY, on ? '1' : '0'); } catch (_e) { /* no storage */ }
-    if (!on) { rack.undockMenuBar(); return; }
-    rack.dockMenuBar(appMenuItems(null, null), () => appMenuItems(null, null));
-    refreshRecent();   // warm the Recent list for the first drop, without blocking the bar
-  }
-  // Default ON, so a first-time user meets a menu where they expect one.
-  let menuBarPref = '1';
-  try { const v = localStorage.getItem(MENUBAR_KEY); if (v === '0' || v === '1') menuBarPref = v; } catch (_e) { /* no storage */ }
-  setMenuBar(menuBarPref === '1');
-  // The pointer follower is remembered but defaults OFF: it is an aid for magnified working, not
-  // something to spring on someone who never asked for it. It also does nothing until a video
-  // module exists, so switching it on early costs only the engine coming up.
-  try { if (localStorage.getItem(FOLLOW_KEY) === '1') setVideoFollow(true); } catch (_e) { /* no storage */ }
-
-  // The interactive tutorial: modeless cards the reader drives with Next/Back. Opens on a first
-  // run (unless "Don't show on startup" is set), and always available from Help ▸ Interactive tutorial.
-  // The copy lives in host/tutorial.md — one file that is both the tutorial and a readable document.
-  // A failure here must not take the app down with it: no tutorial is survivable, a dead boot isn't.
-  notes = createPatchNotes({
-    getNotes: () => rack.patchNotes,
-    setNotes: (v) => { rack.patchNotes = v; },
-    getOpen: () => rack.patchNotesOpen,
-    setOpen: (v) => { rack.patchNotesOpen = v; },
-    isDark: () => rack.isDark(),
-    onChange: () => onEdit(),
-  });
-  rack.onPatchNotes = () => notes.toggle();
-  const composer = createComposer({
-    repo: 'chrisgr99/DreamRack',
-    isDark: () => rack.isDark(),
-    getPatchJSON: () => trimmedPatchText(),
-    openExternal: (url) => rack._openExternal(url),
-    appName: APP_NAME,
-    appVersion: APP_VERSION,
-    getBuild: () => rack.buildInfo,
-  });
-  rack.onReportBug = () => composer.reportBug();
-  rack.onSharePatch = () => composer.sharePatch();
-  const about = createAbout({
-    appName: APP_NAME,
-    appVersion: APP_VERSION,
-    author: 'Chris Graham',
-    getBuild: () => rack.buildInfo,
-    isDark: () => rack.isDark(),
-    openExternal: (url) => rack._openExternal(url),
-    repoUrl: 'https://github.com/chrisgr99/DreamRack',
-    contactUrl: 'https://github.com/chrisgr99',
-    onTutorial: () => { if (rack.onTutorial) rack.onTutorial(); },
-  });
-  rack.onAbout = () => about.toggle();
-  loadExamples();   // populate the Examples menu (async; refreshes the native menu when ready)
-
-  let tour = null;
-  try {
-    const steps = await loadTutorial();
-    tour = createTour({ steps, onExternal: (url) => rack._openExternal(url), isDark: () => rack.isDark(),
-      onSee: (t, el) => (t ? rack.showCallout(t, el) : rack.clearCallout()),
-      canSee: (t) => rack.calloutAvailable(t),
-      homePos: (w, h) => rack.tutorialHomePos(w, h),
-      // Reading a block aloud: the same pre-rendered narration the demos use, with no animation.
-      onSpeak: (text, done) => rack.demo && rack.demo.speakText(text, done),
-      onStopSpeak: () => rack.demo && rack.demo.stopSpeech(),
-      // DEMONSTRATE hands over: the tutorial closes and the transport takes its place. They never
-      // share the screen — the demo needs the rack, and the tutorial window sits over it.
-      onDemonstrate: (id, sectionId) => demonstrate(id, sectionId) });
-    rack.onTutorial = () => tour.open(0);
-    if (!tourSeen()) tour.open(0);
-  } catch (e) {
-    log('tutorial unavailable: ' + e.message);
-  }
-
-  // F1 — the conventional Help key. Opens the Help menu centred in the window, so it's reachable
-  // without knowing about right-click or finding the hamburger.
-  // NOTE on macOS: F1 is a system brightness key unless "Use F1, F2, etc. as standard function keys"
-  // is on in System Settings ▸ Keyboard — otherwise the app never sees it and you need Fn-F1.
-  window.addEventListener('keydown', (e) => {
-    if (e.key !== 'F1') return;
-    const t = e.target;
-    if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
-    e.preventDefault();
-    rack.openMenu(window.innerWidth / 2, window.innerHeight / 2, rack.helpMenuItems(), { centred: true });
-  });
-
-  // Spacebar toggles the ENGINE — a hands-on-keyboard alternative to the Rack menu and the
-  // mixer's engine lamp. It follows the engine rather than the master bus because a transport
-  // key should be the thing that starts and stops sound outright, and because pressing it to
-  // start must never leave you with silence (the engine brings the master bus with it).
-  // Ignored while typing in a field, and when a button has focus (Space
-  // would "click" it and double-toggle). No modifier, so Cmd/Ctrl-Space and friends pass straight through.
-  window.addEventListener('keydown', (e) => {
-    if (e.key !== ' ' && e.code !== 'Space') return;
-    if (e.metaKey || e.ctrlKey || e.altKey) return;
-    const t = e.target;
-    if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'BUTTON' || t.isContentEditable)) return;
-    e.preventDefault();
-    rack.toggleEngine();
-  });
-
-  // R toggles recording. A bare letter is safe here for the same reason Space can toggle
-  // the master bus: patching is a pointer activity, so the keyboard is free. Modified R is
-  // explicitly excluded so Cmd-R (reload) and friends pass straight through, and e.code
-  // keeps it on the physical key rather than the character a layout produces.
-  //
-  // There is no native menu item for recording, so unlike the standard shortcuts below
-  // this one runs in Electron too — it is the only handler for it, so nothing double-fires.
-  window.addEventListener('keydown', (e) => {
-    if (e.code !== 'KeyR' || e.metaKey || e.ctrlKey || e.altKey || e.shiftKey) return;
-    if (!recorder || !recorder.available()) return;
-    const t = e.target;
-    if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'BUTTON' || t.isContentEditable)) return;
-    e.preventDefault();
-    toggleRecording();
-  });
-
-  // Standard shortcuts, for the BROWSER only: in Electron the native menu carries the same
-  // accelerators and would fire alongside these.
-  window.addEventListener('keydown', (e) => {
-    if (window.wcoast && window.wcoast.isElectron) return;
-    if (!(e.metaKey || e.ctrlKey) || e.altKey) return;
-    const k = e.key.toLowerCase();
-    if (k === 's') { e.preventDefault(); if (e.shiftKey) saveAsPatch(); else savePatch(); }
-    else if (k === 'o' && !e.shiftKey) { e.preventDefault(); openPatch(); }
-    else if (k === 'n' && !e.shiftKey) { e.preventDefault(); newPatch(); }
-    else if (k === 'z' && !e.shiftKey) { e.preventDefault(); rack.undo(); }   // undo cable/module topology changes
-    else if (k === 'z' && e.shiftKey) { e.preventDefault(); rack.redo(); }    // redo (Cmd/Ctrl-Shift-Z)
-  });
-
-  // Warn before a browser tab/window discards unsaved work. In Electron the
-  // window close is guarded in the main process (via the mirrored dirty state),
-  // so beforeunload here is browser-only to avoid a double prompt.
-  if (!(window.wcoast && window.wcoast.isElectron)) {
-    window.addEventListener('beforeunload', (e) => { if (dirty) { e.preventDefault(); e.returnValue = ''; } });
-  }
-  // Persist the session on unload (both environments) so a relaunch resumes it.
-  window.addEventListener('pagehide', flushSession);
-
-  // Resume the last session if one was saved; otherwise start with one of each so
-  // there's something to patch.
-  let resumed = false;
-  // `started` records that restore got far enough to put modules on the rack, whether or not it
-  // finished. It is the difference between "there is nothing here" and "there is a half-built rack
-  // here", and only the first of those wants the default modules placed on top of it.
-  let started = false;
-  try {
-    const saved = localStorage.getItem(SESSION_KEY);
-    if (saved) {
-      const obj = JSON.parse(saved);
-      started = true;   // from here a throw can leave modules behind
-      const v = validate(obj, registry);
-      // Require at least one module — a module-less session is boot-transient junk,
-      // not a patch worth resuming; fall through to the default instead.
-      if (v.ok && obj.modules && obj.modules.length) {
-        // Settings that no longer fit the descriptors are dropped rather than fatal, so
-        // say what was dropped — silently different knob positions are worse than noisy ones.
-        for (const w of v.warnings || []) log(`session: ${w}`);
-        await restore(obj, rack, mixerIO); syncMaster(); afterLoad(); resumed = true;
-        started = true;
-        // Re-adopt the file this session was editing, so File > Save writes back to it (not a fresh prompt).
-        try { const n = await storage.adoptLast(); if (n) patchName = n; } catch (_e) { /* fileless resume */ }
-      }
-      else if (!v.ok) log(`session ignored: ${v.error}`);
+    // The order matters. Row count is set BEFORE the modules are placed, since placeDefaultModules
+    // lays out against the current number of rows and would otherwise put the mixer in a row that is
+    // about to disappear.
+    async function resetToDefault() {
+      rack.confirm(
+        'Reset to default? This puts your modules back to the initial complement and state, '
+        + 'and returns the view settings to their defaults. Unsaved work is lost.',
+        'Reset', async () => {
+          rack.clear();
+          rack.resetAllControls();
+          setRows(2);
+          if (!rack.isDark()) toggleDark();
+          setMenuBar(true);
+          rack.resetZoom();
+          await placeDefaultModules();
+          // Silent, the way a launch is: the engine last, since that is what guarantees it.
+          rack.applyParam(mixRec, 'masterEnable', 'off');
+          rack.applyParam(mixRec, 'monitorEnable', 'off');
+          rack.applyParam(mixRec, 'engine', 'off');
+          storage.forget(); setPatchName(null); markClean(); afterLoad();
+        });
     }
-  } catch (e) {
-    // WITH A STACK. This used to log the message alone, and the message alone cannot tell you which
-    // of thirty lines in restore() gave up.
-    log(`session restore failed: ${e.message}`);
-    console.error('[wcoast] session restore failed: ' + ((e && e.stack) || e));
-  }
-  if (!resumed) {
-    // A HALF-RESTORED RACK IS CLEARED FIRST. If restore() threw after adding modules — a module that
-    // would not instantiate, a cable that would not reconnect — the rack was left holding them AND
-    // then had a full set of defaults placed on top, so every module appeared twice and none of the
-    // cables were there. Two symptoms, one cause, and the duplicate pass then autosaved itself over
-    // the only good copy of the patch.
-    if (started) { try { rack.clear(); } catch (_e) { /* nothing to clear */ } }
-    await placeDefaultModules();
-  }
-  // Roll the backup now: whatever we just read is the last known-good state, and from here the
-  // autosave is free to overwrite the live key.
-  try {
-    const prior = localStorage.getItem(SESSION_KEY);
-    if (prior) localStorage.setItem(SESSION_PREV_KEY, prior);
-  } catch (_e) { /* no storage */ }
-  // Put the view back where it was left. AFTER the modules exist, since relayout resets the transform
-  // as it fits the rows — restoring earlier would simply be overwritten.
-  try {
-    // The tab first: selecting a page redraws the cables and the stubs, and doing it after the pan
-    // and zoom were restored would leave the view fighting a layout it had not seen.
-    const pg = localStorage.getItem(PAGE_KEY);
-    if (pg && rack._hasPage(pg)) rack.selectPage(pg);
-    const v = localStorage.getItem(VIEW_KEY);
-    if (v) rack.setViewState(JSON.parse(v));
-  } catch (_e) { /* no storage, or nonsense in it — the default view is fine */ }
-  // Startup silence: the engine and both buses OFF on every launch, regardless of the last-exited
-  // state or any monitors that a restored patch would otherwise re-enable — the app never comes up
-  // making sound. The engine is cleared LAST, because turning it off is what actually guarantees
-  // the silence and nothing below it can undo that.
-  rack.applyParam(mixRec, 'masterEnable', 'off');
-  rack.applyParam(mixRec, 'monitorEnable', 'off');
-  rack.applyParam(mixRec, 'engine', 'off');
-  booted = true;   // from here on, real edits autosave the session
-  markClean();     // the resumed/starting patch is the clean baseline, not unsaved work
-  await mirror.init();   // read enabled state + push the first mirror snapshot
-  // The AI mirror is Electron-only and always on: no toggle UI, no folder-reveal — just
-  // ensure it's enabled so the running patch is always mirrored.
-  if (mirror.available() && !mirror.isEnabled()) { try { await mirror.setEnabled(true); } catch (_e) { /* ignore */ } updateTrace(); }
 
-  // --- Scripted demos (design/scripted-demo.md): library, floating transport, triggers ---
-  // Reels are a named manifest; the floating "Demo" window (DEV ▸ Demos…) chooses one from its
-  // drop-down and Runs / Stops / Restarts it, showing the running reel's name. Ctrl-Shift-D starts
-  // the selected reel, Escape stops. A demo rebuilds the rack, so the user's whole working state —
-  // patch, probes, page and view — is snapshotted and put back around every run.
-  let demoList = [];
-  try { const res = await fetch('demos/scripts/index.json'); if (res.ok) demoList = (await res.json()).demos || []; }
-  catch (_e) { /* no demo library */ }
-  // MOST RECENTLY EDITED FIRST. index.json is in the order the reels were written, which is the least
-  // useful order for the person writing them: the one you are working on is whichever you last saved,
-  // and it was at the bottom. Anything we cannot date keeps the file's own order behind the rest.
-  try {
-    if (window.wcoast && window.wcoast.demoMtimes) {
-      const when = await window.wcoast.demoMtimes();
-      demoList = demoList
-        .map((d, i) => ({ d, i, t: when[d.file] || 0 }))
-        .sort((a, b) => (b.t - a.t) || (a.i - b.i))
-        .map((x) => x.d);
+    async function openPatch() {
+      if (!okToDiscard()) return;
+      let f;
+      try { f = await storage.open(); } catch (e) { log(`open failed: ${e.message}`); return; }
+      if (!f) return;
+      try { await restore(JSON.parse(f.text), rack, mixerIO); setPatchName(f.name); markClean(); afterLoad(); }
+      catch (e) { console.error('[wcoast] open failed: ' + ((e && e.stack) || e)); log(`restore failed: ${e.message}`); window.alert(`Could not open patch: ${e.message}`); }
     }
-  } catch (_e) { /* keep the file's own order */ }
-
-  const loadDemo = async (entry) => {
-    // A DEMO IS MARKDOWN, and JSON only where one has not been converted yet. The words are the part
-    // that gets rewritten, and rewriting a sentence inside JSON means minding quotes and escapes.
-    if (String(entry.file).endsWith('.md')) {
-      const res = await fetch(`demos/scripts/${entry.file}?t=${Date.now()}`);
-      if (!res.ok) throw new Error(`demo ${entry.file}: ${res.status}`);
-      const md = parseDemoMd(await res.text(), { id: entry.id });
-      // The markdown demos were the ones without a file recorded, which is the half that matters:
-      // a step's line number is only useful beside the name of the file it is a line of.
-      md.__file = 'demos/scripts/' + entry.file;
-      return md;
+    // ---- WORK STATE, CARRIED BY THE REPOSITORY ---------------------------------------------------
+    // CAPTURE before leaving a machine, RESTORE after cloning on the next one. The transport is git:
+    // the app runs from its own checkout, so `patches/` beside it travels with a commit and a push.
+    //
+    // The saved patches are ordinary files and the main process copies them itself. The two things that
+    // are NOT files — the live session and the view transform — live in this window's storage, so they
+    // are handed over from here.
+    async function captureWork() {
+      if (!(window.wcoast && window.wcoast.captureWork)) { log('capture: Electron only'); return; }
+      flushSession();   // whatever is on the rack right now, not what it was 400ms ago
+      let view = null;
+      try { view = JSON.parse(localStorage.getItem(VIEW_KEY) || 'null'); } catch (_e) { /* none */ }
+      const r = await window.wcoast.captureWork({ session: patchText(), view });
+      if (!r || r.error) { log(`capture failed: ${(r && r.error) || 'unknown'}`); return; }
+      log(`captured ${r.copied} patches + session to patches/ — commit and push to carry them`);
     }
-    // Cache-busted: the whole point of Reload is to pick up an edit made a moment ago, and a cached
-    // script would quietly serve the words you just changed.
-    const res = await fetch(`demos/scripts/${entry.file}?t=${Date.now()}`);
-    if (!res.ok) throw new Error(`demo ${entry.file}: ${res.status}`);
-    const obj = await res.json();
-    obj.__file = 'demos/scripts/' + entry.file;
-    return obj;
-  };
-
-  // Project where the demo has got to, so an editing conversation needs no preamble: which script,
-  // which step, its exact note and pacing, and the steps either side of it. Written on every step,
-  // so "make that shorter" always refers to something readable from outside the app.
-  const pushDemoState = () => {
-    if (!mirror || !rack.demo) return;
-    mirror.pushFiles({ 'demo.json': demoStepping || rack.demo.running ? rack.demo.state() : null });
-  };
-
-  // The runner takes the whole app state as one opaque snapshot, captured before every step. That
-  // is what makes stepping BACKWARDS as cheap as stepping forwards — for the author checking a
-  // script, and for the reader who wants to see a step again.
-  rack.demo = createDemoRunner(rack, {
-    registerAudio: (node) => rack.addAudioTap(node),   // narration goes into a recording, not just the speakers
-    // Every step, and every pause, projected to the mirror — see pushDemoState above.
-    onProgress: () => pushDemoState(),
-    // Load a shipped example, the same route File ▸ Examples takes, so a demo can start from a patch
-    // that already works rather than building one first.
-    loadExample: async (name) => {
-      const entry = (examples || []).find((e) => e.name === name || e.file === name);
-      // LOUDLY. A demo whose patch does not load runs every remaining step against an empty rack and
-      // records a video of nothing, which is what a silent log bought once already.
-      if (!entry) { console.warn(`[demo] no example named "${name}" — the rack will be empty`); log(`no example named "${name}"`); return; }
-      try {
-        const res = await fetch('examples/' + entry.file);
-        if (!res.ok) throw new Error(String(res.status));
-        await restore(await res.json(), rack, mixerIO, { keepKeys: true });
-        syncMaster();
-        silenceAfterLoad();   // an example arrives silent, like every other patch
-      } catch (e) { log(`example load failed: ${e.message}`); }
-    },
-    onAvoid: (region) => { if (demoPanel) demoPanel.avoid(region); },   // the transport window steps out of the work
-    panelRect: () => (demoPanel ? demoPanel.rect() : null),             // ...and the card then keeps off the window
-    snapshot: () => ({ patch: patchText(), page: rack.page, view: rack.viewState() }),
-    restoreSnapshot: async (s) => {
-      if (!s) return;
-      await restore(JSON.parse(s.patch), rack, mixerIO, { keepKeys: true });
-      syncMaster();
-      if (rack._hasPage(s.page)) rack.selectPage(s.page);
-      rack.setViewState(s.view);
-    },
-  });
-
-  // The transport switches are NOT part of a saved patch (see TRANSPORT above), so they're caught
-  // and put back by hand — a demo turns the engine on, and leaving it on afterwards would break the
-  // rule that sound only ever starts because you asked for it.
-  const grabTransport = () => ({ engine: mixRec.values.get('engine'), masterEnable: mixRec.values.get('masterEnable'), monitorEnable: mixRec.values.get('monitorEnable') });
-  const putTransport = (t) => { rack.applyParam(mixRec, 'masterEnable', t.masterEnable); rack.applyParam(mixRec, 'monitorEnable', t.monitorEnable); rack.applyParam(mixRec, 'engine', t.engine); };
-
-  // The user's own state, held for the length of a demo however it was started — a plain Run or a
-  // step-through — so whichever one ends can put it back. Held in one place because Stop hands a
-  // running demo OVER to stepping rather than tearing it down.
-  let demoHeld = null;
-  const holdUserState = () => { demoHeld = { snap: patchText(), view: rack.viewState(), page: rack.page, transport: grabTransport() }; };
-  async function releaseUserState() {
-    const h = demoHeld; demoHeld = null;
-    if (!h) return;
-    try {
-      await restore(JSON.parse(h.snap), rack, mixerIO);
-      syncMaster();
-      if (rack._hasPage(h.page)) rack.selectPage(h.page);
-      rack.setViewState(h.view);
-    } catch (e) { log(`demo restore failed: ${e.message}`); }
-    putTransport(h.transport);
-    markClean();
-  }
-
-  async function runDemo(obj, name, { restoreAfter = true, loop = false, from = 0 } = {}) {
-    if (!obj || rack.demo.running) return;
-    if (restoreAfter && !demoHeld) holdUserState();
-    if (tour && tour.isOpen()) tour.close();   // the first-run tutorial card sits over the rack
-    // ...and so does the patch-notes window, which afterLoad already refuses to OPEN during a demo
-    // but could not close one that was already up when Run was pressed. A note about the patch is
-    // exactly what a viewer has open when they decide to watch the demo of it.
-    if (notes) notes.close();
-    demoActive = true; demoStop = false;
-    if (demoPanel) demoPanel.setRunning(name || obj.id || 'demo');
-    try { do { await rack.demo.run(obj); } while (loop && !demoStop); }
-    finally {
-      if (demoPanel) demoPanel.setRunning(null);
-      // A demo STOPPED mid-way leaves you standing on the step it reached — that is what stopping is
-      // for while authoring. Only a demo that ran to its end puts your patch back on its own.
-      if (demoStop) { demoStepping = demoStepping || true; showPos(); }
-      else {
-        demoActive = false;
-        await releaseUserState();
-        // A finished demo STAYS. The rack is left as the demo built it and the transport is still
-        // there, so the obvious next thing — watch that again — is one press away. Going back is the
-        // reader's decision, not the clock's: the button says so.
-        if (demoPanel) demoPanel.setExitLabel(cameFromTutorial ? 'Return to tutorial' : 'Close');
-      }
-    }
-  }
-
-  let overrideRate = 1, loopWanted = false;   // window controls: pace vs legibility, attract loop
-
-  // A LATCH TAKEN SYNCHRONOUSLY, before the first await. Every other guard here — `rack.demo.running`,
-  // `demoActive` — is only set once the script has been fetched and the run has actually begun, so two
-  // presses a moment apart both sailed past them and started two demos over the top of each other. A
-  // reader who presses again because nothing has visibly happened yet is doing the obvious thing.
-  let demoStarting = false;
-
-  async function runSelected({ from = 0 } = {}) {
-    if (!selectedEntry || demoStarting || rack.demo.running || demoActive) return;
-    demoStarting = true;
-    try {
-      let obj; try { obj = await loadDemo(selectedEntry); } catch (e) { log(`demo load failed: ${e.message}`); return; }
-      const base = Number(obj.rate) > 0 ? Number(obj.rate) : 1;
-      const eff = { ...obj, rate: base * overrideRate };   // global rate override on top of the reel's own
-      demoPromise = runDemo(eff, selectedEntry.title || selectedEntry.id, { loop: loopWanted, from });
-      return demoPromise;
-    } finally { demoStarting = false; }
-  }
-  async function stopDemo(why) { if (rack.demo.running) { demoStop = true; rack.demo.stop(why || 'stopDemo'); } if (demoPromise) { try { await demoPromise; } catch (_e) { /* ignore */ } } }
-  async function restartDemo() { await stopDemo('Restart button'); runSelected(); }
-
-  // Step-through. The first press stands the demo up the way Run does — the user's work put aside,
-  // the rack cleared, sound on — and then performs one step. Leaving step-through is what puts the
-  // patch back, so `demoStepping` holds the snapshot until then.
-  let demoStepping = null;
-  async function enterStepping() {
-    if (demoStepping || !selectedEntry) return false;
-    let obj; try { obj = await loadDemo(selectedEntry); } catch (e) { log(`demo load failed: ${e.message}`); return false; }
-    if (!demoHeld) holdUserState();
-    demoStepping = true;
-    if (tour && tour.isOpen()) tour.close();
-    demoActive = true;
-    rack.demo.load(obj);
-    await rack.demo.reset();
-    return true;
-  }
-  async function exitStepping() {
-    if (!demoStepping) return;
-    demoStepping = null;
-    rack.demo.stop('leaving step-through');
-    await releaseUserState();
-    demoActive = false;
-    demoPanel.setPosition(0, 0);
-    pushDemoState();
-  }
-  const showPos = () => { demoPanel.setPosition(rack.demo.index, rack.demo.count, (rack.demo.stepAt(rack.demo.index) || {}).do); pushDemoState(); };
-  async function stepDemo() { if (!demoStepping && !(await enterStepping())) return; await rack.demo.step(); showPos(); }
-  async function backDemo() { if (!demoStepping) return; await rack.demo.back(); showPos(); }
-  // Perform the current step properly — full pacing and narration — then stop on the next one.
-  async function playStepDemo() { if (!demoStepping && !(await enterStepping())) return; await rack.demo.playStep(); showPos(); }
-  // Re-read the script from disk and return to the step we were standing on, so an edit can be heard
-  // without losing your place. Steps are replayed with their waits collapsed to get back there.
-  async function reloadDemo() {
-    if (!selectedEntry) return;
-    const at = demoStepping ? rack.demo.index : 0;
-    let obj; try { obj = await loadDemo(selectedEntry); } catch (e) { log(`demo reload failed: ${e.message}`); return; }
-    if (!demoStepping && !(await enterStepping())) return;
-    rack.demo.load(obj);
-    await rack.demo.reset();
-    await rack.demo.seek(Math.min(at, rack.demo.count));
-    showPos();
-    log(`demo reloaded at step ${rack.demo.index + 1}`);
-  }
-
-  // ---- the tutorial's hand-off ---------------------------------------------
-  // Pressing Demonstrate in a section closes the tutorial and opens the transport on that demo, in its
-  // reader face. Exiting the transport reopens the tutorial where it was left. One or the other is on
-  // screen, never both: the demo needs the rack, and the tutorial window sits over it.
-  let cameFromTutorial = null;   // the section id to return to, or null when opened from the DEV menu
-
-  async function demonstrate(id, sectionId) {
-    if (demoStarting || rack.demo.running || demoActive) return;   // a second press while one is starting
-    const entry = demoList.find((d) => d.id === id);
-    if (!entry) { log(`no demo named "${id}"`); return; }
-    cameFromTutorial = sectionId || true;
-    if (tour) tour.close();
-    selectedEntry = entry;
-    demoPanel.setMode('reader');
-    demoPanel.setTitle(entry.title || entry.id);
-    demoPanel.setExitLabel('Return to tutorial');
-    demoPanel.open();
-    await exitStepping();
-    runSelected();
-  }
-
-  // Put the transport away and open the tutorial at the section that launched the demo. Shared by the
-  // Exit button and by a demo reaching its own end, so both leave you in the same place.
-  function returnToTutorial() {
-    demoPanel.close();
-    const back = cameFromTutorial; cameFromTutorial = null;
-    if (back && tour) tour.open(typeof back === 'string' ? back.replace(/^sec-/, '') : 0);
-  }
-
-  // Leaving the transport by hand. From the tutorial it goes back there, at the section you pressed
-  // the play button in; opened from the DEV menu it simply closes.
-  async function leaveDemo() {
-    await stopDemo('Close button');
-    await exitStepping();
-    returnToTutorial();
-  }
-
-  selectedEntry = demoList[0] || null;
-  // Started from the command line (WCOAST_DEMO=<id>): open the transport on that demo and run it.
-  const autoId = new URLSearchParams(location.search).get('demo');
-  if (autoId) {
-    const entry = demoList.find((d) => d.id === autoId);
-    if (!entry) console.warn(`[demo] no demo named "${autoId}"`);
-    else { window.__demoTrace = true; setTimeout(() => demonstrate(entry.id), 1200); }
-  }
-  demoPanel = createDemoPanel({
-    demos: demoList,
-    onSelect: (e) => { selectedEntry = e; if (demoStepping) exitStepping(); },
-    onRun: async () => { await exitStepping(); runSelected(); },
-    // TWO-STAGE STOP. Stopping a playback leaves you STANDING ON the step it reached, with the rack as
-    // the demo built it — which is the whole point of stopping while authoring: you stop because you
-    // want to look at that step, go back a step, or change its words. Pressing Stop again (when
-    // nothing is playing) is what puts your own patch back.
-    onStop: async () => {
-      if (rack.demo.running) { await stopDemo('Stop button'); showPos(); return; }
-      await stopDemo('Stop button'); await exitStepping();
-    },
-    onRestart: restartDemo,
-    onRate: (v) => { if (v > 0) overrideRate = v; },
-    // Ticked: caption mode, which turns the cards on itself. Unticked: back to whatever the script
-    // declares — `null` is "the header decides", not "narrated", so a captions-first demo still runs
-    // the way it was written.
-    onCaptions: (v) => { rack.demo.setCaptionShow(!!v); rack.demo.setCaptions(!!v); },
-    onCaptionVoice: (v) => rack.demo.setCaptionVoice(!!v),
-    // Returns the new state, so the button can say Pause or Resume without keeping its own copy.
-    onPause: () => { const p = rack.demo.togglePause(); pushDemoState(); return p; },
-    onStep: stepDemo, onBack: backDemo, onPlay: playStepDemo, onReload: reloadDemo,
-    // JUMP THERE, or jump there and play on from it. Backwards is a snapshot restore and forwards
-    // replays the steps between with their waits collapsed, so either direction lands on the state
-    // that step begins from — which is what makes "watch that bit again" a two-second job.
-    onGoto: async (n) => { if (!demoStepping && !(await enterStepping())) return; await rack.demo.seek(n); showPos(); },
-    onRunFrom: async (n) => {
-      if (!demoStepping && !(await enterStepping())) return;
-      showPos();
-      runSelected({ from: n });
-    },
-    onClose: leaveDemo,
-  });
-  // The DEV menu opens it as an AUTHOR tool — picker, Play and Reload — and closing it just closes it.
-  // The same two commands the native menu bar carries — see developerMenuItems.
-  // THE PANEL EDITOR SAVED A FACEPLATE. Find the module type whose panel file lives in that
-  // directory and re-skin its instances — the drawing changes, the patch does not.
-  if (window.wcoast && window.wcoast.onPanelSaved) {
-    window.wcoast.onPanelSaved(async (dir) => {
-      if (!dir) return;
-      const type = MODULE_TYPES.find((t) => t.panelUrl === `modules/${dir}/panel.svg`);
-      if (!type) { log(`panel saved for "${dir}", which no module on the rack uses`); return; }
-      const done = await rack.reskinType(type.descriptorId);
-      log(done ? `${type.name} re-skinned from the editor's save` : `${type.name} saved; none placed on the rack`);
-    });
-  }
-
-  rack.onCaptureWork = () => captureWork();
-  rack.onRestoreWork = () => restoreWork();
-  rack.onResetDefault = () => resetToDefault();
-  rack.openDemoPanel = () => { cameFromTutorial = null; demoPanel.setMode('author'); demoPanel.setExitLabel('Close'); demoPanel.open(); };
-  // A HANDLE FOR AUTOMATED TESTING. A demo can only be started from the native menu, which a test
-  // harness attached over the debugging port cannot reach — so a whole class of bug (a script that
-  // runs but makes no sound) could only ever be reproduced by asking a person to press a menu item
-  // and describe what happened. This runs one by id, exactly as the panel does.
-  //
-  // Under `npm run dev` only, so a shipped app carries no such door.
-  if (window.wcoast && window.wcoast.isDev) {
-    window.__wcoast = {
-      runDemo: async (id) => {
-        const idx = await (await fetch('demos/scripts/index.json')).json();
-        const row = (idx.demos || []).find((d) => d.id === id);
-        if (!row) throw new Error(`no demo "${id}"`);
-        const raw = await (await fetch('demos/scripts/' + row.file + '?t=' + Date.now()));
-        const obj = row.file.endsWith('.md') ? parseDemoMd(await raw.text(), { id }) : await raw.json();
-        obj.__file = 'demos/scripts/' + row.file;    // so the mirror can name the file a step lives in
-        return runDemo(obj, row.title || id, { restoreAfter: false });
-      },
-      stopDemo: () => rack.demo.stop && rack.demo.stop(),
-      // RECORD A DEMO AS A TAKE. Start the recorder, run the script, stop when it ends — the picture
-      // is the window and the sound is tapped off the audio graph, so what lands in the file is what
-      // the mixer produced rather than whatever the operating system happened to be routing.
-      recordDemo: async (id, name, opts = {}) => {
-        if (!recorder || !recorder.available()) throw new Error('no recorder here (Electron only)');
-        if (rack.demo && rack.demo.primeVoice) rack.demo.primeVoice();   // ...so the narration is in the take
-        const path = await recorder.start(name || `DreamRack ${id}`, opts);
-        if (!path) throw new Error('the recorder did not start');
-        try { await window.__wcoast.runDemo(id); } finally {
-          const saved = await recorder.stop();
-          window.__wcoast.lastRecording = saved || path;
+    async function restoreWork() {
+      if (!(window.wcoast && window.wcoast.restoreWork)) { log('restore: Electron only'); return; }
+      if (!okToDiscard()) return;   // it replaces the rack you are looking at
+      const r = await window.wcoast.restoreWork();
+      if (!r || r.error) { log(`restore failed: ${(r && r.error) || 'unknown'}`); return; }
+      if (r.session) {
+        try {
+          await restore(JSON.parse(r.session), rack, mixerIO);
+          setPatchName(null); markClean(); afterLoad();
+        } catch (e) {
+          console.error('[wcoast] work restore failed: ' + ((e && e.stack) || e));
+          log(`restore failed: ${e.message}`);
         }
-        return window.__wcoast.lastRecording;
-      },
-      rack,
-    };
-  }
+      }
+      // The view goes back AFTER the modules, since laying them out resets the transform.
+      if (r.view) { try { rack.setViewState(r.view); localStorage.setItem(VIEW_KEY, JSON.stringify(r.view)); } catch (_e) { /* ignore */ } }
+      log(`restored ${r.added} patches to Documents (${r.kept} already there, left alone)`);
+    }
 
-  window.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && rack.demo.running) { stopDemo('Escape key'); return; }
-    // P PAUSES AND RESUMES a run. Not Space, which starts and stops the engine, and not Escape,
-    // which ends the demo — the two acts are different and a viewer who wanted to look at something
-    // should not have to risk ending the run to do it. Ignored while typing, and with any modifier
-    // held, so Cmd-P and friends pass straight through.
-    if (!e.metaKey && !e.ctrlKey && !e.altKey && (e.key === 'p' || e.key === 'P') && rack.demo.running) {
+    async function savePatch() {
+      try { const name = await storage.save(patchText()); if (name) { setPatchName(name); markClean(); } }
+      catch (e) { log(`save failed: ${e.message}`); window.alert(`Could not save: ${e.message}`); }
+    }
+    async function saveAsPatch() {
+      try { const name = await storage.saveAs(patchText()); if (name) { setPatchName(name); markClean(); } }
+      catch (e) { log(`save failed: ${e.message}`); window.alert(`Could not save: ${e.message}`); }
+    }
+    // Open one of the recent saves. Same guard as Open — it discards the current work.
+    async function openRecent(id) {
+      if (!okToDiscard()) return;
+      let f;
+      try { f = await storage.openRecent(id); } catch (e) { log(`open failed: ${e.message}`); return; }
+      if (!f) { window.alert('That patch could not be opened — it may have been moved or renamed.'); return; }
+      try { await restore(JSON.parse(f.text), rack, mixerIO); setPatchName(f.name); markClean(); afterLoad(); }
+      catch (e) { console.error('[wcoast] open failed: ' + ((e && e.stack) || e)); log(`restore failed: ${e.message}`); window.alert(`Could not open patch: ${e.message}`); }
+    }
+
+    // The recent list is read when the menu OPENS, not cached at boot: the folder is the truth, and
+    // it changes underneath us every time a patch is saved — here or in the Finder.
+    let recentFiles = [];
+    const refreshRecent = async () => { try { recentFiles = await storage.recent(); } catch (_e) { recentFiles = []; } };
+
+    async function reopenPatch() {
+      if (!okToDiscard()) return;
+      let f;
+      try { f = await storage.reopenLast(); } catch (e) { log(`reopen failed: ${e.message}`); return; }
+      if (!f) return;
+      try { await restore(JSON.parse(f.text), rack, mixerIO); setPatchName(f.name); markClean(); afterLoad(); }
+      catch (e) { console.error('[wcoast] open failed: ' + ((e && e.stack) || e)); log(`restore failed: ${e.message}`); window.alert(`Could not open patch: ${e.message}`); }
+    }
+
+    // Bundled example patches (examples/index.json), loaded once. Opening one loads it as a STARTING POINT:
+    // storage.forget() means a following Save behaves like Save As, since it isn't a file of the user's own.
+    const loadExamples = async () => { try { const r = await fetch('examples/index.json'); if (r.ok) examples = await r.json(); } catch (_e) { examples = []; } pushMenuState(); };
+    async function openExample(file, name) {
+      if (!okToDiscard()) return;
+      let obj;
+      try { const r = await fetch('examples/' + file); if (!r.ok) throw new Error('not found'); obj = await r.json(); }
+      catch (e) { log(`example load failed: ${e.message}`); window.alert('Could not load that example.'); return; }
+      try { await restore(obj, rack, mixerIO); storage.forget(); setPatchName(name); markClean(); afterLoad(); }
+      catch (e) { console.error('[wcoast] open failed: ' + ((e && e.stack) || e)); log(`restore failed: ${e.message}`); window.alert(`Could not open example: ${e.message}`); }
+    }
+    // Edit ▸ Create patch from clipboard — load a patch someone shared (e.g. copied from a GitHub post).
+    async function createFromClipboard() {
+      if (!okToDiscard()) return;
+      let text;
+      try { text = await navigator.clipboard.readText(); }
+      catch (e) { log(`clipboard read failed: ${e.message}`); window.alert('Could not read the clipboard.'); return; }
+      text = (text || '').trim().replace(/^```[a-z]*\s*/i, '').replace(/\s*```$/, '').trim();   // tolerate a pasted code fence
+      let obj;
+      try { obj = JSON.parse(text); } catch (_e) { window.alert('The clipboard doesn’t contain a patch (it isn’t readable as JSON).'); return; }
+      const v = validate(obj, registry);
+      if (!v.ok) { window.alert(`That isn’t a valid Wcoast patch: ${v.error}`); return; }
+      try { await restore(obj, rack, mixerIO); storage.forget(); setPatchName('from clipboard'); markClean(); afterLoad(); }
+      catch (e) { window.alert(`Could not open the patch: ${e.message}`); }
+    }
+
+    // THE HANDOFF ASKS IN OUR OWN DIALOG, not the browser's. window.confirm is a native modal whose
+    // dismissal rules are the platform's — a stray keystroke closes it — and a handoff dismissed by
+    // accident is gone: the mirror has already given up the file, so the proposal has to be sent again.
+    // This one answers to two keys and two buttons and NOTHING ELSE. No click-outside, no Tab, no
+    // space bar: Return applies, Escape cancels.
+    function askApply(summary) {
+      return new Promise((resolve) => {
+        const dark = rack.isDark();
+        const wrap = document.createElement('div');
+        wrap.style.cssText = 'position:fixed;inset:0;z-index:9000;display:flex;align-items:center;'
+          + 'justify-content:center;background:rgba(0,0,0,0.45)';
+        const box = document.createElement('div');
+        box.style.cssText = 'min-width:340px;max-width:520px;padding:18px 20px 16px;border-radius:10px;'
+          + `background:${dark ? '#25252a' : '#f2f2f4'};color:${dark ? '#e8e8ec' : '#1b1b1f'};`
+          + 'font:14px/1.45 system-ui,sans-serif;box-shadow:0 12px 40px rgba(0,0,0,0.5)';
+        box.innerHTML = `<div style="font-weight:600;margin-bottom:6px">Apply the proposed patch?</div>
+          <div style="opacity:0.8">${summary}</div>
+          <div style="opacity:0.6;margin-top:10px;font-size:12px">Return to apply · Escape to cancel</div>`;
+        const row = document.createElement('div');
+        row.style.cssText = 'display:flex;gap:10px;justify-content:flex-end;margin-top:16px';
+        const mk = (label, primary) => {
+          const b = document.createElement('button');
+          b.textContent = label;
+          b.style.cssText = 'padding:6px 16px;border-radius:6px;font:inherit;cursor:pointer;'
+            + (primary ? 'background:#2f7fd0;color:#fff;border:1px solid #2f7fd0'
+              : `background:transparent;color:inherit;border:1px solid ${dark ? '#585860' : '#b0b0b8'}`);
+          return b;
+        };
+        const cancel = mk('Cancel', false), ok = mk('Apply', true);
+        row.append(cancel, ok); box.appendChild(row); wrap.appendChild(box); document.body.appendChild(wrap);
+        const done = (yes) => {
+          document.removeEventListener('keydown', onKey, true);
+          wrap.remove();
+          resolve(yes);
+        };
+        const onKey = (e) => {
+          if (e.key !== 'Enter' && e.key !== 'Escape') { e.stopPropagation(); return; }
+          e.preventDefault(); e.stopPropagation();
+          done(e.key === 'Enter');
+        };
+        document.addEventListener('keydown', onKey, true);
+        cancel.addEventListener('click', () => done(false));
+        ok.addEventListener('click', () => done(true));
+        ok.focus();
+      });
+    }
+
+    // Apply an AI-proposed patch (the mirror's inbox.json handoff, in patch.json's
+    // format): validate it against the descriptors, confirm with the user, then restore it.
+    async function applyEdit(text) {
+      let obj;
+      try { obj = JSON.parse(text); } catch (e) { return { ok: false, error: `invalid JSON: ${e.message}` }; }
+      const v = validate(obj, registry);
+      if (!v.ok) return v;
+      const cur = serialize(rack, mixerIO);
+      const summary = `${cur.modules.length} → ${obj.modules.length} modules, ${cur.wiring.length} → ${obj.wiring.length} cables`;
+      if (!await askApply(summary)) return { ok: false, error: 'cancelled by the user' };
+      try { await restore(obj, rack, mixerIO); afterLoad(); } catch (e) { return { ok: false, error: `apply failed: ${e.message}` }; }
+      markDirty();
+      return { ok: true };
+    }
+
+    // The commands the two menus share. Both the in-window menu and the native one call THESE, so
+    // there is one implementation of each and they can't drift apart.
+    let libraryTheme = null;   // set once the library exists; the theme toggle re-skins its thumbnails
+    const toggleDark = () => {
+      const d = !rack.isDark();
+      rack.setDarkMode(d);   // re-skins every module, the pinned mixer included
+      if (tour) tour.applyTheme();   // ...and the tutorial card, which is dressed as a faceplate
+      if (notes) notes.applyTheme();
+      if (composer) composer.applyTheme();
+      if (about) about.applyTheme();
+      if (typeof libraryTheme === 'function') libraryTheme();
+      try { localStorage.setItem('wcoast.dark', d ? '1' : '0'); } catch (_e) { /* no storage */ }
+      pushMenuState();
+    };
+    // The row count is PATCH DATA — it is serialised and restored — so changing it has to mark the
+    // patch edited. Without that nothing triggered an autosave, and a rack set to two rows and then
+    // quit came back at whatever the session had last recorded for some other reason.
+    const setRows = (n) => { rack.setRowCount(n); pushMenuState(); onEdit(); };
+
+    // Keep the native menu's state honest: what's undoable, which mode, which patches. Debounced,
+    // because this fires on every edit and the main process rebuilds the menu bar from it.
+    function pushMenuState() {
+      const m = window.wcoast && window.wcoast.menu;
+      if (!m) return;                       // browser: there is no native menu
+      clearTimeout(menuStateTimer);
+      menuStateTimer = setTimeout(async () => {
+        menuStateTimer = null;
+        let recent = [];
+        try { recent = await storage.recent(); } catch (_e) { /* none */ }
+        m.setState({ dark: rack.isDark(), rows: rack.rowCount, canUndo: rack.canUndo(), canRedo: rack.canRedo(),
+          recent, examples, videoFollow: rack.videoFollowsPointer() });
+      }, 200);
+    }
+
+    // The native menu names an action; the renderer runs the same function the in-window menu does.
+    if (window.wcoast && window.wcoast.menu) {
+      const actions = {
+        new: () => newPatch(), open: () => openPatch(), save: () => savePatch(), saveAs: () => saveAsPatch(),
+        openRecent: (id) => openRecent(id),
+        undo: () => { rack.undo(); pushMenuState(); },
+        redo: () => { rack.redo(); pushMenuState(); },
+        clearAll: () => rack.confirmDeleteAllCables(),
+        toggleDark: () => toggleDark(),
+        demos: () => rack.openDemoPanel && rack.openDemoPanel(),
+        setRows: (n) => setRows(n),
+        fitToWindow: () => rack.resetZoom(),
+        captureWork: () => captureWork(),
+        restoreWork: () => restoreWork(),
+        library: () => library.show(),
+        resetToDefault: () => resetToDefault(),
+        toggleVideoFollow: () => setVideoFollow(!rack.videoFollowsPointer()),
+        // Run the same items the in-window Help menu offers, rather than restating their URLs here.
+        readme: () => { const it = rack.helpMenuItems().find((i) => i.label === 'README'); if (it) it.action(); },
+        reference: () => { const it = rack.developerMenuItems().find((i) => i.label === 'Developer guide'); if (it) it.action(); },
+        tutorial: () => { if (rack.onTutorial) rack.onTutorial(); },
+        patchNotes: () => { if (notes) notes.toggle(); },
+        openExample: (e) => openExample(e.file, e.name),
+        createFromClipboard: () => createFromClipboard(),
+        reportBug: () => composer.reportBug(),
+        sharePatch: () => composer.sharePatch(),
+        about: () => about.toggle(),
+      };
+      window.wcoast.menu.onAction(({ action, arg }) => { const fn = actions[action]; if (fn) fn(arg); });
+    }
+
+    // The panel menu's File entry opens the File menu, reusing the rack's pop-up menu.
+    // Hierarchical menu: the top level shows File / Edit / View; hovering (or clicking) a
+    // heading opens its submenu, Electron-style.
+    const appMenuItems = (rec) => {
+      const file = [
+        { label: 'New', action: () => newPatch() },
+        { label: 'Open…', action: () => openPatch() },
+        { label: 'Save', action: () => savePatch() },
+        { label: 'Save As…', action: () => saveAsPatch() },
+      ];
+      if (examples.length) file.push({ label: 'Examples', submenu: examples.map((e) => ({ label: e.name, action: () => openExample(e.file, e.name) })) });
+      if (storage.hasLast && storage.hasLast()) file.push({ label: `Reopen ${storage.lastName()}`, action: () => reopenPatch() });
+      // Newest first, in a submenu of its own — a header over a flat run of filenames just reads as
+      // more File commands. The file you already have open is listed like any other: clicking it
+      // re-reads it from disk, which is how you revert to the last save.
+      if (recentFiles.length) {
+        file.push({ label: 'Recent', submenu: recentFiles.map((f) => ({ label: f.name, action: () => openRecent(f.id) })) });
+      }
+      file.push({ label: 'Share this patch…', disabled: true });   // greyed until there's a person-to-person channel
+      const edit = [
+        { label: 'Undo', disabled: !rack.canUndo(), action: () => rack.undo() },
+        { label: 'Redo', disabled: !rack.canRedo(), action: () => rack.redo() },
+        { label: 'Create patch from clipboard', action: () => createFromClipboard() },
+        { separator: true },
+        // Emptying the patch is an edit of the whole patch. It sat under Module because it is about
+        // modules, which is true of nearly everything in the app and is not what that menu is for:
+        // Module is where you reach for ONE of them.
+        { label: 'Clear connections & controls…', action: () => rack.confirmDeleteAllCables() },
+      ];
+      // View (Dark/Light mode is self-describing: the label names the mode it switches to).
+      const view = [
+        { label: rack.isDark() ? 'Light mode' : 'Dark mode', action: () => toggleDark() },
+        { label: 'Fit to window', action: () => rack.resetZoom() },
+        { label: 'Patch notes', action: () => notes.toggle() },   // info about this patch
+        // A conventional menu bar across the top, for anyone who looks for one there. ON by
+        // default: the title-bar hamburgers are quicker once you know about them, but a menu you
+        // have to be told about is a menu most people never find.
+        { label: 'Menu bar', checkFn: () => rack.menuBarDocked(), action: () => setMenuBar(!rack.menuBarDocked()) },
+        { label: 'Video follows pointer', checkFn: () => rack.videoFollowsPointer(),
+          action: () => setVideoFollow(!rack.videoFollowsPointer()) },
+        // How many rows the rack stands: the shape of what you are looking at, beside Fit to window
+        // and the rest. It lived under Rack, which no longer exists.
+        { label: 'Rows', submenu: [1, 2, 3, 4, 5].map((n) => ({
+          label: String(n), checkFn: () => rack.rowCount === n, action: () => setRows(n),
+        })) },
+      ];
+      // Capturing what you can SEE belongs under View, beside the other things that change what is
+      // on screen — not under File, which is about the patch. Both are desktop only: they need the
+      // main process to reach the window's pixels and to write to disk.
+      if ((recorder && recorder.available()) || snapshotAvailable()) {
+        view.push({ separator: true });
+        // "Snapshot VIEW", not just "snapshot": on an instrument, an unqualified snapshot sounds
+        // like it might capture the sound or the patch state. This one captures what you can see.
+        if (snapshotAvailable()) view.push({ label: 'Snapshot view', action: () => takeSnapshot() });
+        if (recorder && recorder.available()) {
+          view.push({ label: `${recorder.recording ? 'Stop recording' : 'Record video…'}   R`, action: () => toggleRecording() });
+        }
+      }
+      // MODULE — what the rack is made of, and the two commands that act on the whole set of them.
+      // It replaces the old Rack menu: the engine went (the space bar toggles it, and the mixer has the
+      // control), Rows went to View, and deleting a page is now the × on the tab itself.
+      //
+      // NOTHING HERE ACTS ON A PARTICULAR MODULE. Duplicating one, or deleting one, is about a module
+      // you have to name — and this menu cannot name it, so it used to arm the pointer and wait for a
+      // click to say which. That is a whole extra gesture, and an armed mode you can forget you are in.
+      // Right-clicking a module's title bar names it by definition, so those commands live there.
+      //
+      // What is left is the library, which is about no module in particular. Clearing the patch went to
+      // Edit, where the other whole-patch commands are.
+      const modulesMenu = [
+        { label: 'Module library…', action: () => library.show() },
+      ];
+      // DR is the application menu, in the position and role the app menu holds on a Mac. DEV is
+      // last and abbreviated: it earns a place for the people who need it without taking the width
+      // of "Developer" from the menus everyone uses.
+      return [
+        { label: 'DreamRack', submenu: rack.helpMenuItems().filter((i) => /about/i.test(i.label || '')).concat([
+          { separator: true },
+          { label: 'Interactive tutorial', action: () => rack.onTutorial && rack.onTutorial() },
+        ]) },
+        { label: 'File', submenu: file },
+        { label: 'Edit', submenu: edit },
+        { label: 'View', submenu: view },
+        { label: 'Module', submenu: modulesMenu },
+        { label: 'Help', submenu: rack.helpMenuItems() },
+        { label: 'DEV', submenu: rack.developerMenuItems(rec) },
+      ];
+    };
+    // Read the folder, THEN open. It's a local readdir of a handful of files, so the wait is
+    // imperceptible — and opening first and re-opening once it lands makes the menu flicker.
+    // A RIGHT-CLICK ON A FACEPLATE opens this — the same items as the bar at the top of the window,
+    // summoned where the pointer already is. That is the whole point: the faceplate is the largest
+    // target on screen, so the main menu costs no aim at all.
+    rack.onAppMenuBar = (x, y, rec) => {
+      refreshRecent().then(() => rack.openMenuBar(x, y, appMenuItems(rec)));
+    };
+
+    // The MODULE LIBRARY, on right-click over empty rack background and from Modules ▸ Module library.
+    // Choosing a card hands the module to the pointer to be carried and placed; the callback is how the
+    // library knows to come back once it has been put down.
+    const library = createLibrary({
+      types: MODULE_TYPES,
+      isTaken: (id) => rack.hasModule(id),
+      isDark: () => rack.isDark(),
+      onChoose: (id, at, done) => rack.startCarryModule(id, done, at),
+    });
+    rack.onLibrary = () => library.show();
+    libraryTheme = library.refreshTheme;
+
+    // The docked bar. It hands the rack a PROVIDER rather than a fixed set of items, so each menu
+    // is rebuilt as it opens — a bar that lives all session would otherwise keep the Undo state,
+    // the Recent list and the light/dark label it happened to be born with.
+    // The pointer-following video picture, remembered like the menu bar: an app preference rather
+    // than anything a patch carries. It exists for magnified working — see video-engine.
+    const FOLLOW_KEY = 'wcoast.videoFollow';
+    function setVideoFollow(on) {
+      try { localStorage.setItem(FOLLOW_KEY, on ? '1' : '0'); } catch (_e) { /* no storage */ }
+      rack.videoFollowPointer(!!on);
+      pushMenuState();
+    }
+
+    // Clicking the Video Output module's picture toggles the same thing the menu item does, so the
+    // menu's tick has to follow it — otherwise the two disagree about a state they share.
+    rack.onVideoFollowChange = (on) => {
+      try { localStorage.setItem(FOLLOW_KEY, on ? '1' : '0'); } catch (_e) { /* no storage */ }
+      pushMenuState();
+    };
+
+    const MENUBAR_KEY = 'wcoast.menuBar';
+    function setMenuBar(on) {
+      try { localStorage.setItem(MENUBAR_KEY, on ? '1' : '0'); } catch (_e) { /* no storage */ }
+      if (!on) { rack.undockMenuBar(); return; }
+      rack.dockMenuBar(appMenuItems(null, null), () => appMenuItems(null, null));
+      refreshRecent();   // warm the Recent list for the first drop, without blocking the bar
+    }
+    // Default ON, so a first-time user meets a menu where they expect one.
+    let menuBarPref = '1';
+    try { const v = localStorage.getItem(MENUBAR_KEY); if (v === '0' || v === '1') menuBarPref = v; } catch (_e) { /* no storage */ }
+    setMenuBar(menuBarPref === '1');
+    // The pointer follower is remembered but defaults OFF: it is an aid for magnified working, not
+    // something to spring on someone who never asked for it. It also does nothing until a video
+    // module exists, so switching it on early costs only the engine coming up.
+    try { if (localStorage.getItem(FOLLOW_KEY) === '1') setVideoFollow(true); } catch (_e) { /* no storage */ }
+
+    // The interactive tutorial: modeless cards the reader drives with Next/Back. Opens on a first
+    // run (unless "Don't show on startup" is set), and always available from Help ▸ Interactive tutorial.
+    // The copy lives in host/tutorial.md — one file that is both the tutorial and a readable document.
+    // A failure here must not take the app down with it: no tutorial is survivable, a dead boot isn't.
+    notes = createPatchNotes({
+      getNotes: () => rack.patchNotes,
+      setNotes: (v) => { rack.patchNotes = v; },
+      getOpen: () => rack.patchNotesOpen,
+      setOpen: (v) => { rack.patchNotesOpen = v; },
+      isDark: () => rack.isDark(),
+      onChange: () => onEdit(),
+    });
+    rack.onPatchNotes = () => notes.toggle();
+    const composer = createComposer({
+      repo: 'chrisgr99/DreamRack',
+      isDark: () => rack.isDark(),
+      getPatchJSON: () => trimmedPatchText(),
+      openExternal: (url) => rack._openExternal(url),
+      appName: APP_NAME,
+      appVersion: APP_VERSION,
+      getBuild: () => rack.buildInfo,
+    });
+    rack.onReportBug = () => composer.reportBug();
+    rack.onSharePatch = () => composer.sharePatch();
+    const about = createAbout({
+      appName: APP_NAME,
+      appVersion: APP_VERSION,
+      author: 'Chris Graham',
+      getBuild: () => rack.buildInfo,
+      isDark: () => rack.isDark(),
+      openExternal: (url) => rack._openExternal(url),
+      repoUrl: 'https://github.com/chrisgr99/DreamRack',
+      contactUrl: 'https://github.com/chrisgr99',
+      onTutorial: () => { if (rack.onTutorial) rack.onTutorial(); },
+    });
+    rack.onAbout = () => about.toggle();
+    loadExamples();   // populate the Examples menu (async; refreshes the native menu when ready)
+
+    let tour = null;
+    try {
+      const steps = await loadTutorial();
+      tour = createTour({ steps, onExternal: (url) => rack._openExternal(url), isDark: () => rack.isDark(),
+        onSee: (t, el) => (t ? rack.showCallout(t, el) : rack.clearCallout()),
+        canSee: (t) => rack.calloutAvailable(t),
+        homePos: (w, h) => rack.tutorialHomePos(w, h),
+        // Reading a block aloud: the same pre-rendered narration the demos use, with no animation.
+        onSpeak: (text, done) => rack.demo && rack.demo.speakText(text, done),
+        onStopSpeak: () => rack.demo && rack.demo.stopSpeech(),
+        // DEMONSTRATE hands over: the tutorial closes and the transport takes its place. They never
+        // share the screen — the demo needs the rack, and the tutorial window sits over it.
+        onDemonstrate: (id, sectionId) => demonstrate(id, sectionId) });
+      rack.onTutorial = () => tour.open(0);
+      if (!tourSeen()) tour.open(0);
+    } catch (e) {
+      log('tutorial unavailable: ' + e.message);
+    }
+
+    // F1 — the conventional Help key. Opens the Help menu centred in the window, so it's reachable
+    // without knowing about right-click or finding the hamburger.
+    // NOTE on macOS: F1 is a system brightness key unless "Use F1, F2, etc. as standard function keys"
+    // is on in System Settings ▸ Keyboard — otherwise the app never sees it and you need Fn-F1.
+    window.addEventListener('keydown', (e) => {
+      if (e.key !== 'F1') return;
       const t = e.target;
       if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
       e.preventDefault();
-      const paused = rack.demo.togglePause();
-      if (demoPanel && demoPanel.setPaused) demoPanel.setPaused(paused);
-      return;
+      rack.openMenu(window.innerWidth / 2, window.innerHeight / 2, rack.helpMenuItems(), { centred: true });
+    });
+
+    // Spacebar toggles the ENGINE — a hands-on-keyboard alternative to the Rack menu and the
+    // mixer's engine lamp. It follows the engine rather than the master bus because a transport
+    // key should be the thing that starts and stops sound outright, and because pressing it to
+    // start must never leave you with silence (the engine brings the master bus with it).
+    // Ignored while typing in a field, and when a button has focus (Space
+    // would "click" it and double-toggle). No modifier, so Cmd/Ctrl-Space and friends pass straight through.
+    window.addEventListener('keydown', (e) => {
+      if (e.key !== ' ' && e.code !== 'Space') return;
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      const t = e.target;
+      if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'BUTTON' || t.isContentEditable)) return;
+      e.preventDefault();
+      rack.toggleEngine();
+    });
+
+    // R toggles recording. A bare letter is safe here for the same reason Space can toggle
+    // the master bus: patching is a pointer activity, so the keyboard is free. Modified R is
+    // explicitly excluded so Cmd-R (reload) and friends pass straight through, and e.code
+    // keeps it on the physical key rather than the character a layout produces.
+    //
+    // There is no native menu item for recording, so unlike the standard shortcuts below
+    // this one runs in Electron too — it is the only handler for it, so nothing double-fires.
+    window.addEventListener('keydown', (e) => {
+      if (e.code !== 'KeyR' || e.metaKey || e.ctrlKey || e.altKey || e.shiftKey) return;
+      if (!recorder || !recorder.available()) return;
+      const t = e.target;
+      if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'BUTTON' || t.isContentEditable)) return;
+      e.preventDefault();
+      toggleRecording();
+    });
+
+    // Standard shortcuts, for the BROWSER only: in Electron the native menu carries the same
+    // accelerators and would fire alongside these.
+    window.addEventListener('keydown', (e) => {
+      if (window.wcoast && window.wcoast.isElectron) return;
+      if (!(e.metaKey || e.ctrlKey) || e.altKey) return;
+      const k = e.key.toLowerCase();
+      if (k === 's') { e.preventDefault(); if (e.shiftKey) saveAsPatch(); else savePatch(); }
+      else if (k === 'o' && !e.shiftKey) { e.preventDefault(); openPatch(); }
+      else if (k === 'n' && !e.shiftKey) { e.preventDefault(); newPatch(); }
+      else if (k === 'z' && !e.shiftKey) { e.preventDefault(); rack.undo(); }   // undo cable/module topology changes
+      else if (k === 'z' && e.shiftKey) { e.preventDefault(); rack.redo(); }    // redo (Cmd/Ctrl-Shift-Z)
+    });
+
+    // Warn before a browser tab/window discards unsaved work. In Electron the
+    // window close is guarded in the main process (via the mirrored dirty state),
+    // so beforeunload here is browser-only to avoid a double prompt.
+    if (!(window.wcoast && window.wcoast.isElectron)) {
+      window.addEventListener('beforeunload', (e) => { if (dirty) { e.preventDefault(); e.returnValue = ''; } });
     }
-    if (e.ctrlKey && e.shiftKey && e.code === 'KeyD') { e.preventDefault(); runSelected(); }
-  }, true);
+    // Persist the session on unload (both environments) so a relaunch resumes it.
+    window.addEventListener('pagehide', flushSession);
 
-  // Re-fit once the layout has settled. In Electron the ready-to-show gate means this is
-  // already correct; a bare browser settles its flex layout a beat later, so the boot-time
-  // fit can be measured too tall.
-  requestAnimationFrame(() => rack.relayout());
-  pushMenuState();   // seed the native menu now the rack, storage and tutorial all exist
+    // Resume the last session if one was saved; otherwise start with one of each so
+    // there's something to patch.
+    let resumed = false;
+    // `started` records that restore got far enough to put modules on the rack, whether or not it
+    // finished. It is the difference between "there is nothing here" and "there is a half-built rack
+    // here", and only the first of those wants the default modules placed on top of it.
+    let started = false;
+    try {
+      const saved = localStorage.getItem(SESSION_KEY);
+      if (saved) {
+        const obj = JSON.parse(saved);
+        started = true;   // from here a throw can leave modules behind
+        const v = validate(obj, registry);
+        // Require at least one module — a module-less session is boot-transient junk,
+        // not a patch worth resuming; fall through to the default instead.
+        if (v.ok && obj.modules && obj.modules.length) {
+          // Settings that no longer fit the descriptors are dropped rather than fatal, so
+          // say what was dropped — silently different knob positions are worse than noisy ones.
+          for (const w of v.warnings || []) log(`session: ${w}`);
+          await restore(obj, rack, mixerIO); syncMaster(); afterLoad(); resumed = true;
+          started = true;
+          // Re-adopt the file this session was editing, so File > Save writes back to it (not a fresh prompt).
+          try { const n = await storage.adoptLast(); if (n) patchName = n; } catch (_e) { /* fileless resume */ }
+        }
+        else if (!v.ok) log(`session ignored: ${v.error}`);
+      }
+    } catch (e) {
+      // WITH A STACK. This used to log the message alone, and the message alone cannot tell you which
+      // of thirty lines in restore() gave up.
+      log(`session restore failed: ${e.message}`);
+      console.error('[wcoast] session restore failed: ' + ((e && e.stack) || e));
+    }
+    if (!resumed) {
+      // A HALF-RESTORED RACK IS CLEARED FIRST. If restore() threw after adding modules — a module that
+      // would not instantiate, a cable that would not reconnect — the rack was left holding them AND
+      // then had a full set of defaults placed on top, so every module appeared twice and none of the
+      // cables were there. Two symptoms, one cause, and the duplicate pass then autosaved itself over
+      // the only good copy of the patch.
+      if (started) { try { rack.clear(); } catch (_e) { /* nothing to clear */ } }
+      await placeDefaultModules();
+    }
+    // Roll the backup now: whatever we just read is the last known-good state, and from here the
+    // autosave is free to overwrite the live key.
+    try {
+      const prior = localStorage.getItem(SESSION_KEY);
+      if (prior) localStorage.setItem(SESSION_PREV_KEY, prior);
+    } catch (_e) { /* no storage */ }
+    // Put the view back where it was left. AFTER the modules exist, since relayout resets the transform
+    // as it fits the rows — restoring earlier would simply be overwritten.
+    try {
+      // The tab first: selecting a page redraws the cables and the stubs, and doing it after the pan
+      // and zoom were restored would leave the view fighting a layout it had not seen.
+      const pg = localStorage.getItem(PAGE_KEY);
+      if (pg && rack._hasPage(pg)) rack.selectPage(pg);
+      const v = localStorage.getItem(VIEW_KEY);
+      if (v) rack.setViewState(JSON.parse(v));
+    } catch (_e) { /* no storage, or nonsense in it — the default view is fine */ }
+    // Startup silence: the engine and both buses OFF on every launch, regardless of the last-exited
+    // state or any monitors that a restored patch would otherwise re-enable — the app never comes up
+    // making sound. The engine is cleared LAST, because turning it off is what actually guarantees
+    // the silence and nothing below it can undo that.
+    rack.applyParam(mixRec, 'masterEnable', 'off');
+    rack.applyParam(mixRec, 'monitorEnable', 'off');
+    rack.applyParam(mixRec, 'engine', 'off');
+    booted = true;   // from here on, real edits autosave the session
+    markClean();     // the resumed/starting patch is the clean baseline, not unsaved work
+    await mirror.init();   // read enabled state + push the first mirror snapshot
+    // The AI mirror is Electron-only and always on: no toggle UI, no folder-reveal — just
+    // ensure it's enabled so the running patch is always mirrored.
+    if (mirror.available() && !mirror.isEnabled()) { try { await mirror.setEnabled(true); } catch (_e) { /* ignore */ } updateTrace(); }
 
+    // --- Scripted demos (design/scripted-demo.md): library, floating transport, triggers ---
+    // Reels are a named manifest; the floating "Demo" window (DEV ▸ Demos…) chooses one from its
+    // drop-down and Runs / Stops / Restarts it, showing the running reel's name. Ctrl-Shift-D starts
+    // the selected reel, Escape stops. A demo rebuilds the rack, so the user's whole working state —
+    // patch, probes, page and view — is snapshotted and put back around every run.
+    let demoList = [];
+    try { const res = await fetch('demos/scripts/index.json'); if (res.ok) demoList = (await res.json()).demos || []; }
+    catch (_e) { /* no demo library */ }
+    // MOST RECENTLY EDITED FIRST. index.json is in the order the reels were written, which is the least
+    // useful order for the person writing them: the one you are working on is whichever you last saved,
+    // and it was at the bottom. Anything we cannot date keeps the file's own order behind the rest.
+    try {
+      if (window.wcoast && window.wcoast.demoMtimes) {
+        const when = await window.wcoast.demoMtimes();
+        demoList = demoList
+          .map((d, i) => ({ d, i, t: when[d.file] || 0 }))
+          .sort((a, b) => (b.t - a.t) || (a.i - b.i))
+          .map((x) => x.d);
+      }
+    } catch (_e) { /* keep the file's own order */ }
+
+    const loadDemo = async (entry) => {
+      // A DEMO IS MARKDOWN, and JSON only where one has not been converted yet. The words are the part
+      // that gets rewritten, and rewriting a sentence inside JSON means minding quotes and escapes.
+      if (String(entry.file).endsWith('.md')) {
+        const res = await fetch(`demos/scripts/${entry.file}?t=${Date.now()}`);
+        if (!res.ok) throw new Error(`demo ${entry.file}: ${res.status}`);
+        const md = parseDemoMd(await res.text(), { id: entry.id });
+        // The markdown demos were the ones without a file recorded, which is the half that matters:
+        // a step's line number is only useful beside the name of the file it is a line of.
+        md.__file = 'demos/scripts/' + entry.file;
+        return md;
+      }
+      // Cache-busted: the whole point of Reload is to pick up an edit made a moment ago, and a cached
+      // script would quietly serve the words you just changed.
+      const res = await fetch(`demos/scripts/${entry.file}?t=${Date.now()}`);
+      if (!res.ok) throw new Error(`demo ${entry.file}: ${res.status}`);
+      const obj = await res.json();
+      obj.__file = 'demos/scripts/' + entry.file;
+      return obj;
+    };
+
+    // Project where the demo has got to, so an editing conversation needs no preamble: which script,
+    // which step, its exact note and pacing, and the steps either side of it. Written on every step,
+    // so "make that shorter" always refers to something readable from outside the app.
+    const pushDemoState = () => {
+      if (!mirror || !rack.demo) return;
+      mirror.pushFiles({ 'demo.json': demoStepping || rack.demo.running ? rack.demo.state() : null });
+    };
+
+    // The runner takes the whole app state as one opaque snapshot, captured before every step. That
+    // is what makes stepping BACKWARDS as cheap as stepping forwards — for the author checking a
+    // script, and for the reader who wants to see a step again.
+    rack.demo = createDemoRunner(rack, {
+      registerAudio: (node) => rack.addAudioTap(node),   // narration goes into a recording, not just the speakers
+      // Every step, and every pause, projected to the mirror — see pushDemoState above.
+      onProgress: () => pushDemoState(),
+      // Load a shipped example, the same route File ▸ Examples takes, so a demo can start from a patch
+      // that already works rather than building one first.
+      loadExample: async (name) => {
+        const entry = (examples || []).find((e) => e.name === name || e.file === name);
+        // LOUDLY. A demo whose patch does not load runs every remaining step against an empty rack and
+        // records a video of nothing, which is what a silent log bought once already.
+        if (!entry) { console.warn(`[demo] no example named "${name}" — the rack will be empty`); log(`no example named "${name}"`); return; }
+        try {
+          const res = await fetch('examples/' + entry.file);
+          if (!res.ok) throw new Error(String(res.status));
+          await restore(await res.json(), rack, mixerIO, { keepKeys: true });
+          syncMaster();
+          silenceAfterLoad();   // an example arrives silent, like every other patch
+        } catch (e) { log(`example load failed: ${e.message}`); }
+      },
+      onAvoid: (region) => { if (demoPanel) demoPanel.avoid(region); },   // the transport window steps out of the work
+      panelRect: () => (demoPanel ? demoPanel.rect() : null),             // ...and the card then keeps off the window
+      snapshot: () => ({ patch: patchText(), page: rack.page, view: rack.viewState() }),
+      restoreSnapshot: async (s) => {
+        if (!s) return;
+        await restore(JSON.parse(s.patch), rack, mixerIO, { keepKeys: true });
+        syncMaster();
+        if (rack._hasPage(s.page)) rack.selectPage(s.page);
+        rack.setViewState(s.view);
+      },
+    });
+
+    // The transport switches are NOT part of a saved patch (see TRANSPORT above), so they're caught
+    // and put back by hand — a demo turns the engine on, and leaving it on afterwards would break the
+    // rule that sound only ever starts because you asked for it.
+    const grabTransport = () => ({ engine: mixRec.values.get('engine'), masterEnable: mixRec.values.get('masterEnable'), monitorEnable: mixRec.values.get('monitorEnable') });
+    const putTransport = (t) => { rack.applyParam(mixRec, 'masterEnable', t.masterEnable); rack.applyParam(mixRec, 'monitorEnable', t.monitorEnable); rack.applyParam(mixRec, 'engine', t.engine); };
+
+    // The user's own state, held for the length of a demo however it was started — a plain Run or a
+    // step-through — so whichever one ends can put it back. Held in one place because Stop hands a
+    // running demo OVER to stepping rather than tearing it down.
+    let demoHeld = null;
+    const holdUserState = () => { demoHeld = { snap: patchText(), view: rack.viewState(), page: rack.page, transport: grabTransport() }; };
+    async function releaseUserState() {
+      const h = demoHeld; demoHeld = null;
+      if (!h) return;
+      try {
+        await restore(JSON.parse(h.snap), rack, mixerIO);
+        syncMaster();
+        if (rack._hasPage(h.page)) rack.selectPage(h.page);
+        rack.setViewState(h.view);
+      } catch (e) { log(`demo restore failed: ${e.message}`); }
+      putTransport(h.transport);
+      markClean();
+    }
+
+    async function runDemo(obj, name, { restoreAfter = true, loop = false, from = 0 } = {}) {
+      if (!obj || rack.demo.running) return;
+      if (restoreAfter && !demoHeld) holdUserState();
+      if (tour && tour.isOpen()) tour.close();   // the first-run tutorial card sits over the rack
+      // ...and so does the patch-notes window, which afterLoad already refuses to OPEN during a demo
+      // but could not close one that was already up when Run was pressed. A note about the patch is
+      // exactly what a viewer has open when they decide to watch the demo of it.
+      if (notes) notes.close();
+      demoActive = true; demoStop = false;
+      if (demoPanel) demoPanel.setRunning(name || obj.id || 'demo');
+      try { do { await rack.demo.run(obj); } while (loop && !demoStop); }
+      finally {
+        if (demoPanel) demoPanel.setRunning(null);
+        // A demo STOPPED mid-way leaves you standing on the step it reached — that is what stopping is
+        // for while authoring. Only a demo that ran to its end puts your patch back on its own.
+        if (demoStop) { demoStepping = demoStepping || true; showPos(); }
+        else {
+          demoActive = false;
+          await releaseUserState();
+          // A finished demo STAYS. The rack is left as the demo built it and the transport is still
+          // there, so the obvious next thing — watch that again — is one press away. Going back is the
+          // reader's decision, not the clock's: the button says so.
+          if (demoPanel) demoPanel.setExitLabel(cameFromTutorial ? 'Return to tutorial' : 'Close');
+        }
+      }
+    }
+
+    let overrideRate = 1, loopWanted = false;   // window controls: pace vs legibility, attract loop
+
+    // A LATCH TAKEN SYNCHRONOUSLY, before the first await. Every other guard here — `rack.demo.running`,
+    // `demoActive` — is only set once the script has been fetched and the run has actually begun, so two
+    // presses a moment apart both sailed past them and started two demos over the top of each other. A
+    // reader who presses again because nothing has visibly happened yet is doing the obvious thing.
+    let demoStarting = false;
+
+    async function runSelected({ from = 0 } = {}) {
+      if (!selectedEntry || demoStarting || rack.demo.running || demoActive) return;
+      demoStarting = true;
+      try {
+        let obj; try { obj = await loadDemo(selectedEntry); } catch (e) { log(`demo load failed: ${e.message}`); return; }
+        const base = Number(obj.rate) > 0 ? Number(obj.rate) : 1;
+        const eff = { ...obj, rate: base * overrideRate };   // global rate override on top of the reel's own
+        demoPromise = runDemo(eff, selectedEntry.title || selectedEntry.id, { loop: loopWanted, from });
+        return demoPromise;
+      } finally { demoStarting = false; }
+    }
+    async function stopDemo(why) { if (rack.demo.running) { demoStop = true; rack.demo.stop(why || 'stopDemo'); } if (demoPromise) { try { await demoPromise; } catch (_e) { /* ignore */ } } }
+    async function restartDemo() { await stopDemo('Restart button'); runSelected(); }
+
+    // Step-through. The first press stands the demo up the way Run does — the user's work put aside,
+    // the rack cleared, sound on — and then performs one step. Leaving step-through is what puts the
+    // patch back, so `demoStepping` holds the snapshot until then.
+    let demoStepping = null;
+    async function enterStepping() {
+      if (demoStepping || !selectedEntry) return false;
+      let obj; try { obj = await loadDemo(selectedEntry); } catch (e) { log(`demo load failed: ${e.message}`); return false; }
+      if (!demoHeld) holdUserState();
+      demoStepping = true;
+      if (tour && tour.isOpen()) tour.close();
+      demoActive = true;
+      rack.demo.load(obj);
+      await rack.demo.reset();
+      return true;
+    }
+    async function exitStepping() {
+      if (!demoStepping) return;
+      demoStepping = null;
+      rack.demo.stop('leaving step-through');
+      await releaseUserState();
+      demoActive = false;
+      demoPanel.setPosition(0, 0);
+      pushDemoState();
+    }
+    const showPos = () => { demoPanel.setPosition(rack.demo.index, rack.demo.count, (rack.demo.stepAt(rack.demo.index) || {}).do); pushDemoState(); };
+    async function stepDemo() { if (!demoStepping && !(await enterStepping())) return; await rack.demo.step(); showPos(); }
+    async function backDemo() { if (!demoStepping) return; await rack.demo.back(); showPos(); }
+    // Perform the current step properly — full pacing and narration — then stop on the next one.
+    async function playStepDemo() { if (!demoStepping && !(await enterStepping())) return; await rack.demo.playStep(); showPos(); }
+    // Re-read the script from disk and return to the step we were standing on, so an edit can be heard
+    // without losing your place. Steps are replayed with their waits collapsed to get back there.
+    async function reloadDemo() {
+      if (!selectedEntry) return;
+      const at = demoStepping ? rack.demo.index : 0;
+      let obj; try { obj = await loadDemo(selectedEntry); } catch (e) { log(`demo reload failed: ${e.message}`); return; }
+      if (!demoStepping && !(await enterStepping())) return;
+      rack.demo.load(obj);
+      await rack.demo.reset();
+      await rack.demo.seek(Math.min(at, rack.demo.count));
+      showPos();
+      log(`demo reloaded at step ${rack.demo.index + 1}`);
+    }
+
+    // ---- the tutorial's hand-off ---------------------------------------------
+    // Pressing Demonstrate in a section closes the tutorial and opens the transport on that demo, in its
+    // reader face. Exiting the transport reopens the tutorial where it was left. One or the other is on
+    // screen, never both: the demo needs the rack, and the tutorial window sits over it.
+    let cameFromTutorial = null;   // the section id to return to, or null when opened from the DEV menu
+
+    async function demonstrate(id, sectionId) {
+      if (demoStarting || rack.demo.running || demoActive) return;   // a second press while one is starting
+      const entry = demoList.find((d) => d.id === id);
+      if (!entry) { log(`no demo named "${id}"`); return; }
+      cameFromTutorial = sectionId || true;
+      if (tour) tour.close();
+      selectedEntry = entry;
+      demoPanel.setMode('reader');
+      demoPanel.setTitle(entry.title || entry.id);
+      demoPanel.setExitLabel('Return to tutorial');
+      demoPanel.open();
+      await exitStepping();
+      runSelected();
+    }
+
+    // Put the transport away and open the tutorial at the section that launched the demo. Shared by the
+    // Exit button and by a demo reaching its own end, so both leave you in the same place.
+    function returnToTutorial() {
+      demoPanel.close();
+      const back = cameFromTutorial; cameFromTutorial = null;
+      if (back && tour) tour.open(typeof back === 'string' ? back.replace(/^sec-/, '') : 0);
+    }
+
+    // Leaving the transport by hand. From the tutorial it goes back there, at the section you pressed
+    // the play button in; opened from the DEV menu it simply closes.
+    async function leaveDemo() {
+      await stopDemo('Close button');
+      await exitStepping();
+      returnToTutorial();
+    }
+
+    selectedEntry = demoList[0] || null;
+    // Started from the command line (WCOAST_DEMO=<id>): open the transport on that demo and run it.
+    const autoId = new URLSearchParams(location.search).get('demo');
+    if (autoId) {
+      const entry = demoList.find((d) => d.id === autoId);
+      if (!entry) console.warn(`[demo] no demo named "${autoId}"`);
+      else { window.__demoTrace = true; setTimeout(() => demonstrate(entry.id), 1200); }
+    }
+    demoPanel = createDemoPanel({
+      demos: demoList,
+      onSelect: (e) => { selectedEntry = e; if (demoStepping) exitStepping(); },
+      onRun: async () => { await exitStepping(); runSelected(); },
+      // TWO-STAGE STOP. Stopping a playback leaves you STANDING ON the step it reached, with the rack as
+      // the demo built it — which is the whole point of stopping while authoring: you stop because you
+      // want to look at that step, go back a step, or change its words. Pressing Stop again (when
+      // nothing is playing) is what puts your own patch back.
+      onStop: async () => {
+        if (rack.demo.running) { await stopDemo('Stop button'); showPos(); return; }
+        await stopDemo('Stop button'); await exitStepping();
+      },
+      onRestart: restartDemo,
+      onRate: (v) => { if (v > 0) overrideRate = v; },
+      // Ticked: caption mode, which turns the cards on itself. Unticked: back to whatever the script
+      // declares — `null` is "the header decides", not "narrated", so a captions-first demo still runs
+      // the way it was written.
+      onCaptions: (v) => { rack.demo.setCaptionShow(!!v); rack.demo.setCaptions(!!v); },
+      onCaptionVoice: (v) => rack.demo.setCaptionVoice(!!v),
+      // Returns the new state, so the button can say Pause or Resume without keeping its own copy.
+      onPause: () => { const p = rack.demo.togglePause(); pushDemoState(); return p; },
+      onStep: stepDemo, onBack: backDemo, onPlay: playStepDemo, onReload: reloadDemo,
+      // JUMP THERE, or jump there and play on from it. Backwards is a snapshot restore and forwards
+      // replays the steps between with their waits collapsed, so either direction lands on the state
+      // that step begins from — which is what makes "watch that bit again" a two-second job.
+      onGoto: async (n) => { if (!demoStepping && !(await enterStepping())) return; await rack.demo.seek(n); showPos(); },
+      onRunFrom: async (n) => {
+        if (!demoStepping && !(await enterStepping())) return;
+        showPos();
+        runSelected({ from: n });
+      },
+      onClose: leaveDemo,
+    });
+    // The DEV menu opens it as an AUTHOR tool — picker, Play and Reload — and closing it just closes it.
+    // The same two commands the native menu bar carries — see developerMenuItems.
+    // THE PANEL EDITOR SAVED A FACEPLATE. Find the module type whose panel file lives in that
+    // directory and re-skin its instances — the drawing changes, the patch does not.
+    if (window.wcoast && window.wcoast.onPanelSaved) {
+      window.wcoast.onPanelSaved(async (dir) => {
+        if (!dir) return;
+        const type = MODULE_TYPES.find((t) => t.panelUrl === `modules/${dir}/panel.svg`);
+        if (!type) { log(`panel saved for "${dir}", which no module on the rack uses`); return; }
+        const done = await rack.reskinType(type.descriptorId);
+        log(done ? `${type.name} re-skinned from the editor's save` : `${type.name} saved; none placed on the rack`);
+      });
+    }
+
+    rack.onCaptureWork = () => captureWork();
+    rack.onRestoreWork = () => restoreWork();
+    rack.onResetDefault = () => resetToDefault();
+    rack.openDemoPanel = () => { cameFromTutorial = null; demoPanel.setMode('author'); demoPanel.setExitLabel('Close'); demoPanel.open(); };
+    // A HANDLE FOR AUTOMATED TESTING. A demo can only be started from the native menu, which a test
+    // harness attached over the debugging port cannot reach — so a whole class of bug (a script that
+    // runs but makes no sound) could only ever be reproduced by asking a person to press a menu item
+    // and describe what happened. This runs one by id, exactly as the panel does.
+    //
+    // Under `npm run dev` only, so a shipped app carries no such door.
+    if (window.wcoast && window.wcoast.isDev) {
+      window.__wcoast = {
+        runDemo: async (id) => {
+          const idx = await (await fetch('demos/scripts/index.json')).json();
+          const row = (idx.demos || []).find((d) => d.id === id);
+          if (!row) throw new Error(`no demo "${id}"`);
+          const raw = await (await fetch('demos/scripts/' + row.file + '?t=' + Date.now()));
+          const obj = row.file.endsWith('.md') ? parseDemoMd(await raw.text(), { id }) : await raw.json();
+          obj.__file = 'demos/scripts/' + row.file;    // so the mirror can name the file a step lives in
+          return runDemo(obj, row.title || id, { restoreAfter: false });
+        },
+        stopDemo: () => rack.demo.stop && rack.demo.stop(),
+        // RECORD A DEMO AS A TAKE. Start the recorder, run the script, stop when it ends — the picture
+        // is the window and the sound is tapped off the audio graph, so what lands in the file is what
+        // the mixer produced rather than whatever the operating system happened to be routing.
+        recordDemo: async (id, name, opts = {}) => {
+          if (!recorder || !recorder.available()) throw new Error('no recorder here (Electron only)');
+          if (rack.demo && rack.demo.primeVoice) rack.demo.primeVoice();   // ...so the narration is in the take
+          const path = await recorder.start(name || `DreamRack ${id}`, opts);
+          if (!path) throw new Error('the recorder did not start');
+          try { await window.__wcoast.runDemo(id); } finally {
+            const saved = await recorder.stop();
+            window.__wcoast.lastRecording = saved || path;
+          }
+          return window.__wcoast.lastRecording;
+        },
+        rack,
+      };
+    }
+
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && rack.demo.running) { stopDemo('Escape key'); return; }
+      // P PAUSES AND RESUMES a run. Not Space, which starts and stops the engine, and not Escape,
+      // which ends the demo — the two acts are different and a viewer who wanted to look at something
+      // should not have to risk ending the run to do it. Ignored while typing, and with any modifier
+      // held, so Cmd-P and friends pass straight through.
+      if (!e.metaKey && !e.ctrlKey && !e.altKey && (e.key === 'p' || e.key === 'P') && rack.demo.running) {
+        const t = e.target;
+        if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
+        e.preventDefault();
+        const paused = rack.demo.togglePause();
+        if (demoPanel && demoPanel.setPaused) demoPanel.setPaused(paused);
+        return;
+      }
+      if (e.ctrlKey && e.shiftKey && e.code === 'KeyD') { e.preventDefault(); runSelected(); }
+    }, true);
+
+    // Re-fit once the layout has settled. In Electron the ready-to-show gate means this is
+    // already correct; a bare browser settles its flex layout a beat later, so the boot-time
+    // fit can be measured too tall.
+    requestAnimationFrame(() => rack.relayout());
+    pushMenuState();   // seed the native menu now the rack, storage and tutorial all exist
+
+  }
+
+  await boot();
+
+  // What a host needs to reach: the graph it shares, the rack it is showing, and the mixer that is
+  // where sound leaves. Read after boot, so these are the built objects rather than the nulls.
+  return { ctx: audioCtx, host, rack, mixer, recorder, trace, element: rackElement };
 }
+
 
 
 // First run only: a small card pointing newcomers at the panel menu's Help, the jack
@@ -1907,5 +1943,9 @@ window.addEventListener('DOMContentLoaded', () => {
   if (window.wcoast && window.wcoast.isElectron) {
     log(`Electron — Chromium ${window.wcoast.versions.chrome}, Node ${window.wcoast.versions.node}.`);
   }
-  boot().catch((e) => { console.error(`[wcoast] BOOT ERROR`, (e && e.stack) || e); log(`BOOT ERROR: ${e.message}`); });
+  // THE PAGE IS NOW ONE CALLER AMONG POSSIBLE OTHERS. It supplies neither a context nor an element,
+  // which is what asks for the standalone behaviour: a context of the rack's own, drawn into #rack.
+  createDreamRack()
+    .then((dr) => { window.dreamRack = dr; })
+    .catch((e) => { console.error(`[wcoast] BOOT ERROR`, (e && e.stack) || e); log(`BOOT ERROR: ${e.message}`); });
 });
