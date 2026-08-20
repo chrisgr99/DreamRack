@@ -46,8 +46,11 @@ Between them: sound is off for exactly one visible reason at a time.
   `MSTR` columns it governs, with those two buses' own enables in the panel-wide enable
   row below. The one place all three are visible together, which is why bus-by-bus choice
   belongs here and not in a menu.
-- **The Rack menu**, first row: `Engine` alone. The menu answers the common question ("is
-  it making sound?"); choosing *between* buses is rarer and more considered.
+- **The app menu's Sound row**: one line reading `MSTR ● MON ●` — each word beside a round
+  enable button, clicking toggles it and the menu stays open, and hovering an OFF button
+  auditions that bus without writing the switch. There is no `Engine` row and no Rack menu:
+  the engine has the space bar and the mixer's own lamp, and a menu row that duplicated them
+  was a third place to keep in step.
 - **The space bar**: toggles the engine. No modifier; ignored while typing or while a
   button has focus. Safe as a bare key because patching is a pointer activity.
 
@@ -106,6 +109,6 @@ to become the louder of the two by accident.
 - `host/rack.js` — `_applyAudioRouting` (the engine gates both buses), `engineOn`,
   `toggleEngine`, the engine→master coupling in `_setParam`, monitor-bus construction and
   the live-ring logic.
-- `debug/rack-app.js` — the Rack menu's `Engine` row, the space bar, `soundOn`, the
+- `debug/rack-app.js` — the space bar, `soundOn`, the
   `TRANSPORT` exclusion set, and the boot clear-down.
 - `index.html` — `.engine-off`, which dims the two bus lamps.
