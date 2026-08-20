@@ -47,22 +47,33 @@ beat is correct whenever it is read, so a reader that samples it late still land
 an edge detected in one thread and acted on in another arrives with whatever jitter lies between
 them. This is the rule the video design already settled on for the same reason.
 
-**The GXW module can run the clock without being opened.** Its faceplate carries a **RUN** button and
-a **CLOCK** output, so a patch can start and stop the sequence, and lock the rack's clocks to it,
-with GXW's own window never open. A module that can only be used by taking over the screen is not a
-module.
+**The GXW module can run the clock without being opened.** Its faceplate carries a **RUN** button, so
+a patch can start and stop the sequence with GXW's own window never open. A module that can only be
+used by taking over the screen is not a module.
+
+**No clock output yet.** A note on a composite cable already carries its own timing — the event is
+the trigger — so a separate clock pulse may buy nothing for the patches this will first be used for.
+It is deferred rather than dropped: the moment something in the rack needs to lock to GXW's beat
+rather than to its notes, the output goes on the face and carries PHASE as described above.
 
 ## 3. The GXW module's face
 
-- **RUN** — starts and stops GXW's transport. The one control that matters from outside.
-- **CLOCK out** — a trigger on each beat, with the beat's phase available to anything that wants to
-  sample rather than to trigger.
-- **AUDIO L and R** — superdough's output, and anything else GXW makes.
-- **NOTE out** — a composite note cable, so GXW can play a voice tab instead of, or as well as,
-  making its own sound.
-- **CV outs** — a small fixed set, driven by whatever GXW chooses to expose: an object's position, a
-  parameter, a stream of values from the canvas.
+Modelled on the Strudel module, which solves the same problem: a source of parts that wants to reach
+several voices and also make its own sound.
+
+- **V1 to V8** — eight polyphonic composite cable outputs, each carrying a whole voice: up to eight
+  notes at once, each with its pitch, level, length, position and movement while it sounds. One
+  cable to a voice tab and GXW is playing the rack. Which of GXW's parts goes to which output is
+  GXW's business, decided in its own window.
+- **AUDIO L and R** — superdough's stereo output, so GXW's own sounds arrive in the rack as ordinary
+  audio to be filtered, delayed or mixed with everything else.
+- **RUN** — starts and stops GXW's transport, from the rack, without opening it.
 - **OPEN** — takes the window, with GXW's in-page menu. Closing it returns to the rack.
+
+**No clock output and no CV outputs in the first version.** A note on a composite cable carries its
+own timing, so the notes may be trigger enough; and a strip of CV outs is worth designing once there
+is a patch asking for particular values rather than a guess at which ones. Both are additions to a
+face that already works, not changes to it.
 
 Inputs come later, at stage 5: CV and triggers from the rack driving GXW's parameters and the motion
 of its display objects.
@@ -110,8 +121,8 @@ change to either project's terms and nothing to decide.
 
 ## 6. Open questions
 
-- **Which CV outs**, and how many, does GXW expose at stage 4? A fixed strip is simpler than a
-  configurable one and can grow later.
+- **Which CV outs**, when they come: an object's position, a named parameter, a stream sampled off
+  the canvas? Worth answering with a patch in hand rather than in advance.
 - **Does the RUN button also arm GXW's own transport UI**, or are they two views of one state? They
   should be one state; the question is which side owns it.
 - **What happens to a combined patch** opened in standalone DreamRack, where the GXW module does not
