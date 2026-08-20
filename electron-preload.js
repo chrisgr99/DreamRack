@@ -46,6 +46,9 @@ contextBridge.exposeInMainWorld('wcoast', {
     end: () => ipcRenderer.invoke('record:end'),
     cancel: () => ipcRenderer.invoke('record:cancel'),
     reveal: (p) => ipcRenderer.invoke('record:reveal', p),
+    // Sizing the window to the shape of the take, and putting it back. See record:frame.
+    frame: (size = null) => ipcRenderer.invoke('record:frame', size),
+    frameRestore: (was) => ipcRenderer.invoke('record:frameRestore', was),
   },
   // A still of the window, written to Downloads as a PNG. Same destination and naming as a video
   // take, and the same "saved" pill afterwards, so the two feel like one feature.

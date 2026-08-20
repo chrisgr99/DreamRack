@@ -452,13 +452,47 @@ export async function createDreamRack({ ctx = null, element = null } = {}) {
   let mixer = null;        // { instanceId, instance }
   let recorder = null;     // screen+audio recorder (Electron only)
   let recBadge = null, recTimer = null;
+  // A SCRIPTED TAKE HIDES THE BADGE. The badge exists so a recording started by hand cannot quietly
+  // keep running — which is a real hazard for a take with no defined end. A demo take has one: the
+  // script stops it. There the badge is not a safeguard, only something painted over the top-right
+  // corner of every frame of the finished video.
+  let recBadgeHidden = false;
+
+  // THE SHAPE OF A TAKE IS 16:9, always. YouTube letterboxes anything else and re-encodes it to a
+  // rung of its own, and this app is what a rescale ruins: hairlines, 2mm legends, thin cables.
+  // 1280x720 CSS pixels captures as 2560x1440 on a 2x display and 1280x720 on a 1x one — both are
+  // sizes YouTube publishes natively, so neither is rescaled on the way in.
+  //
+  // Only SCRIPTED takes do this. A recording started by hand is a recording of whatever the user is
+  // looking at, and resizing their window out from under them to improve the framing would be the
+  // app deciding it knows better.
+  const TAKE_FRAME = { w: 1280, h: 720 };
+
+  async function setTakeFrame(frame) {
+    if (frame === false || !window.wcoast?.record?.frame) return null;
+    const want = (frame && frame.w > 0 && frame.h > 0) ? frame : TAKE_FRAME;
+    const was = await window.wcoast.record.frame(want);
+    // The rack packs its rows to the width it is given, so it needs a beat and a relayout before the
+    // first frame is captured — otherwise the take opens on the old layout sliding into place.
+    await new Promise((r) => setTimeout(r, 250));
+    rack.relayout();
+    await new Promise((r) => requestAnimationFrame(r));
+    return was;
+  }
+
+  async function restoreTakeFrame(was) {
+    if (!was || !window.wcoast?.record?.frameRestore) return;
+    await window.wcoast.record.frameRestore(was);
+    await new Promise((r) => setTimeout(r, 250));
+    rack.relayout();
+  }
 
   // A recording that is quietly still running is the failure mode worth designing against,
   // so the badge is deliberately hard to miss: fixed to the top-right, above everything,
   // with a pulsing dot and the elapsed time. Click it to stop.
   function paintRecBadge() {
     if (!recorder) return;
-    if (recorder.recording && !recBadge) {
+    if (recorder.recording && !recBadge && !recBadgeHidden) {
       recBadge = document.createElement('button');
       recBadge.type = 'button';
       recBadge.title = 'Stop recording';
@@ -1890,10 +1924,17 @@ export async function createDreamRack({ ctx = null, element = null } = {}) {
         recordDemo: async (id, name, opts = {}) => {
           if (!recorder || !recorder.available()) throw new Error('no recorder here (Electron only)');
           if (rack.demo && rack.demo.primeVoice) rack.demo.primeVoice();   // ...so the narration is in the take
+          // Out of shot unless the caller asks for it. See recBadgeHidden.
+          recBadgeHidden = opts.badge !== true;
+          paintRecBadge();
+          // 16:9 FIRST, whatever shape the window is in. See TAKE_FRAME.
+          const frameWas = await setTakeFrame(opts.frame);
           const path = await recorder.start(name || `DreamRack ${id}`, opts);
-          if (!path) throw new Error('the recorder did not start');
+          if (!path) { recBadgeHidden = false; await restoreTakeFrame(frameWas); throw new Error('the recorder did not start'); }
           try { await window.__wcoast.runDemo(id); } finally {
             const saved = await recorder.stop();
+            recBadgeHidden = false;
+            await restoreTakeFrame(frameWas);
             window.__wcoast.lastRecording = saved || path;
           }
           return window.__wcoast.lastRecording;

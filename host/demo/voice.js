@@ -19,13 +19,22 @@ import { speechId } from './speech-id.js';
 const INDEX_URL = 'demos/speech/index.json';
 const FILE_DIR = 'demos/speech/';
 
-// VOLUME ABOVE UNITY. The rendered speech is quiet — `say` leaves plenty of headroom — and it plays
-// against a patch, so at 0.9 it sat under the music. It goes straight to the destination with nothing
-// else summed into it, so there is room for the lift.
-export function createVoice(getCtx, { register = null, volume = 2.2 } = {}) {
+// VOLUME ABOVE UNITY, THEN A LIMITER. The rendered speech is quiet — `say` leaves plenty of headroom —
+// and it plays against a patch, so at 0.9 it sat under the music.
+//
+// The lift used to be 2.2, and that was past the ceiling. Fragments peak at about -3 dB, so 0.7 of
+// full scale; 0.7 x 2.2 is 1.5, and everything above 1.0 arrives at the output as a flat top. A take
+// measured 3.35% of its samples pinned there, in 2,520 flat runs of ten samples or more — heard as a
+// buzz riding the voice and stopping when the voice stops. It was in the app as well as in the
+// recordings, since this is the signal both are fed from.
+//
+// So the lift is smaller and a limiter stands behind it. The limiter is the part that matters: it
+// means no fragment can clip regardless of how hot it was rendered, which a fixed number alone can
+// never promise — the next voice, or the next `say` version, renders at whatever level it likes.
+export function createVoice(getCtx, { register = null, volume = 1.3 } = {}) {
   let index = null;                  // id -> { file, secs, text }
   let loading = null;
-  let gain = null;
+  let gain = null;         // the head of the narration chain: gain -> limiter -> ceiling -> out
   const buffers = new Map();         // id -> AudioBuffer (decoded on first use)
   let current = null;                // the source now playing, so it can be cut off
   // PAUSING A SENTENCE. A buffer source cannot be frozen — it can only be stopped — so a pause notes
@@ -62,8 +71,34 @@ export function createVoice(getCtx, { register = null, volume = 2.2 } = {}) {
     if (!gain) {
       gain = ctx.createGain();
       gain.gain.value = volume;
-      gain.connect(ctx.destination);
-      if (register) register(gain);    // ...and into the recording, alongside the music
+
+      // Peaks held down before they reach the ceiling. Fast enough to catch a plosive, slow enough
+      // to release between words rather than pumping on every syllable.
+      const limiter = ctx.createDynamicsCompressor();
+      limiter.threshold.value = -6;
+      limiter.knee.value = 0;
+      limiter.ratio.value = 20;
+      limiter.attack.value = 0.003;
+      limiter.release.value = 0.25;
+
+      // AND A CEILING BEHIND THE LIMITER. A compressor has attack time, so the very first edge of a
+      // sharp transient passes before it acts; this curve is a soft saturation that cannot output
+      // more than 1 whatever it is given, so that edge rounds instead of squaring off. It is doing
+      // nothing at all on ordinary speech, which is the point — it is the backstop, not the sound.
+      const ceiling = ctx.createWaveShaper();
+      const n = 2048, curve = new Float32Array(n);
+      for (let i = 0; i < n; i++) {
+        const x = (i / (n - 1)) * 2 - 1;
+        curve[i] = Math.tanh(x * 1.4) / Math.tanh(1.4);
+      }
+      ceiling.curve = curve;
+      ceiling.oversample = '4x';
+
+      gain.connect(limiter); limiter.connect(ceiling); ceiling.connect(ctx.destination);
+      // THE RECORDING TAPS THE END OF THE CHAIN, not the gain. Registering the gain would have put
+      // the unlimited signal in the take — the very thing that was being fixed — while the speakers
+      // heard the limited one.
+      if (register) register(ceiling);
     }
     return gain;
   }

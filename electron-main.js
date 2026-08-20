@@ -130,6 +130,37 @@ function registerRecordIpc() {
   // a timestamped name, so hitting the shortcut records immediately rather than stopping
   // to ask. The renderer shows where it went when the take ends, with a click to reveal
   // it — which is the moment the answer is actually useful.
+  // THE SHAPE OF THE TAKE. The picture comes from the window, so the window's content size is the
+  // video's aspect ratio — and a take at whatever shape the window happened to be is a take YouTube
+  // letterboxes and then rescales to a rung of its own. This app is the worst case for that:
+  // hairlines, 2mm legends and thin cables are exactly what a scaled re-encode smears.
+  //
+  // So a scripted take sets the window to 16:9 first and puts it back after. Called with a size it
+  // sets one and returns what was there before; called with nothing it only reports. The previous
+  // state carries the maximised and full-screen flags too, because setContentSize on a maximised
+  // window is ignored and restoring the numbers alone would leave the window merely window-sized.
+  ipcMain.handle('record:frame', async (e, size) => {
+    const win = BrowserWindow.fromWebContents(e.sender);
+    if (!win) return null;
+    const [w, h] = win.getContentSize();
+    const was = { w, h, maximized: win.isMaximized(), fullScreen: win.isFullScreen() };
+    if (!size || !(size.w > 0 && size.h > 0)) return was;
+    if (win.isFullScreen()) win.setFullScreen(false);
+    if (win.isMaximized()) win.unmaximize();
+    win.setContentSize(Math.round(size.w), Math.round(size.h));
+    return was;
+  });
+
+  // Put it back exactly as it was, maximised or full-screen included.
+  ipcMain.handle('record:frameRestore', async (e, was) => {
+    const win = BrowserWindow.fromWebContents(e.sender);
+    if (!win || !was) return false;
+    if (was.fullScreen) { win.setFullScreen(true); return true; }
+    win.setContentSize(Math.round(was.w), Math.round(was.h));
+    if (was.maximized) win.maximize();
+    return true;
+  });
+
   ipcMain.handle('record:begin', async (_e, suggestedName) => {
     if (recStream) return { path: recPath };   // already rolling
     const base = (typeof suggestedName === 'string' && suggestedName) || 'DreamRack.webm';
