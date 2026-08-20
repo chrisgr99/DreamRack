@@ -24,13 +24,13 @@ More than that, it's an exploration. It began as an attempt to build the modular
 
 ## What's in it today
 
-Twenty-nine modules ship:
+Thirty-two modules ship:
 
 - **Sources** — Complex Oscillator, VCO, Macro Oscillator 2, Sine Source, Noise
 - **Shaping** — Quad Low Pass Gate, Filter, VCA, Quad Function Generator, ADSR, Delay, Octave
 - **Timing and sequencing** — drClckd, Sequencer / Programmer Eight, Random Sampler, Strudel
 - **Voices** — Sequence Out, Voice In, Poly to Stereo
-- **Video** — Coordinate Field, Shapes, Formula, Video Maths, Compositor, Time, Video Output
+- **Video** — Coordinate Field, Shapes, Formula, Video Maths, Compositor, Colorizer, Encoder, Chroma, Time, Video Output
 - **Utility** — Control Gallery, Load, Mixer / Output
 
 Modules of any kind drop in as plug-ins, with or without a hardware ancestor. Many more are planned, and suggestions are welcome.

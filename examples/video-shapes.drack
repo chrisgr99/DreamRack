@@ -1,0 +1,224 @@
+{
+  "format": "wcoast-patch",
+  "version": "0.1",
+  "app": "DreamRack",
+  "appVersion": "0.1",
+  "rack": {
+    "rows": 2
+  },
+  "pages": [
+    {
+      "id": "a1",
+      "name": "Audio 1",
+      "stops": [
+        0,
+        0
+      ]
+    }
+  ],
+  "mixerPos": {
+    "row": 1,
+    "x": 0
+  },
+  "modules": [
+    {
+      "id": "m0",
+      "type": "polygon",
+      "page": "video",
+      "row": 0,
+      "x": 80
+    },
+    {
+      "id": "m1",
+      "type": "coordinate-field",
+      "page": "video",
+      "row": 0,
+      "x": 0
+    },
+    {
+      "id": "m2",
+      "type": "video-maths",
+      "page": "video",
+      "row": 0,
+      "x": 132
+    },
+    {
+      "id": "m3",
+      "type": "video-out",
+      "page": "video",
+      "row": 0,
+      "x": 342
+    },
+    {
+      "id": "m4",
+      "type": "colorizer",
+      "page": "video",
+      "row": 0,
+      "x": 258
+    },
+    {
+      "id": "m5",
+      "type": "chroma",
+      "page": "video",
+      "row": 0,
+      "x": 300
+    },
+    {
+      "id": "m6",
+      "type": "symmetry",
+      "page": "video",
+      "row": 0,
+      "x": 174
+    },
+    {
+      "id": "m7",
+      "type": "grid",
+      "page": "video",
+      "row": 0,
+      "x": 216
+    }
+  ],
+  "probes": [],
+  "wiring": [
+    {
+      "from": {
+        "module": "m1",
+        "port": "fieldOut"
+      },
+      "to": {
+        "module": "m2",
+        "port": "aIn"
+      }
+    },
+    {
+      "from": {
+        "module": "m0",
+        "port": "shapeOut"
+      },
+      "to": {
+        "module": "m2",
+        "port": "bIn"
+      }
+    },
+    {
+      "from": {
+        "module": "m2",
+        "port": "outImage"
+      },
+      "to": {
+        "module": "m6",
+        "port": "imageIn"
+      }
+    },
+    {
+      "from": {
+        "module": "m6",
+        "port": "imageOut"
+      },
+      "to": {
+        "module": "m7",
+        "port": "imageIn"
+      }
+    },
+    {
+      "from": {
+        "module": "m7",
+        "port": "imageOut"
+      },
+      "to": {
+        "module": "m4",
+        "port": "imageIn"
+      }
+    },
+    {
+      "from": {
+        "module": "m4",
+        "port": "imageOut"
+      },
+      "to": {
+        "module": "m5",
+        "port": "imageIn"
+      }
+    },
+    {
+      "from": {
+        "module": "m5",
+        "port": "imageOut"
+      },
+      "to": {
+        "module": "m3",
+        "port": "imageIn"
+      }
+    }
+  ],
+  "settings": {
+    "params": {
+      "m0": {
+        "size": 0.83,
+        "rotate": 0.19,
+        "star": 0.4,
+        "sides": 6.13,
+        "round": 0.01,
+        "outline": 0.07,
+        "soft": 0.06,
+        "posX": 0,
+        "posY": 0
+      },
+      "m1": {
+        "offsetX": 0,
+        "offsetY": 0,
+        "rotate": 0.19,
+        "scale": 0.75,
+        "polar": 0.54,
+        "twist": 1.47,
+        "tile": 1.43,
+        "quantise": 11.54,
+        "scroll": 0.2,
+        "phase": 0,
+        "invert": "off",
+        "mirror": "off",
+        "field": "angle"
+      },
+      "m2": {
+        "gainA": 1.31,
+        "gainB": 1.17,
+        "amount": 0.63,
+        "op": "max"
+      },
+      "m3": {
+        "bright": 0.87,
+        "limit": 0.58,
+        "res": "half",
+        "frame": "16:9",
+        "test": "off"
+      },
+      "m4": {
+        "spread": 1.58,
+        "shift": 0.5,
+        "cycle": 0.17,
+        "palette": "heat"
+      },
+      "m5": {
+        "hue": 0.96,
+        "sat": 0.18,
+        "level": 1.13,
+        "contrast": 1.55
+      },
+      "m6": {
+        "sectors": 5.74,
+        "rotate": -0.93,
+        "spread": 0.78,
+        "mode": "repeat",
+        "zoom": 0.95
+      },
+      "m7": {
+        "cols": 4.34,
+        "rows": 2.22,
+        "brick": 0.36,
+        "gap": 0.12,
+        "vary": 0.99
+      }
+    }
+  },
+  "notes": "Shapes and structure — the finished patch the demo builds.\n\nCoordinate Field on ANGLE, quantised and twisted, meets a Polygon star on Video Maths set to MAX; Symmetry folds the result, Grid repeats it, and the Colorizer and Chroma colour it. The movement is the field’s SCROLL and nothing else."
+}

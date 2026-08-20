@@ -1,0 +1,91 @@
+{
+  "format": "wcoast-patch",
+  "version": "0.1",
+  "app": "DreamRack",
+  "appVersion": "0.1",
+  "rack": {
+    "rows": 2
+  },
+  "pages": [
+    {
+      "id": "a1",
+      "name": "Audio 1",
+      "stops": [
+        0,
+        0
+      ]
+    }
+  ],
+  "mixerPos": {
+    "row": 1,
+    "x": 0
+  },
+  "modules": [
+    {
+      "id": "m0",
+      "type": "polygon",
+      "page": "video",
+      "row": 0,
+      "x": 80
+    },
+    {
+      "id": "m1",
+      "type": "coordinate-field",
+      "page": "video",
+      "row": 0,
+      "x": 0
+    },
+    {
+      "id": "m2",
+      "type": "video-maths",
+      "page": "video",
+      "row": 0,
+      "x": 132
+    },
+    {
+      "id": "m3",
+      "type": "video-out",
+      "page": "video",
+      "row": 0,
+      "x": 342
+    },
+    {
+      "id": "m4",
+      "type": "colorizer",
+      "page": "video",
+      "row": 0,
+      "x": 258
+    },
+    {
+      "id": "m5",
+      "type": "chroma",
+      "page": "video",
+      "row": 0,
+      "x": 300
+    },
+    {
+      "id": "m6",
+      "type": "symmetry",
+      "page": "video",
+      "row": 0,
+      "x": 174
+    },
+    {
+      "id": "m7",
+      "type": "grid",
+      "page": "video",
+      "row": 0,
+      "x": 216
+    }
+  ],
+  "probes": [],
+  "wiring": [],
+  "settings": {
+    "params": {
+      "m3": {
+        "test": "on"
+      }
+    }
+  },
+  "notes": "Shapes and structure, unpatched — the eight modules of the shapes patch in a row, nothing joined up, every knob at its default and the test pattern on, which is what an output with nothing patched into it shows.\n\nThe opening rack for the shapes demo."
+}

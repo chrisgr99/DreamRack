@@ -37,27 +37,45 @@ export const ALIASES = {
   videoMaths: 'video-maths',
   videoOut: 'video-out',
   compositor: 'compositor',
+  colorizer: 'colorizer',
+  encoder: 'encoder',
+  chroma: 'chroma',
+  polygon: 'polygon',
+  grid: 'grid',
+  symmetry: 'symmetry',
 };
 
 // The rack a first-run user meets. Row 1 fills left to right; the gate goes on the bottom row of the
 // first audio page. It used to sit beside the mixer, which is no longer on this page — following the
 // mixer across would have put the one module a first patch needs most on a page you have to find.
 // The mixer is absent because it is pinned: it is placed before any of this and survives File > New.
-// The video page carries the video set in signal order left to right: the field generates
-// coordinates, shapes turns a field into an image, maths combines two images, the time machine delays
-// what it is given, the compositor lays one picture over another, and the output ends the chain. That
-// order means a first patch on that page is mostly a matter of joining neighbours, and the compositor
-// comes last before the output because that is where it belongs in a patch as well as on the bench:
-// it is what collapses several pictures into the one the output shows.
+// The video page carries the WHOLE video set, on two rows, in signal order — so that a first patch is
+// mostly a matter of joining neighbours, and so that nothing has to be fetched from the library
+// before there is something to look at.
+//
+// ROW ONE MAKES THE PICTURE, all of it monochrome: the field generates coordinates and warps them,
+// the polygon draws a shape with corners, shapes cuts an edge out of a gradient, the grid repeats
+// what it is given into cells, symmetry folds the frame about its centre, and maths meets two images
+// against each other. Reading left to right is reading from "where things are" to "what is drawn" to
+// "how it is repeated".
+//
+// ROW TWO TREATS IT AND ENDS IT: the time machine delays and trails, the three colour modules turn
+// one channel or three into colour, the compositor collapses several pictures into one, and the
+// output finishes the chain. Colour sits between time and the compositor because that is the order a
+// patch uses them in — process in monochrome, colour late, composite last.
+//
+// The two rows sit under each other so a cable from row one to row two is a short vertical hop, which
+// is the commonest cable on the page.
 //
 // FORMULA IS NOT HERE, though it is in the library. It is four images and a typed expression, which is
 // the advanced end of the set: someone who wants it can find it, and someone who does not should not
-// have to work out what an unused module with an expression on its face is for. The page a first-run
-// user meets should be six modules that each explain themselves.
+// have to work out what an unused module with an expression on its face is for. Every other module on
+// the page explains itself by its own controls.
 export const DEFAULT_RACK = [
   'R1: osc func prog',
   'R2: lpg',
-  'VR1: field shapes videoMaths timeMachine compositor videoOut',
+  'VR1: field polygon shapes grid symmetry videoMaths',
+  'VR2: timeMachine colorizer encoder chroma compositor videoOut',
 ];
 
 // "T2R1" / "MR1" / "VR1" / "R2" -> which page, and which row (0-based inside the rack).

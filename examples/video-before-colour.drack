@@ -1,0 +1,136 @@
+{
+  "format": "wcoast-patch",
+  "version": 1,
+  "app": "DreamRack",
+  "appVersion": "0.1.0",
+  "rack": {
+    "rows": 2
+  },
+  "pages": [
+    {
+      "id": "a1",
+      "name": "Audio 1",
+      "stops": [
+        0,
+        0
+      ]
+    }
+  ],
+  "mixerPos": {
+    "row": 1,
+    "x": 0
+  },
+  "modules": [
+    {
+      "id": "m0",
+      "type": "coordinate-field",
+      "page": "video",
+      "row": 0,
+      "x": 0
+    },
+    {
+      "id": "m1",
+      "type": "shapes",
+      "page": "video",
+      "row": 0,
+      "x": 81.28
+    },
+    {
+      "id": "m2",
+      "type": "video-maths",
+      "page": "video",
+      "row": 0,
+      "x": 121.92
+    },
+    {
+      "id": "m3",
+      "type": "time-machine",
+      "page": "video",
+      "row": 0,
+      "x": 162.56
+    },
+    {
+      "id": "m4",
+      "type": "compositor",
+      "page": "video",
+      "row": 0,
+      "x": 203.2
+    },
+    {
+      "id": "m5",
+      "type": "video-out",
+      "page": "video",
+      "row": 0,
+      "x": 243.84
+    },
+    {
+      "id": "m6",
+      "type": "encoder",
+      "page": "video",
+      "row": 1,
+      "x": 0
+    },
+    {
+      "id": "m7",
+      "type": "chroma",
+      "page": "video",
+      "row": 1,
+      "x": 40.64
+    },
+    {
+      "id": "m8",
+      "type": "colorizer",
+      "page": "video",
+      "row": 1,
+      "x": 81.28
+    }
+  ],
+  "wiring": [
+    {
+      "from": {
+        "module": "m0",
+        "port": "fieldOut"
+      },
+      "to": {
+        "module": "m1",
+        "port": "fieldIn"
+      }
+    },
+    {
+      "from": {
+        "module": "m1",
+        "port": "shapeOut"
+      },
+      "to": {
+        "module": "m5",
+        "port": "imageIn"
+      }
+    }
+  ],
+  "settings": {
+    "params": {
+      "m0": {
+        "field": "radius",
+        "scale": 0.64,
+        "tile": 5.24,
+        "quantise": 4.7,
+        "twist": 0.42,
+        "rotate": 0.27,
+        "polar": 0.13,
+        "scroll": 0.51
+      },
+      "m1": {
+        "mode": "above",
+        "width": 0.47,
+        "centre": 0.11,
+        "soft": 0.24
+      },
+      "m5": {
+        "test": "off"
+      }
+    }
+  },
+  "probes": [],
+  "notes": "Video, before colour — where the video reel demo ends, with the colour modules placed but unpatched.\n\nCoordinate Field on radius, quantised into bands, tiled, twisted and scrolling; Shapes keeping everything above a slice of it; the picture on Video Output. Encoder, Chroma and Colorizer sit on the second row with nothing in them.\n\nThis is the opening rack for the colour demo. Open \"Video — colour\" to see where it ends up.",
+  "notesOpen": false
+}

@@ -1,6 +1,10 @@
 # Video synthesis — specification
 
-Status: design specification. NOT implemented.
+Status: built through phase 7's colour modules. The engine, the two domains, the output window and
+its floating pane, CV reaching a uniform, and the modules Coordinate Field, Shapes, Video Maths,
+Formula, Time, Compositor, Colorizer, Encoder and Chroma are all in the rack. Still to come: the
+video oscillator, the Decoder, frame feedback, the scan processor, an external source, image to CV,
+the video monitor probe, and capture.
 
 A set of rack modules that take CV from the rest of the patch and generate moving
 image — ramps, shapes, texture, layering, feedback — drawn into a window that can be
@@ -261,17 +265,27 @@ processing is monochrome, and colour happens at two specific places.
    is where the choice gets made.
 9. **Colorizer** · luma in, rgb out. A different job from the encoder: one channel mapped
    through a palette, with CV over palette position and rotation. The quick route to
-   colour when three chains are more than the patch needs.
+   colour when three chains are more than the patch needs. SPREAD and SHIFT decide which part of
+   the palette the image reaches, which matters because an image rarely fills the range from black
+   to white and without them most of a palette is never seen. CYCLE turns the palette under a still
+   picture, and wraps — on a palette that does not end where it began that puts a moving contour in
+   the frame, which is a feature. Palettes: heat, ice, spectrum, duo, steps.
+10. **Chroma** · rgb in, rgb out. Hue, saturation, level and contrast on a colour picture. It
+   multiplies what the other two can do without adding a cable: a Colorizer gives an image one
+   palette, and a slow CV on HUE walks that palette through every other colour it could have been.
+   Hue is rotated in HSV, because that operation cannot be expressed as gains on the three
+   channels; saturation is a mix against LUMINANCE rather than HSV's own, so draining the colour
+   leaves the picture standing instead of collapsing every bright colour to white.
 
 ### Second set — where it gets strange
-10. **Frame feedback** · luma or rgb. Last frame, affinely or polar-transformed, blended
+11. **Frame feedback** · luma or rgb. Last frame, affinely or polar-transformed, blended
    under the new frame. This single module produces the tunnelling, blooming, recursive
    imagery that people build whole instruments around. Ping-pong framebuffers; the
    one-frame delay is the effect, not a defect.
-11. **Scan processor** · luma. Rutt/Etra style geometric displacement driven by an
+12. **Scan processor** · luma. Rutt/Etra style geometric displacement driven by an
     input's brightness.
-12. **External source** · rgb out. Camera or a still image as a texture input.
-13. **Image to CV** · luma or rgb in, control out. Average, movable probe, and centroid
+13. **External source** · rgb out. Camera or a still image as a texture input.
+14. **Image to CV** · luma or rgb in, control out. Average, movable probe, and centroid
     X/Y — the loop back to the audio side. See section 4.
 
 ### The video monitor — a probe, not a module

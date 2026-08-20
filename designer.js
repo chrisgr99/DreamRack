@@ -64,6 +64,18 @@ import compositorLayout from './modules/compositor/panel.layout.js';
 import compositorDesc from './modules/compositor/descriptor.js';
 import vidoutLayout from './modules/video-out/panel.layout.js';
 import vidoutDesc from './modules/video-out/descriptor.js';
+import colorizerLayout from './modules/colorizer/panel.layout.js';
+import colorizerDesc from './modules/colorizer/descriptor.js';
+import encoderLayout from './modules/encoder/panel.layout.js';
+import encoderDesc from './modules/encoder/descriptor.js';
+import chromaLayout from './modules/chroma/panel.layout.js';
+import chromaDesc from './modules/chroma/descriptor.js';
+import polygonLayout from './modules/polygon/panel.layout.js';
+import polygonDesc from './modules/polygon/descriptor.js';
+import gridLayout from './modules/grid/panel.layout.js';
+import gridDesc from './modules/grid/descriptor.js';
+import symmetryLayout from './modules/symmetry/panel.layout.js';
+import symmetryDesc from './modules/symmetry/descriptor.js';
 import noteSeqLayout from './modules/sequencer/panel.layout.js';
 import noteSeqDesc from './modules/sequencer/descriptor.js';
 import pageVoiceLayout from './modules/voice/panel.layout.js';
@@ -105,6 +117,12 @@ const MODULES = [
   { name: 'Video Maths', dir: 'video-maths', base: vmathsLayout, desc: vmathsDesc },
   { name: 'Macro Oscillator 2', dir: 'model-voice', base: voiceLayout, desc: voiceDesc },
   { name: 'Compositor', dir: 'compositor', base: compositorLayout, desc: compositorDesc },
+  { name: 'Colorizer', dir: 'colorizer', base: colorizerLayout, desc: colorizerDesc },
+  { name: 'Encoder', dir: 'encoder', base: encoderLayout, desc: encoderDesc },
+  { name: 'Chroma', dir: 'chroma', base: chromaLayout, desc: chromaDesc },
+  { name: 'Polygon', dir: 'polygon', base: polygonLayout, desc: polygonDesc },
+  { name: 'Grid', dir: 'grid', base: gridLayout, desc: gridDesc },
+  { name: 'Symmetry', dir: 'symmetry', base: symmetryLayout, desc: symmetryDesc },
   { name: 'Video Output', dir: 'video-out', base: vidoutLayout, desc: vidoutDesc },
   { name: 'Sequence Out', dir: 'sequencer', base: noteSeqLayout, desc: noteSeqDesc },
   { name: 'Voice In', dir: 'voice', base: pageVoiceLayout, desc: pageVoiceDesc },

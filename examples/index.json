@@ -16,11 +16,31 @@
     "file": "modulate-complex-oscillator.drack"
   },
   {
-    "name": "Strudel \u2014 two voices and drums",
+    "name": "Strudel — two voices and drums",
     "file": "strudel-two-voices.drack"
   },
   {
-    "name": "Chirpy \u2014 a function generator as sequencer",
+    "name": "Chirpy — a function generator as sequencer",
     "file": "chirpy.drack"
+  },
+  {
+    "name": "Video — unpatched",
+    "file": "video-unpatched.drack"
+  },
+  {
+    "name": "Video — before colour",
+    "file": "video-before-colour.drack"
+  },
+  {
+    "name": "Video — colour",
+    "file": "video-colour.drack"
+  },
+  {
+    "name": "Video — shapes, unpatched",
+    "file": "video-shapes-start.drack"
+  },
+  {
+    "name": "Video — shapes and structure",
+    "file": "video-shapes.drack"
   }
 ]

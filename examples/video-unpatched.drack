@@ -1,0 +1,99 @@
+{
+  "format": "wcoast-patch",
+  "version": 1,
+  "app": "DreamRack",
+  "appVersion": "0.1.0",
+  "rack": {
+    "rows": 2
+  },
+  "pages": [
+    {
+      "id": "a1",
+      "name": "Audio 1",
+      "stops": [
+        0,
+        0
+      ]
+    }
+  ],
+  "mixerPos": {
+    "row": 1,
+    "x": 0
+  },
+  "modules": [
+    {
+      "id": "m0",
+      "type": "coordinate-field",
+      "page": "video",
+      "row": 0,
+      "x": 0
+    },
+    {
+      "id": "m1",
+      "type": "shapes",
+      "page": "video",
+      "row": 0,
+      "x": 81.28
+    },
+    {
+      "id": "m2",
+      "type": "video-maths",
+      "page": "video",
+      "row": 0,
+      "x": 121.92
+    },
+    {
+      "id": "m3",
+      "type": "time-machine",
+      "page": "video",
+      "row": 0,
+      "x": 162.56
+    },
+    {
+      "id": "m4",
+      "type": "compositor",
+      "page": "video",
+      "row": 0,
+      "x": 203.2
+    },
+    {
+      "id": "m5",
+      "type": "video-out",
+      "page": "video",
+      "row": 0,
+      "x": 243.84
+    },
+    {
+      "id": "m6",
+      "type": "encoder",
+      "page": "video",
+      "row": 1,
+      "x": 0
+    },
+    {
+      "id": "m7",
+      "type": "chroma",
+      "page": "video",
+      "row": 1,
+      "x": 40.64
+    },
+    {
+      "id": "m8",
+      "type": "colorizer",
+      "page": "video",
+      "row": 1,
+      "x": 81.28
+    }
+  ],
+  "wiring": [],
+  "settings": {
+    "params": {
+      "m5": {
+        "test": "on"
+      }
+    }
+  },
+  "probes": [],
+  "notes": "Video, unpatched — the six video modules on the video page with nothing joined up.\n\nThe opening rack for the video build demo: Coordinate Field, Shapes, Video Maths, Time, Compositor and Video Output, left to right in the order they are normally used, every knob at its default and the output showing its test pattern.",
+  "notesOpen": false
+}
