@@ -50,10 +50,17 @@ const params = [
   // OPEN takes the window and gives it to GXW, with GXW's own in-page menu. Closing it returns to the
   // rack. A momentary press rather than a state: the window's openness belongs to the window, not to
   // the patch, so reopening a patch does not reopen the editor over the top of the rack.
-  // TRANSIENT: state, not a setting. Whether the window is open belongs to this session, not to the
-  // patch — reopening a piece should not throw GXW over the rack before you have looked at it.
+  // MOMENTARY AND TRANSIENT, and it needs both.
+  //
+  // MOMENTARY because every press must mean "open", not "toggle". The window can also be closed from
+  // inside — the way out sits in GXW's own toolbar — and the module does not report that back, so a
+  // toggling button would still be holding `on` and the next press would send `off`: one press that
+  // appeared to do nothing, and only the press after it reopening the window.
+  //
+  // TRANSIENT because whether a window is open belongs to this session, not to the patch. Reopening a
+  // piece should not throw GXW over the rack before you have looked at it.
   { id: 'open', name: 'Open', section: 'transport', curve: 'stepped', default: 'off', modulatable: false,
-    transient: true, steps: [{ value: 'off' }, { value: 'on' }] },
+    momentary: true, transient: true, steps: [{ value: 'off' }, { value: 'on' }] },
 
   // The score GXW is holding, saved with the patch so a piece reopens as it was left. Text, like the
   // Strudel module's pattern: what it holds is GXW's own bundle, and only GXW reads it.
@@ -75,6 +82,8 @@ export default {
   // One sequencer plays the tab; it is never duplicated per note, so it carries no per-note lamp.
   sharedFixed: true,
   hp: 9,
+  // Shared with the Strudel module; the host loads a worklet path once. See the factory.
+  worklets: ['modules/strudel/strudel-processor.js'],
   menuSectionOrder: ['transport', 'out'],
   ports,
   params,

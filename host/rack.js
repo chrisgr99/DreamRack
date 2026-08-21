@@ -186,6 +186,21 @@ const BOUNDARY = {
   'wcoast.sequencer': { dir: 'out', port: 'noteOut', label: 'SEQ', kind: 'a sequence' },
   'wcoast.voice': { dir: 'in', port: 'noteIn', label: 'Voice', kind: 'a voice' },
 };
+
+// ---- ONE OF A GROUP, ACROSS THE WHOLE PATCH ---------------------------------------------------
+// A boundary rule is per page and per module type. This is neither: it says that of a SET of module
+// types, a patch may hold one, wherever they sit.
+//
+// Strudel and GXW are that set. Both play through superdough, which is a singleton by construction —
+// one audio controller, one output stage, one registry of sounds — so two owners would fight over
+// where its sound goes, and the loser would play into a node nobody is listening to. Refusing the
+// second is the honest answer; sharing it is not something superdough offers.
+//
+// The name is what the message says, so it reads as a sentence rather than as an identifier.
+const GROUP_SINGLETON = {
+  'wcoast.strudel': { group: 'engine', name: 'Strudel' },
+  'wcoast.gxw': { group: 'engine', name: 'GXW' },
+};
 // ---- PER NOTE OR SHARED ----------------------------------------------------------------------
 // On a voice page, a module is either one of eight or one of one. Sources, filters, envelopes and
 // VCAs are per note; a clock, a sequencer, or a reverb you want the whole page to share is not.
@@ -9710,7 +9725,24 @@ export class Rack {
   // ONE OF EACH, NEVER TWO OF ONE. A page holding a sequencer and a voice is a self-contained
   // instrument — convenient for a small patch and for testing — while two voices on one page is a
   // page that cannot say which of them a note is for.
+  // ONE OF THE GROUP, ANYWHERE ON THE PATCH. Checked before the page rules, because it is the wider
+  // statement: it does not matter which page you are on.
+  _groupRefusal(descriptorId, exceptRec) {
+    const want = GROUP_SINGLETON[descriptorId];
+    if (!want) return null;
+    for (const rec of this.records.values()) {
+      if (rec === exceptRec || rec.descriptorId === descriptorId) continue;
+      const has = GROUP_SINGLETON[rec.descriptorId];
+      if (!has || has.group !== want.group) continue;
+      return `This patch already has ${has.name}. ${has.name} and ${want.name} share one sound engine, `
+        + 'so a patch has one of them.';
+    }
+    return null;
+  }
+
   _boundaryRefusal(descriptorId, pageId, exceptRec) {
+    const group = this._groupRefusal(descriptorId, exceptRec);
+    if (group) return group;
     const want = BOUNDARY[descriptorId];
     if (!want) return null;
     for (const rec of this.records.values()) {

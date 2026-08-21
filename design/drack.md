@@ -109,7 +109,36 @@ What the sync cannot carry is what GXW reaches outside for:
 
 The editor therefore goes through the same seam as the sound engine: injected, not imported.
 
-## 5. Staging
+## 5. One set of scores and images, shared by both builds
+
+A score developed in standalone GXW should open in the module and play through the rack, and a score
+made in the module should open standalone. Today they share nothing: standalone GXW keeps scores as
+`.gxs` files in `~/Documents/GeoSonel Scores` and caches images under its own application-support
+folder, reaching both through the `gxwStorage` bridge; embedded GXW has no bridge, falls back to the
+browser path, and comes up with an empty scene.
+
+**The shell registers GXW's own storage handlers.** They already sit behind one named function,
+`registerStorageHandlers()`, with about sixteen file helpers behind it. Those move into a module both
+main processes can require — without GXW's window creation, menu setup and app lifecycle coming with
+them — and the shell registers them beside DreamRack's. The renderer then gets the same bridge and
+talks to the same files.
+
+**Both builds point at GeoSonel's own application-support folder.** The image cache and settings live
+under `app.getPath('userData')`, which under the shell resolves to DreamRack's folder. Left alone,
+scores would be shared while images and settings quietly diverged — including a Scores folder relinked
+in one build and not seen by the other. The paths are given explicitly rather than inherited.
+
+**EMBEDDED STILL WINS OVER DESKTOP.** GXW decides it is the desktop build by the presence of that
+bridge, so handing it one flips every judgement that turns on it — and the in-page menu bar would come
+back on top of a module that has just been given a hamburger. `embedded` is the more specific fact and
+takes precedence wherever the two disagree.
+
+**Changes on disk are picked up by both.** Two builds over one set of files means the other one's copy
+goes stale the moment either writes. Scores, settings and the image cache are watched, and a change
+reloads what is showing rather than waiting to be asked. Two open editors on one score still means the
+last writer wins — watching makes that visible rather than solving it.
+
+## 6. Staging
 
 **0 — the repo.** `DRACK`: Electron shell, both projects as a workspace, one AudioContext, DreamRack
 booting as the host. Both originals still build standalone.
@@ -140,7 +169,7 @@ receiving end for notes coming back into the rack.
 **6 — consolidation.** Combined patch save, the menu handoff between GXW's in-page menu and
 DreamRack's, sample and asset paths, and the build.
 
-## 6. What to watch
+## 7. What to watch
 
 **One thread, two apps.** GXW's canvas and DreamRack's video engine both want frames, and the audio
 thread is shared. The Load module already reads that thread as a percentage of one core, so this can
@@ -152,7 +181,7 @@ needs to hold in three places: the Add menu, a patch load, and the module librar
 **Licence.** DreamRack is AGPL-3.0-only and GXW is AGPL v3, so the combined work is AGPL-3.0. No
 change to either project's terms and nothing to decide.
 
-## 7. Open questions
+## 8. Open questions
 
 - **Which CV outs**, when they come: an object's position, a named parameter, a stream sampled off
   the canvas? Worth answering with a patch in hand rather than in advance.

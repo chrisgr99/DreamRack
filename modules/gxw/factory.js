@@ -13,6 +13,17 @@
 'use strict';
 
 import { loadSuperdough } from '../../host/superdough.js';
+import { midiToVolts } from '../strudel/adapter.js';
+
+// THE NOTE CABLE'S WORKLET, shared with the Strudel module. A note travels a note cable as a message
+// rather than as signal, and this processor is what holds an event until its sample arrives; the
+// audio connection exists only to keep it in the rendering graph. The host loads worklets by path and
+// skips one it already has, so naming the same file twice costs nothing.
+//
+// It lives under modules/strudel because that module was the only thing that needed it. It is not
+// Strudel's — it is the note cable's — and it should move to a shared place, the way starting
+// superdough did. Left where it is for now rather than disturbing a working module late.
+const NOTE_PROCESSOR = 'wcoast-strudel';
 
 const GXW_ENTRY = 'gxw://project/main.js';
 
@@ -39,6 +50,14 @@ function loadGXW() {
 }
 
 export function create(ctx, _services) {
+  // ONE NODE FOR ALL EIGHT JACKS. The notes are messages, so eight jacks need eight ports in the
+  // descriptor and no extra outputs on the node — every jack hands out the same channel of silence,
+  // which is only there to keep the worklet running.
+  const noteNode = new AudioWorkletNode(ctx, NOTE_PROCESSOR, {
+    numberOfInputs: 0, numberOfOutputs: 1, outputChannelCount: [1],
+  });
+  let seq = 0;
+  const handlePrefix = 'gxw' + Math.floor(ctx.currentTime * 1000).toString(36);
   // GXW'S SOUND, ON ITS WAY TO THE JACKS. superdough is stereo and pans its voices, so the pair is
   // split rather than summed — one jack into one mixer channel would throw the panning away. The same
   // shape the Strudel module uses, for the same reason.
@@ -65,6 +84,26 @@ export function create(ctx, _services) {
   //
   // Pointed at this module's own output as it is handed over, so its voices arrive at the jacks.
   const engineForGXW = async () => loadSuperdough(ctx, doughOut);
+
+  // A NOTE FROM GXW, ONTO THE CABLE. GXW hands over what it knows — which jack, when, how long, what
+  // pitch — and this puts it in the rack's units: volts rather than MIDI, with 0V at middle C, and an
+  // explicit note-off so a voice tab knows when to release.
+  //
+  // The handle pairs the on with the off. Without one, two notes of the same pitch overlapping on one
+  // jack would release together on the first off.
+  const onNote = (n) => {
+    if (!n || !Number.isFinite(n.at)) return;
+    const midi = typeof n.note === 'number' ? n.note : null;
+    if (midi === null) return;                       // a named pitch is GXW's to resolve, not ours
+    const handle = handlePrefix + ':' + (seq++);
+    const duration = Math.max(0.01, Number(n.duration) || 0.25);
+    const level = typeof n.gain === 'number' ? Math.max(0, Math.min(1, n.gain)) : 0.8;
+    noteNode.port.postMessage({ events: [
+      { at: n.at, handle, voice: n.voice, pitch: midiToVolts(midi), level, duration,
+        pan: typeof n.pan === 'number' ? n.pan : 0 },
+      { at: n.at + duration, handle, voice: n.voice, off: true },
+    ] });
+  };
 
   // MOUNTED ONCE, LAZILY. Nothing loads until the module is asked to do something — a patch with a
   // GXW module on it that is never run should not pay for GXW's boot.
@@ -104,11 +143,25 @@ export function create(ctx, _services) {
         audioContext: ctx,        // the rack's own, so GXW and the rack are one graph
         output: doughOut,         // ...and its sound arrives at this module's jacks
         loadStrudel: engineForGXW,
+        onNote,
       });
       // AFTER GXW HAS PAINTED, not before. createGXW fills the element with GXW's own furniture by
       // setting innerHTML, which discards anything already inside it — the close bar included. It was
       // being added and then silently swept away.
-      pane.appendChild(closeButton());
+      // Into GXW's toolbar if it has one; otherwise the floating strip. See closeButton.
+      const toolbar = pane.querySelector('#canvas-toolbar');
+      if (toolbar) {
+        // AT THE FRONT, not the end. The toolbar is wider than the pane and clips, so a control
+        // appended to it is off the right-hand edge and unreachable — which is worse than sitting on
+        // top of something. The left end is always in view; it goes beside the hamburger, where the
+        // two controls that are about leaving this view sit together.
+        const btn = closeButton().firstChild;
+        btn.style.marginRight = '10px';
+        const hamburger = toolbar.querySelector('.gxw-menu-button');
+        toolbar.insertBefore(btn, hamburger ? hamburger.nextSibling : toolbar.firstChild);
+      } else {
+        pane.appendChild(closeButton());
+      }
       lastError = null;
       say('ok');
       if (score) applyScore(score);
@@ -138,14 +191,23 @@ export function create(ctx, _services) {
   // and kept it. It gets a strip of its own rather than borrowing GXW's chrome, because GXW's menu is
   // GXW's and a rack control does not belong inside it.
   function closeButton() {
+    // IN GXW'S OWN TOOLBAR WHEN THERE IS ONE, floating only as a fallback. Floated over the top-right
+    // it sat on the inspector's tabs and hid two of them — and there is nowhere on a full-window pane
+    // to float it that is not on top of something. Costing a band of height instead would take back
+    // exactly what hiding the menu bar just gave. So it joins the row of controls GXW already has,
+    // beside the hamburger: no overlap, no height, and it reads as what it is — the way out.
     const bar = document.createElement('div');
     bar.className = 'gxw-pane-bar';
     bar.style.cssText = 'position:absolute;top:0;right:0;z-index:10;display:flex;align-items:center;'
       + 'gap:8px;padding:4px 8px;font:12px/1 -apple-system,system-ui,sans-serif;color:#c9c9d0';
     const btn = document.createElement('button');
     btn.type = 'button';
-    btn.textContent = 'Back to the rack';
+    // SHORT, AND IT MUST NOT WRAP. In GXW's toolbar the slot is narrow, and "Back to the rack" broke
+    // across four lines and made the whole toolbar tall. The full sentence lives in the tooltip.
+    btn.textContent = '\u21A9 Rack';
+    btn.title = 'Back to the rack';
     btn.style.cssText = 'font:12px/1 -apple-system,system-ui,sans-serif;padding:5px 10px;'
+      + 'white-space:nowrap;flex:0 0 auto;'
       + 'border-radius:5px;border:1px solid #6a6a72;background:#17171b;color:#c9c9d0;cursor:pointer';
     btn.addEventListener('click', () => setOpen(false));
     bar.appendChild(btn);
@@ -171,21 +233,19 @@ export function create(ctx, _services) {
     document.body.classList.toggle('gxw-open', open);
     if (open) window.addEventListener('keydown', onKey, true);
     else window.removeEventListener('keydown', onKey, true);
-    // The faceplate's lamp follows the window, so a patch that was reopened does not claim to be
-    // showing something it is not.
-    if (report) report('open', open ? 'on' : 'off');
+    // NOTHING IS REPORTED BACK. Telling the rack `open: 'on'` made it STORE that, and a stored value
+    // is re-applied — so closing the window put it back a moment later, which is exactly the loop
+    // "Back to the rack" appeared to be stuck in. The window's openness lives here, in the module's
+    // own state, and nowhere else; the param is a command, not a mirror.
   }
 
   return {
     getOutput: (id) => {
       if (id === 'audioOutL') return { node: doughL, index: 0 };
       if (id === 'audioOutR') return { node: doughR, index: 0 };
-      // THE EIGHT VOICE JACKS ARE DECLARED AND NOT YET FED. Notes travel a note cable as messages,
-      // not as signal, and the path that carries them — GXW's firing engine into the rack's note
-      // protocol — is the next piece of work. Returning null here means a cable to a voice tab will
-      // not connect yet, which is honest: a jack that accepts a cable and stays silent would look
-      // like a broken patch rather than an unfinished module.
-      return null;
+      // All eight share the one node; which jack a note leaves by rides in the message, not in the
+      // connection. See onNote.
+      return /^noteOut[1-8]$/.test(id) ? { node: noteNode, index: 0 } : null;
     },
     getInput: () => null,
     getParam: () => null,
@@ -234,6 +294,7 @@ export function create(ctx, _services) {
       try { window.removeEventListener('keydown', onKey, true); } catch (_e) { /* never bound */ }
       try { if (pane) pane.remove(); } catch (_e) { /* already gone */ }
       document.body.classList.remove('gxw-open');
+      try { noteNode.port.postMessage({ type: 'dispose' }); noteNode.disconnect(); } catch (_e) { /* gone */ }
       try { doughOut.disconnect(); doughSplit.disconnect(); doughL.disconnect(); doughR.disconnect(); } catch (_e) { /* gone */ }
       if (mountPromise) mounted = Math.max(0, mounted - 1);
       gxw = null; pane = null; mountPromise = null;
