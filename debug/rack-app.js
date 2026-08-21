@@ -37,6 +37,8 @@ import vcaDescriptor from '../modules/vca/descriptor.js';
 import { create as vcaCreate } from '../modules/vca/factory.js';
 import strudelDescriptor from '../modules/strudel/descriptor.js';
 import { create as strudelCreate } from '../modules/strudel/factory.js';
+import gxwDescriptor from '../modules/gxw/descriptor.js';
+import { create as gxwCreate } from '../modules/gxw/factory.js';
 import polyStereoDescriptor from '../modules/poly-to-stereo/descriptor.js';
 import { create as polyStereoCreate } from '../modules/poly-to-stereo/factory.js';
 import filterDescriptor from '../modules/filter/descriptor.js';
@@ -118,6 +120,7 @@ registry.register({ descriptor: envDescriptor, create: envCreate });
 registry.register({ descriptor: vcaDescriptor, create: vcaCreate });
 registry.register({ descriptor: polyStereoDescriptor, create: polyStereoCreate });
 registry.register({ descriptor: strudelDescriptor, create: strudelCreate });
+registry.register({ descriptor: gxwDescriptor, create: gxwCreate });
 registry.register({ descriptor: filterDescriptor, create: filterCreate });
 registry.register({ descriptor: octDescriptor, create: octCreate });
 registry.register({ descriptor: clockDescriptor, create: clockCreate });
@@ -409,6 +412,15 @@ const MODULE_TYPES = [{
   hp: 8,
   panelUrl: 'modules/strudel/panel.svg',
   descriptor: strudelDescriptor,
+}, {
+  // GXW — the geometric sequencer, running inside the app on its audio context, with the rack as its
+  // output instead of the speakers. Only one of GXW and Strudel belongs on a patch: they share one
+  // superdough, which has one output stage. See design/drack.md.
+  descriptorId: gxwDescriptor.id,
+  name: 'GXW',
+  hp: 9,
+  panelUrl: 'modules/gxw/panel.svg',
+  descriptor: gxwDescriptor,
 }, {
   descriptorId: pageVoiceDescriptor.id,
   name: 'Voice In',

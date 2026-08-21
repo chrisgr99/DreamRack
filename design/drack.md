@@ -78,7 +78,38 @@ face that already works, not changes to it.
 Inputs come later, at stage 5: CV and triggers from the rack driving GXW's parameters and the motion
 of its display objects.
 
-## 4. Staging
+## 4. How GXW's code reaches DreamRack
+
+Two speeds, because building it and shipping it want different things.
+
+**While it is being built: a sibling checkout, served over its own scheme.** The DRACK shell already
+does this — `gxw://project/…` reads the GXW checkout where it stands. Nothing is copied, nothing is
+built, and both repositories stay editable, which is the whole reason the plan chose a workspace over
+submodules. This is how phases 3 to 5 are worked.
+
+**When it ships: GXW's source is SYNCED into the DreamRack repository, and its outside dependencies
+are vendored.** The public site serves files from the DreamRack repository and nothing else, so a
+GXW module that only exists in a sibling checkout is a module the web build cannot have. A sync
+script rather than a bundler, because GXW's own source is ordinary relative-import ES modules and
+needs no build: 5 MB tracked, almost all JavaScript. The copy is GENERATED — one way, GXW's
+repository is the source of truth, and nothing edits the copy in place.
+
+What the sync cannot carry is what GXW reaches outside for:
+
+- **Strudel and superdough are INJECTED, not imported.** GXW takes its sound engine from its host, so
+  embedded it uses the vendored bundle DreamRack already has. Two copies would not be one singleton
+  with two owners; they would be two singletons, each with its own output stage and its own
+  registered sounds. See `host/superdough.js`, which is the one place that knows how superdough is
+  started and where its output goes.
+- **CodeMirror and acorn are VENDORED.** GXW imports them from esm.sh in about thirty-five places.
+  A CDN in the path of the public site breaks the rule the vendored bundles exist to keep — no build
+  step, no import map, works offline — so they are bundled beside the others by the recipe in
+  `vendor/README.md`, and the esm.sh specifiers are rewritten by the sync. DreamRack's Strudel bundle
+  already contains CodeMirror; if the versions agree, GXW takes it from there and only acorn is new.
+
+The editor therefore goes through the same seam as the sound engine: injected, not imported.
+
+## 5. Staging
 
 **0 — the repo.** `DRACK`: Electron shell, both projects as a workspace, one AudioContext, DreamRack
 booting as the host. Both originals still build standalone.
@@ -95,7 +126,9 @@ what would let a test or a demo build a rack without a page.
 and connecting to the destination, and mounts into an element. Standalone GXW passes its own context
 and its own destination, so nothing changes for it. Superdough is started on the shared context
 through a shared helper — moved out of the Strudel module's factory, so there is one place that knows
-how superdough is started and where its output goes.
+how superdough is started and where its output goes. GXW's three Electron bridges — `gxwStorage`,
+`gxwWindow`, `gxwDialog` — come from the host through the same seam, since none of them exists in
+DreamRack's page.
 
 **4 — GXW as a full-tab module.** The faceplate of section 3, minus the inputs. Opening it takes the
 window; the rack makes the sound audible. This is the "GXW as a module, like Strudel" milestone.
@@ -107,7 +140,7 @@ receiving end for notes coming back into the rack.
 **6 — consolidation.** Combined patch save, the menu handoff between GXW's in-page menu and
 DreamRack's, sample and asset paths, and the build.
 
-## 5. What to watch
+## 6. What to watch
 
 **One thread, two apps.** GXW's canvas and DreamRack's video engine both want frames, and the audio
 thread is shared. The Load module already reads that thread as a percentage of one core, so this can
@@ -119,7 +152,7 @@ needs to hold in three places: the Add menu, a patch load, and the module librar
 **Licence.** DreamRack is AGPL-3.0-only and GXW is AGPL v3, so the combined work is AGPL-3.0. No
 change to either project's terms and nothing to decide.
 
-## 6. Open questions
+## 7. Open questions
 
 - **Which CV outs**, when they come: an object's position, a named parameter, a stream sampled off
   the canvas? Worth answering with a patch in hand rather than in advance.

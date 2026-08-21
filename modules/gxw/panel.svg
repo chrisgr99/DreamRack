@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="utf-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="45.72mm" height="128.5mm" viewBox="3.9 0 45.72 128.5" font-family="Arial Narrow, Helvetica, Arial, sans-serif">
+<defs>
+  <linearGradient id="metalStripV" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#f8f8f8"/><stop offset="0.45" stop-color="#d8dbdd"/><stop offset="0.7" stop-color="#f4f4f4"/><stop offset="1" stop-color="#9a9a9a"/></linearGradient>
+  <linearGradient id="metalStripH" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f8f8f8"/><stop offset="0.45" stop-color="#d8dbdd"/><stop offset="0.7" stop-color="#f4f4f4"/><stop offset="1" stop-color="#9a9a9a"/></linearGradient>
+  <radialGradient id="metalDisc"><stop offset="0" stop-color="#f8f8f8"/><stop offset="0.45" stop-color="#d8dbdd"/><stop offset="0.7" stop-color="#f4f4f4"/><stop offset="1" stop-color="#9a9a9a"/></radialGradient>
+  <radialGradient id="blueRing"><stop offset="0" stop-color="#1688cc"/><stop offset="0.55" stop-color="#006da8"/><stop offset="1" stop-color="#003d62"/></radialGradient>
+  <radialGradient id="orangeRing"><stop offset="0" stop-color="#f2953a"/><stop offset="0.55" stop-color="#d06b00"/><stop offset="1" stop-color="#6f3800"/></radialGradient>
+  <radialGradient id="greenRing"><stop offset="0" stop-color="#3ec06a"/><stop offset="0.55" stop-color="#149146"/><stop offset="1" stop-color="#0a4a24"/></radialGradient>
+  <radialGradient id="purpleRing"><stop offset="0" stop-color="#a07ae0"/><stop offset="0.55" stop-color="#7548c0"/><stop offset="1" stop-color="#3d2268"/></radialGradient>
+  <radialGradient id="blueDial"><stop offset="0" stop-color="#1d79b7"/><stop offset="0.6" stop-color="#00639a"/><stop offset="1" stop-color="#00456e"/></radialGradient>
+  <radialGradient id="knobCap"><stop offset="0" stop-color="#f8f8f8"/><stop offset="0.4" stop-color="#bfc3c5"/><stop offset="0.62" stop-color="#f4f4f4"/><stop offset="1" stop-color="#777777"/></radialGradient>
+  <radialGradient id="redLed"><stop offset="0" stop-color="#ff4a4a"/><stop offset="0.55" stop-color="#d00000"/><stop offset="1" stop-color="#650000"/></radialGradient>
+  <radialGradient id="greenLed"><stop offset="0" stop-color="#5cf07a"/><stop offset="0.55" stop-color="#12a531"/><stop offset="1" stop-color="#054d15"/></radialGradient>
+  <radialGradient id="orangeLed"><stop offset="0" stop-color="#ffbf5c"/><stop offset="0.55" stop-color="#ef7d00"/><stop offset="1" stop-color="#7a3a00"/></radialGradient>
+</defs>
+  <g transform="translate(3.9 7.0994)">
+  <rect x="0" y="0" width="45.72" height="113.5912" rx="2.5" fill="#cfcfcf"/>
+  <rect x="0.5" y="0.5" width="44.72" height="112.5912" rx="2.2" fill="none" stroke="#7d7d7d" stroke-width="0.5"/>
+  <g data-wcoast-param="open"><circle cx="22.86" cy="18" r="6.10" fill="url(#metalDisc)" pointer-events="none" data-wcoast-role="button-metal"/><circle cx="22.86" cy="18" r="5.4" fill="#24468a" stroke="#4a4a4a" stroke-width="0.2366" data-wcoast-role="step-indicator" data-wcoast-step="on" data-wcoast-off="#24468a"/><circle cx="21.35" cy="16.49" r="1.62" fill="#ffb4b4" opacity="0.35" data-wcoast-role="led-gloss" pointer-events="none"/>
+      <text x="22.86" y="29.39632" font-size="6.106" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="open">OPEN</text></g>
+  <g data-wcoast-param="run"><circle cx="22.86" cy="39" r="6.10" fill="url(#metalDisc)" pointer-events="none" data-wcoast-role="button-metal"/><circle cx="22.86" cy="39" r="5.4" fill="#505055" stroke="#4a4a4a" stroke-width="0.2366" data-wcoast-role="step-indicator" data-wcoast-step="on"/><circle cx="21.35" cy="37.49" r="1.62" fill="#ffb4b4" opacity="0" data-wcoast-role="led-gloss" pointer-events="none"/>
+      <text x="22.86" y="50.39632" font-size="6.106" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="run">RUN</text></g>
+  <text x="22.86" y="57.94" font-size="3.306" font-weight="700" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">GEOMETRIC</text>
+  <text x="22.86" y="62.44" font-size="3.306" font-weight="700" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">SEQUENCER</text>
+  <g data-wcoast-port="noteOut1" data-wcoast-cx="7.859999999999999" data-wcoast-cy="76">
+    <circle cx="7.859999999999999" cy="76" r="3" fill="#8a8a8a" stroke="#000000" stroke-width="0.3"/>
+    <circle cx="7.859999999999999" cy="76" r="1.6" fill="#000000"/>
+  </g>
+  <text x="7.859999999999999" y="83.12432" font-size="3.506" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="noteOut1">V1</text>
+  <g data-wcoast-port="noteOut2" data-wcoast-cx="17.86" data-wcoast-cy="76">
+    <circle cx="17.86" cy="76" r="3" fill="#8a8a8a" stroke="#000000" stroke-width="0.3"/>
+    <circle cx="17.86" cy="76" r="1.6" fill="#000000"/>
+  </g>
+  <text x="17.86" y="83.12432" font-size="3.506" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="noteOut2">V2</text>
+  <g data-wcoast-port="noteOut3" data-wcoast-cx="27.86" data-wcoast-cy="76">
+    <circle cx="27.86" cy="76" r="3" fill="#8a8a8a" stroke="#000000" stroke-width="0.3"/>
+    <circle cx="27.86" cy="76" r="1.6" fill="#000000"/>
+  </g>
+  <text x="27.86" y="83.12432" font-size="3.506" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="noteOut3">V3</text>
+  <g data-wcoast-port="noteOut4" data-wcoast-cx="37.86" data-wcoast-cy="76">
+    <circle cx="37.86" cy="76" r="3" fill="#8a8a8a" stroke="#000000" stroke-width="0.3"/>
+    <circle cx="37.86" cy="76" r="1.6" fill="#000000"/>
+  </g>
+  <text x="37.86" y="83.12432" font-size="3.506" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="noteOut4">V4</text>
+  <g data-wcoast-port="noteOut5" data-wcoast-cx="7.859999999999999" data-wcoast-cy="89">
+    <circle cx="7.859999999999999" cy="89" r="3" fill="#8a8a8a" stroke="#000000" stroke-width="0.3"/>
+    <circle cx="7.859999999999999" cy="89" r="1.6" fill="#000000"/>
+  </g>
+  <text x="7.859999999999999" y="96.12432" font-size="3.506" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="noteOut5">V5</text>
+  <g data-wcoast-port="noteOut6" data-wcoast-cx="17.86" data-wcoast-cy="89">
+    <circle cx="17.86" cy="89" r="3" fill="#8a8a8a" stroke="#000000" stroke-width="0.3"/>
+    <circle cx="17.86" cy="89" r="1.6" fill="#000000"/>
+  </g>
+  <text x="17.86" y="96.12432" font-size="3.506" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="noteOut6">V6</text>
+  <g data-wcoast-port="noteOut7" data-wcoast-cx="27.86" data-wcoast-cy="89">
+    <circle cx="27.86" cy="89" r="3" fill="#8a8a8a" stroke="#000000" stroke-width="0.3"/>
+    <circle cx="27.86" cy="89" r="1.6" fill="#000000"/>
+  </g>
+  <text x="27.86" y="96.12432" font-size="3.506" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="noteOut7">V7</text>
+  <g data-wcoast-port="noteOut8" data-wcoast-cx="37.86" data-wcoast-cy="89">
+    <circle cx="37.86" cy="89" r="3" fill="#8a8a8a" stroke="#000000" stroke-width="0.3"/>
+    <circle cx="37.86" cy="89" r="1.6" fill="#000000"/>
+  </g>
+  <text x="37.86" y="96.12432" font-size="3.506" font-weight="700" font-style="italic" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="noteOut8">V8</text>
+  <g data-wcoast-port="audioOutL" data-wcoast-cx="17.36" data-wcoast-cy="101">
+    <circle cx="17.36" cy="101" r="3" fill="#8a8a8a" stroke="#000000" stroke-width="0.3"/>
+    <circle cx="17.36" cy="101" r="1.6" fill="#000000"/>
+  </g>
+  <text x="12.76" y="102.33416" font-size="3.706" font-weight="700" font-style="italic" fill="#163a69" text-anchor="end" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="audioOutL">L</text>
+  <g data-wcoast-port="audioOutR" data-wcoast-cx="28.36" data-wcoast-cy="101">
+    <circle cx="28.36" cy="101" r="3" fill="#8a8a8a" stroke="#000000" stroke-width="0.3"/>
+    <circle cx="28.36" cy="101" r="1.6" fill="#000000"/>
+  </g>
+  <text x="32.96" y="102.33416" font-size="3.706" font-weight="700" font-style="italic" fill="#163a69" text-anchor="start" font-family="Arial Narrow, Helvetica, Arial, sans-serif" data-wcoast-label-for="audioOutR">R</text>
+  <text x="22.86" y="108.9" font-size="3.206" font-weight="700" fill="#163a69" text-anchor="middle" font-family="Arial Narrow, Helvetica, Arial, sans-serif">SUPERDOUGH</text>
+  </g>
+</svg>
