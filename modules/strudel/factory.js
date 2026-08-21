@@ -11,15 +11,12 @@
 'use strict';
 
 import { toNote, durationOf } from './adapter.js';
+// ONE PLACE STARTS SUPERDOUGH, and it is no longer here — GXW needs the same one. See
+// host/superdough.js.
+import { loadSuperdough } from '../../host/superdough.js';
 
 const PROCESSOR = 'wcoast-strudel';
 const VENDOR = '../../vendor/strudel-dreamrack.mjs';
-// Strudel's OWN sound engine, loaded only if a pattern asks for one of its voices — 113kB that a
-// patch playing nothing but rack voices never pays for. See vendor/README.md.
-const SUPERDOUGH = '../../vendor/superdough-dreamrack.mjs';
-// A kit beside the bundle, when one has been dropped there: what makes the desktop build play a drum
-// with no network. Absent, `samples()` in a pattern fetches a pack as it does in Strudel itself.
-const LOCAL_SAMPLES = '../../vendor/samples/';
 
 let strudelPromise = null;      // the module namespace, once
 function loadStrudel() {
@@ -36,42 +33,6 @@ function loadStrudel() {
 // part that names a SOUND is Strudel's; anything else is a bare note, which is what a rack voice has
 // always played, so it keeps going there. That last rule is what lets every pattern written before
 // this go on working unchanged.
-let doughPromise = null;
-function loadSuperdough(ctx) {
-  if (!doughPromise) {
-    doughPromise = import(SUPERDOUGH).then(async (sd) => {
-      if (sd.setAudioContext) sd.setAudioContext(ctx);
-      if (sd.initAudio) { try { await sd.initAudio(); } catch (_e) { /* the rack owns resuming */ } }
-      // ITS SYNTHS HAVE TO BE REGISTERED. Without this, `s("sawtooth")` reports that the sound was
-      // not found — the first thing anyone meets, and it looks like a broken bundle rather than a
-      // missing line.
-      try { sd.registerSynthSounds && sd.registerSynthSounds(); } catch (_e) { /* older build */ }
-      try { sd.registerZZFXSounds && sd.registerZZFXSounds(); } catch (_e) { /* not in this build */ }
-      // A PATTERN MAY LOAD ITS OWN SAMPLES, as it would in Strudel — `samples('github:...')` — so the
-      // loader is put where a pattern can reach it rather than kept inside this module.
-      for (const name of ['samples', 'registerSound', 'registerSynthSounds', 'aliasBank']) {
-        if (typeof sd[name] === 'function') globalThis[name] = sd[name].bind(sd);
-      }
-      // OFF THE SPEAKERS AND ONTO THE JACK. superdough builds its own path to the destination on
-      // first use; this takes the last node of it, disconnects that path, and hands its signal to the
-      // rack instead. Done after init, because the output stage does not exist until then.
-      try {
-        const ctl = sd.getSuperdoughAudioController && sd.getSuperdoughAudioController();
-        const g = ctl && ctl.output && ctl.output.destinationGain;
-        if (g) { try { g.disconnect(); } catch (_e) { /* not connected yet */ } g.connect(doughOut); }
-        else console.warn('[strudel] superdough output stage not found; its voices go straight out');
-      } catch (_e) { /* older build: leave it as it is */ }
-      // A kit shipped beside the bundle, if there is one. Missing is the normal case in the browser.
-      try {
-        const url = new URL(LOCAL_SAMPLES + 'strudel.json', import.meta.url).href;
-        const res = await fetch(url);
-        if (res.ok) await sd.samples(await res.json(), new URL(LOCAL_SAMPLES, import.meta.url).href);
-      } catch (_e) { /* no local kit; patterns can still fetch their own */ }
-      return sd;
-    }).catch((e) => { doughPromise = null; throw e; });
-  }
-  return doughPromise;
-}
 
 export function create(ctx, _services) {
   const node = new AudioWorkletNode(ctx, PROCESSOR, {
@@ -115,7 +76,7 @@ export function create(ctx, _services) {
     // Strudel's; a bare note is the rack's, as it always has been.
     const named = value.rack !== undefined || value.orbit !== undefined;
     if (!named && value.s !== undefined) {
-      loadSuperdough(ctx).then((sd) => {
+      loadSuperdough(ctx, doughOut).then((sd) => {
         // superdough takes the event, the time to sound at, and how long — the same three things the
         // note bundle carries, in its own units.
         try { sd.superdough(value, t, durationOf(value, hap.whole ? Number(hap.whole.end) - Number(hap.whole.begin) : 0, cps)); }
@@ -158,7 +119,7 @@ export function create(ctx, _services) {
     // the rack, which is a silence that looks nothing like a missing drum kit.
     for (const name of ['samples', 'registerSound', 'registerSynthSounds', 'aliasBank', 'initAudio']) {
       if (typeof globalThis[name] === 'function') continue;
-      globalThis[name] = (...args) => loadSuperdough(ctx).then((sd) => (sd[name] ? sd[name](...args) : undefined));
+      globalThis[name] = (...args) => loadSuperdough(ctx, doughOut).then((sd) => (sd[name] ? sd[name](...args) : undefined));
     }
     // Our own repl, for playing without the editor open. Its output is ours and its clock is the
     // rack's, so an event's deadline is already in the right domain.
