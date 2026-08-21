@@ -50,17 +50,19 @@ const params = [
   // OPEN takes the window and gives it to GXW, with GXW's own in-page menu. Closing it returns to the
   // rack. A momentary press rather than a state: the window's openness belongs to the window, not to
   // the patch, so reopening a patch does not reopen the editor over the top of the rack.
+  // TRANSIENT: state, not a setting. Whether the window is open belongs to this session, not to the
+  // patch — reopening a piece should not throw GXW over the rack before you have looked at it.
   { id: 'open', name: 'Open', section: 'transport', curve: 'stepped', default: 'off', modulatable: false,
-    momentary: true, steps: [{ value: 'off' }, { value: 'on' }] },
+    transient: true, steps: [{ value: 'off' }, { value: 'on' }] },
 
   // The score GXW is holding, saved with the patch so a piece reopens as it was left. Text, like the
   // Strudel module's pattern: what it holds is GXW's own bundle, and only GXW reads it.
   { id: 'score', name: 'Score', section: 'transport', curve: 'text', default: '' },
 
-  // What the module says about itself, for the faceplate lamp and the mirror. Not saved as anything
-  // meaningful — it is a report, recomputed at load.
+  // What the module says about itself, for the faceplate lamp and the mirror. Transient for the same
+  // reason: it is a report about right now, and saving it would restore a claim rather than a fact.
   { id: 'status', name: 'Status', section: 'transport', curve: 'stepped', default: 'idle', modulatable: false,
-    steps: [{ value: 'idle' }, { value: 'loading' }, { value: 'ok' }, { value: 'error' }] },
+    transient: true, steps: [{ value: 'idle' }, { value: 'loading' }, { value: 'ok' }, { value: 'error' }] },
 ];
 
 export default {

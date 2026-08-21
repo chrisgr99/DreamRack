@@ -16,8 +16,16 @@ import { loadSuperdough } from '../../host/superdough.js';
 
 const GXW_ENTRY = 'gxw://project/main.js';
 
-// One at a time, and one only. Superdough is a singleton, and so is a page: two GXWs would be two
-// applications fighting over one window and one output stage.
+// ONE GXW PER PAGE, enforced here rather than hoped for. GXW is an application — a canvas, a render
+// loop, resize observers, a transport — and two of them in one document do not merely duplicate: they
+// peg the renderer between them. A patch carrying a GXW module, restored while another is already
+// mounted, is exactly how that happens, and the page stops answering with no clue as to why.
+//
+// So the second one refuses and says so. The rack's group-singleton rule (only one of Strudel or GXW
+// on a patch) will make this unreachable in normal use; this is the backstop for the case the rule
+// does not cover, which is a module added while another is mid-mount.
+let mounted = 0;
+
 let loadPromise = null;
 function loadGXW() {
   if (!loadPromise) {
@@ -64,16 +72,32 @@ export function create(ctx, _services) {
   function mount() {
     if (mountPromise) return mountPromise;
     say('loading');
+    if (mounted > 0) {
+      mountPromise = null;
+      lastError = 'another GXW is already open in this window; only one can run at a time';
+      say('error');
+      console.warn('[gxw] ' + lastError);
+      return Promise.reject(new Error(lastError));
+    }
+    mounted++;
     mountPromise = loadGXW().then(async (mod) => {
       if (typeof mod.createGXW !== 'function') throw new Error('GXW exports no createGXW');
       pane = document.createElement('div');
       pane.className = 'gxw-pane';
-      // OFF-SCREEN UNTIL OPENED, not unmounted. GXW keeps running while its window is shut — that is
-      // what lets RUN on the faceplate work with the window never open — so it needs somewhere real
-      // to live and a real size to lay itself out into. Hidden by moving it, not by `display: none`,
-      // which would collapse its canvas to nothing and make reopening a re-layout every time.
-      pane.style.cssText = 'position:fixed;inset:0;z-index:1500;background:#111;visibility:hidden;'
-        + 'pointer-events:none';
+      // OFF-SCREEN UNTIL OPENED, and off-screen means MOVED — not hidden, not collapsed. GXW keeps
+      // running while its window is shut, which is what lets RUN work with the window never open, so
+      // it needs somewhere real to live at a real size.
+      //
+      // `visibility: hidden` was not that. A hidden element still has a box, but revealing one is a
+      // layout change, and GXW answers a layout change by resizing its canvas — which is itself a
+      // layout change. The two chased each other: the renderer filled with "ResizeObserver loop
+      // completed with undelivered notifications" and stopped answering altogether, so hard that the
+      // debugger could not interrupt it. Mounting was never the problem; REVEALING was.
+      //
+      // Translating it costs no layout at all: the box keeps its size and position in the flow, and
+      // only the compositor moves. Nothing resizes, so nothing observes a resize.
+      pane.style.cssText = 'position:fixed;inset:0;z-index:1500;background:#111;'
+        + 'transform:translateX(-200vw);pointer-events:none';
       document.body.appendChild(pane);
       gxw = await mod.createGXW({
         element: pane,
@@ -81,12 +105,17 @@ export function create(ctx, _services) {
         output: doughOut,         // ...and its sound arrives at this module's jacks
         loadStrudel: engineForGXW,
       });
+      // AFTER GXW HAS PAINTED, not before. createGXW fills the element with GXW's own furniture by
+      // setting innerHTML, which discards anything already inside it — the close bar included. It was
+      // being added and then silently swept away.
+      pane.appendChild(closeButton());
       lastError = null;
       say('ok');
       if (score) applyScore(score);
       return gxw;
     }).catch((e) => {
       mountPromise = null;
+      mounted = Math.max(0, mounted - 1);
       lastError = (e && e.message) || String(e);
       say('error');
       console.warn('[gxw] ' + lastError);
@@ -105,12 +134,46 @@ export function create(ctx, _services) {
     }
   }
 
+  // A WAY BACK. Opening was the whole gesture and there was nothing to undo it — GXW took the window
+  // and kept it. It gets a strip of its own rather than borrowing GXW's chrome, because GXW's menu is
+  // GXW's and a rack control does not belong inside it.
+  function closeButton() {
+    const bar = document.createElement('div');
+    bar.className = 'gxw-pane-bar';
+    bar.style.cssText = 'position:absolute;top:0;right:0;z-index:10;display:flex;align-items:center;'
+      + 'gap:8px;padding:4px 8px;font:12px/1 -apple-system,system-ui,sans-serif;color:#c9c9d0';
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.textContent = 'Back to the rack';
+    btn.style.cssText = 'font:12px/1 -apple-system,system-ui,sans-serif;padding:5px 10px;'
+      + 'border-radius:5px;border:1px solid #6a6a72;background:#17171b;color:#c9c9d0;cursor:pointer';
+    btn.addEventListener('click', () => setOpen(false));
+    bar.appendChild(btn);
+    return bar;
+  }
+
+  // ESCAPE CLOSES IT TOO, which is what a hand reaches for before it finds a button. Bound while the
+  // window is open and unbound when it is not, so it cannot swallow an Escape meant for the rack.
+  const onKey = (e) => { if (e.key === 'Escape') { e.stopPropagation(); setOpen(false); } };
+
+  // Two frames and a beat: long enough for GXW's own layout — its dividers, its editor — to reach a
+  // size it agrees with, so that showing it is not also the first time anything measures it.
+  const settled = () => new Promise((resolve) => {
+    requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(resolve, 350)));
+  });
+
   function setOpen(open) {
     if (!pane) return;
-    pane.style.visibility = open ? 'visible' : 'hidden';
+    // See the pane's own comment: moved, never hidden or collapsed.
+    pane.style.transform = open ? 'none' : 'translateX(-200vw)';
     pane.style.pointerEvents = open ? 'auto' : 'none';
     // The rack's own chrome stays out of the way while GXW has the window, and comes back after.
     document.body.classList.toggle('gxw-open', open);
+    if (open) window.addEventListener('keydown', onKey, true);
+    else window.removeEventListener('keydown', onKey, true);
+    // The faceplate's lamp follows the window, so a patch that was reopened does not claim to be
+    // showing something it is not.
+    if (report) report('open', open ? 'on' : 'off');
   }
 
   return {
@@ -134,17 +197,32 @@ export function create(ctx, _services) {
       // start the piece again from the top.
       if (id === 'run') {
         running = value === 'on';
+        // ONLY 'ON' BRINGS IT UP. This mounted on every application of the param, including the 'off'
+        // the rack applies to every default when a module is added or a patch is loaded — so merely
+        // having GXW on a patch booted the whole application, which is the opposite of the laziness
+        // the mount was written for. A module that is already up still gets its pause.
+        if (!running) {
+          if (gxw && gxw.transport) gxw.transport.pause();
+          return;
+        }
         // MOUNTING ON FIRST USE. Pressing RUN is what a patch does to start the sequence with the
         // window never open, so it has to be able to bring GXW up by itself.
         mount().then(() => {
-          if (!gxw || !gxw.transport) return;
-          if (running) gxw.transport.play(); else gxw.transport.pause();
+          if (gxw && gxw.transport) gxw.transport.play();
         }).catch(() => { /* already reported through status */ });
         return;
       }
       if (id === 'open') {
-        if (value !== 'on') return;         // momentary: only the press means anything
-        mount().then(() => setOpen(true)).catch(() => { /* already reported */ });
+        // No guard against a patch load is needed: `open` is declared TRANSIENT, so it is never
+        // written into a patch and never applied by one. See the descriptor.
+        if (value !== 'on') { setOpen(false); return; }
+        // REVEALED ONLY ONCE IT HAS SETTLED. Showing GXW the instant createGXW resolved pegged the
+        // renderer: its editor is a CodeMirror view whose scroller is still 0x0 at that moment, and
+        // measuring one as it becomes visible sets off a resize loop the page never gets out of —
+        // far enough under that the debugger cannot interrupt it. Mounting was never the problem and
+        // neither was the reveal itself; the two together, with no frame in between, were.
+        mount().then(settled).then(() => setOpen(true))
+          .catch(() => { /* already reported through status */ });
         return;
       }
     },
@@ -153,9 +231,11 @@ export function create(ctx, _services) {
 
     dispose: () => {
       try { if (gxw && typeof gxw.dispose === 'function') gxw.dispose(); } catch (_e) { /* going anyway */ }
+      try { window.removeEventListener('keydown', onKey, true); } catch (_e) { /* never bound */ }
       try { if (pane) pane.remove(); } catch (_e) { /* already gone */ }
       document.body.classList.remove('gxw-open');
       try { doughOut.disconnect(); doughSplit.disconnect(); doughL.disconnect(); doughR.disconnect(); } catch (_e) { /* gone */ }
+      if (mountPromise) mounted = Math.max(0, mounted - 1);
       gxw = null; pane = null; mountPromise = null;
     },
 
