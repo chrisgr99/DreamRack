@@ -9731,11 +9731,22 @@ export class Rack {
     const want = GROUP_SINGLETON[descriptorId];
     if (!want) return null;
     for (const rec of this.records.values()) {
-      if (rec === exceptRec || rec.descriptorId === descriptorId) continue;
+      if (rec === exceptRec) continue;
       const has = GROUP_SINGLETON[rec.descriptorId];
       if (!has || has.group !== want.group) continue;
-      return `This patch already has ${has.name}. ${has.name} and ${want.name} share one sound engine, `
-        + 'so a patch has one of them.';
+      // TWO OF THE SAME IS THE SAME PROBLEM, and it used to be left to other rules — which did not
+      // catch it. A second GXW cannot run: the first holds the one superdough and the one window, so
+      // the second sits there refusing to mount, and pressing OPEN on it does nothing at all while
+      // its twin works perfectly. Better to refuse the module than to add one that cannot work.
+      //
+      // AND IT SAYS WHERE. "This patch already has one" is no help at all when the one it means is on
+      // a page you are not looking at — which is exactly how it reads when a module was added to Audio
+      // 1 while you are working on Audio 2. The page it is on is the thing you actually need.
+      const where = this._pageName(this.pageOf(rec));
+      return has.name === want.name
+        ? `This patch already has ${want.name}, on ${where}. It can only have one.`
+        : `This patch already has ${has.name}, on ${where}. ${has.name} and ${want.name} share one `
+          + 'sound engine, so a patch has one of them.';
     }
     return null;
   }

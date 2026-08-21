@@ -12,7 +12,7 @@
 // the file does not. See design/drack.md §4.
 'use strict';
 
-import { loadSuperdough } from '../../host/superdough.js';
+import { loadEngine } from '../../host/superdough.js';
 import { midiToVolts } from '../strudel/adapter.js';
 
 // THE NOTE CABLE'S WORKLET, shared with the Strudel module. A note travels a note cable as a message
@@ -83,7 +83,11 @@ export function create(ctx, _services) {
   // one, with its own output stage and its own registered sounds, neither aware of the other.
   //
   // Pointed at this module's own output as it is handed over, so its voices arrive at the jacks.
-  const engineForGXW = async () => loadSuperdough(ctx, doughOut);
+  // THE WHOLE ENGINE, not just the voices. GXW's runtime skips initStrudel for a host-supplied engine
+  // and then waits for the pattern globals to appear; handed superdough alone it waited for something
+  // superdough never registers, timed out, and never reached "loaded" — so nothing it played reached
+  // anything. loadEngine starts the pattern scope AND superdough, pointed at this module's own jacks.
+  const engineForGXW = async () => loadEngine(ctx, doughOut);
 
   // A NOTE FROM GXW, ONTO THE CABLE. GXW hands over what it knows — which jack, when, how long, what
   // pitch — and this puts it in the rack's units: volts rather than MIDI, with 0V at middle C, and an

@@ -20,6 +20,8 @@
 
 // Strudel's OWN sound engine. See vendor/README.md.
 const SUPERDOUGH = '../vendor/superdough-dreamrack.mjs';
+// The pattern language, whose evalScope is what puts `note`, `s` and the rest on globalThis.
+const STRUDEL = '../vendor/strudel-dreamrack.mjs';
 // A kit beside the bundle, when one has been dropped there: what makes the desktop build play a drum
 // with no network. Absent, `samples()` in a pattern fetches a pack as it does in Strudel itself.
 const LOCAL_SAMPLES = '../vendor/samples/';
@@ -78,4 +80,47 @@ export function loadSuperdough(ctx, out) {
     }).catch((e) => { doughPromise = null; throw e; });
   }
   return doughPromise;
+}
+
+
+// ---- THE WHOLE ENGINE, not just its voices --------------------------------------------------------
+//
+// loadSuperdough above starts the SOUND. That is all the Strudel module needs from here, because it
+// loads the pattern language itself. GXW needs both — and asking it for only half is what made it
+// silent inside the rack: its runtime skips initStrudel when a host supplies an engine (calling it
+// would set up a second output stage and undo the host's routing), then waits for `window.note` to
+// appear, which superdough alone never registers. The wait timed out, the runtime never reached
+// "loaded", and nothing GXW played reached anything at all.
+//
+// So a host that is handing an engine to something that expects @strudel/web hands it a whole one:
+// the pattern scope registered, superdough started and pointed at the caller's node, and the two
+// returned together under the names that package uses.
+let enginePromise = null;
+
+export function loadEngine(ctx, out) {
+  if (enginePromise) return enginePromise.then((eng) => { pointOutputAt(eng, out); return eng; });
+  enginePromise = (async () => {
+    const S = await import(STRUDEL);
+    // THE RACK'S OWN LANES, AND `rack`, as real controls. Without these a pattern using one dies with
+    // "timbre is not a function" — and the same registration serves whatever asks for the scope.
+    try { if (S.core && S.core.createParams) S.core.createParams('timbre', 'press', 'rack'); } catch (_e) { /* older build */ }
+    // THE GLOBALS. `note`, `s`, `stack` and the rest have to exist before any pattern is evaluated —
+    // and, for GXW, before its runtime will admit the engine started at all.
+    await S.evalScope(S.core, S.mini);
+    const sd = await loadSuperdough(ctx, out);
+    // ONE OBJECT WEARING @strudel/web's NAMES. The caller reads `superdough` off it and looks for
+    // `initStrudel`; the absence of initStrudel is deliberate and its own signal — this engine is
+    // already started, and starting it again is exactly what must not happen.
+    const engine = Object.create(null);
+    for (const k of Object.keys(S)) { try { engine[k] = S[k]; } catch (_e) { /* a getter that objects */ } }
+    engine.superdough = sd.superdough;
+    engine.getSuperdoughAudioController = sd.getSuperdoughAudioController;
+    engine.setAudioContext = sd.setAudioContext;
+    engine.samples = sd.samples;
+    engine.registerSound = sd.registerSound;
+    engine.registerSynthSounds = sd.registerSynthSounds;
+    engine.aliasBank = sd.aliasBank;
+    return engine;
+  })().catch((e) => { enginePromise = null; throw e; });
+  return enginePromise;
 }
