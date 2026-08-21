@@ -731,6 +731,15 @@ function createWindow() {
   });
   mainWindow.webContents.on('did-finish-load', () => {
     mainWindow.webContents.setVisualZoomLevelLimits(1, 1);
+    // ...AND THE ZOOM LEVEL, which is a different thing and was the one that drifted. The limits
+    // above stop a trackpad PINCH; they do nothing about Ctrl-scroll over the window, which changes
+    // the page zoom and which Chromium then remembers per origin. Nothing here reset it and the app
+    // binds no zoom shortcuts, so a stray Ctrl-scroll left the whole rack magnified with no way back
+    // — and everything drawn in the page with it, including a GXW module's whole interface.
+    //
+    // The rack is drawn in millimetres and has its own zoom for the work; page zoom is not a control
+    // anyone here asked for. So it starts at 1 every launch.
+    mainWindow.webContents.setZoomFactor(1);
   });
 
   // Guard the close if the renderer has unsaved changes.
