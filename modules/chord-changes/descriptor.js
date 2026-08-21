@@ -62,7 +62,7 @@ export default {
   id: 'wcoast.chord-changes',
   name: 'Chord Changes',
   abbreviation: 'CHG',
-  category: 'sequencer',
+  category: 'harmony',
   scope: 'shared',
   hp: 14,
   worklets: ['modules/chord-changes/chord-changes-processor.js'],

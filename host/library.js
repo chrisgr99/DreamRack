@@ -27,6 +27,14 @@ const CATEGORIES = [
   ['processor', 'Processors'],
   ['modulation', 'Modulation'],
   ['sequencing', 'Sequencing'],
+  // CHANCE IS NOT MODULATION. A random source and an envelope both move a value, but you reach for
+  // them for opposite reasons — one to shape something the same way each time, the other to make it
+  // different. Marbles was declaring `random` against a list that had no such group and being filed
+  // under Utility, which is where a module goes when nothing knows what it is.
+  ['random', 'Chance'],
+  // Harmony is what a chart, a progression or a set of changes belongs to: material that decides
+  // WHICH notes, rather than when they happen (Sequencing) or how they sound (Sound sources).
+  ['harmony', 'Harmony'],
   ['utility', 'Utility'],
   ['video', 'Video'],
 ];
@@ -154,8 +162,6 @@ export function createLibrary(opts = {}) {
   const isDark = opts.isDark || (() => true);
 
   let win = null, grid = null, search = null, cards = [];
-  const RETURN_MS = 2000;   // long enough to see what you placed, short enough not to feel stuck
-  let backTimer = null;
   let pref = { size: DEFAULT_SIZE, off: [], x: null, y: null, w: null, h: null, plain: false };
   try { Object.assign(pref, JSON.parse(localStorage.getItem(PREF_KEY) || '{}')); } catch (_e) { /* no storage */ }
   const savePref = () => { try { localStorage.setItem(PREF_KEY, JSON.stringify(pref)); } catch (_e) { /* no storage */ } };
@@ -286,14 +292,16 @@ export function createLibrary(opts = {}) {
         const at = { atX: ev.clientX, atY: ev.clientY,
           offFrac: { x: clamp01((ev.clientX - r.left) / (r.width || 1)), y: clamp01((ev.clientY - r.top) / (r.height || 1)) } };
         hide();
-        // THE LIBRARY WAITS BEFORE COMING BACK. A module that lands and is instantly covered by the
-        // window you chose it from is a placement you never got to see. Only after a real drop,
-        // though: cancelling placed nothing, so there is nothing to look at and it returns at once.
-        // Any later show/hide cancels the pending return, so it can never ambush you.
+        // CHOOSING CLOSES IT, AND IT STAYS CLOSED. It used to come back a moment after a module was
+        // placed, on the theory that you might want another. In use that is wrong twice over: picking
+        // one module is the common case, so the window returns unasked and has to be dismissed again;
+        // and it returns over the rack just as you are looking at what you placed. Opening it again is
+        // one click, which is cheaper than closing it every time you did not mean it.
+        //
+        // A CANCELLED PICK IS DIFFERENT. Nothing was placed, so there is nothing to look at and
+        // nothing to get out of the way of — the window you were choosing from comes straight back.
         onChoose(t.descriptorId, at, (placed) => {
-          clearTimeout(backTimer);
-          if (!placed) { show(); return; }
-          backTimer = setTimeout(() => { backTimer = null; show(); }, RETURN_MS);
+          if (!placed) show();
         });
       });
       g.appendChild(card);
@@ -426,7 +434,6 @@ export function createLibrary(opts = {}) {
   }
 
   function show() {
-    clearTimeout(backTimer); backTimer = null;
     build();
     theme();
     applySize();
@@ -450,7 +457,7 @@ export function createLibrary(opts = {}) {
     void r;
   }
 
-  function hide() { clearTimeout(backTimer); backTimer = null; if (win) win.classList.remove('open'); }
+  function hide() { if (win) win.classList.remove('open'); }
   const isOpen = () => !!(win && win.classList.contains('open'));
 
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && isOpen()) { e.stopPropagation(); hide(); } }, true);

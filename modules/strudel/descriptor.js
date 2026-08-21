@@ -77,7 +77,7 @@ export default {
   id: 'wcoast.strudel',
   name: 'Strudel',
   abbreviation: 'STR',
-  category: 'sequencer',
+  category: 'sequencing',
   scope: 'shared',
   // One engine plays the tab; it is never duplicated per note, so it carries no per-note lamp.
   sharedFixed: true,
