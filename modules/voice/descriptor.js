@@ -43,7 +43,7 @@ export default {
   id: 'wcoast.voice',
   name: 'Voice In',
   abbreviation: 'VCI',
-  category: 'utility',
+  category: 'sequencing',
   scope: 'shared',            // it is the page's boundary, not one voice's worth of it
   hp: 8,
   worklets: ['modules/voice/voice-processor.js'],

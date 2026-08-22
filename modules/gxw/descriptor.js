@@ -62,8 +62,10 @@ const params = [
   { id: 'open', name: 'Open', section: 'transport', curve: 'stepped', default: 'off', modulatable: false,
     momentary: true, transient: true, steps: [{ value: 'off' }, { value: 'on' }] },
 
-  // The score GXW is holding, saved with the patch so a piece reopens as it was left. Text, like the
-  // Strudel module's pattern: what it holds is GXW's own bundle, and only GXW reads it.
+  // WHICH SCORE, as a path into the shared library — not a copy of the score itself. Both builds read
+  // and write the same files on disk, so a patch that carried the content would be a second and
+  // staler copy of something that already has a home, and the two would disagree about which was
+  // real. The patch says which piece; the piece lives where pieces live.
   { id: 'score', name: 'Score', section: 'transport', curve: 'text', default: '' },
 
   // What the module says about itself, for the faceplate lamp and the mirror. Transient for the same

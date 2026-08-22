@@ -69,11 +69,25 @@ export function create(ctx, _services) {
   doughSplit.connect(doughL, 0);
   doughSplit.connect(doughR, 1);
 
+  const state = {};           // the pane watcher lives here so dispose can stop it
   let gxw = null;             // the mounted application, once it is up
   let pane = null;            // the full-window element it draws into
   let report = null;          // how the module tells the rack what it is doing
   let lastError = null;
   let running = false;
+  let drivingTransport = false;   // true while the module is the one moving GXW's transport
+  let driveTimer = 0;
+  // HELD ACROSS THE EVENT, not just the call. GXW emits its transport change asynchronously, so a
+  // flag cleared the moment play() returns is already false when the echo arrives — and the echo then
+  // reports the old state back over the one the rack just set, which is why RUN would not switch off.
+  // A short window covers the round trip without leaving the guard up long enough to swallow a real
+  // change made inside GXW.
+  const drive = (fn) => {
+    drivingTransport = true;
+    clearTimeout(driveTimer);
+    try { fn(); } catch (_e) { /* GXW not up yet */ }
+    driveTimer = setTimeout(() => { drivingTransport = false; }, 400);
+  };
   let score = '';
 
   const say = (status) => { if (report) report('status', status); };
@@ -102,10 +116,17 @@ export function create(ctx, _services) {
     const handle = handlePrefix + ':' + (seq++);
     const duration = Math.max(0.01, Number(n.duration) || 0.25);
     const level = typeof n.gain === 'number' ? Math.max(0, Math.min(1, n.gain)) : 0.8;
+    // IN SAMPLE FRAMES, NOT SECONDS. The worklet compares an event's `at` against currentFrame, and a
+    // context time handed over as seconds is a number so much smaller that every note reads as
+    // already past: it fires at the top of the current block, and its note-off — also seconds —
+    // fires in that SAME block. The pitch changes, because the note is applied; the gate rises and
+    // falls inside one render quantum, so nothing downstream ever sees it. An envelope patched to
+    // that gate simply never triggers, which is exactly how the fault presents.
+    const frame = (t) => Math.round(t * ctx.sampleRate);
     noteNode.port.postMessage({ events: [
-      { at: n.at, handle, voice: n.voice, pitch: midiToVolts(midi), level, duration,
+      { at: frame(n.at), handle, voice: n.voice, pitch: midiToVolts(midi), level, duration,
         pan: typeof n.pan === 'number' ? n.pan : 0 },
-      { at: n.at + duration, handle, voice: n.voice, off: true },
+      { at: frame(n.at + duration), handle, voice: n.voice, off: true },
     ] });
   };
 
@@ -166,9 +187,41 @@ export function create(ctx, _services) {
       } else {
         pane.appendChild(closeButton());
       }
+
+      // IF THE PANE LEAVES THE DOCUMENT, GXW GOES WITH IT. The module's own dispose tears GXW down
+      // properly, but nothing guarantees dispose is what removed the pane — a script, a stray
+      // innerHTML, some future bit of chrome. When it was not, the element vanished and the
+      // application carried on: transport counting, engine scheduling, notes still arriving at these
+      // jacks, and no window anywhere to stop it from. That is a genuinely baffling fault to meet, so
+      // the element's removal is treated as the same event as deleting the module.
+      const watcher = new MutationObserver(() => {
+        if (pane && !pane.isConnected) {
+          watcher.disconnect();
+          state.watcher = null;
+          try { if (gxw && typeof gxw.dispose === 'function') gxw.dispose(); } catch (_e) { /* going anyway */ }
+          mounted = Math.max(0, mounted - 1);
+          mountPromise = null;
+          gxw = null;
+        }
+      });
+      watcher.observe(document.body, { childList: true });
+      state.watcher = watcher;
+
       lastError = null;
       say('ok');
       if (score) applyScore(score);
+
+      // ONE TRANSPORT, TWO VIEWS. The faceplate's RUN and GXW's own play control are the same state,
+      // so GXW tells the module when it moves. The guard stops the echo: a change the module ITSELF
+      // asked for must not be reported back as news, or the two drive each other in circles — which
+      // is the same fault that made "Back to the rack" bounce, and it is worth only ever fixing once.
+      if (typeof gxw.onTransport === 'function') {
+        gxw.onTransport((playing) => {
+          if (drivingTransport) return;
+          running = playing;
+          if (report) report('run', playing ? 'on' : 'off');
+        });
+      }
       return gxw;
     }).catch((e) => {
       mountPromise = null;
@@ -181,15 +234,29 @@ export function create(ctx, _services) {
     return mountPromise;
   }
 
-  // A score arriving from the patch. GXW may not be mounted yet, in which case it is held and applied
-  // when it is — a patch load happens long before anyone presses a button.
-  function applyScore(text) {
-    score = String(text || '');
+  // WHICH SCORE, NOT A COPY OF IT. The patch records the path of the score GXW has open; the score
+  // itself lives in the shared library on disk, where the standalone app reads and writes the same
+  // file. Storing the content here would make the patch a second, staler copy of something that
+  // already has a home — and the two builds would then disagree about which was the real one.
+  //
+  // Held until GXW is up: a patch loads long before anyone presses a button, and the module mounts
+  // lazily by design.
+  function applyScore(path) {
+    score = String(path || '');
     if (!gxw || !score) return;
-    if (typeof gxw.loadScoreText === 'function') {
-      try { gxw.loadScoreText(score); } catch (e) { console.warn('[gxw] score refused:', e.message); }
-    }
+    if (typeof gxw.openScorePath !== 'function') return;
+    Promise.resolve(gxw.openScorePath(score))
+      .catch((e) => console.warn('[gxw] could not open ' + score + ': ' + ((e && e.message) || e)));
   }
+
+  // ONE DIRECTION ONLY, deliberately. Reporting GXW's path back to the rack fed itself: the report
+  // was stored, a stored param is re-applied, applying it reopened the score, and reopening resolved
+  // the path against the scores folder again — so each pass grew the string and the patch ended up
+  // holding a path with the same folder in it six times over.
+  //
+  // Catching a score opened from GXW's own File menu needs a "score changed" signal from GXW and a
+  // path that is stable under a round trip. Until both exist, the patch says which score to open and
+  // does not try to follow along afterwards.
 
   // A WAY BACK. Opening was the whole gesture and there was nothing to undo it — GXW took the window
   // and kept it. It gets a strip of its own rather than borrowing GXW's chrome, because GXW's menu is
@@ -266,13 +333,13 @@ export function create(ctx, _services) {
         // having GXW on a patch booted the whole application, which is the opposite of the laziness
         // the mount was written for. A module that is already up still gets its pause.
         if (!running) {
-          if (gxw && gxw.transport) gxw.transport.pause();
+          drive(() => gxw && gxw.pause && gxw.pause());
           return;
         }
         // MOUNTING ON FIRST USE. Pressing RUN is what a patch does to start the sequence with the
         // window never open, so it has to be able to bring GXW up by itself.
         mount().then(() => {
-          if (gxw && gxw.transport) gxw.transport.play();
+          drive(() => gxw && gxw.play && gxw.play());
         }).catch(() => { /* already reported through status */ });
         return;
       }
@@ -294,6 +361,7 @@ export function create(ctx, _services) {
     supports: (id) => ['run', 'open', 'score', 'status'].includes(id),
 
     dispose: () => {
+      try { if (state.watcher) state.watcher.disconnect(); } catch (_e) { /* never made */ }
       try { if (gxw && typeof gxw.dispose === 'function') gxw.dispose(); } catch (_e) { /* going anyway */ }
       try { window.removeEventListener('keydown', onKey, true); } catch (_e) { /* never bound */ }
       try { if (pane) pane.remove(); } catch (_e) { /* already gone */ }
@@ -307,5 +375,19 @@ export function create(ctx, _services) {
     // How the rack hands the module its reporting channel — the name the rack actually calls, the
     // same one the Strudel module takes.
     onValueChange: (fn) => { report = fn; say(lastError ? 'error' : (gxw ? 'ok' : 'idle')); },
+
+    // THE CABLE, HANDED IN WHEN IT IS PLUGGED. This is how a note reaches anything: the worklet keeps
+    // a map of jack to cable, and the rack fills that map by calling this whenever one is patched or
+    // a patch is loaded. Without it the map stays empty — so every note arrived at the worklet
+    // correctly converted and was dropped for want of anywhere to go. A jack that accepts a cable, a
+    // scope on the far end reading nothing, and no error anywhere to say why.
+    //
+    // WHICH JACK matters, because this module has eight of them. The id goes straight through; the
+    // worklet files voice 1 under either `noteOut1` or `noteOut`, since the two modules that share
+    // that processor name their first jack differently.
+    attachNoteOut: (port, edge, portId) => {
+      if (port) noteNode.port.postMessage({ noteOut: port, edge, port: portId || 'noteOut1' }, [port]);
+      else noteNode.port.postMessage({ noteOutOff: edge });
+    },
   };
 }

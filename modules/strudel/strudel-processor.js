@@ -52,11 +52,21 @@ class StrudelProcessor extends AudioWorkletProcessor {
     q.splice(i, 0, ev);
   }
 
-  // A voice number is a jack: 1 is `noteOut` — the id the first jack has always had, so a patch made
-  // before there were eight still finds its cable — and the rest are numbered after it.
+  // A voice number is a jack. TWO NAMES ARE ACCEPTED FOR THE FIRST ONE, because two modules use this
+  // processor and they name that jack differently:
+  //
+  //   noteOut1  the plain numbering, which a module written after there were eight of them uses.
+  //   noteOut   what the Strudel module's first jack has always been called, kept so a patch made
+  //             before there were eight still finds its cable.
+  //
+  // Reconstructing only the second meant a note for voice 1 from a module using the first went
+  // looking for cables that were registered under the other name and found none — the jack accepted
+  // a cable, the scope on the far end read nothing, and voices 2 to 8 worked perfectly, which is
+  // about as misleading as a fault can be.
   _post(voice, m) {
-    const id = !voice || voice === 1 ? 'noteOut' : 'noteOut' + voice;
-    const outs = this._byPort.get(id);
+    const n = !voice ? 1 : voice;
+    const outs = this._byPort.get('noteOut' + n)
+      || (n === 1 ? this._byPort.get('noteOut') : null);
     if (!outs) return;                         // nothing patched to that jack; the note simply has nowhere to go
     for (const p of outs.values()) p.postMessage(m);
   }
