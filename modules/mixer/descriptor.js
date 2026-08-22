@@ -38,9 +38,12 @@ for (const L of CH) {
   // carry a depth param the patchbay put in the cord as an attenuator, but it defaulted to unity
   // and — once the knAck lost its attenuverter — could not be moved off it. A desk is set up, not
   // played; where a pan CV needs taming, hang an insert on the jack (design/inserts.md).
-  // Enable lamp: lit = channel enabled (passing audio). Internally still a mute
+  // Enable lamp: lit = channel enabled (passing audio). The ID SAYS SO TOO, since it used to say
+  // `mute` and mean the opposite: a channel reading 'on' was OPEN, not silenced, and anything reading
+  // a patch — a person, a script, an AI reading the mirror — would reasonably conclude the reverse.
+  // Internally it is still a mute gain, which is an implementation detail and stays one.
   // gain, but the sense is flipped — 'on' now means enabled, and it defaults on.
-  params.push({ id: `mute${L}`, name: `Enable ${L}`, section: 'channel', curve: 'stepped', steps: [{ value: 'off' }, { value: 'on' }], default: 'on' });
+  params.push({ id: `enable${L}`, name: `Enable ${L}`, section: 'channel', curve: 'stepped', steps: [{ value: 'off' }, { value: 'on' }], default: 'on' });
   // TWO SENDS: how much of this channel goes to each shared effect bus. Post-fader and pre-pan, the
   // way a desk does it — the send follows the fader, so pulling a channel down takes its reverb with
   // it, and the effect returns in whatever position you give it rather than inheriting the channel's.

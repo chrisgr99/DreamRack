@@ -129,7 +129,7 @@ for (const L of CH) {
   items.push({ t: 'jack', id: `chan${L}`, x: MID_X(L), y: Y_INPUT });
   items.push({ t: 'slider', id: `level${L}`, x: CH_X[L], opts: { top: SLIDER_TOP, bot: SLIDER_BOT, valuePos: 0.8 } });
   items.push({ t: 'jack', id: `ampCv${L}`, x: MID_X(L), y: Y_AMPCV });
-  items.push({ t: 'button', id: `mute${L}`, x: MID_X(L), y: Y_MUTE, opts: { r: MUTE_R, kind: 'red' } });
+  items.push({ t: 'button', id: `enable${L}`, x: MID_X(L), y: Y_MUTE, opts: { r: MUTE_R, kind: 'red' } });
   // knAcks like the pan below them: a send amount is exactly the sort of thing you want an envelope
   // on, and giving each a jack of its own would have cost two more rows the panel does not have.
   items.push({ t: 'knack', id: `send1${L}`, x: MID_X(L), y: Y_SEND1,

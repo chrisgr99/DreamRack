@@ -45,7 +45,7 @@ sometimes an abbreviation, so anything a demo actually points at is worth writin
 | mixer:master | the master fader |
 | mixer:levelA | the fader for channel one |
 | mixer:levelB | the fader for channel two |
-| mixer:muteA | the enable button under channel one |
+| mixer:enableA | the enable button under channel one |
 | mixer:monitorLevel | the monitor fader |
 | osc:prinSquareOut | the square output of the principal oscillator |
 | osc:prinSineOut | the sine output of the principal oscillator |

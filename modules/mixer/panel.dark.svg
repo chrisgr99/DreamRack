@@ -225,7 +225,7 @@
     <circle cx="14" cy="91" r="3" fill="#8a8a8a" stroke="#000000" stroke-width="0.3"/>
     <circle cx="14" cy="91" r="1.6" fill="#000000"/>
   </g>
-  <g data-wcoast-param="muteA"><circle cx="14" cy="21.9" r="3.00" fill="url(#metalDisc)" pointer-events="none" data-wcoast-role="button-metal"/><circle cx="14" cy="21.9" r="2.3" fill="#505055" stroke="#4a4a4a" stroke-width="0.2366" data-wcoast-role="step-indicator" data-wcoast-step="on"/><circle cx="13.36" cy="21.26" r="0.69" fill="#ffb4b4" opacity="0" data-wcoast-role="led-gloss" pointer-events="none"/></g>
+  <g data-wcoast-param="enableA"><circle cx="14" cy="21.9" r="3.00" fill="url(#metalDisc)" pointer-events="none" data-wcoast-role="button-metal"/><circle cx="14" cy="21.9" r="2.3" fill="#505055" stroke="#4a4a4a" stroke-width="0.2366" data-wcoast-role="step-indicator" data-wcoast-step="on"/><circle cx="13.36" cy="21.26" r="0.69" fill="#ffb4b4" opacity="0" data-wcoast-role="led-gloss" pointer-events="none"/></g>
   <g data-wcoast-param="send1A" data-wcoast-cx="14" data-wcoast-cy="69.5" data-wcoast-angle-min="-150" data-wcoast-angle-max="150" data-wcoast-port="send1CvA">
     <circle cx="14" cy="69.5" r="4.7" fill="url(#blueRing)" stroke="#6fa8d6" stroke-width="0.2073"/>
     <circle cx="14" cy="69.5" r="3.38" fill="url(#knobCap)" stroke="#b8b8bc" stroke-width="0.1381"/>
@@ -287,7 +287,7 @@
     <circle cx="27" cy="91" r="3" fill="#8a8a8a" stroke="#000000" stroke-width="0.3"/>
     <circle cx="27" cy="91" r="1.6" fill="#000000"/>
   </g>
-  <g data-wcoast-param="muteB"><circle cx="27" cy="21.9" r="3.00" fill="url(#metalDisc)" pointer-events="none" data-wcoast-role="button-metal"/><circle cx="27" cy="21.9" r="2.3" fill="#505055" stroke="#4a4a4a" stroke-width="0.2366" data-wcoast-role="step-indicator" data-wcoast-step="on"/><circle cx="26.36" cy="21.26" r="0.69" fill="#ffb4b4" opacity="0" data-wcoast-role="led-gloss" pointer-events="none"/></g>
+  <g data-wcoast-param="enableB"><circle cx="27" cy="21.9" r="3.00" fill="url(#metalDisc)" pointer-events="none" data-wcoast-role="button-metal"/><circle cx="27" cy="21.9" r="2.3" fill="#505055" stroke="#4a4a4a" stroke-width="0.2366" data-wcoast-role="step-indicator" data-wcoast-step="on"/><circle cx="26.36" cy="21.26" r="0.69" fill="#ffb4b4" opacity="0" data-wcoast-role="led-gloss" pointer-events="none"/></g>
   <g data-wcoast-param="send1B" data-wcoast-cx="27" data-wcoast-cy="69.5" data-wcoast-angle-min="-150" data-wcoast-angle-max="150" data-wcoast-port="send1CvB">
     <circle cx="27" cy="69.5" r="4.7" fill="url(#blueRing)" stroke="#6fa8d6" stroke-width="0.2073"/>
     <circle cx="27" cy="69.5" r="3.38" fill="url(#knobCap)" stroke="#b8b8bc" stroke-width="0.1381"/>
@@ -349,7 +349,7 @@
     <circle cx="40" cy="91" r="3" fill="#8a8a8a" stroke="#000000" stroke-width="0.3"/>
     <circle cx="40" cy="91" r="1.6" fill="#000000"/>
   </g>
-  <g data-wcoast-param="muteC"><circle cx="40" cy="21.9" r="3.00" fill="url(#metalDisc)" pointer-events="none" data-wcoast-role="button-metal"/><circle cx="40" cy="21.9" r="2.3" fill="#505055" stroke="#4a4a4a" stroke-width="0.2366" data-wcoast-role="step-indicator" data-wcoast-step="on"/><circle cx="39.36" cy="21.26" r="0.69" fill="#ffb4b4" opacity="0" data-wcoast-role="led-gloss" pointer-events="none"/></g>
+  <g data-wcoast-param="enableC"><circle cx="40" cy="21.9" r="3.00" fill="url(#metalDisc)" pointer-events="none" data-wcoast-role="button-metal"/><circle cx="40" cy="21.9" r="2.3" fill="#505055" stroke="#4a4a4a" stroke-width="0.2366" data-wcoast-role="step-indicator" data-wcoast-step="on"/><circle cx="39.36" cy="21.26" r="0.69" fill="#ffb4b4" opacity="0" data-wcoast-role="led-gloss" pointer-events="none"/></g>
   <g data-wcoast-param="send1C" data-wcoast-cx="40" data-wcoast-cy="69.5" data-wcoast-angle-min="-150" data-wcoast-angle-max="150" data-wcoast-port="send1CvC">
     <circle cx="40" cy="69.5" r="4.7" fill="url(#blueRing)" stroke="#6fa8d6" stroke-width="0.2073"/>
     <circle cx="40" cy="69.5" r="3.38" fill="url(#knobCap)" stroke="#b8b8bc" stroke-width="0.1381"/>
@@ -411,7 +411,7 @@
     <circle cx="53" cy="91" r="3" fill="#8a8a8a" stroke="#000000" stroke-width="0.3"/>
     <circle cx="53" cy="91" r="1.6" fill="#000000"/>
   </g>
-  <g data-wcoast-param="muteD"><circle cx="53" cy="21.9" r="3.00" fill="url(#metalDisc)" pointer-events="none" data-wcoast-role="button-metal"/><circle cx="53" cy="21.9" r="2.3" fill="#505055" stroke="#4a4a4a" stroke-width="0.2366" data-wcoast-role="step-indicator" data-wcoast-step="on"/><circle cx="52.36" cy="21.26" r="0.69" fill="#ffb4b4" opacity="0" data-wcoast-role="led-gloss" pointer-events="none"/></g>
+  <g data-wcoast-param="enableD"><circle cx="53" cy="21.9" r="3.00" fill="url(#metalDisc)" pointer-events="none" data-wcoast-role="button-metal"/><circle cx="53" cy="21.9" r="2.3" fill="#505055" stroke="#4a4a4a" stroke-width="0.2366" data-wcoast-role="step-indicator" data-wcoast-step="on"/><circle cx="52.36" cy="21.26" r="0.69" fill="#ffb4b4" opacity="0" data-wcoast-role="led-gloss" pointer-events="none"/></g>
   <g data-wcoast-param="send1D" data-wcoast-cx="53" data-wcoast-cy="69.5" data-wcoast-angle-min="-150" data-wcoast-angle-max="150" data-wcoast-port="send1CvD">
     <circle cx="53" cy="69.5" r="4.7" fill="url(#blueRing)" stroke="#6fa8d6" stroke-width="0.2073"/>
     <circle cx="53" cy="69.5" r="3.38" fill="url(#knobCap)" stroke="#b8b8bc" stroke-width="0.1381"/>
@@ -473,7 +473,7 @@
     <circle cx="66" cy="91" r="3" fill="#8a8a8a" stroke="#000000" stroke-width="0.3"/>
     <circle cx="66" cy="91" r="1.6" fill="#000000"/>
   </g>
-  <g data-wcoast-param="muteE"><circle cx="66" cy="21.9" r="3.00" fill="url(#metalDisc)" pointer-events="none" data-wcoast-role="button-metal"/><circle cx="66" cy="21.9" r="2.3" fill="#505055" stroke="#4a4a4a" stroke-width="0.2366" data-wcoast-role="step-indicator" data-wcoast-step="on"/><circle cx="65.36" cy="21.26" r="0.69" fill="#ffb4b4" opacity="0" data-wcoast-role="led-gloss" pointer-events="none"/></g>
+  <g data-wcoast-param="enableE"><circle cx="66" cy="21.9" r="3.00" fill="url(#metalDisc)" pointer-events="none" data-wcoast-role="button-metal"/><circle cx="66" cy="21.9" r="2.3" fill="#505055" stroke="#4a4a4a" stroke-width="0.2366" data-wcoast-role="step-indicator" data-wcoast-step="on"/><circle cx="65.36" cy="21.26" r="0.69" fill="#ffb4b4" opacity="0" data-wcoast-role="led-gloss" pointer-events="none"/></g>
   <g data-wcoast-param="send1E" data-wcoast-cx="66" data-wcoast-cy="69.5" data-wcoast-angle-min="-150" data-wcoast-angle-max="150" data-wcoast-port="send1CvE">
     <circle cx="66" cy="69.5" r="4.7" fill="url(#blueRing)" stroke="#6fa8d6" stroke-width="0.2073"/>
     <circle cx="66" cy="69.5" r="3.38" fill="url(#knobCap)" stroke="#b8b8bc" stroke-width="0.1381"/>
@@ -535,7 +535,7 @@
     <circle cx="79" cy="91" r="3" fill="#8a8a8a" stroke="#000000" stroke-width="0.3"/>
     <circle cx="79" cy="91" r="1.6" fill="#000000"/>
   </g>
-  <g data-wcoast-param="muteF"><circle cx="79" cy="21.9" r="3.00" fill="url(#metalDisc)" pointer-events="none" data-wcoast-role="button-metal"/><circle cx="79" cy="21.9" r="2.3" fill="#505055" stroke="#4a4a4a" stroke-width="0.2366" data-wcoast-role="step-indicator" data-wcoast-step="on"/><circle cx="78.36" cy="21.26" r="0.69" fill="#ffb4b4" opacity="0" data-wcoast-role="led-gloss" pointer-events="none"/></g>
+  <g data-wcoast-param="enableF"><circle cx="79" cy="21.9" r="3.00" fill="url(#metalDisc)" pointer-events="none" data-wcoast-role="button-metal"/><circle cx="79" cy="21.9" r="2.3" fill="#505055" stroke="#4a4a4a" stroke-width="0.2366" data-wcoast-role="step-indicator" data-wcoast-step="on"/><circle cx="78.36" cy="21.26" r="0.69" fill="#ffb4b4" opacity="0" data-wcoast-role="led-gloss" pointer-events="none"/></g>
   <g data-wcoast-param="send1F" data-wcoast-cx="79" data-wcoast-cy="69.5" data-wcoast-angle-min="-150" data-wcoast-angle-max="150" data-wcoast-port="send1CvF">
     <circle cx="79" cy="69.5" r="4.7" fill="url(#blueRing)" stroke="#6fa8d6" stroke-width="0.2073"/>
     <circle cx="79" cy="69.5" r="3.38" fill="url(#knobCap)" stroke="#b8b8bc" stroke-width="0.1381"/>
@@ -597,7 +597,7 @@
     <circle cx="92" cy="91" r="3" fill="#8a8a8a" stroke="#000000" stroke-width="0.3"/>
     <circle cx="92" cy="91" r="1.6" fill="#000000"/>
   </g>
-  <g data-wcoast-param="muteG"><circle cx="92" cy="21.9" r="3.00" fill="url(#metalDisc)" pointer-events="none" data-wcoast-role="button-metal"/><circle cx="92" cy="21.9" r="2.3" fill="#505055" stroke="#4a4a4a" stroke-width="0.2366" data-wcoast-role="step-indicator" data-wcoast-step="on"/><circle cx="91.36" cy="21.26" r="0.69" fill="#ffb4b4" opacity="0" data-wcoast-role="led-gloss" pointer-events="none"/></g>
+  <g data-wcoast-param="enableG"><circle cx="92" cy="21.9" r="3.00" fill="url(#metalDisc)" pointer-events="none" data-wcoast-role="button-metal"/><circle cx="92" cy="21.9" r="2.3" fill="#505055" stroke="#4a4a4a" stroke-width="0.2366" data-wcoast-role="step-indicator" data-wcoast-step="on"/><circle cx="91.36" cy="21.26" r="0.69" fill="#ffb4b4" opacity="0" data-wcoast-role="led-gloss" pointer-events="none"/></g>
   <g data-wcoast-param="send1G" data-wcoast-cx="92" data-wcoast-cy="69.5" data-wcoast-angle-min="-150" data-wcoast-angle-max="150" data-wcoast-port="send1CvG">
     <circle cx="92" cy="69.5" r="4.7" fill="url(#blueRing)" stroke="#6fa8d6" stroke-width="0.2073"/>
     <circle cx="92" cy="69.5" r="3.38" fill="url(#knobCap)" stroke="#b8b8bc" stroke-width="0.1381"/>
@@ -659,7 +659,7 @@
     <circle cx="105" cy="91" r="3" fill="#8a8a8a" stroke="#000000" stroke-width="0.3"/>
     <circle cx="105" cy="91" r="1.6" fill="#000000"/>
   </g>
-  <g data-wcoast-param="muteH"><circle cx="105" cy="21.9" r="3.00" fill="url(#metalDisc)" pointer-events="none" data-wcoast-role="button-metal"/><circle cx="105" cy="21.9" r="2.3" fill="#505055" stroke="#4a4a4a" stroke-width="0.2366" data-wcoast-role="step-indicator" data-wcoast-step="on"/><circle cx="104.36" cy="21.26" r="0.69" fill="#ffb4b4" opacity="0" data-wcoast-role="led-gloss" pointer-events="none"/></g>
+  <g data-wcoast-param="enableH"><circle cx="105" cy="21.9" r="3.00" fill="url(#metalDisc)" pointer-events="none" data-wcoast-role="button-metal"/><circle cx="105" cy="21.9" r="2.3" fill="#505055" stroke="#4a4a4a" stroke-width="0.2366" data-wcoast-role="step-indicator" data-wcoast-step="on"/><circle cx="104.36" cy="21.26" r="0.69" fill="#ffb4b4" opacity="0" data-wcoast-role="led-gloss" pointer-events="none"/></g>
   <g data-wcoast-param="send1H" data-wcoast-cx="105" data-wcoast-cy="69.5" data-wcoast-angle-min="-150" data-wcoast-angle-max="150" data-wcoast-port="send1CvH">
     <circle cx="105" cy="69.5" r="4.7" fill="url(#blueRing)" stroke="#6fa8d6" stroke-width="0.2073"/>
     <circle cx="105" cy="69.5" r="3.38" fill="url(#knobCap)" stroke="#b8b8bc" stroke-width="0.1381"/>
@@ -721,7 +721,7 @@
     <circle cx="133" cy="91" r="3" fill="#8a8a8a" stroke="#000000" stroke-width="0.3"/>
     <circle cx="133" cy="91" r="1.6" fill="#000000"/>
   </g>
-  <g data-wcoast-param="muteI"><circle cx="133" cy="21.9" r="3.00" fill="url(#metalDisc)" pointer-events="none" data-wcoast-role="button-metal"/><circle cx="133" cy="21.9" r="2.3" fill="#505055" stroke="#4a4a4a" stroke-width="0.2366" data-wcoast-role="step-indicator" data-wcoast-step="on"/><circle cx="132.36" cy="21.26" r="0.69" fill="#ffb4b4" opacity="0" data-wcoast-role="led-gloss" pointer-events="none"/></g>
+  <g data-wcoast-param="enableI"><circle cx="133" cy="21.9" r="3.00" fill="url(#metalDisc)" pointer-events="none" data-wcoast-role="button-metal"/><circle cx="133" cy="21.9" r="2.3" fill="#505055" stroke="#4a4a4a" stroke-width="0.2366" data-wcoast-role="step-indicator" data-wcoast-step="on"/><circle cx="132.36" cy="21.26" r="0.69" fill="#ffb4b4" opacity="0" data-wcoast-role="led-gloss" pointer-events="none"/></g>
   <g data-wcoast-param="send1I" data-wcoast-cx="133" data-wcoast-cy="69.5" data-wcoast-angle-min="-150" data-wcoast-angle-max="150" data-wcoast-port="send1CvI">
     <circle cx="133" cy="69.5" r="4.7" fill="url(#blueRing)" stroke="#6fa8d6" stroke-width="0.2073"/>
     <circle cx="133" cy="69.5" r="3.38" fill="url(#knobCap)" stroke="#b8b8bc" stroke-width="0.1381"/>
@@ -783,7 +783,7 @@
     <circle cx="146" cy="91" r="3" fill="#8a8a8a" stroke="#000000" stroke-width="0.3"/>
     <circle cx="146" cy="91" r="1.6" fill="#000000"/>
   </g>
-  <g data-wcoast-param="muteJ"><circle cx="146" cy="21.9" r="3.00" fill="url(#metalDisc)" pointer-events="none" data-wcoast-role="button-metal"/><circle cx="146" cy="21.9" r="2.3" fill="#505055" stroke="#4a4a4a" stroke-width="0.2366" data-wcoast-role="step-indicator" data-wcoast-step="on"/><circle cx="145.36" cy="21.26" r="0.69" fill="#ffb4b4" opacity="0" data-wcoast-role="led-gloss" pointer-events="none"/></g>
+  <g data-wcoast-param="enableJ"><circle cx="146" cy="21.9" r="3.00" fill="url(#metalDisc)" pointer-events="none" data-wcoast-role="button-metal"/><circle cx="146" cy="21.9" r="2.3" fill="#505055" stroke="#4a4a4a" stroke-width="0.2366" data-wcoast-role="step-indicator" data-wcoast-step="on"/><circle cx="145.36" cy="21.26" r="0.69" fill="#ffb4b4" opacity="0" data-wcoast-role="led-gloss" pointer-events="none"/></g>
   <g data-wcoast-param="send1J" data-wcoast-cx="146" data-wcoast-cy="69.5" data-wcoast-angle-min="-150" data-wcoast-angle-max="150" data-wcoast-port="send1CvJ">
     <circle cx="146" cy="69.5" r="4.7" fill="url(#blueRing)" stroke="#6fa8d6" stroke-width="0.2073"/>
     <circle cx="146" cy="69.5" r="3.38" fill="url(#knobCap)" stroke="#b8b8bc" stroke-width="0.1381"/>

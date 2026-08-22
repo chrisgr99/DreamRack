@@ -90,7 +90,7 @@ export function create(ctx, services) {
     const mute = ctx.createGain();
     const pan = ctx.createStereoPanner();
     level.gain.value = paramDefault(`level${L}`);
-    mute.gain.value = paramDefault(`mute${L}`) === 'on' ? 1 : 0;
+    mute.gain.value = paramDefault(`enable${L}`) === 'on' ? 1 : 0;
     level.connect(mute); mute.connect(pan); pan.connect(master);
     // POST-FADER, PRE-PAN. Post-fader so the send follows the fader — pull a channel down and its
     // reverb goes with it. Pre-pan so the effect returns wherever you place it, instead of arriving
@@ -149,8 +149,14 @@ export function create(ctx, services) {
   }
   function supports() { return true; }
   function setParam(paramId, value, atTime) {
-    if (paramId.startsWith('mute')) {
-      const c = byLetter.get(paramId.slice(4));
+    // `enable` on the face, a mute gain underneath — the node keeps its old name because that is
+    // what it is; only the control the user sees was misnamed.
+    if (paramId.startsWith('enable')) {
+      // THE LETTER, BY PATTERN RATHER THAN BY LENGTH. This was slice(4), which was right while the id
+      // was `muteA` and silently wrong the moment it became `enableA` — it read "eA" and found no
+      // channel, so the switch did nothing at all. A rename that changes an id's LENGTH breaks every
+      // place that took it apart by counting characters.
+      const c = byLetter.get((/^enable([A-Z])$/.exec(paramId) || [])[1]);
       if (c) c.mute.gain.value = value === 'on' ? 1 : 0;
       return;
     }

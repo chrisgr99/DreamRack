@@ -19,7 +19,7 @@
     },
     {
       "do": "set",
-      "target": "mixer:muteA",
+      "target": "mixer:enableA",
       "to": "off"
     },
     {
@@ -84,7 +84,7 @@
     },
     {
       "do": "set",
-      "target": "mixer:muteA",
+      "target": "mixer:enableA",
       "to": "off",
       "note": "Channel one off."
     },
@@ -94,7 +94,7 @@
     },
     {
       "do": "set",
-      "target": "mixer:muteA",
+      "target": "mixer:enableA",
       "to": "on",
       "note": "And on again."
     },

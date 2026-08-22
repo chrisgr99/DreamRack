@@ -34,7 +34,7 @@
     },
     {
       "do": "set",
-      "target": "mixer:muteA",
+      "target": "mixer:enableA",
       "to": "off",
       "note": "The Enable button under channel one's fader. Off."
     },
@@ -45,7 +45,7 @@
     },
     {
       "do": "set",
-      "target": "mixer:muteA",
+      "target": "mixer:enableA",
       "to": "on",
       "note": "On again, and it comes straight back."
     },

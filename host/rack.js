@@ -1395,7 +1395,7 @@ export class Rack {
 
   // The buttons and the panel's lamps are one control seen twice, so moving either moves the other.
   _mirrorMixerEnable(rec, id) {
-    if (rec.descriptorId === 'mixer' && /^mute[A-Z]$/.test(id) && this._stubSvg) this._drawPageStubs();
+    if (rec.descriptorId === 'mixer' && /^enable[A-Z]$/.test(id) && this._stubSvg) this._drawPageStubs();
     // The Output tab's lamp is the mixer's engine switch seen a second time, so it follows the param
     // rather than the click — the space bar, the mixer's own lamp and the tab all light it.
     if (rec.descriptorId === 'mixer' && id === 'engine') this._syncEngineLamp();
@@ -2745,7 +2745,7 @@ export class Rack {
     const out = [];
     for (const port of d.ports || []) {
       const m = /^chan([A-Z])$/.exec(port.id);
-      if (m) out.push({ rec, L: m[1], portId: port.id, name: port.name, enableId: `mute${m[1]}` });
+      if (m) out.push({ rec, L: m[1], portId: port.id, name: port.name, enableId: `enable${m[1]}` });
     }
     return out;
   }
@@ -8386,8 +8386,8 @@ export class Rack {
     // on however it was left. The rule is about the GESTURE, not the connection.
     if (!(opts && opts.restoring)
         && dst.rec && dst.rec.descriptorId === 'mixer' && /^chan[A-Z]$/.test(dst.portId)
-        && dst.rec.values.get(`mute${dst.portId.slice(4)}`) !== 'on') {
-      this._setParam(dst.rec, `mute${dst.portId.slice(4)}`, 'on');
+        && dst.rec.values.get(`enable${dst.portId.slice(4)}`) !== 'on') {
+      this._setParam(dst.rec, `enable${dst.portId.slice(4)}`, 'on');
     }
     return res.edge;
   }

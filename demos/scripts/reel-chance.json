@@ -40,7 +40,7 @@
   },
   {
    "do": "set",
-   "target": "mixer:muteA",
+   "target": "mixer:enableA",
    "to": "off"
   },
   {

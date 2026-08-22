@@ -39,7 +39,7 @@ export const FORMAT = 'wcoast-patch';   // INTERNAL format id — never rename (
 // number is retired by TYPE rather than by anyone remembering to skip it. And JSON numbers are
 // floating point, where 0.1 plus 0.02 is not 0.12 — version arithmetic would eventually compare
 // wrong. Parsed into parts and compared as integers, it cannot.
-export const FORMAT_VERSION = '0.1';
+export const FORMAT_VERSION = '0.2';
 
 // User-facing product identity, stamped into every saved patch for traceability.
 // APP_VERSION is deliberately pinned; do not increment it without an explicit request.
@@ -75,6 +75,29 @@ const MIGRATIONS = [
       // later: a file written AFTER pages arrived but still stamped 1 (this branch's own working
       // saves) already says where everything goes, and must be left exactly as it is.
       obj.__sortOntoPages = !Array.isArray(obj.pages);
+    },
+  },
+  {
+    to: [0, 2],
+    note: 'mixer enable',
+    apply(obj) {
+      // THE MIXER'S CHANNEL SWITCH WAS CALLED `mute` AND MEANT ITS OPPOSITE. The descriptor named it
+      // Enable, the lamp lit when the channel was passing audio, and the value 'on' meant OPEN — but
+      // the id said mute, so anything reading the file (a person, a script, an AI reading the mirror)
+      // would reasonably conclude a channel marked 'on' was silenced. It cost an hour of chasing a
+      // fault that was not there.
+      //
+      // Renamed to `enableA`..`enableJ`, with the MEANING UNCHANGED: 'on' still means passing audio,
+      // so every saved value carries over as it stands and only the key moves.
+      const p = obj.settings && obj.settings.params;
+      const mix = p && p.mixer;
+      if (!mix) return;
+      for (const k of Object.keys(mix)) {
+        const m = /^mute([A-Z])$/.exec(k);
+        if (!m) continue;
+        mix['enable' + m[1]] = mix[k];
+        delete mix[k];
+      }
     },
   },
 ];

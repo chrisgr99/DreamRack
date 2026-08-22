@@ -136,9 +136,9 @@ Move one at a time and listen.
 
 Carry straight on from the last section, or load **First drone** again for a clean start from something familiar. Either way you have the Complex Oscillator {see:complexOsc259t} going into the mixer, and two modules sitting unused: the Quad Low Pass Gate {see:lpg-292} and the Quad Function Generator {see:quadFn281t}.
 
-The drone is about to be in the way. You do not have to unplug it — every mixer channel has an ==Enable== button {see:mixer/muteA} under its fader, and switching one off silences that channel while leaving everything wired exactly as it is. That is how you audition one part of a patch against another.
+The drone is about to be in the way. You do not have to unplug it — every mixer channel has an ==Enable== button {see:mixer/enableA} under its fader, and switching one off silences that channel while leaving everything wired exactly as it is. That is how you audition one part of a patch against another.
 
-> **Example** — Switch **channel one** {see:mixer/muteA} off on the mixer. The cable is still there; the drone is not.
+> **Example** — Switch **channel one** {see:mixer/enableA} off on the mixer. The cable is still there; the drone is not.
 
 {demo:mute}
 
@@ -168,7 +168,7 @@ The gate also has a clock, which strikes a channel repeatedly.
 
 The oscillator now reaches mixer channel A directly and channel B through the gate.
 
-> **Example** — Set the **channel A** {see:mixer/levelA} and **channel B** {see:mixer/levelB} faders against each other. The **Enable** buttons {see:mixer/muteA} below them switch each voice off.
+> **Example** — Set the **channel A** {see:mixer/levelA} and **channel B** {see:mixer/levelB} faders against each other. The **Enable** buttons {see:mixer/enableA} below them switch each voice off.
 
 {demo:mixing}
 
